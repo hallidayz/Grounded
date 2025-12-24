@@ -28,12 +28,18 @@ const ReportView: React.FC<ReportViewProps> = ({ logs, values, lcswConfig }) => 
     setLoading(true);
     try {
       // Generate report using on-device AI with configuration
+      // This will use rule-based fallback if AI models aren't available
       const report = await generateHumanReports(filteredLogs, values, lcswConfig);
       setGeneratedReport(report);
       setMode('generate');
     } catch (error) {
       console.error("Report synthesis failed:", error);
-      alert("Something went wrong while synthesizing your journey. Please try again.");
+      const errorMessage = error instanceof Error ? error.message : String(error);
+      if (errorMessage.includes('Failed to load on-device models')) {
+        alert("AI models are not available. The app will generate a basic report using rule-based analysis. Please check your internet connection and try updating the models in Settings.");
+      } else {
+        alert("Something went wrong while synthesizing your journey. Please try again.");
+      }
     } finally {
       setLoading(false);
     }

@@ -116,4 +116,5 @@ export interface CrisisDetection {
   severity: 'low' | 'moderate' | 'high' | 'critical';
   detectedPhrases: string[];
   recommendedAction: 'continue' | 'show_crisis_info' | 'contact_lcsw' | 'emergency';
+  categories?: string[]; // Crisis categories detected
 }

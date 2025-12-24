@@ -1,4 +1,5 @@
 import { LogEntry, ValueItem, GoalFrequency, MentalStateAssessment, CrisisDetection, LCSWConfig } from "../types";
+import { ALL_CRISIS_PHRASES, CrisisCategory } from "./crisisConfig";
 
 /**
  * ON-DEVICE AI SERVICE
@@ -10,7 +11,7 @@ import { LogEntry, ValueItem, GoalFrequency, MentalStateAssessment, CrisisDetect
 let moodTrackerModel: any = null;
 let counselingCoachModel: any = null;
 let isModelLoading = false;
-let modelLoadPromise: Promise<void> | null = null;
+let modelLoadPromise: Promise<boolean> | null = null;
 
 /**
  * Clear models to force re-download/update
@@ -37,79 +38,202 @@ export async function clearModels(): Promise<void> {
  * Uses @xenova/transformers for browser-based inference
  * Can be called to update/reload models
  * @param forceReload - If true, clears existing models and reloads
+ * @returns true if models loaded successfully, false if fallback mode is used
  */
-export async function initializeModels(forceReload: boolean = false): Promise<void> {
+export async function initializeModels(forceReload: boolean = false): Promise<boolean> {
   if (forceReload) {
     await clearModels();
   }
   
   if (moodTrackerModel && counselingCoachModel && !forceReload) {
-    return; // Already loaded
+    return true; // Already loaded
   }
 
   if (isModelLoading && modelLoadPromise && !forceReload) {
-    return modelLoadPromise; // Wait for existing load
+    // Wait for existing load and return its result
+    try {
+      await modelLoadPromise;
+      return moodTrackerModel !== null && counselingCoachModel !== null;
+    } catch {
+      return false;
+    }
   }
 
   isModelLoading = true;
   modelLoadPromise = (async () => {
     try {
-      // Dynamic import to avoid loading in SSR environments
-      const { pipeline, env } = await import('@xenova/transformers');
-      
-      // Configure transformers.js for browser use
-      // Set the backend to 'webgpu' or 'wasm' (webgpu is faster but requires support)
-      env.allowLocalModels = true;
-      env.allowRemoteModels = true;
-      env.useBrowserCache = true;
-      env.useCustomCache = false;
-      
-      // Configure ONNX Runtime backend - check if it exists before accessing
-      if (env.backends && env.backends.onnx && env.backends.onnx.wasm) {
-        env.backends.onnx.wasm.proxy = false;
-        env.backends.onnx.wasm.numThreads = 1;
+      // Set up environment before importing
+      if (typeof window !== 'undefined') {
+        (window as any).__TRANSFORMERS_ENV__ = (window as any).__TRANSFORMERS_ENV__ || {};
       }
+      
+      // Dynamic import with error boundary
+      // The registerBackend error is a known browser compatibility issue
+      // We'll catch it gracefully and use rule-based responses
+      let transformersModule;
+      
+      try {
+        // Attempt import - this may fail with registerBackend error in some browsers
+        transformersModule = await import('@xenova/transformers');
+        
+        // Verify the module loaded correctly
+        if (!transformersModule || !transformersModule.pipeline) {
+          console.info('ℹ️ Transformers module structure invalid. Using rule-based responses.');
+          return false;
+        }
+      } catch (importError: any) {
+        // Catch the registerBackend error and other import errors
+        const errorMsg = importError?.message || String(importError);
+        const errorStack = importError?.stack || '';
+        
+        // This is a known browser compatibility issue - not a critical error
+        const isKnownIssue = errorMsg.includes('registerBackend') || 
+                            errorMsg.includes('ort-web') ||
+                            errorStack.includes('ort-web') ||
+                            errorMsg.includes('Cannot read properties');
+        
+        if (isKnownIssue) {
+          console.info('ℹ️ AI models unavailable: Browser compatibility issue with ONNX Runtime. App uses rule-based responses (fully functional).');
+        } else {
+          console.info('ℹ️ AI models unavailable. App uses rule-based responses (fully functional).');
+        }
+        return false;
+      }
+      
+      const { pipeline, env } = transformersModule;
+      
+      // Check if the module loaded correctly
+      if (!pipeline || !env) {
+        throw new Error('Transformers module did not load correctly');
+      }
+      
+      // Verify pipeline is a function
+      if (typeof pipeline !== 'function') {
+        throw new Error('Pipeline function not available in transformers module');
+      }
+      
+      // Configure transformers.js for browser use - use minimal configuration
+      // Configure BEFORE any backend access to avoid registerBackend errors
+      try {
+        env.allowLocalModels = true;
+        env.allowRemoteModels = true;
+        env.useBrowserCache = true;
+        env.useCustomCache = false;
+        
+        // Set cache directory for models
+        env.cacheDir = './models-cache';
+      } catch (configError) {
+        console.warn('Could not configure transformers environment, using defaults:', configError);
+        // Continue anyway - library may have defaults
+      }
+      
+      // Wait a moment for any backend initialization to complete
+      await new Promise(resolve => setTimeout(resolve, 100));
+      
+      // Don't try to configure backends manually - let transformers.js handle it
+      // This avoids the registerBackend error
       
       // Models will be downloaded and cached locally on first use
       
       // Model A: Mental state tracker (mood/anxiety/depression assessment)
-      // Try MiniCPM-0.5B or TinyLlama-1.1B for psychology-centric assistance
-      // These are tiny, on-device models quantized for mobile devices
+      // Start with a simpler, more reliable model that works better in browsers
+      // Use text-classification models first as they're more stable than text-generation
+      console.log('Loading psychology-centric AI model...');
+      
+      // Progress callback for model loading
+      const progressCallback = (progress: any) => {
+        if (progress.status === 'progress') {
+          const percent = progress.progress ? Math.round(progress.progress * 100) : 0;
+          console.log(`Model loading: ${progress.name || 'model'} - ${percent}%`);
+        } else if (progress.status === 'done') {
+          console.log(`Model loaded: ${progress.name || 'model'}`);
+        }
+      };
+      
+      // Try loading a reliable text-classification model first (more stable)
+      // This model is smaller and loads faster, good for sentiment analysis
       try {
-        console.log('Loading psychology-centric AI model (MiniCPM-0.5B/TinyLlama-1.1B)...');
+        console.log('Attempting to load DistilBERT (text classification)...');
+        moodTrackerModel = await pipeline(
+          'text-classification',
+          'Xenova/distilbert-base-uncased-finetuned-sst-2-english',
+          { 
+            quantized: true,
+            progress_callback: progressCallback
+          }
+        );
+        console.log('✓ DistilBERT model loaded successfully');
+      } catch (distilbertError: any) {
+        const errorMsg = distilbertError?.message || String(distilbertError);
+        const errorStack = distilbertError?.stack || '';
         
-        // Try MiniCPM-0.5B first (recommended for psychology-centric tasks)
-        try {
-          moodTrackerModel = await pipeline(
-            'text-generation',
-            'Xenova/MiniCPM-2-4B-ONNX', // Using available quantized model
-            { quantized: true }
-          );
-          console.log('MiniCPM model loaded successfully');
-        } catch (miniCPMError) {
-          console.warn('MiniCPM-0.5B load failed, trying TinyLlama-1.1B:', miniCPMError);
-          // Fallback to TinyLlama-1.1B
+        // Check if it's a backend/ONNX error
+        const isBackendError = errorMsg.includes('registerBackend') || 
+                               errorMsg.includes('ort-web') ||
+                               errorStack.includes('ort-web') ||
+                               errorMsg.includes('Cannot read properties');
+        
+        if (isBackendError) {
+          console.error('Backend initialization error detected. This is likely a browser compatibility issue with ONNX Runtime.');
+          console.warn('The app will continue using rule-based responses. AI features will not be available.');
+          moodTrackerModel = null;
+        } else {
+          console.warn('DistilBERT load failed, trying text-generation model:', distilbertError);
+          
+          // Fallback to a smaller text-generation model
           try {
+            console.log('Attempting to load TinyLlama (text generation)...');
             moodTrackerModel = await pipeline(
               'text-generation',
               'Xenova/TinyLlama-1.1B-Chat-v1.0',
-              { quantized: true }
+              { 
+                quantized: true,
+                progress_callback: progressCallback
+              }
             );
-            console.log('TinyLlama-1.1B model loaded successfully');
-          } catch (tinyLlamaError) {
-            console.warn('TinyLlama-1.1B load failed, using DistilBERT fallback:', tinyLlamaError);
-            // Final fallback to DistilBERT for text classification
-            moodTrackerModel = await pipeline(
-              'text-classification',
-              'Xenova/distilbert-base-uncased-finetuned-sst-2-english',
-              { quantized: true }
-            );
-            console.log('DistilBERT fallback model loaded successfully');
+            console.log('✓ TinyLlama model loaded successfully');
+          } catch (tinyLlamaError: any) {
+            const tinyLlamaMsg = tinyLlamaError?.message || String(tinyLlamaError);
+            const tinyLlamaStack = tinyLlamaError?.stack || '';
+            const isTinyLlamaBackendError = tinyLlamaMsg.includes('registerBackend') || 
+                                            tinyLlamaMsg.includes('ort-web') ||
+                                            tinyLlamaStack.includes('ort-web');
+            
+            if (isTinyLlamaBackendError) {
+              console.error('Backend initialization error with TinyLlama. Browser may not support ONNX Runtime.');
+              moodTrackerModel = null;
+            } else {
+              console.warn('TinyLlama load failed, trying MiniCPM:', tinyLlamaError);
+              
+              // Final fallback to MiniCPM
+              try {
+                console.log('Attempting to load MiniCPM (text generation)...');
+                moodTrackerModel = await pipeline(
+                  'text-generation',
+                  'Xenova/MiniCPM-2-4B-ONNX',
+                  { 
+                    quantized: true,
+                    progress_callback: progressCallback
+                  }
+                );
+                console.log('✓ MiniCPM model loaded successfully');
+              } catch (miniCPMError: any) {
+                const miniCPMMsg = miniCPMError?.message || String(miniCPMError);
+                const miniCPMStack = miniCPMError?.stack || '';
+                const isMiniCPMBackendError = miniCPMMsg.includes('registerBackend') || 
+                                               miniCPMMsg.includes('ort-web') ||
+                                               miniCPMStack.includes('ort-web');
+                
+                if (isMiniCPMBackendError) {
+                  console.error('Backend initialization error with all models. Browser compatibility issue detected.');
+                } else {
+                  console.error('All model loading attempts failed:', miniCPMError);
+                }
+                moodTrackerModel = null; // Will use rule-based fallback
+              }
+            }
           }
         }
-      } catch (error) {
-        console.warn('All model loads failed, using rule-based fallback:', error);
-        moodTrackerModel = null; // Will use rule-based fallback
       }
 
       // Model B: Counseling coach - Use same model for text generation
@@ -117,17 +241,44 @@ export async function initializeModels(forceReload: boolean = false): Promise<vo
       // In future, can load separate specialized model
       counselingCoachModel = moodTrackerModel;
       if (counselingCoachModel) {
-        console.log('Using psychology-centric model for counseling guidance');
+        console.log('✓ Using psychology-centric model for counseling guidance');
       } else {
-        console.log('Using rule-based counseling guidance (models unavailable)');
+        console.log('⚠️ Using rule-based counseling guidance (models unavailable)');
       }
 
+      const modelsReady = moodTrackerModel !== null && counselingCoachModel !== null;
       isModelLoading = false;
+      
+      if (modelsReady) {
+        console.log('✅ All AI models loaded and ready!');
+      } else {
+        console.warn('⚠️ AI models not available. App will use rule-based responses.');
+      }
+      
+      return modelsReady;
     } catch (error) {
       console.error('Model initialization error:', error);
       isModelLoading = false;
-      // Fallback: models will use rule-based responses
-      throw new Error('Failed to load on-device models. Please refresh and try again.');
+      moodTrackerModel = null;
+      counselingCoachModel = null;
+      
+      // Provide more specific error message
+      const errorMessage = error instanceof Error ? error.message : String(error);
+      if (errorMessage.includes('registerBackend') || errorMessage.includes('backend')) {
+        console.error('Backend initialization failed. This may be a compatibility issue with @xenova/transformers.');
+        console.warn('App will continue with rule-based responses. AI features will not be available.');
+        // Return false to indicate failure, but don't throw
+        return false;
+      } else if (errorMessage.includes('network') || errorMessage.includes('fetch')) {
+        console.warn('Failed to download AI models. App will use rule-based responses.');
+        // Return false to indicate failure, but don't throw
+        return false;
+      } else {
+        // Fallback: models will use rule-based responses
+        console.warn('Failed to load on-device models. App will use rule-based responses instead.');
+        // Return false to indicate failure, but don't throw
+        return false;
+      }
     }
   })();
 
@@ -137,34 +288,60 @@ export async function initializeModels(forceReload: boolean = false): Promise<vo
 /**
  * Crisis detection - scans text for safety phrases and crisis indicators
  * This runs BEFORE any AI processing to ensure safety
+ * Uses comprehensive, hardcoded crisis phrase list (non-editable for safety)
  */
 export function detectCrisis(text: string, lcswConfig?: LCSWConfig): CrisisDetection {
   const lowerText = text.toLowerCase();
-  const crisisPhrases = lcswConfig?.crisisPhrases || [
-    'suicide', 'kill myself', 'end my life', 'want to die', 'no point living',
-    'self harm', 'cutting', 'hurting myself', 'overdose', 'plan to die'
-  ];
-
+  
+  // Use comprehensive hardcoded crisis phrases (non-editable)
+  // User-provided phrases in lcswConfig are IGNORED for safety
   const detectedPhrases: string[] = [];
-  let severity: CrisisDetection['severity'] = 'low';
+  const detectedCategories: CrisisCategory[] = [];
+  let maxSeverity: 'low' | 'moderate' | 'high' | 'critical' = 'low';
 
-  for (const phrase of crisisPhrases) {
-    if (lowerText.includes(phrase.toLowerCase())) {
-      detectedPhrases.push(phrase);
-      if (phrase.includes('suicide') || phrase.includes('kill') || phrase.includes('die')) {
-        severity = 'critical';
-      } else if (severity !== 'critical') {
-        severity = 'high';
+  // Scan text against all crisis phrases
+  for (const crisisPhrase of ALL_CRISIS_PHRASES) {
+    if (lowerText.includes(crisisPhrase.phrase)) {
+      detectedPhrases.push(crisisPhrase.phrase);
+      if (!detectedCategories.includes(crisisPhrase.category)) {
+        detectedCategories.push(crisisPhrase.category);
+      }
+      
+      // Determine maximum severity
+      if (crisisPhrase.severity === 'critical') {
+        maxSeverity = 'critical';
+      } else if (crisisPhrase.severity === 'high' && maxSeverity !== 'critical') {
+        maxSeverity = 'high';
+      } else if (crisisPhrase.severity === 'moderate' && maxSeverity === 'low') {
+        maxSeverity = 'moderate';
       }
     }
   }
 
+  // Escalation logic: if moderate risk phrases are combined with any crisis phrase, escalate
+  const hasModerateRisk = detectedCategories.some(cat => 
+    cat === 'RISK_SEVERE_HOPELESSNESS' || cat === 'RISK_BEHAVIORAL_RED_FLAGS'
+  );
+  const hasCrisisCategory = detectedCategories.some(cat => 
+    cat.startsWith('CRISIS_')
+  );
+  
+  if (hasModerateRisk && hasCrisisCategory && maxSeverity === 'moderate') {
+    maxSeverity = 'high';
+  }
+
   const isCrisis = detectedPhrases.length > 0;
   
+  // Determine recommended action based on severity and categories
   let recommendedAction: CrisisDetection['recommendedAction'] = 'continue';
-  if (severity === 'critical') {
+  
+  if (maxSeverity === 'critical') {
     recommendedAction = 'emergency';
-  } else if (severity === 'high') {
+  } else if (
+    maxSeverity === 'high' || 
+    detectedCategories.includes('CRISIS_SELF_HARM') ||
+    detectedCategories.includes('CRISIS_THIRD_PARTY_SUICIDE_RISK')
+  ) {
     recommendedAction = 'contact_lcsw';
   } else if (isCrisis) {
     recommendedAction = 'show_crisis_info';
@@ -172,9 +349,10 @@ export function detectCrisis(text: string, lcswConfig?: LCSWConfig): CrisisDetec
 
   return {
     isCrisis,
-    severity,
+    severity: maxSeverity,
     detectedPhrases,
-    recommendedAction
+    recommendedAction,
+    categories: detectedCategories
   };
 }
 
@@ -185,12 +363,32 @@ export function detectCrisis(text: string, lcswConfig?: LCSWConfig): CrisisDetec
  */
 export async function assessMentalState(
   logs: LogEntry[],
-  currentReflection: string
+  currentReflection: string,
+  lcswConfig?: LCSWConfig
 ): Promise<MentalStateAssessment> {
   try {
-    // Ensure models are loaded
+    // Check for crisis FIRST - before any processing
+    const crisisCheck = detectCrisis(currentReflection, lcswConfig);
+    if (crisisCheck.isCrisis && crisisCheck.severity === 'critical') {
+      // Return assessment that flags crisis - the UI should handle displaying crisis response
+      return {
+        anxietySeverity: 'high',
+        depressionSeverity: 'high',
+        keyThemes: ['CRISIS_DETECTED'],
+        recommendedActions: ['Contact emergency services (911) or crisis hotline (988) immediately'],
+        timestamp: new Date().toISOString()
+      };
+    }
+
+    // Ensure models are loaded - wait if they're currently loading
     if (!moodTrackerModel) {
-      await initializeModels();
+      if (isModelLoading && modelLoadPromise) {
+        // Wait for current load to complete
+        await modelLoadPromise;
+      } else {
+        // Start loading if not already loading
+        await initializeModels();
+      }
     }
 
     // Combine recent logs and current reflection for context
@@ -421,9 +619,15 @@ export async function generateCounselingGuidance(
       return getCrisisResponse(crisisCheck, lcswConfig);
     }
 
-    // Ensure models are loaded
+    // Ensure models are loaded - wait if they're currently loading
     if (!counselingCoachModel) {
-      await initializeModels();
+      if (isModelLoading && modelLoadPromise) {
+        // Wait for current load to complete
+        await modelLoadPromise;
+      } else {
+        // Start loading if not already loading
+        await initializeModels();
+      }
     }
 
     // Build prompt aligned with LCSW integration role
@@ -499,6 +703,142 @@ export async function generateEncouragement(
   lcswConfig?: LCSWConfig
 ): Promise<string> {
   return generateCounselingGuidance(value, mood, '', lcswConfig);
+}
+
+/**
+ * Generate encouragement based on emotional state
+ * Provides personalized support and opportunities based on how the user is feeling
+ */
+export async function generateEmotionalEncouragement(
+  emotionalState: 'drained' | 'heavy' | 'mixed' | 'positive' | 'energized',
+  selectedFeeling: string | null,
+  lowStateCount: number,
+  lcswConfig?: LCSWConfig
+): Promise<string> {
+  const protocols = lcswConfig?.protocols || [];
+  const protocolContext = protocols.length > 0 
+    ? `The user is working with an LCSW using ${protocols.join(', ')} protocols.`
+    : 'The user is working with a licensed clinical social worker.';
+
+  const feelingContext = selectedFeeling ? ` They're specifically feeling ${selectedFeeling}.` : '';
+  
+  // Build context-aware encouragement prompts
+  let prompt = '';
+  let fallbackResponse = '';
+
+  if (emotionalState === 'drained' || emotionalState === 'heavy') {
+    // Low states - focus on support, validation, and connection
+    const isRepeated = lowStateCount >= 3;
+    const connectionPrompt = isRepeated 
+      ? ' Strongly encourage them to reach out to a trusted person, their therapist, or a support line. Emphasize that they don\'t have to go through this alone.'
+      : ' Gently suggest that connecting with someone they trust might be helpful.';
+    
+    prompt = `You are a supportive therapy integration assistant. The user is feeling ${emotionalState === 'drained' ? 'very low and drained' : 'low and heavy'}.${feelingContext}
+
+${protocolContext}
+
+Your role is to:
+- Validate their experience without minimizing it
+- Help them see opportunities and possibilities for themselves
+- Remphasize that difficult feelings are temporary and manageable
+- Suggest gentle, achievable steps they can take
+${connectionPrompt}
+
+Provide warm, compassionate encouragement (2-3 sentences) that:
+1. Acknowledges what they're experiencing
+2. Helps them see possibilities and opportunities ahead
+3. Offers gentle support and next steps
+4. ${isRepeated ? 'Strongly encourages reaching out to someone for support' : 'Suggests connection if appropriate'}
+
+Be genuine, hopeful, and supportive. Avoid platitudes or toxic positivity.`;
+
+    fallbackResponse = emotionalState === 'drained'
+      ? `Feeling drained is real and valid. Right now might feel heavy, but there are opportunities ahead. Consider reaching out to someone you trust—you don't have to carry this alone. Small steps forward are still progress.`
+      : `Feeling heavy is understandable. These moments can feel overwhelming, but they also show your capacity to feel deeply. There are possibilities and opportunities waiting for you. ${isRepeated ? 'Please consider reaching out to your therapist, a trusted friend, or a support line (988). You deserve support.' : 'Consider connecting with someone who cares about you.'}`;
+
+  } else if (emotionalState === 'mixed') {
+    prompt = `You are a supportive therapy integration assistant. The user is feeling mixed or uncertain.${feelingContext}
+
+${protocolContext}
+
+Your role is to:
+- Validate that mixed feelings are normal and valid
+- Help them see opportunities and possibilities
+- Support them in navigating uncertainty
+- Suggest gentle reflection or connection
+
+Provide warm, supportive encouragement (2-3 sentences) that:
+1. Normalizes mixed feelings
+2. Helps them see possibilities and opportunities
+3. Offers gentle guidance for navigating uncertainty
+
+Be genuine and supportive.`;
+
+    fallbackResponse = `Mixed feelings are completely normal and valid. This in-between space can actually be a place of growth and possibility. There are opportunities ahead, and you have the capacity to navigate them. Consider what feels most authentic to you right now.`;
+
+  } else if (emotionalState === 'positive') {
+    prompt = `You are a supportive therapy integration assistant. The user is feeling positive and hopeful.${feelingContext}
+
+${protocolContext}
+
+Your role is to:
+- Celebrate their positive state
+- Help them see and build on opportunities
+- Support them in maintaining this energy
+- Suggest ways to channel this positivity
+
+Provide warm, encouraging support (2-3 sentences) that:
+1. Acknowledges their positive state
+2. Helps them see possibilities and opportunities to build on this
+3. Supports them in maintaining and channeling this energy
+
+Be genuine and uplifting.`;
+
+    fallbackResponse = `It's wonderful that you're feeling positive and hopeful. This is a great time to explore opportunities and possibilities. Consider what you'd like to build on or move toward. You have momentum—how can you channel this energy in meaningful ways?`;
+
+  } else { // energized
+    prompt = `You are a supportive therapy integration assistant. The user is feeling energized and motivated.${feelingContext}
+
+${protocolContext}
+
+Your role is to:
+- Celebrate their energized state
+- Help them see and act on opportunities
+- Support them in channeling this energy productively
+- Suggest ways to build on this momentum
+
+Provide warm, enthusiastic support (2-3 sentences) that:
+1. Celebrates their energized state
+2. Helps them see possibilities and opportunities to act on
+3. Supports them in channeling this energy meaningfully
+
+Be genuine and energizing.`;
+
+    fallbackResponse = `You're feeling energized and motivated—that's powerful! This is a great time to explore opportunities and take meaningful action. What possibilities are calling to you? How can you channel this energy toward what matters most to you?`;
+  }
+
+  // Try to use AI model if available
+  if (counselingCoachModel) {
+    try {
+      const result = await counselingCoachModel(prompt, {
+        max_new_tokens: 200,
+        temperature: 0.8,
+        do_sample: true,
+        top_p: 0.9
+      });
+
+      const generatedText = result[0]?.generated_text || '';
+      const extracted = generatedText.replace(prompt, '').trim();
+      if (extracted && extracted.length > 20) {
+        return extracted;
+      }
+    } catch (error) {
+      console.warn('Emotional encouragement inference failed:', error);
+    }
+  }
+
+  // Return fallback response
+  return fallbackResponse;
 }
 
 /**
@@ -657,7 +997,12 @@ export async function generateHumanReports(
     const crisisCheck = detectCrisis(allText, lcswConfig);
     
     if (crisisCheck.isCrisis && crisisCheck.severity === 'critical') {
-      return `# CRISIS DETECTED IN LOGS\n\n**IMPORTANT**: These logs contain crisis indicators. Please contact your LCSW or emergency services immediately.\n\nDetected phrases: ${crisisCheck.detectedPhrases.join(', ')}\n\nEmergency contact: ${lcswConfig?.emergencyContact?.phone || '911'}\n\n---\n\n# Clinical Summary\n\nDue to crisis indicators, a full clinical summary should be reviewed with your LCSW in person.`;
+      const emergencyContact = lcswConfig?.emergencyContact;
+      const therapistContact = emergencyContact 
+        ? `${emergencyContact.name || 'Your therapist'}: ${emergencyContact.phone}`
+        : 'Your therapist or healthcare provider';
+      
+      return `# 🚨 SAFETY CONCERN DETECTED IN LOGS\n\n**Your safety is the priority.** These logs contain language that suggests you may be thinking about ending your life or hurting yourself.\n\n**If you are in immediate danger or feel you might act on thoughts of suicide, please contact emergency services (911 in the U.S.) or the 988 Suicide & Crisis Lifeline right now.**\n\n**This app cannot help in an emergency. If you are about to harm yourself, please call 911 or 988, or your local emergency number, immediately.**\n\n**Please also reach out to someone you trust right now**—a close friend, family member, or someone who can be with you. You don't have to go through this alone.\n\n**Resources available right now:**\n• **988 Suicide & Crisis Lifeline** - Dial 988 (24/7, free, confidential)\n• **Crisis Text Line** - Text HOME to 741741\n• **Emergency Services** - 911 (U.S.) or your local emergency number\n• **Your Therapist**: ${therapistContact}\n\n---\n\n# Clinical Summary\n\nDue to safety concerns detected in these logs, a full clinical summary should be reviewed with your LCSW or mental health professional in person.\n\n*Feeling suicidal is a medical and emotional emergency, not a personal failure. You deserve support, and help is available.*`;
     }
 
     if (!counselingCoachModel) {
@@ -711,17 +1056,48 @@ Format your response with clear sections for each format. Keep the tone supporti
 
 /**
  * Get crisis response - provides safety information and resources
+ * Uses clear, direct, non-judgmental language that avoids stigmatizing phrases
+ * Always routes to real-world support (988/911) and trusted people
  */
 function getCrisisResponse(crisis: CrisisDetection, lcswConfig?: LCSWConfig): string {
-  if (crisis.severity === 'critical') {
-    return `🚨 **CRISIS DETECTED**\n\nYour safety is the priority. Please:\n\n1. Contact emergency services: 911\n2. Contact your therapist: ${lcswConfig?.emergencyContact?.phone || 'Your therapist\'s emergency line'}\n3. Reach out to a crisis hotline: 988 (Suicide & Crisis Lifeline)\n\nThis app cannot provide crisis support. Please connect with a professional immediately.`;
+  const emergencyContact = lcswConfig?.emergencyContact;
+  const therapistContact = emergencyContact 
+    ? `${emergencyContact.name || 'Your therapist'}: ${emergencyContact.phone}`
+    : 'Your therapist or healthcare provider';
+
+  // CRITICAL/EMERGENCY - Immediate danger or active planning
+  if (crisis.severity === 'critical' || crisis.recommendedAction === 'emergency') {
+    // Check if it's imminent danger category
+    const isImminent = crisis.categories?.includes('CRISIS_IMMINENT_DANGER') || 
+                      crisis.categories?.includes('CRISIS_PLANNING_OR_METHOD');
+    
+    if (isImminent) {
+      return `🚨 **IMMEDIATE SAFETY CONCERN**\n\n**Your safety is the most important thing right now.**\n\n**If you are in immediate danger or feel you might act on thoughts of ending your life, please contact emergency services (911 in the U.S.) or the 988 Suicide & Crisis Lifeline right now.**\n\n**This app cannot help in an emergency. If you are about to harm yourself or someone else, please call 911 or 988, or your local emergency number, immediately.**\n\n**Please also reach out to someone you trust right now**—a close friend, family member, or someone who can be with you or check in on you. You don't have to go through this alone.\n\n**Resources available right now:**\n• **988 Suicide & Crisis Lifeline** - Dial 988 (24/7, free, confidential)\n• **Crisis Text Line** - Text HOME to 741741\n• **Emergency Services** - 911 (U.S.) or your local emergency number\n• **Your Therapist**: ${therapistContact}\n\n**If you have started to carry out a plan to end your life, stop using this app and contact 911, 988, or your local crisis service for urgent help.**\n\n*Feeling suicidal is a medical and emotional emergency, not a personal failure. You deserve support, and help is available.*`;
+    }
+    
+    // Direct suicide ideation or planning
+    return `🚨 **SAFETY CHECK**\n\n**It sounds like you may be thinking about ending your life or hurting yourself.**\n\n**Are you having thoughts of suicide right now?**\n\n**If you are thinking about suicide or have a plan, your safety is the priority. Please contact emergency services (911 in the U.S.) or the 988 Suicide & Crisis Lifeline right now.**\n\n**This app cannot help in an emergency. If you are about to harm yourself, please call 911 or 988, or your local emergency number, immediately.**\n\n**Please also reach out to someone you trust right now**—a close friend, family member, or someone who can be with you. You don't have to go through this alone.\n\n**Resources available right now:**\n• **988 Suicide & Crisis Lifeline** - Dial 988 (24/7, free, confidential)\n• **Crisis Text Line** - Text HOME to 741741\n• **Emergency Services** - 911 (U.S.) or your local emergency number\n• **Your Therapist**: ${therapistContact}\n\n*You are not alone in feeling this way, and it is OK to talk about suicide. Reaching out for help can make a difference. Many people have thoughts of suicide when pain feels overwhelming. Talking with a trained crisis counselor or mental health professional can help you stay safe.*`;
   }
 
-  if (crisis.severity === 'high') {
-    return `⚠️ **Support Needed**\n\nYour reflection contains concerning content. Please:\n\n1. Contact your therapist as soon as possible\n2. Reach out to your support network\n3. Use your safety plan if you have one\n\nThis is not a crisis response system. For immediate support, contact a professional.`;
+  // HIGH - Self-harm, indirect ideation, or third-party concern
+  if (crisis.severity === 'high' || crisis.recommendedAction === 'contact_lcsw') {
+    const isSelfHarm = crisis.categories?.includes('CRISIS_SELF_HARM');
+    const isThirdParty = crisis.categories?.includes('CRISIS_THIRD_PARTY_SUICIDE_RISK');
+    
+    if (isSelfHarm) {
+      return `⚠️ **SUPPORT NEEDED**\n\n**Thank you for sharing this. It sounds like you may be hurting yourself or thinking about self-harm.**\n\n**What has helped you stay safe so far when you've had thoughts of suicide or self-harm?**\n\n**Your safety matters. Please reach out for help:**\n\n1. **Contact your therapist as soon as possible**: ${therapistContact}\n2. **988 Suicide & Crisis Lifeline** - Dial 988 (24/7, free, confidential)\n3. **Crisis Text Line** - Text HOME to 741741\n4. **Reach out to someone you trust**—a close friend, family member, or someone who can support you right now\n\n**This app is not a crisis or emergency service and cannot keep you safe in an emergency. For urgent help, contact 988, 911, or your local crisis line.**\n\n**If you feel you might act on thoughts of self-harm, please contact a crisis line, emergency services, or your local equivalent immediately.**\n\n*Feeling suicidal is a medical and emotional emergency, not a personal failure. You deserve support, and help is available.*`;
+    }
+    
+    if (isThirdParty) {
+      return `⚠️ **CONCERN FOR SOMEONE ELSE**\n\n**It sounds like you're concerned about someone else who may be thinking about suicide or self-harm.**\n\n**If someone you know is in immediate danger, please contact emergency services (911) or a crisis line right away.**\n\n**Resources to help:**\n• **988 Suicide & Crisis Lifeline** - Dial 988 (24/7, free, confidential)\n• **Crisis Text Line** - Text HOME to 741741\n• **Emergency Services** - 911 (U.S.) or your local emergency number\n• **Your Therapist**: ${therapistContact}\n\n**You can also encourage the person to reach out to a trusted friend, family member, or mental health professional.**\n\n*This app is not a crisis or emergency service. For urgent situations, contact local emergency services or crisis lines.*`;
+    }
+    
+    // Indirect ideation or high risk
+    return `⚠️ **SUPPORT AVAILABLE**\n\n**It sounds like you're going through a very difficult time right now.**\n\n**Who in your life (family, friends, professionals) could you contact today to talk about how you're feeling?**\n\n**Please reach out for help:**\n\n1. **Contact your therapist as soon as possible**: ${therapistContact}\n2. **988 Suicide & Crisis Lifeline** - Dial 988 (24/7, free, confidential)\n3. **Crisis Text Line** - Text HOME to 741741\n4. **Reach out to a trusted person**—a close friend, family member, or someone you trust—and let them know you need support right now\n\n**This app is not a crisis or emergency service and cannot keep you safe in an emergency. For urgent help, contact 988, 911, or your local crisis line.**\n\n**If you are thinking about suicide or self-harm, this app cannot keep you safe. Please call a crisis hotline or emergency services immediately.**\n\n*You are not alone in feeling this way. Reaching out for help can make a difference. Would you consider creating or updating a safety plan with a mental health professional or crisis counselor?*`;
   }
 
-  return `Your reflection contains some difficult content. Consider discussing this with your therapist in your next session. If you need immediate support, contact ${lcswConfig?.emergencyContact?.phone || 'your therapist'}.`;
+  // MODERATE - Hopelessness or behavioral red flags
+  return `**SUPPORT AVAILABLE**\n\n**It sounds like you're going through a difficult time. Thank you for sharing this.**\n\n**Please know that support is available:**\n\n1. **Discuss this with your therapist** in your next session: ${therapistContact}\n2. **988 Suicide & Crisis Lifeline** - Dial 988 if you need to talk to someone (24/7, free, confidential)\n3. **Crisis Text Line** - Text HOME to 741741\n4. **Consider reaching out to a trusted person**—a friend, family member, or someone you trust—and sharing what you're experiencing\n\n**If you are thinking about suicide or self-harm, or feel you might act on harmful thoughts, please stop using the app and reach out to a trusted person or crisis service now.**\n\n**This app cannot help in emergencies. If you are in crisis or considering self-harm, call your local emergency number or a crisis hotline now.**\n\n*This app is not a substitute for professional therapy or crisis support. I can offer general information, but only trained people and local services can provide the immediate help you deserve when you feel suicidal.*`;
 }
 
 /**
@@ -797,11 +1173,38 @@ function generateFallbackReport(logs: LogEntry[], values: ValueItem[]): string {
 
 /**
  * Preload models in the background (call this early in app lifecycle)
+ * This will attempt to load models without blocking the UI
+ * Returns true if models loaded successfully, false otherwise
  */
-export async function preloadModels(): Promise<void> {
+export async function preloadModels(): Promise<boolean> {
   try {
-    await initializeModels();
+    console.log('🚀 Starting background model preload...');
+    const success = await initializeModels(false);
+    if (success) {
+      console.log('✅ AI models preloaded successfully and ready to use');
+    } else {
+      console.warn('⚠️ Model preload completed but models not available. Will use rule-based fallbacks.');
+    }
+    return success;
   } catch (error) {
-    console.warn('Model preload failed, will retry on first use:', error);
+    console.warn('⚠️ Model preload failed, will retry on first use:', error);
+    return false;
   }
+}
+
+/**
+ * Check if models are currently loaded and ready
+ */
+export function areModelsLoaded(): boolean {
+  return moodTrackerModel !== null && counselingCoachModel !== null;
+}
+
+/**
+ * Get model loading status
+ */
+export function getModelStatus(): { loaded: boolean; loading: boolean } {
+  return {
+    loaded: areModelsLoaded(),
+    loading: isModelLoading
+  };
 }

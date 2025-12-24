@@ -101,6 +101,10 @@ export default defineConfig({
       jsx: 'automatic'
     }
   },
+  // Configure how modules are resolved and loaded
+  ssr: {
+    noExternal: ['@xenova/transformers']
+  },
   build: {
     minify: 'terser',
     terserOptions: {
