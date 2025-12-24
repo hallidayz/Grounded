@@ -85,7 +85,12 @@ const App: React.FC = () => {
               setSelectedValueIds(appData.values || []);
               setLogs(appData.logs || []);
               setGoals(appData.goals || []);
-              setSettings(appData.settings || { reminders: { enabled: false, frequency: 'daily', time: '09:00' } });
+              // Ensure settings.reminders.frequency exists (migration for old data)
+              const loadedSettings = appData.settings || { reminders: { enabled: false, frequency: 'daily', time: '09:00' } };
+              if (loadedSettings.reminders && !loadedSettings.reminders.frequency) {
+                loadedSettings.reminders.frequency = 'daily';
+              }
+              setSettings(loadedSettings);
             }
             
             // Check if terms are accepted
@@ -174,7 +179,10 @@ const App: React.FC = () => {
       let shouldNotify = false;
       let notificationBody = "";
 
-      switch (settings.reminders.frequency) {
+      // Ensure frequency has a valid default value
+      const frequency = settings.reminders.frequency || 'daily';
+      
+      switch (frequency) {
         case 'hourly':
           // Hourly: 8 AM to 8 PM only
           if (currentHour >= 8 && currentHour <= 20 && currentMin === 0 && settings.reminders.lastNotifiedHour !== currentHour) {
@@ -208,20 +216,68 @@ const App: React.FC = () => {
             notificationBody = `Monthly Reflection: Time to reflect on ${topValue}.`;
           }
           break;
+        
+        default:
+          // Fallback to daily if frequency is invalid or undefined
+          if (currentTime === settings.reminders.time && settings.reminders.lastNotifiedDay !== today) {
+            shouldNotify = true;
+            notificationBody = `Time for your daily Grounded check-in. Your focus is ${topValue}.`;
+          }
+          break;
       }
 
       if (shouldNotify) {
+        // Browser notification
         new Notification('Grounded', {
           body: notificationBody,
           icon: '/favicon.ico'
         });
         
+        // Ntfy.sh push notification (if enabled)
+        if (settings.reminders.useNtfyPush && settings.reminders.ntfyTopic) {
+          import('./services/ntfyService').then(({ sendNtfyNotification }) => {
+            sendNtfyNotification(
+              notificationBody,
+              'Grounded Reminder',
+              {
+                topic: settings.reminders.ntfyTopic,
+                server: settings.reminders.ntfyServer
+              }
+            ).catch(err => {
+              console.error('Failed to send ntfy notification:', err);
+            });
+          });
+        }
+        
+        // Calendar event (if enabled)
+        if (settings.reminders.useDeviceCalendar && frequency !== 'hourly') {
+          const [hours, minutes] = settings.reminders.time.split(':').map(Number);
+          const eventDate = new Date();
+          eventDate.setHours(hours, minutes, 0, 0);
+          
+          // Create calendar event URL
+          const calendarTitle = encodeURIComponent(`Grounded ${frequency.charAt(0).toUpperCase() + frequency.slice(1)} Check-in`);
+          const calendarDescription = encodeURIComponent(notificationBody);
+          const googleCalendarUrl = `https://calendar.google.com/calendar/render?action=TEMPLATE&text=${calendarTitle}&details=${calendarDescription}&dates=${eventDate.toISOString().replace(/[-:]|\.\d{3}/g, '')}/${new Date(eventDate.getTime() + 30 * 60 * 1000).toISOString().replace(/[-:]|\.\d{3}/g, '')}`;
+          
+          // Only open if we haven't created an event for this reminder yet
+          if (!settings.reminders.calendarEventId) {
+            window.open(googleCalendarUrl, '_blank');
+            setSettings(prev => ({
+              ...prev,
+              reminders: { ...prev.reminders, calendarEventId: Date.now().toString() }
+            }));
+          }
+        }
+        
         setSettings(prev => ({
           ...prev,
           reminders: { 
             ...prev.reminders, 
-            lastNotifiedDay: today,
-            lastNotifiedHour: currentHour 
+            ...(frequency === 'hourly' ? { lastNotifiedHour: currentHour } : {}),
+            ...(frequency === 'daily' ? { lastNotifiedDay: today } : {}),
+            ...(frequency === 'weekly' ? { lastNotifiedWeek: today } : {}),
+            ...(frequency === 'monthly' ? { lastNotifiedMonth: today } : {})
           }
         }));
       }
@@ -251,7 +307,12 @@ const App: React.FC = () => {
           setSelectedValueIds(appData.values || []);
           setLogs(appData.logs || []);
           setGoals(appData.goals || []);
-          setSettings(appData.settings || { reminders: { enabled: false, frequency: 'daily', time: '09:00' } });
+          // Ensure settings.reminders.frequency exists (migration for old data)
+          const loadedSettings = appData.settings || { reminders: { enabled: false, frequency: 'daily', time: '09:00' } };
+          if (loadedSettings.reminders && !loadedSettings.reminders.frequency) {
+            loadedSettings.reminders.frequency = 'daily';
+          }
+          setSettings(loadedSettings);
         }
         setAuthState('app');
       } else {
@@ -459,6 +520,8 @@ const App: React.FC = () => {
           config={settings.lcswConfig}
           onUpdate={(config) => setSettings({ ...settings, lcswConfig: config })}
           onClose={() => setShowLCSWConfig(false)}
+          settings={settings}
+          onUpdateSettings={setSettings}
         />
       )}
 

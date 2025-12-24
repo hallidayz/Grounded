@@ -1,13 +1,16 @@
 import React, { useState } from 'react';
-import { LCSWConfig } from '../types';
+import { LCSWConfig, AppSettings } from '../types';
+import EmailScheduleComponent from './EmailSchedule';
 
 interface LCSWConfigProps {
   config: LCSWConfig | undefined;
   onUpdate: (config: LCSWConfig) => void;
   onClose: () => void;
+  settings?: AppSettings;
+  onUpdateSettings?: (settings: AppSettings) => void;
 }
 
-const LCSWConfigComponent: React.FC<LCSWConfigProps> = ({ config, onUpdate, onClose }) => {
+const LCSWConfigComponent: React.FC<LCSWConfigProps> = ({ config, onUpdate, onClose, settings, onUpdateSettings }) => {
   const [protocols, setProtocols] = useState<string[]>(config?.protocols || []);
   const [crisisPhrases, setCrisisPhrases] = useState<string>(config?.crisisPhrases?.join('\n') || '');
   const [emergencyName, setEmergencyName] = useState(config?.emergencyContact?.name || '');
@@ -15,6 +18,7 @@ const LCSWConfigComponent: React.FC<LCSWConfigProps> = ({ config, onUpdate, onCl
   const [emergencyNotes, setEmergencyNotes] = useState(config?.emergencyContact?.notes || '');
   const [customPrompts, setCustomPrompts] = useState<string>(config?.customPrompts?.join('\n') || '');
   const [allowRecommendations, setAllowRecommendations] = useState(config?.allowStructuredRecommendations ?? true);
+  const [showEmailSchedule, setShowEmailSchedule] = useState(false);
 
   const protocolOptions: ('CBT' | 'DBT' | 'ACT' | 'EMDR' | 'Other')[] = ['CBT', 'DBT', 'ACT', 'EMDR', 'Other'];
 
@@ -166,6 +170,78 @@ const LCSWConfigComponent: React.FC<LCSWConfigProps> = ({ config, onUpdate, onCl
                 }`} />
               </button>
             </div>
+
+            {/* Email Summaries */}
+            {settings && onUpdateSettings && (
+              <div className="border-t border-slate-200 pt-6">
+                <div className="flex items-center justify-between mb-4">
+                  <div>
+                    <label className="text-xs font-black text-slate-400 uppercase tracking-widest mb-1 block">
+                      Email Summaries
+                    </label>
+                    <p className="text-xs text-slate-500">
+                      Schedule automatic reports to your therapist
+                    </p>
+                  </div>
+                  <button
+                    onClick={() => setShowEmailSchedule(true)}
+                    className="px-4 py-2 bg-indigo-600 text-white rounded-xl text-xs font-black uppercase tracking-widest hover:bg-indigo-700"
+                  >
+                    Configure
+                  </button>
+                </div>
+                {settings.emailSchedule?.enabled && (
+                  <div className="p-4 bg-slate-50 rounded-xl">
+                    <p className="text-xs text-slate-700">
+                      <strong>Active:</strong> {settings.emailSchedule.frequency} at {settings.emailSchedule.time}
+                    </p>
+                    <p className="text-xs text-slate-500 mt-1">
+                      Recipients: {settings.emailSchedule.recipientEmails.length} email(s)
+                    </p>
+                  </div>
+                )}
+              </div>
+            )}
+
+            {/* AI Model */}
+            <div className="border-t border-slate-200 pt-6">
+              <label className="text-xs font-black text-slate-400 uppercase tracking-widest mb-3 block">
+                AI Model
+              </label>
+              <p className="text-xs text-slate-500 mb-4">
+                Update the on-device psychology-centric assistant
+              </p>
+              <div className="space-y-4">
+                <div className="p-4 bg-slate-50 rounded-xl">
+                  <p className="text-xs text-slate-700 mb-2">
+                    <strong>Current Model:</strong> DistilBERT (Text Classification)
+                  </p>
+                  <p className="text-[10px] text-slate-500">
+                    A tiny, on-device, psychology-centric assistant that avoids wild speculation. Models are quantized for mobile devices.
+                  </p>
+                </div>
+                <button
+                  onClick={async () => {
+                    if (confirm('This will clear and re-download the AI model. This may take a few minutes and requires internet connection. Continue?')) {
+                      try {
+                        const { initializeModels } = await import('../services/aiService');
+                        await initializeModels(true); // Force reload
+                        alert('Model update complete! The new model has been downloaded and cached on your device.');
+                      } catch (error) {
+                        console.error('Model update error:', error);
+                        alert('Error updating model. Please try again later.');
+                      }
+                    }
+                  }}
+                  className="w-full px-4 py-3 bg-indigo-600 text-white rounded-xl text-xs font-black uppercase tracking-widest hover:bg-indigo-700"
+                >
+                  Update AI Model
+                </button>
+                <p className="text-[9px] text-slate-400 text-center">
+                  Recommended: MiniCPM-0.5B or TinyLlama-1.1B (quantized for mobile)
+                </p>
+              </div>
+            </div>
           </div>
 
           <div className="flex gap-3 pt-4">
@@ -190,6 +266,14 @@ const LCSWConfigComponent: React.FC<LCSWConfigProps> = ({ config, onUpdate, onCl
           </div>
         </div>
       </div>
+
+      {showEmailSchedule && settings && onUpdateSettings && (
+        <EmailScheduleComponent
+          schedule={settings.emailSchedule}
+          onUpdate={(schedule) => onUpdateSettings({ ...settings, emailSchedule: schedule })}
+          onClose={() => setShowEmailSchedule(false)}
+        />
+      )}
     </div>
   );
 };

@@ -73,26 +73,54 @@ export async function initializeModels(forceReload: boolean = false): Promise<vo
       // Models will be downloaded and cached locally on first use
       
       // Model A: Mental state tracker (mood/anxiety/depression assessment)
-      // Using sentiment analysis model for mood tracking
-      // In production, replace with MiniCPM4-0.5B fine-tuned for mental health assessment
+      // Try MiniCPM-0.5B or TinyLlama-1.1B for psychology-centric assistance
+      // These are tiny, on-device models quantized for mobile devices
       try {
-        console.log('Loading mood tracker model...');
-        moodTrackerModel = await pipeline(
-          'text-classification',
-          'Xenova/distilbert-base-uncased-finetuned-sst-2-english',
-          { quantized: true }
-        );
-        console.log('Mood tracker model loaded successfully');
+        console.log('Loading psychology-centric AI model (MiniCPM-0.5B/TinyLlama-1.1B)...');
+        
+        // Try MiniCPM-0.5B first (recommended for psychology-centric tasks)
+        try {
+          moodTrackerModel = await pipeline(
+            'text-generation',
+            'Xenova/MiniCPM-2-4B-ONNX', // Using available quantized model
+            { quantized: true }
+          );
+          console.log('MiniCPM model loaded successfully');
+        } catch (miniCPMError) {
+          console.warn('MiniCPM-0.5B load failed, trying TinyLlama-1.1B:', miniCPMError);
+          // Fallback to TinyLlama-1.1B
+          try {
+            moodTrackerModel = await pipeline(
+              'text-generation',
+              'Xenova/TinyLlama-1.1B-Chat-v1.0',
+              { quantized: true }
+            );
+            console.log('TinyLlama-1.1B model loaded successfully');
+          } catch (tinyLlamaError) {
+            console.warn('TinyLlama-1.1B load failed, using DistilBERT fallback:', tinyLlamaError);
+            // Final fallback to DistilBERT for text classification
+            moodTrackerModel = await pipeline(
+              'text-classification',
+              'Xenova/distilbert-base-uncased-finetuned-sst-2-english',
+              { quantized: true }
+            );
+            console.log('DistilBERT fallback model loaded successfully');
+          }
+        }
       } catch (error) {
-        console.warn('Mood tracker model load failed, using fallback:', error);
+        console.warn('All model loads failed, using rule-based fallback:', error);
         moodTrackerModel = null; // Will use rule-based fallback
       }
 
-      // Model B: Counseling coach - Skip text-generation models for now
-      // Text-generation models require more complex ONNX setup and are causing errors
-      // We'll use rule-based fallback which works reliably
-      counselingCoachModel = null;
-      console.log('Using rule-based counseling guidance (text-generation models disabled for stability)');
+      // Model B: Counseling coach - Use same model for text generation
+      // For now, we'll use the mood tracker model for both tasks
+      // In future, can load separate specialized model
+      counselingCoachModel = moodTrackerModel;
+      if (counselingCoachModel) {
+        console.log('Using psychology-centric model for counseling guidance');
+      } else {
+        console.log('Using rule-based counseling guidance (models unavailable)');
+      }
 
       isModelLoading = false;
     } catch (error) {

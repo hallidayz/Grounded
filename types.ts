@@ -39,8 +39,14 @@ export interface AppReminder {
   dayOfWeek?: number; // 0-6 for weekly (0 = Sunday)
   dayOfMonth?: number; // 1-31 for monthly
   useDeviceCalendar?: boolean; // Use device calendar for scheduling
+  calendarEventId?: string; // Store event ID for calendar updates/deletions
+  useNtfyPush?: boolean; // Use ntfy.sh for push notifications
+  ntfyTopic?: string; // ntfy.sh topic name (user's private topic)
+  ntfyServer?: string; // Custom ntfy server URL (defaults to https://ntfy.sh)
   lastNotifiedDay?: string; // YYYY-MM-DD to avoid duplicate notifications
   lastNotifiedHour?: number; // Last hour notified to avoid multiple triggers in same hour
+  lastNotifiedWeek?: string; // YYYY-MM-DD for weekly
+  lastNotifiedMonth?: string; // YYYY-MM-DD for monthly
 }
 
 export interface AppSettings {
