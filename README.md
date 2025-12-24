@@ -1,4 +1,6 @@
-# InnerCompass - On-Device Therapy Integration App
+# Grounded - On-Device Therapy Integration App
+
+**Grounded by AC MiNDS** - Privacy-first therapy integration app for values-based reflection and mental health support.
 
 A privacy-first values-based reflection app designed to support clients working with Licensed Clinical Social Workers (LCSW). All AI processing happens **entirely on your device** - no data ever leaves your device.
 
@@ -105,6 +107,28 @@ npm run preview
 
 ## 📦 Building for Distribution
 
+### Option 1: Native Installers (Recommended for End Users)
+
+Build native installers that users can double-click to install:
+
+```bash
+# Build desktop installers (DMG/EXE)
+npm run build:desktop
+
+# Build Android APK
+npm run build:android
+
+# Build everything
+npm run build:all
+```
+
+**Output:**
+- macOS: `src-tauri/target/release/bundle/macos/Grounded.dmg`
+- Windows: `src-tauri/target/release/bundle/msi/Grounded_0.0.0_x64_en-US.msi`
+- Android: `android/app/build/outputs/apk/release/app-release.apk`
+
+### Option 2: PWA Package (Web Distribution)
+
 To create a distributable PWA package:
 
 ```bash
@@ -116,9 +140,20 @@ This will:
 1. Build the optimized production version
 2. Create a `package/` folder with:
    - `dist/` - The built app (upload to web server)
+   - `installers/` - Native installers (if built)
    - `INSTALLATION_GUIDE.md` - Complete installation instructions
    - `serve.sh` / `serve.bat` - Local testing scripts
-3. Create `InnerCompass-PWA.zip` ready for email distribution
+3. Create `Grounded-PWA.zip` ready for email distribution
+
+### Complete Distribution Package
+
+```bash
+# Build native installers + package everything
+npm run build:all
+npm run package
+```
+
+This creates a complete package with native installers for easy distribution.
 
 ### Generating Icons
 

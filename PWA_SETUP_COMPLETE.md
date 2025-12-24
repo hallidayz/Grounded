@@ -1,6 +1,6 @@
 # ✅ PWA Setup Complete!
 
-Your InnerCompass app is now configured as a Progressive Web App (PWA) that can be installed on Android, iOS, and desktop devices.
+Your **Grounded by AC MiNDS** app is now configured as a Progressive Web App (PWA) that can be installed on Android, iOS, and desktop devices.
 
 ## 🎯 What's Been Configured
 
@@ -40,7 +40,7 @@ npm run build:pwa
 This will:
 - Build optimized production version
 - Create `package/` folder
-- Generate `InnerCompass-PWA.zip` for distribution
+- Generate `Grounded-PWA.zip` for distribution
 
 ### 3. Distribute
 - **Email**: Send the zip file

@@ -144,7 +144,7 @@ const App: React.FC = () => {
       // 1. Check Primary Daily Nudge
       if (currentTime === settings.reminders.time && settings.reminders.lastNotifiedDay !== today) {
         shouldNotify = true;
-        notificationBody = `Time for your daily InnerCompass check-in. Your focus is ${topValue}.`;
+        notificationBody = `Time for your daily Grounded check-in. Your focus is ${topValue}.`;
       } 
       // 2. Check Hourly Daylight Nudge (8 AM to 8 PM)
       else if (
@@ -159,7 +159,7 @@ const App: React.FC = () => {
       }
 
       if (shouldNotify) {
-        new Notification('InnerCompass', {
+        new Notification('Grounded', {
           body: notificationBody,
           icon: '/favicon.ico'
         });
@@ -291,7 +291,7 @@ const App: React.FC = () => {
             <div className="w-7 h-7 bg-authority-navy dark:bg-brand-accent rounded-lg flex items-center justify-center text-white font-bold text-sm">
               IC
             </div>
-            <span className="font-bold text-base sm:text-lg tracking-tight text-authority-navy dark:text-pure-foundation hidden sm:inline">InnerCompass</span>
+            <span className="font-bold text-base sm:text-lg tracking-tight text-authority-navy dark:text-pure-foundation hidden sm:inline">Grounded</span>
           </div>
           <div className="flex items-center space-x-1.5 sm:space-x-2">
             {showNav && (

@@ -124,7 +124,7 @@ const Login: React.FC<LoginProps> = ({ onLogin }) => {
               IC
             </div>
             <h1 className="text-2xl sm:text-3xl font-black text-authority-navy dark:text-pure-foundation tracking-tight">
-              InnerCompass
+              Grounded
             </h1>
             <p className="text-sm sm:text-base text-authority-navy/60 dark:text-pure-foundation/60">
               {mode === 'login' && 'Sign in to continue'}

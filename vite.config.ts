@@ -2,6 +2,10 @@ import path from 'path';
 import { defineConfig } from 'vite';
 import react from '@vitejs/plugin-react';
 import { VitePWA } from 'vite-plugin-pwa';
+import Tauri from 'vite-plugin-tauri';
+
+// Only load Tauri plugin when building for Tauri (when TAURI_PLATFORM is set)
+const isTauriBuild = process.env.TAURI_PLATFORM !== undefined;
 
 export default defineConfig({
   server: {
@@ -12,12 +16,13 @@ export default defineConfig({
   },
   plugins: [
     react(),
+    ...(isTauriBuild ? [Tauri()] : []),
     VitePWA({
       registerType: 'autoUpdate',
       includeAssets: ['favicon.ico', 'apple-touch-icon.png', 'mask-icon.svg'],
       manifest: {
-        name: 'InnerCompass',
-        short_name: 'InnerCompass',
+        name: 'Grounded',
+        short_name: 'Grounded',
         description: 'Privacy-first therapy integration app for values-based reflection and mental health support',
         theme_color: '#02295b',
         background_color: '#f6f7f9',

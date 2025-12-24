@@ -1,4 +1,6 @@
-# 🚀 Quick Start - Building & Distributing InnerCompass PWA
+# 🚀 Quick Start - Building & Distributing Grounded PWA
+
+**Grounded by AC MiNDS** - Privacy-first therapy integration app
 
 ## Step 1: Install Dependencies
 
@@ -24,12 +26,12 @@ npm run build:pwa
 This creates:
 - ✅ Optimized production build
 - ✅ `package/` folder with everything needed
-- ✅ `InnerCompass-PWA.zip` ready to email
+- ✅ `Grounded-PWA.zip` ready to email
 
 ## Step 4: Distribute
 
 **Option A: Email the zip file**
-- Send `InnerCompass-PWA.zip` to recipients
+- Send `Grounded-PWA.zip` to recipients
 - They extract it and follow `INSTALLATION_GUIDE.md`
 
 **Option B: Upload to web server**

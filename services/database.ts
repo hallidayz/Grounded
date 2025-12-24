@@ -3,7 +3,7 @@
  * Uses IndexedDB for secure, structured local storage
  * 
  * Database Naming Convention:
- * - Uses reverse domain notation (com.innercompass.therapy-integration.db)
+ * - Uses reverse domain notation (com.acminds.grounded.db)
  * - Ensures uniqueness and prevents conflicts with other applications
  * - Follows web standards for IndexedDB naming
  * - Object stores are scoped to this database, so they don't need global uniqueness
@@ -32,7 +32,7 @@ interface AppData {
 class DatabaseService {
   // Unique database name using reverse domain notation to avoid conflicts
   // Format: com.[appname].[purpose].db ensures uniqueness
-  private dbName = 'com.innercompass.therapy-integration.db';
+  private dbName = 'com.acminds.grounded.db';
   private dbVersion = 1;
   private db: IDBDatabase | null = null;
 

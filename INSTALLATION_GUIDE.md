@@ -1,8 +1,52 @@
-# InnerCompass - Installation Guide
+# Grounded - Installation Guide
 
-## 📱 Installing as a Progressive Web App (PWA)
+**Grounded by AC MiNDS** - Privacy-first therapy integration app
 
-InnerCompass can be installed on **Android** and **iOS** devices as a standalone app that works offline.
+## 🎯 Choose Your Installation Method
+
+Grounded can be installed in two ways:
+
+1. **Native Installers (Recommended)** - Double-click to install, just like any other app
+2. **Progressive Web App (PWA)** - Install via browser
+
+---
+
+## ✅ Method 1: Native Installers (Easiest - Recommended)
+
+If you received installer files (`.dmg`, `.exe`, or `.apk`), use this method. It's the simplest!
+
+### 🖥️ Desktop (Mac/Windows)
+
+**For Mac (DMG file):**
+1. Double-click the `.dmg` file
+2. Drag "Grounded" to your Applications folder
+3. Open Applications and launch Grounded
+4. Done! The app is installed.
+
+**For Windows (EXE file):**
+1. Double-click the `.exe` file
+2. Follow the installation wizard
+3. Click "Install" when prompted
+4. Launch Grounded from your Start menu
+5. Done! The app is installed.
+
+### 📱 Android (APK file)
+
+1. Transfer the `.apk` file to your Android device (via email, USB, or cloud storage)
+2. On your Android device, open Settings → Security
+3. Enable "Install from unknown sources" or "Allow from this source"
+4. Tap the `.apk` file to install
+5. Tap "Install" when prompted
+6. Launch Grounded from your app drawer
+7. Done! The app is installed.
+
+**That's it!** No browser setup, no technical knowledge needed. Just double-click and install.
+
+---
+
+## 📱 Method 2: Progressive Web App (PWA)
+
+If you don't have installer files, you can install via your browser. This requires a few more steps.
 
 ---
 
@@ -15,7 +59,7 @@ InnerCompass can be installed on **Android** and **iOS** devices as a standalone
    - Or scan a QR code if provided
 
 2. **Wait for install prompt**
-   - Chrome will show a banner at the bottom: "Add InnerCompass to Home screen"
+   - Chrome will show a banner at the bottom: "Add Grounded to Home screen"
    - Tap **"Add"** or **"Install"**
 
 3. **Manual installation** (if prompt doesn't appear):
@@ -24,7 +68,7 @@ InnerCompass can be installed on **Android** and **iOS** devices as a standalone
    - Tap **"Add"** or **"Install"**
 
 4. **Launch the app**
-   - Find the InnerCompass icon on your home screen
+   - Find the Grounded icon on your home screen
    - Tap to open (it will run like a native app)
 
 ### Method 2: Other Android Browsers
@@ -46,11 +90,11 @@ InnerCompass can be installed on **Android** and **iOS** devices as a standalone
 2. **Add to Home Screen**:
    - Tap the **Share button** (square with arrow) at the bottom
    - Scroll down and tap **"Add to Home Screen"**
-   - Edit the name if desired (default: "InnerCompass")
+   - Edit the name if desired (default: "Grounded")
    - Tap **"Add"** in the top right
 
 3. **Launch the app**:
-   - Find the InnerCompass icon on your home screen
+   - Find the Grounded icon on your home screen
    - Tap to open (it will run in standalone mode)
 
 ### iOS Notes:

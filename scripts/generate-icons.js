@@ -6,7 +6,7 @@
 const fs = require('fs');
 const path = require('path');
 
-// Simple SVG icon for InnerCompass (IC logo)
+// Simple SVG icon for Grounded (G logo)
 const svgIcon = `<?xml version="1.0" encoding="UTF-8"?>
 <svg width="512" height="512" viewBox="0 0 512 512" xmlns="http://www.w3.org/2000/svg">
   <rect width="512" height="512" rx="80" fill="#02295b"/>
@@ -37,7 +37,7 @@ const iconGeneratorHTML = `<!DOCTYPE html>
   </style>
 </head>
 <body>
-  <h1>InnerCompass Icon Generator</h1>
+  <h1>Grounded Icon Generator</h1>
   <p>Open browser console and run the code below to generate icons:</p>
   <pre id="code"></pre>
   <div id="canvases"></div>
