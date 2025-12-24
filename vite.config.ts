@@ -12,7 +12,7 @@ export default defineConfig({
     port: 3000,
     host: '0.0.0.0',
     strictPort: false, // Automatically try next available port if 3000 is in use
-    open: true, // Automatically open browser when server starts
+    open: '/', // Explicitly open the root path
   },
   plugins: [
     react(),
@@ -20,6 +20,7 @@ export default defineConfig({
     VitePWA({
       registerType: 'autoUpdate',
       includeAssets: ['favicon.ico', 'apple-touch-icon.png', 'mask-icon.svg'],
+      filename: 'manifest.webmanifest', // Explicitly set manifest filename
       manifest: {
         name: 'Grounded',
         short_name: 'Grounded',
@@ -83,7 +84,7 @@ export default defineConfig({
         ]
       },
       devOptions: {
-        enabled: true,
+        enabled: false, // Disable PWA in dev mode to avoid service worker conflicts
         type: 'module'
       }
     })
@@ -91,12 +92,17 @@ export default defineConfig({
   resolve: {
     alias: {
       '@': path.resolve(__dirname, '.'),
-    }
+    },
+    dedupe: ['react', 'react-dom'] // Ensure single React instance
   },
   // Optimize for on-device AI model loading
   optimizeDeps: {
     exclude: ['@xenova/transformers'],
-    include: ['react', 'react-dom']
+    include: ['react', 'react-dom'],
+    esbuildOptions: {
+      // Ensure React is treated as external during optimization
+      jsx: 'automatic'
+    }
   },
   build: {
     minify: 'terser',
