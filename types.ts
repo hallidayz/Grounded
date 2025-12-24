@@ -38,6 +38,24 @@ export interface AppReminder {
 
 export interface AppSettings {
   reminders: AppReminder;
+  lcswConfig?: LCSWConfig;
+}
+
+export interface LCSWConfig {
+  // Treatment protocols the LCSW uses
+  protocols: ('CBT' | 'DBT' | 'ACT' | 'EMDR' | 'Other')[];
+  // Safety phrases that trigger crisis routing
+  crisisPhrases: string[];
+  // Emergency contact information
+  emergencyContact?: {
+    name: string;
+    phone: string;
+    notes?: string;
+  };
+  // Custom homework/worksheets
+  customPrompts?: string[];
+  // Whether AI should provide structured recommendations
+  allowStructuredRecommendations: boolean;
 }
 
 export interface Goal {
@@ -59,4 +77,19 @@ export enum ReportFormat {
 export interface AIAdvice {
   text: string;
   type: 'encouragement' | 'action' | 'analysis';
+}
+
+export interface MentalStateAssessment {
+  anxietySeverity: 'low' | 'moderate' | 'high';
+  depressionSeverity: 'low' | 'moderate' | 'high';
+  keyThemes: string[];
+  recommendedActions: string[];
+  timestamp: string;
+}
+
+export interface CrisisDetection {
+  isCrisis: boolean;
+  severity: 'low' | 'moderate' | 'high' | 'critical';
+  detectedPhrases: string[];
+  recommendedAction: 'continue' | 'show_crisis_info' | 'contact_lcsw' | 'emergency';
 }

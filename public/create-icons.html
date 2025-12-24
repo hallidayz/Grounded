@@ -1,0 +1,93 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <title>InnerCompass Icon Generator</title>
+  <style>
+    body { font-family: Arial, sans-serif; padding: 20px; max-width: 800px; margin: 0 auto; }
+    canvas { border: 1px solid #ccc; margin: 10px; display: block; }
+    button { padding: 10px 20px; margin: 10px; font-size: 16px; cursor: pointer; }
+    .info { background: #f0f0f0; padding: 15px; border-radius: 5px; margin: 20px 0; }
+  </style>
+</head>
+<body>
+  <h1>🎨 InnerCompass Icon Generator</h1>
+  <div class="info">
+    <p><strong>Instructions:</strong></p>
+    <ol>
+      <li>Click "Generate Icons" button below</li>
+      <li>Icons will be automatically downloaded</li>
+      <li>Place the downloaded files in the <code>public/</code> folder</li>
+    </ol>
+  </div>
+  
+  <button onclick="generateIcons()">Generate Icons</button>
+  
+  <div id="preview"></div>
+  
+  <script>
+    function generateIcons() {
+      const sizes = [
+        { size: 192, name: 'pwa-192x192.png' },
+        { size: 512, name: 'pwa-512x512.png' },
+        { size: 180, name: 'apple-touch-icon.png' }
+      ];
+      
+      const preview = document.getElementById('preview');
+      preview.innerHTML = '<h2>Generating icons...</h2>';
+      
+      sizes.forEach(({ size, name }) => {
+        const canvas = document.createElement('canvas');
+        canvas.width = size;
+        canvas.height = size;
+        const ctx = canvas.getContext('2d');
+        
+        // Background with rounded corners
+        const radius = size * 0.15;
+        ctx.fillStyle = '#02295b';
+        ctx.beginPath();
+        ctx.moveTo(radius, 0);
+        ctx.lineTo(size - radius, 0);
+        ctx.quadraticCurveTo(size, 0, size, radius);
+        ctx.lineTo(size, size - radius);
+        ctx.quadraticCurveTo(size, size, size - radius, size);
+        ctx.lineTo(radius, size);
+        ctx.quadraticCurveTo(0, size, 0, size - radius);
+        ctx.lineTo(0, radius);
+        ctx.quadraticCurveTo(0, 0, radius, 0);
+        ctx.closePath();
+        ctx.fill();
+        
+        // Text "IC"
+        ctx.fillStyle = '#fda700';
+        ctx.font = `bold ${size * 0.47}px Arial, sans-serif`;
+        ctx.textAlign = 'center';
+        ctx.textBaseline = 'middle';
+        ctx.fillText('IC', size / 2, size / 2);
+        
+        // Download
+        canvas.toBlob(blob => {
+          const url = URL.createObjectURL(blob);
+          const a = document.createElement('a');
+          a.href = url;
+          a.download = name;
+          a.click();
+          URL.revokeObjectURL(url);
+          
+          // Show preview
+          const img = document.createElement('img');
+          img.src = canvas.toDataURL();
+          img.style.width = '100px';
+          img.style.margin = '10px';
+          preview.appendChild(img);
+          preview.appendChild(document.createTextNode(name + ' ✓'));
+          preview.appendChild(document.createElement('br'));
+        });
+      });
+      
+      setTimeout(() => {
+        preview.innerHTML += '<p style="color: green; margin-top: 20px;"><strong>✅ All icons generated! Check your downloads folder.</strong></p>';
+      }, 1000);
+    }
+  </script>
+</body>
+</html>
