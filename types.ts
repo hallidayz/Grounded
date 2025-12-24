@@ -39,6 +39,17 @@ export interface AppReminder {
 export interface AppSettings {
   reminders: AppReminder;
   lcswConfig?: LCSWConfig;
+  emailSchedule?: EmailSchedule;
+}
+
+export interface EmailSchedule {
+  enabled: boolean;
+  frequency: 'daily' | 'weekly' | 'monthly';
+  time: string; // HH:mm format
+  recipientEmails: string[];
+  lastSent?: string;
+  sendGoalCompletions: boolean;
+  sendReports: boolean;
 }
 
 export interface LCSWConfig {

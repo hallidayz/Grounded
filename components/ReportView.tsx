@@ -2,6 +2,7 @@
 import React, { useState, useMemo } from 'react';
 import { LogEntry, ValueItem, LCSWConfig } from '../types';
 import { generateHumanReports } from '../services/aiService';
+import { shareViaEmail, generateEmailReport, isWebShareAvailable } from '../services/emailService';
 
 interface ReportViewProps {
   logs: LogEntry[];
@@ -123,15 +124,32 @@ const ReportView: React.FC<ReportViewProps> = ({ logs, values, lcswConfig }) => 
            <div className="bg-white dark:bg-executive-depth p-6 sm:p-8 lg:p-12 rounded-2xl sm:rounded-[56px] shadow-2xl border border-brand-accent/20 dark:border-brand-accent/30 max-w-4xl mx-auto prose prose-slate dark:prose-invert">
               <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3 sm:gap-0 mb-6 sm:mb-10 pb-4 sm:pb-6 border-b border-slate-100 dark:border-creative-depth/30">
                 <p className="text-[10px] font-black text-brand-accent uppercase tracking-[0.3em]">Confidential Clinical Summary</p>
-                <button 
-                  onClick={() => {
-                    navigator.clipboard.writeText(generatedReport);
-                    alert("All formats copied to clipboard!");
-                  }}
-                  className="px-4 sm:px-6 py-2 bg-brand-accent/20 dark:bg-brand-accent/30 text-brand-accent rounded-full text-[9px] sm:text-[10px] font-black uppercase tracking-widest hover:bg-brand-accent/30 dark:hover:bg-brand-accent/40"
-                >
-                  Copy All Formats
-                </button>
+                <div className="flex flex-wrap gap-2">
+                  <button 
+                    onClick={() => {
+                      navigator.clipboard.writeText(generatedReport);
+                      alert("All formats copied to clipboard!");
+                    }}
+                    className="px-4 sm:px-6 py-2 bg-brand-accent/20 dark:bg-brand-accent/30 text-brand-accent rounded-full text-[9px] sm:text-[10px] font-black uppercase tracking-widest hover:bg-brand-accent/30 dark:hover:bg-brand-accent/40"
+                  >
+                    Copy
+                  </button>
+                  <button 
+                    onClick={async () => {
+                      const emailData = generateEmailReport(filteredLogs, values, generatedReport);
+                      const therapistEmails = lcswConfig?.emergencyContact?.phone 
+                        ? [] // We'll use the emergency contact if available
+                        : [];
+                      const success = await shareViaEmail(emailData, therapistEmails);
+                      if (!success) {
+                        alert("Could not open email. Please copy the report and send manually.");
+                      }
+                    }}
+                    className="px-4 sm:px-6 py-2 bg-brand-accent text-authority-navy rounded-full text-[9px] sm:text-[10px] font-black uppercase tracking-widest hover:opacity-90"
+                  >
+                    {isWebShareAvailable() ? '📧 Share' : '📧 Email'}
+                  </button>
+                </div>
               </div>
               <div className="whitespace-pre-wrap font-sans text-authority-navy dark:text-pure-foundation leading-relaxed text-sm sm:text-base lg:text-lg">
                 {generatedReport}

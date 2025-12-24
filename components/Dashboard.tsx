@@ -2,6 +2,7 @@
 import React, { useState, useEffect, useMemo } from 'react';
 import { ValueItem, LogEntry, Goal, GoalFrequency, GoalUpdate, LCSWConfig } from '../types';
 import { generateEncouragement, generateValueMantra, suggestGoal, detectCrisis } from '../services/aiService';
+import { shareViaEmail, generateGoalsEmail } from '../services/emailService';
 
 // Debounce hook to prevent rapid API calls
 function useDebounce<T>(value: T, delay: number): T {
@@ -140,7 +141,8 @@ const Dashboard: React.FC<DashboardProps> = ({ values, onLog, goals, onUpdateGoa
     }
   };
 
-  const handleCompleteGoal = (goal: Goal) => {
+  const handleCompleteGoal = async (goal: Goal) => {
+    const completedGoal = { ...goal, completed: true };
     onLog({
       id: Date.now().toString() + "-done",
       date: new Date().toISOString(),
@@ -150,7 +152,14 @@ const Dashboard: React.FC<DashboardProps> = ({ values, onLog, goals, onUpdateGoa
       type: 'goal-completion',
       goalText: goal.text
     });
-    onUpdateGoals(goals.map(g => g.id === goal.id ? { ...g, completed: true } : g));
+    onUpdateGoals(goals.map(g => g.id === goal.id ? completedGoal : g));
+
+    // Send email notification for goal completion
+    if (lcswConfig?.emergencyContact?.phone || lcswConfig?.emergencyContact) {
+      const emailData = generateGoalsEmail([], values, [completedGoal]);
+      const therapistEmails = lcswConfig?.emergencyContact ? [] : []; // Can be extended
+      await shareViaEmail(emailData, therapistEmails);
+    }
   };
 
   const handleDeleteGoal = (goalId: string) => {

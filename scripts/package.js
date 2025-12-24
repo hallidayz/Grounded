@@ -3,15 +3,21 @@
  * Creates the smallest possible package for email distribution
  */
 
-const fs = require('fs');
-const path = require('path');
-const { execSync } = require('child_process');
+import fs from 'fs';
+import path from 'path';
+import { execSync } from 'child_process';
+import { fileURLToPath } from 'url';
+
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = path.dirname(__filename);
 
 const distDir = path.join(__dirname, '..', 'dist');
 const packageDir = path.join(__dirname, '..', 'package');
-const packageName = 'InnerCompass-PWA';
+const packageName = 'Grounded-PWA';
+const srcTauriDir = path.join(__dirname, '..', 'src-tauri');
+const androidDir = path.join(__dirname, '..', 'android');
 
-console.log('📦 Creating PWA package...\n');
+console.log('📦 Creating distribution package...\n');
 
 // Check if dist folder exists
 if (!fs.existsSync(distDir)) {
@@ -54,7 +60,7 @@ const serverScript = `#!/bin/bash
 
 PORT=${process.argv[2] || 8000}
 cd "$(dirname "$0")/dist"
-echo "🌐 Serving InnerCompass on http://localhost:$PORT"
+echo "🌐 Serving Grounded on http://localhost:$PORT"
 echo "📱 Open this URL on your device to install the app"
 python3 -m http.server $PORT 2>/dev/null || python -m http.server $PORT 2>/dev/null || php -S localhost:$PORT || echo "Please install Python or PHP to run the server"
 `;
@@ -71,7 +77,7 @@ set PORT=%1
 if "%PORT%"=="" set PORT=8000
 
 cd /d "%~dp0dist"
-echo Serving InnerCompass on http://localhost:%PORT%
+echo Serving Grounded on http://localhost:%PORT%
 echo Open this URL on your device to install the app
 python -m http.server %PORT% 2>nul || php -S localhost:%PORT% || echo Please install Python or PHP to run the server
 pause
@@ -80,9 +86,9 @@ pause
 fs.writeFileSync(path.join(packageDir, 'serve.bat'), serverScriptWin);
 
 // Create README for the package
-const packageReadme = `# InnerCompass PWA Package
+const packageReadme = `# Grounded PWA Package
 
-This package contains the complete InnerCompass Progressive Web App, ready for distribution.
+This package contains the complete Grounded by AC MiNDS Progressive Web App, ready for distribution.
 
 ## 📁 Contents
 
@@ -155,6 +161,78 @@ console.log(`\n✅ Package created successfully!`);
 console.log(`📊 Package size: ${distSizeMB} MB`);
 console.log(`📁 Location: ${packageDir}\n`);
 
+// Check for native installers
+console.log('🔍 Checking for native installers...\n');
+
+const tauriBuildDir = path.join(srcTauriDir, 'target', 'release', 'bundle');
+const androidApkPath = path.join(androidDir, 'app', 'build', 'outputs', 'apk', 'release', 'app-release.apk');
+const androidDebugApkPath = path.join(androidDir, 'app', 'build', 'outputs', 'apk', 'debug', 'app-debug.apk');
+
+let hasNativeInstallers = false;
+
+// Check for Tauri installers (DMG/EXE)
+if (fs.existsSync(tauriBuildDir)) {
+  const bundleContents = fs.readdirSync(tauriBuildDir, { withFileTypes: true });
+  const installers = bundleContents
+    .filter(dirent => dirent.isDirectory())
+    .map(dirent => dirent.name);
+  
+  if (installers.length > 0) {
+    hasNativeInstallers = true;
+    console.log('✅ Found Tauri desktop installers:');
+    installers.forEach(installer => {
+      const installerDir = path.join(tauriBuildDir, installer);
+      const files = fs.readdirSync(installerDir);
+      files.forEach(file => {
+        if (file.endsWith('.dmg') || file.endsWith('.exe') || file.endsWith('.AppImage') || file.endsWith('.deb')) {
+          const installerPath = path.join(installerDir, file);
+          const installerSize = fs.statSync(installerPath).size;
+          const installerSizeMB = (installerSize / 1024 / 1024).toFixed(2);
+          console.log(`   📦 ${file} (${installerSizeMB} MB)`);
+          
+          // Copy to package directory
+          const destPath = path.join(packageDir, 'installers', file);
+          fs.mkdirSync(path.dirname(destPath), { recursive: true });
+          fs.copyFileSync(installerPath, destPath);
+        }
+      });
+    });
+    console.log('');
+  }
+}
+
+// Check for Android APK
+if (fs.existsSync(androidApkPath)) {
+  hasNativeInstallers = true;
+  const apkSize = fs.statSync(androidApkPath).size;
+  const apkSizeMB = (apkSize / 1024 / 1024).toFixed(2);
+  console.log(`✅ Found Android APK: app-release.apk (${apkSizeMB} MB)`);
+  
+  const destPath = path.join(packageDir, 'installers', 'Grounded-release.apk');
+  fs.mkdirSync(path.dirname(destPath), { recursive: true });
+  fs.copyFileSync(androidApkPath, destPath);
+  console.log('');
+} else if (fs.existsSync(androidDebugApkPath)) {
+  hasNativeInstallers = true;
+  const apkSize = fs.statSync(androidDebugApkPath).size;
+  const apkSizeMB = (apkSize / 1024 / 1024).toFixed(2);
+  console.log(`✅ Found Android Debug APK: app-debug.apk (${apkSizeMB} MB)`);
+  console.log('   ⚠️  Note: This is a debug build. For production, build a release APK.');
+  
+  const destPath = path.join(packageDir, 'installers', 'Grounded-debug.apk');
+  fs.mkdirSync(path.dirname(destPath), { recursive: true });
+  fs.copyFileSync(androidDebugApkPath, destPath);
+  console.log('');
+}
+
+if (!hasNativeInstallers) {
+  console.log('⚠️  No native installers found.');
+  console.log('💡 To build native installers:');
+  console.log('   - Desktop (DMG/EXE): npm run build:desktop');
+  console.log('   - Android (APK): npm run build:android');
+  console.log('');
+}
+
 // Create zip file
 console.log('🗜️  Creating zip archive...');
 try {
@@ -174,10 +252,13 @@ try {
   console.log(`\n✅ Zip archive created!`);
   console.log(`📦 File: ${zipPath}`);
   console.log(`📊 Zip size: ${zipSizeMB} MB`);
-  console.log(`\n📧 Ready to email!`);
+  if (hasNativeInstallers) {
+    console.log(`\n📱 Native installers included! Users can double-click to install.`);
+  } else {
+    console.log(`\n📧 PWA package ready to email!`);
+  }
 } catch (error) {
   console.log('\n⚠️  Could not create zip automatically.');
   console.log('💡 Manually zip the "package" folder to create a distributable file.');
   console.log('   The package folder is ready for distribution.');
 }
-

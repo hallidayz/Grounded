@@ -22,7 +22,7 @@ const HelpOverlay: React.FC<HelpOverlayProps> = ({ onClose }) => {
         <div className="p-10 space-y-8">
           <div className="space-y-2">
             <h2 className="text-3xl font-black text-slate-900 tracking-tight">How to navigate</h2>
-            <p className="text-slate-500 font-medium">Mastering your InnerCompass in 3 steps.</p>
+            <p className="text-slate-500 font-medium">Mastering Grounded in 3 steps.</p>
           </div>
 
           <div className="space-y-6">

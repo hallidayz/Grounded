@@ -1,0 +1,60 @@
+{
+  "productName": "Grounded",
+  "version": "0.0.0",
+  "identifier": "com.acminds.grounded",
+  "build": {
+    "beforeDevCommand": "npm run dev",
+    "beforeBuildCommand": "npm run build",
+    "frontendDist": "../dist"
+  },
+  "app": {
+    "windows": [
+      {
+        "title": "Grounded",
+        "width": 1200,
+        "height": 800,
+        "minWidth": 800,
+        "minHeight": 600,
+        "resizable": true,
+        "fullscreen": false,
+        "transparent": false,
+        "decorations": true
+      }
+    ],
+    "security": {
+      "csp": null
+    },
+    "macOSPrivateApi": true
+  },
+  "bundle": {
+    "active": true,
+    "targets": "all",
+    "icon": [
+      "icons/32x32.png",
+      "icons/128x128.png",
+      "icons/128x128@2x.png",
+      "icons/icon.icns",
+      "icons/icon.ico"
+    ],
+    "resources": [],
+    "externalBin": [],
+    "copyright": "",
+    "category": "Health",
+    "shortDescription": "Privacy-first therapy integration app",
+    "longDescription": "Grounded by AC MiNDS helps clients integrate therapy discussions, track mood and behaviors, and work with their LCSW on values-based reflection and mental health support.",
+    "macOS": {
+      "frameworks": [],
+      "minimumSystemVersion": "10.13",
+      "exceptionDomain": "",
+      "signingIdentity": null,
+      "entitlements": null
+    },
+    "windows": {
+      "certificateThumbprint": null,
+      "digestAlgorithm": "sha256",
+      "timestampUrl": ""
+    }
+  },
+  "plugins": {}
+}
+
