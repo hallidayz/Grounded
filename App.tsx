@@ -218,7 +218,10 @@ const App: React.FC = () => {
 
       if (Notification.permission !== 'granted') return;
 
-      const topValue = ALL_VALUES.find(v => v.id === selectedValueIds[0])?.name || 'values';
+      // Get the top value (North Star) from selected values
+      const topValue = selectedValueIds.length > 0 
+        ? ALL_VALUES.find(v => v.id === selectedValueIds[0])?.name || 'your values'
+        : 'your values';
       let shouldNotify = false;
       let notificationBody = "";
 
@@ -227,44 +230,48 @@ const App: React.FC = () => {
       
       switch (frequency) {
         case 'hourly':
-          // Hourly: 8 AM to 8 PM only
-          if (currentHour >= 8 && currentHour <= 20 && currentMin === 0 && settings.reminders.lastNotifiedHour !== currentHour) {
+          // Hourly: 8 AM to 8 PM only, check every minute at :00
+          if (currentHour >= 8 && currentHour < 20 && currentMin === 0 && settings.reminders.lastNotifiedHour !== currentHour) {
             shouldNotify = true;
-            notificationBody = `Hourly Pulse: Are your actions right now aligned with ${topValue}?`;
+            notificationBody = `💛 Hourly Pulse: Are your actions right now aligned with your North Star (${topValue})?`;
           }
           break;
         
         case 'daily':
-          // Daily: At specified time
-          if (currentTime === settings.reminders.time && settings.reminders.lastNotifiedDay !== today) {
+          // Daily: At specified time (check within 1 minute window)
+          const [targetHour, targetMin] = settings.reminders.time.split(':').map(Number);
+          if (currentHour === targetHour && currentMin === targetMin && settings.reminders.lastNotifiedDay !== today) {
             shouldNotify = true;
-            notificationBody = `Time for your daily Grounded check-in. Your focus is ${topValue}.`;
+            notificationBody = `💛 Time for your daily Grounded check-in. Your North Star is ${topValue}.`;
           }
           break;
         
         case 'weekly':
           // Weekly: On specified day at specified time
           const targetDay = settings.reminders.dayOfWeek ?? 0;
-          if (currentDay === targetDay && currentTime === settings.reminders.time && settings.reminders.lastNotifiedDay !== today) {
+          const [weeklyHour, weeklyMin] = settings.reminders.time.split(':').map(Number);
+          if (currentDay === targetDay && currentHour === weeklyHour && currentMin === weeklyMin && settings.reminders.lastNotifiedWeek !== today) {
             shouldNotify = true;
-            notificationBody = `Weekly Reflection: Time to check in with ${topValue}.`;
+            notificationBody = `💛 Weekly Reflection: Time to check in with your North Star (${topValue}).`;
           }
           break;
         
         case 'monthly':
           // Monthly: On specified day of month at specified time
           const targetDate = settings.reminders.dayOfMonth ?? 1;
-          if (currentDate === targetDate && currentTime === settings.reminders.time && settings.reminders.lastNotifiedDay !== today) {
+          const [monthlyHour, monthlyMin] = settings.reminders.time.split(':').map(Number);
+          if (currentDate === targetDate && currentHour === monthlyHour && currentMin === monthlyMin && settings.reminders.lastNotifiedMonth !== today) {
             shouldNotify = true;
-            notificationBody = `Monthly Reflection: Time to reflect on ${topValue}.`;
+            notificationBody = `💛 Monthly Reflection: Time to reflect on your North Star (${topValue}).`;
           }
           break;
         
         default:
           // Fallback to daily if frequency is invalid or undefined
-          if (currentTime === settings.reminders.time && settings.reminders.lastNotifiedDay !== today) {
+          const [defaultHour, defaultMin] = settings.reminders.time.split(':').map(Number);
+          if (currentHour === defaultHour && currentMin === defaultMin && settings.reminders.lastNotifiedDay !== today) {
             shouldNotify = true;
-            notificationBody = `Time for your daily Grounded check-in. Your focus is ${topValue}.`;
+            notificationBody = `💛 Time for your daily Grounded check-in. Your North Star is ${topValue}.`;
           }
           break;
       }
@@ -313,24 +320,34 @@ const App: React.FC = () => {
           }
         }
         
+        // Update last notified timestamp to prevent duplicates
+        const updateData: Partial<AppSettings['reminders']> = {};
+        if (frequency === 'hourly') {
+          updateData.lastNotifiedHour = currentHour;
+        } else if (frequency === 'daily') {
+          updateData.lastNotifiedDay = today;
+        } else if (frequency === 'weekly') {
+          updateData.lastNotifiedWeek = today;
+        } else if (frequency === 'monthly') {
+          updateData.lastNotifiedMonth = today;
+        }
+        
         setSettings(prev => ({
           ...prev,
           reminders: { 
-            ...prev.reminders, 
-            ...(frequency === 'hourly' ? { lastNotifiedHour: currentHour } : {}),
-            ...(frequency === 'daily' ? { lastNotifiedDay: today } : {}),
-            ...(frequency === 'weekly' ? { lastNotifiedWeek: today } : {}),
-            ...(frequency === 'monthly' ? { lastNotifiedMonth: today } : {})
+            ...prev.reminders,
+            ...updateData
           }
         }));
       }
     };
 
-    const interval = setInterval(checkReminders, 30000); // Check every 30 seconds for accuracy
-    checkReminders(); 
+    // Check every minute for accurate timing (especially for hourly reminders)
+    const interval = setInterval(checkReminders, 60000); // Check every minute
+    checkReminders(); // Check immediately on mount/enable
 
     return () => clearInterval(interval);
-  }, [settings.reminders, selectedValueIds, setSettings]);
+  }, [settings.reminders, selectedValueIds]);
 
   // Determine initial view based on data
   useEffect(() => {
@@ -536,6 +553,7 @@ const App: React.FC = () => {
             onUpdateGoals={handleUpdateGoals}
             logs={logs}
             lcswConfig={settings.lcswConfig}
+            onNavigate={(view) => setView(view)}
           />
         )}
 
@@ -550,9 +568,11 @@ const App: React.FC = () => {
         {view === 'vault' && (
           <VaultControl
             logs={logs}
+            goals={goals}
             settings={settings}
             onUpdateSettings={setSettings}
             onClearData={handleClearData}
+            selectedValueIds={selectedValueIds}
           />
         )}
       </main>

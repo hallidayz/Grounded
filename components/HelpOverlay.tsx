@@ -56,7 +56,7 @@ const HelpOverlay: React.FC<HelpOverlayProps> = ({ onClose }) => {
                 <div className="text-2xl mt-1">💡</div>
                 <div className="space-y-1">
                   <p className="text-xs font-black text-text-primary dark:text-white uppercase tracking-widest">Pro Tip</p>
-                  <p className="text-xs text-text-secondary dark:text-text-secondary leading-relaxed font-medium">Head to the <b>Vault</b> to enable "Accountability Nudges"—system notifications that keep your North Star top-of-mind.</p>
+                  <p className="text-xs text-text-secondary dark:text-text-secondary leading-relaxed font-medium">Head to <b>Settings</b> to enable "Growth and Progress" nudges—system notifications that keep your North Star top-of-mind.</p>
                 </div>
              </div>
 

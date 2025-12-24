@@ -53,3 +53,87 @@ body {
   }
 }
 
+/* ============================================
+   COMPONENT CLASSES (Tailwind @layer)
+   Use these for quick, reusable styling
+   ============================================ */
+
+@layer components {
+  /* Button Components */
+  .btn-primary {
+    @apply px-6 py-3 sm:py-4 bg-navy-primary text-white dark:bg-navy-primary dark:text-white rounded-lg sm:rounded-xl font-black uppercase tracking-widest text-sm sm:text-base hover:opacity-90 active:scale-[0.98] transition-all shadow-lg;
+  }
+  
+  .btn-accent {
+    @apply px-6 py-3 sm:py-4 bg-yellow-warm text-text-primary dark:bg-yellow-warm dark:text-text-primary rounded-lg sm:rounded-xl font-black uppercase tracking-widest text-sm sm:text-base hover:opacity-90 active:scale-[0.98] shadow-lg transition-all;
+  }
+  
+  .btn-secondary {
+    @apply px-6 py-3 sm:py-4 bg-bg-primary dark:bg-dark-bg-primary/50 text-text-primary dark:text-white rounded-lg sm:rounded-xl font-black uppercase tracking-widest text-sm sm:text-base hover:opacity-80 transition-all border border-border-soft dark:border-dark-border/30;
+  }
+  
+  .btn-icon {
+    @apply w-8 h-8 flex items-center justify-center rounded-full text-text-secondary dark:text-text-secondary hover:text-yellow-warm dark:hover:text-yellow-warm hover:bg-yellow-warm/10 dark:hover:bg-yellow-warm/20 transition-all;
+  }
+  
+  .btn-small {
+    @apply px-3 sm:px-4 py-1.5 sm:py-2 rounded-lg sm:rounded-xl font-black text-[8px] sm:text-[9px] uppercase tracking-widest transition-all;
+  }
+  
+  /* Card Components */
+  .card-standard {
+    @apply bg-white dark:bg-dark-bg-secondary rounded-xl sm:rounded-2xl border border-border-soft dark:border-dark-border shadow-sm p-4 sm:p-5;
+  }
+  
+  .card-elevated {
+    @apply bg-white dark:bg-dark-bg-primary rounded-2xl sm:rounded-3xl border border-border-soft dark:border-dark-border shadow-2xl p-6 sm:p-8;
+  }
+  
+  .card-subtle {
+    @apply bg-bg-secondary dark:bg-dark-bg-secondary rounded-xl p-4 sm:p-5;
+  }
+  
+  /* Typography Components */
+  .text-heading-1 {
+    @apply text-2xl sm:text-3xl font-black text-text-primary dark:text-white tracking-tight;
+  }
+  
+  .text-heading-2 {
+    @apply text-xl sm:text-2xl font-black text-text-primary dark:text-white tracking-tight;
+  }
+  
+  .text-heading-3 {
+    @apply text-lg sm:text-xl font-semibold text-text-primary dark:text-white;
+  }
+  
+  .text-body {
+    @apply text-sm sm:text-base text-text-primary dark:text-white leading-relaxed;
+  }
+  
+  .text-body-secondary {
+    @apply text-sm sm:text-base text-text-secondary dark:text-text-secondary leading-relaxed;
+  }
+  
+  .text-label {
+    @apply text-[10px] font-black text-text-primary/60 dark:text-white/60 uppercase tracking-widest;
+  }
+  
+  /* Input Components */
+  .input-text {
+    @apply w-full bg-bg-secondary dark:bg-dark-bg-primary/50 border border-border-soft dark:border-dark-border/30 rounded-xl p-3 font-black text-text-primary dark:text-white focus:ring-2 focus:ring-yellow-warm focus:border-yellow-warm transition-all outline-none;
+  }
+  
+  .input-textarea {
+    @apply w-full bg-bg-secondary dark:bg-dark-bg-primary/50 border-none rounded-xl sm:rounded-2xl p-3 sm:p-4 focus:ring-2 focus:ring-yellow-warm/30 outline-none text-text-primary dark:text-white min-h-[140px] sm:min-h-[160px] resize-none text-[10px] sm:text-[11px] leading-relaxed shadow-inner transition-all;
+  }
+  
+  /* Utility Classes */
+  .divider {
+    @apply border-t border-border-soft dark:border-dark-border;
+  }
+  
+  .section-spacing {
+    @apply space-y-4 sm:space-y-6;
+  }
+}
+

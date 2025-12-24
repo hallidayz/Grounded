@@ -1,5 +1,5 @@
 
-import React, { useState, useEffect, useMemo } from 'react';
+import React, { useState, useEffect, useMemo, useRef } from 'react';
 import { ValueItem, LogEntry, Goal, GoalFrequency, GoalUpdate, LCSWConfig } from '../types';
 import { generateEncouragement, generateEmotionalEncouragement, generateValueMantra, suggestGoal, detectCrisis, analyzeReflection } from '../services/aiService';
 import { shareViaEmail, generateGoalsEmail } from '../services/emailService';
@@ -32,9 +32,10 @@ interface DashboardProps {
   onUpdateGoals: (goals: Goal[]) => void;
   logs: LogEntry[];
   lcswConfig?: LCSWConfig;
+  onNavigate?: (view: 'values' | 'report' | 'vault') => void;
 }
 
-const Dashboard: React.FC<DashboardProps> = ({ values, onLog, goals, onUpdateGoals, logs, lcswConfig }) => {
+const Dashboard: React.FC<DashboardProps> = ({ values, onLog, goals, onUpdateGoals, logs, lcswConfig, onNavigate }) => {
   const [activeValueId, setActiveValueId] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
   const [lastLoggedId, setLastLoggedId] = useState<string | null>(null);
@@ -61,6 +62,9 @@ const Dashboard: React.FC<DashboardProps> = ({ values, onLog, goals, onUpdateGoa
   const [lowStateCount, setLowStateCount] = useState(0); // Track consecutive low state selections
   
   const debouncedReflectionText = useDebounce(reflectionText, 2000); // Analyze after 2 seconds of no typing
+  
+  // Refs for scrolling to value cards
+  const valueCardRefs = useRef<Record<string, HTMLDivElement | null>>({});
 
   // Get personalized greeting based on time of day
   const getGreeting = () => {
@@ -220,6 +224,19 @@ const Dashboard: React.FC<DashboardProps> = ({ values, onLog, goals, onUpdateGoa
         .catch(() => setTopValueMantra("Be Here Now"));
     }
   }, [values, topValueMantra]);
+
+  // Scroll to value card when it opens
+  useEffect(() => {
+    if (activeValueId && valueCardRefs.current[activeValueId]) {
+      // Small delay to ensure the card is rendered
+      setTimeout(() => {
+        valueCardRefs.current[activeValueId]?.scrollIntoView({ 
+          behavior: 'smooth', 
+          block: 'center' 
+        });
+      }, 100);
+    }
+  }, [activeValueId]);
 
   const handleSuggestGoal = async (value: ValueItem) => {
     setAiGoalLoading(true);
@@ -384,11 +401,15 @@ const Dashboard: React.FC<DashboardProps> = ({ values, onLog, goals, onUpdateGoa
     setLastLoggedId(valueId);
     setTimeout(() => setLastLoggedId(null), 2000);
     
+    // Clear form but keep encouragement visible to return to "Would you like to" view
     setReflectionText('');
     setGoalText('');
     setCoachInsight(null);
     setValueMantra(null);
     setActiveValueId(null);
+    
+    // Keep encouragementText visible so user returns to "Would you like to" view
+    // Don't clear encouragementText or lastEncouragedState
   };
 
   return (
@@ -432,13 +453,22 @@ const Dashboard: React.FC<DashboardProps> = ({ values, onLog, goals, onUpdateGoa
               emotion={lastEncouragedState || undefined}
               onActionClick={(action) => {
                 if (action === 'reflection') {
-                  // Open first value for reflection
+                  // Open first value for reflection/journaling
                   if (values.length > 0) {
-                    setActiveValueId(values[0].id);
+                    const firstValueId = values[0].id;
+                    setActiveValueId(firstValueId);
+                    // Keep encouragement visible so user can return to it after saving
+                    // Scroll will happen automatically via useEffect
                   }
                 } else if (action === 'values') {
-                  // Could navigate to values view, but for now just show values
-                  // This would be handled by parent component
+                  // Navigate to values view
+                  if (onNavigate) {
+                    onNavigate('values');
+                  }
+                } else if (action === 'resources') {
+                  // Show crisis resources
+                  const resourcesMessage = `📞 Crisis Resources\n\n• 988 Suicide & Crisis Lifeline (24/7)\n• 911 for emergencies\n${lcswConfig?.emergencyContact?.phone ? `• Your therapist: ${lcswConfig.emergencyContact.phone}` : ''}\n\nYou're not alone. Reach out for support.`;
+                  alert(resourcesMessage);
                 }
               }}
             />
@@ -585,6 +615,9 @@ const Dashboard: React.FC<DashboardProps> = ({ values, onLog, goals, onUpdateGoa
           return (
             <div 
               key={value.id}
+              ref={(el) => {
+                valueCardRefs.current[value.id] = el;
+              }}
               className={`bg-white dark:bg-dark-bg-primary rounded-xl sm:rounded-2xl border transition-all duration-300 ${isActive ? 'border-yellow-warm shadow-lg dark:shadow-xl' : 'border-border-soft dark:border-dark-border/30 shadow-sm hover:border-yellow-warm/50 dark:hover:border-yellow-warm/50'} ${isSuccess ? 'border-calm-sage dark:border-calm-sage ring-2 ring-calm-sage/20 dark:ring-calm-sage/30' : ''}`}
             >
               <div className="p-3 sm:p-4 md:p-5">
