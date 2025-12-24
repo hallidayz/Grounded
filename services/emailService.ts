@@ -265,4 +265,3 @@ export function shouldSendScheduledEmail(schedule: EmailSchedule): boolean {
       return false;
   }
 }
-
