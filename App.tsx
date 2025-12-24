@@ -389,7 +389,7 @@ const App: React.FC = () => {
 
   const handleSelectionComplete = (ids: string[]) => {
     setSelectedValueIds(ids);
-    setView('dashboard');
+    setView('home');
   };
 
   const handleLogEntry = (entry: LogEntry) => {

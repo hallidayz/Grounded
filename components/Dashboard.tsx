@@ -246,18 +246,21 @@ const Dashboard: React.FC<DashboardProps> = ({ values, onLog, goals, onUpdateGoa
     setLastEncouragedState(state);
     setEncouragementText(null);
     
-    // Track low state selections
+    // Track low state selections - calculate new count first to use immediately
+    let newLowStateCount: number;
     if (state === 'drained' || state === 'heavy') {
-      setLowStateCount(prev => prev + 1);
+      newLowStateCount = lowStateCount + 1;
+      setLowStateCount(newLowStateCount);
     } else {
-      setLowStateCount(0); // Reset if not low state
+      newLowStateCount = 0; // Reset if not low state
+      setLowStateCount(0);
     }
     
     try {
       const encouragement = await generateEmotionalEncouragement(
         state,
         selectedFeeling,
-        lowStateCount,
+        newLowStateCount, // Use the calculated value, not the stale state
         lcswConfig
       );
       setEncouragementText(encouragement);

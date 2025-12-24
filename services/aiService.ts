@@ -1005,8 +1005,13 @@ export async function generateHumanReports(
       return `# 🚨 SAFETY CONCERN DETECTED IN LOGS\n\n**Your safety is the priority.** These logs contain language that suggests you may be thinking about ending your life or hurting yourself.\n\n**If you are in immediate danger or feel you might act on thoughts of suicide, please contact emergency services (911 in the U.S.) or the 988 Suicide & Crisis Lifeline right now.**\n\n**This app cannot help in an emergency. If you are about to harm yourself, please call 911 or 988, or your local emergency number, immediately.**\n\n**Please also reach out to someone you trust right now**—a close friend, family member, or someone who can be with you. You don't have to go through this alone.\n\n**Resources available right now:**\n• **988 Suicide & Crisis Lifeline** - Dial 988 (24/7, free, confidential)\n• **Crisis Text Line** - Text HOME to 741741\n• **Emergency Services** - 911 (U.S.) or your local emergency number\n• **Your Therapist**: ${therapistContact}\n\n---\n\n# Clinical Summary\n\nDue to safety concerns detected in these logs, a full clinical summary should be reviewed with your LCSW or mental health professional in person.\n\n*Feeling suicidal is a medical and emotional emergency, not a personal failure. You deserve support, and help is available.*`;
     }
 
+    // Try to initialize models if not already loaded
     if (!counselingCoachModel) {
-      await initializeModels();
+      const modelsLoaded = await initializeModels();
+      if (!modelsLoaded) {
+        // Model initialization failed - throw error so UI can show message
+        throw new Error('Failed to load on-device models');
+      }
     }
 
     const summary = logs.map(l => {
@@ -1025,6 +1030,7 @@ Format your response with clear sections for each format. Keep the tone supporti
 
     let report = generateFallbackReport(logs, values);
     
+    // If model is available, try to generate AI report
     if (counselingCoachModel) {
       try {
         const result = await counselingCoachModel(prompt, {
@@ -1040,7 +1046,7 @@ Format your response with clear sections for each format. Keep the tone supporti
         }
       } catch (error) {
         console.warn('Report generation inference failed:', error);
-        // Use fallback report
+        // Use fallback report - inference failures are handled gracefully
       }
     }
 
@@ -1049,8 +1055,18 @@ Format your response with clear sections for each format. Keep the tone supporti
 
     return report + disclaimer;
   } catch (error) {
+    // Check if this is a model loading error that should be shown to user
+    const errorMessage = error instanceof Error ? error.message : String(error);
+    if (errorMessage.includes('Failed to load on-device models')) {
+      // Re-throw model loading errors so UI can show appropriate message
+      throw error;
+    }
+    
+    // For other unexpected errors, log and return fallback
     console.error('Report generation error:', error);
-    return `# Clinical Summary\n\nUnable to generate full synthesis. Please review your ${logs.length} log entries manually or discuss with your LCSW.\n\n*All processing happens on your device for privacy.*`;
+    const fallbackReport = generateFallbackReport(logs, values);
+    const disclaimer = `\n\n---\n\n*This report was generated using rule-based analysis. All processing happens on your device for privacy.*`;
+    return `${fallbackReport}${disclaimer}`;
   }
 }
 
@@ -1116,8 +1132,9 @@ function generateFallbackGuidance(value: ValueItem, mood: string, reflection: st
 
 /**
  * Fallback report generator (used when models aren't available)
+ * Exported so UI components can use it directly when model loading fails
  */
-function generateFallbackReport(logs: LogEntry[], values: ValueItem[]): string {
+export function generateFallbackReport(logs: LogEntry[], values: ValueItem[]): string {
   const valueCounts: Record<string, number> = {};
   const moodCounts: Record<string, number> = {};
   

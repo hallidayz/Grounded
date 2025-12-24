@@ -36,7 +36,15 @@ const ReportView: React.FC<ReportViewProps> = ({ logs, values, lcswConfig }) => 
       console.error("Report synthesis failed:", error);
       const errorMessage = error instanceof Error ? error.message : String(error);
       if (errorMessage.includes('Failed to load on-device models')) {
+        // Model loading failed - show alert and generate fallback report
         alert("AI models are not available. The app will generate a basic report using rule-based analysis. Please check your internet connection and try updating the models in Settings.");
+        
+        // Generate and display fallback report
+        const { generateFallbackReport } = await import('../services/aiService');
+        const fallbackReport = generateFallbackReport(filteredLogs, values);
+        const disclaimer = `\n\n---\n\n*This report was generated using rule-based analysis because AI models are not available. For AI-enhanced reports, please check your internet connection and try updating the models in Settings.*`;
+        setGeneratedReport(fallbackReport + disclaimer);
+        setMode('generate');
       } else {
         alert("Something went wrong while synthesizing your journey. Please try again.");
       }
