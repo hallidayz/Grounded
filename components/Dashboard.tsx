@@ -1,7 +1,7 @@
 
 import React, { useState, useEffect, useMemo } from 'react';
 import { ValueItem, LogEntry, Goal, GoalFrequency, GoalUpdate, LCSWConfig } from '../types';
-import { generateEncouragement, generateValueMantra, suggestGoal, detectCrisis } from '../services/aiService';
+import { generateEncouragement, generateValueMantra, suggestGoal, detectCrisis, analyzeReflection } from '../services/aiService';
 import { shareViaEmail, generateGoalsEmail } from '../services/emailService';
 
 // Debounce hook to prevent rapid API calls
@@ -44,6 +44,10 @@ const Dashboard: React.FC<DashboardProps> = ({ values, onLog, goals, onUpdateGoa
   
   const [coachInsight, setCoachInsight] = useState<string | null>(null);
   const [valueMantra, setValueMantra] = useState<string | null>(null);
+  const [reflectionAnalysis, setReflectionAnalysis] = useState<string | null>(null);
+  const [analyzingReflection, setAnalyzingReflection] = useState(false);
+  
+  const debouncedReflectionText = useDebounce(reflectionText, 2000); // Analyze after 2 seconds of no typing
 
   const moodDetails = {
     '🌱': { label: 'Growth', desc: 'Coping/Adapting' },
@@ -95,6 +99,25 @@ const Dashboard: React.FC<DashboardProps> = ({ values, onLog, goals, onUpdateGoa
     }
   }, [reflectionText, goalText, activeValueId]);
 
+  // Analyze reflection when user stops typing
+  useEffect(() => {
+    if (debouncedReflectionText.trim() && activeValueId) {
+      setAnalyzingReflection(true);
+      analyzeReflection(debouncedReflectionText, goalFreq, lcswConfig)
+        .then(analysis => {
+          setReflectionAnalysis(analysis);
+          setAnalyzingReflection(false);
+        })
+        .catch(error => {
+          console.error('Reflection analysis error:', error);
+          setReflectionAnalysis(null);
+          setAnalyzingReflection(false);
+        });
+    } else {
+      setReflectionAnalysis(null);
+    }
+  }, [debouncedReflectionText, goalFreq, activeValueId, lcswConfig]);
+
   // AI Motivation Refresh
   useEffect(() => {
     if (activeValueId) {
@@ -127,11 +150,16 @@ const Dashboard: React.FC<DashboardProps> = ({ values, onLog, goals, onUpdateGoa
       // Check for crisis before suggesting goal
       const crisisCheck = detectCrisis(reflectionText, lcswConfig);
       if (crisisCheck.isCrisis && crisisCheck.recommendedAction !== 'continue') {
-        setGoalText(`### Safety First\n\n⚠️ Your reflection contains concerning content. Please contact your LCSW or emergency services if needed.\n\nEmergency: ${lcswConfig?.emergencyContact?.phone || '911'}\nCrisis Line: 988`);
+        setGoalText(`### Safety First\n\n⚠️ Your reflection contains concerning content. Please contact your therapist or emergency services if needed.\n\nEmergency: ${lcswConfig?.emergencyContact?.phone || '911'}\nCrisis Line: 988`);
         setAiGoalLoading(false);
         return;
       }
-      const suggestion = await suggestGoal(value, goalFreq, reflectionText, lcswConfig);
+      // Use deep reflection and analysis together for goal suggestion
+      // This helps the user see they have options and different approaches
+      const deepReflectionContext = reflectionText.trim() 
+        ? `Deep Reflection:\n${reflectionText}\n\n${reflectionAnalysis ? `Reflection Analysis:\n${reflectionAnalysis}` : ''}`
+        : (reflectionAnalysis || '');
+      const suggestion = await suggestGoal(value, goalFreq, deepReflectionContext, lcswConfig);
       setGoalText(suggestion);
     } catch (error) {
       console.error("AI Goal Error:", error);
@@ -174,7 +202,7 @@ const Dashboard: React.FC<DashboardProps> = ({ values, onLog, goals, onUpdateGoa
     const crisisCheck = detectCrisis(combinedText, lcswConfig);
     
     if (crisisCheck.isCrisis && crisisCheck.severity === 'critical') {
-      const crisisMessage = `🚨 CRISIS DETECTED\n\nYour entry contains crisis indicators. Please:\n\n1. Contact emergency services: 911\n2. Contact your LCSW: ${lcswConfig?.emergencyContact?.phone || 'Your LCSW\'s emergency line'}\n3. Crisis hotline: 988\n\nThis app cannot provide crisis support. Please connect with a professional immediately.`;
+      const crisisMessage = `🚨 CRISIS DETECTED\n\nYour entry contains crisis indicators. Please:\n\n1. Contact emergency services: 911\n2. Contact your therapist: ${lcswConfig?.emergencyContact?.phone || 'Your therapist\'s emergency line'}\n3. Crisis hotline: 988\n\nThis app cannot provide crisis support. Please connect with a professional immediately.`;
       alert(crisisMessage);
       // Still allow them to save, but show the warning
     }
@@ -202,7 +230,9 @@ const Dashboard: React.FC<DashboardProps> = ({ values, onLog, goals, onUpdateGoa
       note: reflectionText.trim() || "Observed without judgment.",
       mood: guideMood,
       type: goalText.trim() ? 'goal-update' : 'standard',
-      goalText: goalText.trim() || undefined
+      goalText: goalText.trim() || undefined,
+      deepReflection: reflectionText.trim() || undefined,
+      reflectionAnalysis: reflectionAnalysis || undefined
     });
 
     localStorage.removeItem(`draft_reflection_${valueId}`);
@@ -312,7 +342,7 @@ const Dashboard: React.FC<DashboardProps> = ({ values, onLog, goals, onUpdateGoa
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-3 sm:gap-4">
                       <div className="space-y-2">
                         <div className="flex items-center justify-between px-1">
-                          <label className="text-[8px] font-black text-authority-navy/50 dark:text-pure-foundation/50 uppercase tracking-widest">1. Observation</label>
+                          <label className="text-[8px] font-black text-authority-navy/50 dark:text-pure-foundation/50 uppercase tracking-widest">1. Deep Reflection</label>
                           <span className="text-[8px] font-bold text-brand-accent uppercase tracking-widest">Systemic Focus</span>
                         </div>
                         <textarea 
@@ -321,6 +351,28 @@ const Dashboard: React.FC<DashboardProps> = ({ values, onLog, goals, onUpdateGoa
                           placeholder={getReflectionPlaceholder(goalFreq)}
                           className="w-full p-3 sm:p-4 rounded-xl sm:rounded-2xl bg-pure-foundation dark:bg-executive-depth/50 border-none focus:ring-2 focus:ring-brand-accent/30 outline-none text-authority-navy dark:text-pure-foundation min-h-[140px] sm:min-h-[160px] resize-none text-[10px] sm:text-[11px] leading-relaxed shadow-inner"
                         />
+                        {analyzingReflection && (
+                          <div className="text-[8px] text-brand-accent font-bold uppercase tracking-widest animate-pulse">
+                            Analyzing reflection...
+                          </div>
+                        )}
+                        {reflectionAnalysis && !analyzingReflection && (
+                          <div className="mt-3 p-3 sm:p-4 bg-brand-accent/10 dark:bg-brand-accent/20 rounded-xl border border-brand-accent/30 space-y-3">
+                            <div className="text-[8px] font-black text-brand-accent uppercase tracking-widest">Reflection Analysis</div>
+                            <div className="text-[9px] sm:text-[10px] text-authority-navy dark:text-pure-foundation whitespace-pre-line leading-relaxed space-y-2">
+                              {reflectionAnalysis.split('\n').map((line, idx) => {
+                                if (line.startsWith('##')) {
+                                  return <div key={idx} className="font-black text-brand-accent mt-3 first:mt-0">{line.replace('##', '').trim()}</div>;
+                                } else if (line.startsWith('-') || /^\d+\./.test(line.trim())) {
+                                  return <div key={idx} className="ml-2">{line}</div>;
+                                } else if (line.trim()) {
+                                  return <div key={idx}>{line}</div>;
+                                }
+                                return <br key={idx} />;
+                              })}
+                            </div>
+                          </div>
+                        )}
                       </div>
                       <div className="space-y-2">
                         <div className="flex justify-between items-center px-1">

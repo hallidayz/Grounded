@@ -45,7 +45,7 @@ const App: React.FC = () => {
   const [logs, setLogs] = useState<LogEntry[]>([]);
   const [goals, setGoals] = useState<Goal[]>([]);
   const [settings, setSettings] = useState<AppSettings>({
-    reminders: { enabled: false, time: '09:00', recurringHourly: false }
+    reminders: { enabled: false, frequency: 'daily', time: '09:00' }
   });
   const [view, setView] = useState<'onboarding' | 'dashboard' | 'report' | 'values' | 'vault'>('onboarding');
   const [showHelp, setShowHelp] = useState(false);
@@ -53,22 +53,39 @@ const App: React.FC = () => {
 
   // Initialize database and check auth state
   useEffect(() => {
+    let isMounted = true; // Prevent state updates if component unmounts
+    let cleanupInterval: NodeJS.Timeout | null = null;
+    
     const initialize = async () => {
       try {
         await dbService.init();
         
+        // Cleanup expired tokens on startup
+        dbService.cleanupExpiredTokens().catch(console.error);
+        
+        // Set up cleanup interval
+        cleanupInterval = setInterval(() => {
+          dbService.cleanupExpiredTokens().catch(console.error);
+        }, 60 * 60 * 1000); // Every hour
+        
+        if (!isMounted) return;
+        
         if (isLoggedIn()) {
           const user = await getCurrentUser();
+          if (!isMounted) return;
+          
           if (user) {
             setUserId(user.id);
             
             // Load app data from database
             const appData = await dbService.getAppData(user.id);
+            if (!isMounted) return;
+            
             if (appData) {
               setSelectedValueIds(appData.values || []);
               setLogs(appData.logs || []);
               setGoals(appData.goals || []);
-              setSettings(appData.settings || { reminders: { enabled: false, time: '09:00', recurringHourly: false } });
+              setSettings(appData.settings || { reminders: { enabled: false, frequency: 'daily', time: '09:00' } });
             }
             
             // Check if terms are accepted
@@ -85,11 +102,20 @@ const App: React.FC = () => {
         }
       } catch (error) {
         console.error('Initialization error:', error);
-        setAuthState('login');
+        if (isMounted) {
+          setAuthState('login');
+        }
       }
     };
     
     initialize();
+    
+    return () => {
+      isMounted = false;
+      if (cleanupInterval) {
+        clearInterval(cleanupInterval);
+      }
+    };
   }, []);
 
   // Save app data to database whenever it changes
@@ -118,13 +144,18 @@ const App: React.FC = () => {
   // Preload AI models on app start
   useEffect(() => {
     if (authState === 'app') {
-      preloadModels().catch(err => {
-        console.warn('Model preload failed, will retry on first use:', err);
-      });
+      console.log('Preloading AI models...');
+      preloadModels()
+        .then(() => {
+          console.log('AI models loaded successfully');
+        })
+        .catch(err => {
+          console.error('Model preload failed, will retry on first use:', err);
+        });
     }
   }, [authState]);
 
-  // Daily & Hourly Reminder Heartbeat
+  // Reminder Heartbeat - supports Hourly, Daily, Weekly, Monthly
   useEffect(() => {
     if (!settings.reminders.enabled) return;
 
@@ -134,6 +165,8 @@ const App: React.FC = () => {
       const currentMin = now.getMinutes();
       const currentTime = `${currentHour.toString().padStart(2, '0')}:${currentMin.toString().padStart(2, '0')}`;
       const today = now.toISOString().split('T')[0];
+      const currentDay = now.getDay(); // 0 = Sunday, 6 = Saturday
+      const currentDate = now.getDate(); // 1-31
 
       if (Notification.permission !== 'granted') return;
 
@@ -141,21 +174,40 @@ const App: React.FC = () => {
       let shouldNotify = false;
       let notificationBody = "";
 
-      // 1. Check Primary Daily Nudge
-      if (currentTime === settings.reminders.time && settings.reminders.lastNotifiedDay !== today) {
-        shouldNotify = true;
-        notificationBody = `Time for your daily Grounded check-in. Your focus is ${topValue}.`;
-      } 
-      // 2. Check Hourly Daylight Nudge (8 AM to 8 PM)
-      else if (
-        settings.reminders.recurringHourly && 
-        currentHour >= 8 && 
-        currentHour <= 20 && 
-        currentMin === 0 && 
-        settings.reminders.lastNotifiedHour !== currentHour
-      ) {
-        shouldNotify = true;
-        notificationBody = `Hourly Pulse: Are your actions right now aligned with ${topValue}?`;
+      switch (settings.reminders.frequency) {
+        case 'hourly':
+          // Hourly: 8 AM to 8 PM only
+          if (currentHour >= 8 && currentHour <= 20 && currentMin === 0 && settings.reminders.lastNotifiedHour !== currentHour) {
+            shouldNotify = true;
+            notificationBody = `Hourly Pulse: Are your actions right now aligned with ${topValue}?`;
+          }
+          break;
+        
+        case 'daily':
+          // Daily: At specified time
+          if (currentTime === settings.reminders.time && settings.reminders.lastNotifiedDay !== today) {
+            shouldNotify = true;
+            notificationBody = `Time for your daily Grounded check-in. Your focus is ${topValue}.`;
+          }
+          break;
+        
+        case 'weekly':
+          // Weekly: On specified day at specified time
+          const targetDay = settings.reminders.dayOfWeek ?? 0;
+          if (currentDay === targetDay && currentTime === settings.reminders.time && settings.reminders.lastNotifiedDay !== today) {
+            shouldNotify = true;
+            notificationBody = `Weekly Reflection: Time to check in with ${topValue}.`;
+          }
+          break;
+        
+        case 'monthly':
+          // Monthly: On specified day of month at specified time
+          const targetDate = settings.reminders.dayOfMonth ?? 1;
+          if (currentDate === targetDate && currentTime === settings.reminders.time && settings.reminders.lastNotifiedDay !== today) {
+            shouldNotify = true;
+            notificationBody = `Monthly Reflection: Time to reflect on ${topValue}.`;
+          }
+          break;
       }
 
       if (shouldNotify) {
@@ -199,7 +251,7 @@ const App: React.FC = () => {
           setSelectedValueIds(appData.values || []);
           setLogs(appData.logs || []);
           setGoals(appData.goals || []);
-          setSettings(appData.settings || { reminders: { enabled: false, time: '09:00', recurringHourly: false } });
+          setSettings(appData.settings || { reminders: { enabled: false, frequency: 'daily', time: '09:00' } });
         }
         setAuthState('app');
       } else {
@@ -228,7 +280,7 @@ const App: React.FC = () => {
     setSelectedValueIds([]);
     setLogs([]);
     setGoals([]);
-    setSettings({ reminders: { enabled: false, time: '09:00', recurringHourly: false } });
+    setSettings({ reminders: { enabled: false, frequency: 'daily', time: '09:00' } });
     setView('onboarding');
   };
 
@@ -249,7 +301,7 @@ const App: React.FC = () => {
     setLogs([]);
     setSelectedValueIds([]);
     setGoals([]);
-    setSettings({ reminders: { enabled: false, time: '09:00', recurringHourly: false } });
+    setSettings({ reminders: { enabled: false, frequency: 'daily', time: '09:00' } });
     setView('onboarding');
   };
 
@@ -295,7 +347,7 @@ const App: React.FC = () => {
           </div>
           <div className="flex items-center space-x-1.5 sm:space-x-2">
             {showNav && (
-              <nav className="hidden xs:flex items-center space-x-0.5">
+              <nav className="flex items-center space-x-0.5 sm:space-x-1">
                 <button 
                   onClick={() => setView('dashboard')}
                   className={`px-2 sm:px-3 py-1.5 rounded-lg text-[10px] sm:text-xs font-bold transition-colors ${view === 'dashboard' ? 'bg-brand-accent/20 dark:bg-brand-accent/30 text-brand-accent dark:text-brand-accent' : 'text-authority-navy/60 dark:text-pure-foundation/60 hover:text-authority-navy dark:hover:text-pure-foundation hover:bg-pure-foundation dark:hover:bg-executive-depth/50'}`}
@@ -330,8 +382,8 @@ const App: React.FC = () => {
               <button 
                 onClick={() => setShowLCSWConfig(true)}
                 className="w-8 h-8 flex items-center justify-center rounded-full text-authority-navy/60 dark:text-pure-foundation/60 hover:text-brand-accent dark:hover:text-brand-accent hover:bg-brand-accent/10 dark:hover:bg-brand-accent/20 transition-all"
-                aria-label="LCSW Settings"
-                title="LCSW Configuration"
+                aria-label="Configuration"
+                title="Configuration"
               >
                 <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z" /><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" /></svg>
               </button>
@@ -385,7 +437,7 @@ const App: React.FC = () => {
         {view === 'report' && (
           <ReportView 
             logs={logs} 
-            values={selectedValues}
+            values={selectedValues} 
             lcswConfig={settings.lcswConfig}
           />
         )}

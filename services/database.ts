@@ -31,8 +31,9 @@ interface AppData {
 
 class DatabaseService {
   // Unique database name using reverse domain notation to avoid conflicts
-  // Format: com.[appname].[purpose].db ensures uniqueness
-  private dbName = 'com.acminds.grounded.db';
+  // Format: com.[company].[appname].[purpose].db ensures uniqueness
+  // This ensures no conflicts with other apps like AiNotes or InnerCompass
+  private dbName = 'com.acminds.grounded.therapy.db';
   private dbVersion = 1;
   private db: IDBDatabase | null = null;
 
