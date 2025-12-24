@@ -1,9 +1,10 @@
 
 import React, { useState, useEffect } from 'react';
-import { LogEntry, Goal, AppSettings, ReminderFrequency } from '../types';
+import { LogEntry, Goal, AppSettings } from '../types';
 import { ALL_VALUES } from '../constants';
 import { shareViaEmail, generateDataExportEmail, isWebShareAvailable } from '../services/emailService';
 import { getCurrentUser } from '../services/authService';
+import { EMOTIONAL_STATES } from '../services/emotionalStates';
 
 interface VaultControlProps {
   logs: LogEntry[];
@@ -11,67 +12,20 @@ interface VaultControlProps {
   settings: AppSettings;
   onUpdateSettings: (settings: AppSettings) => void;
   onClearData: () => void;
+  selectedValueIds?: string[]; // For displaying North Star in notifications
 }
 
-const VaultControl: React.FC<VaultControlProps> = ({ logs, goals, settings, onUpdateSettings, onClearData }) => {
-  const [notifPermission, setNotifPermission] = useState<NotificationPermission>(Notification.permission);
-  const [nextPulseInfo, setNextPulseInfo] = useState<string>('');
+const VaultControl: React.FC<VaultControlProps> = ({ logs, goals, settings, onUpdateSettings, onClearData, selectedValueIds = [] }) => {
   const [userId, setUserId] = useState<string | null>(null);
+  const [selectedStartDate, setSelectedStartDate] = useState<string>('');
+  const [selectedEndDate, setSelectedEndDate] = useState<string>('');
+  const [showDateRangePicker, setShowDateRangePicker] = useState<boolean>(false);
 
   useEffect(() => {
     getCurrentUser().then(user => {
       if (user) setUserId(user.id);
     });
   }, []);
-
-  // Calculate the next expected pulse for the UI
-  useEffect(() => {
-    const updatePulsePreview = () => {
-      if (!settings.reminders.enabled) {
-        setNextPulseInfo('Disabled');
-        return;
-      }
-
-      const now = new Date();
-      const currentHour = now.getHours();
-      const currentDay = now.getDay();
-      const currentDate = now.getDate();
-      
-      // Ensure frequency has a valid default value
-      const frequency = settings.reminders.frequency || 'daily';
-      
-      switch (frequency) {
-        case 'hourly':
-          if (currentHour >= 8 && currentHour < 20) {
-            setNextPulseInfo(`Hourly: ${currentHour + 1}:00`);
-          } else {
-            setNextPulseInfo('Hourly: 8:00 AM');
-          }
-          break;
-        case 'daily':
-          setNextPulseInfo(`Daily: ${settings.reminders.time}`);
-          break;
-        case 'weekly':
-          const days = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'];
-          const targetDay = settings.reminders.dayOfWeek ?? 0;
-          const dayName = days[targetDay];
-          setNextPulseInfo(`Weekly: ${dayName} at ${settings.reminders.time}`);
-          break;
-        case 'monthly':
-          const day = settings.reminders.dayOfMonth ?? 1;
-          setNextPulseInfo(`Monthly: Day ${day} at ${settings.reminders.time}`);
-          break;
-        default:
-          // Fallback to daily if frequency is invalid or undefined
-          setNextPulseInfo(`Daily: ${settings.reminders.time}`);
-          break;
-      }
-    };
-
-    updatePulsePreview();
-    const interval = setInterval(updatePulsePreview, 60000); // Update once a minute
-    return () => clearInterval(interval);
-  }, [settings.reminders]);
 
   const handleExport = () => {
     const dataStr = JSON.stringify(logs, null, 2);
@@ -109,416 +63,20 @@ const VaultControl: React.FC<VaultControlProps> = ({ logs, goals, settings, onUp
     }
   };
 
-  const requestPermission = async () => {
-    const permission = await Notification.requestPermission();
-    setNotifPermission(permission);
-  };
-
-  const toggleReminders = () => {
-    if (notifPermission !== 'granted') {
-      requestPermission();
-    }
-    onUpdateSettings({
-      ...settings,
-      reminders: { ...settings.reminders, enabled: !settings.reminders.enabled }
-    });
-  };
-
-  const handleFrequencyChange = (frequency: ReminderFrequency) => {
-    onUpdateSettings({
-      ...settings,
-      reminders: { ...settings.reminders, frequency }
-    });
-  };
-
-  const handleTimeChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    onUpdateSettings({
-      ...settings,
-      reminders: { ...settings.reminders, time: e.target.value }
-    });
-  };
-
-  const handleDayOfWeekChange = (e: React.ChangeEvent<HTMLSelectElement>) => {
-    onUpdateSettings({
-      ...settings,
-      reminders: { ...settings.reminders, dayOfWeek: parseInt(e.target.value) }
-    });
-  };
-
-  const handleDayOfMonthChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const day = parseInt(e.target.value);
-    if (day >= 1 && day <= 31) {
-      onUpdateSettings({
-        ...settings,
-        reminders: { ...settings.reminders, dayOfMonth: day }
-      });
-    }
-  };
-
-  const handleCalendarToggle = async () => {
-    if (!settings.reminders.useDeviceCalendar) {
-      // Request calendar access and create event
-      try {
-        // Use Web Calendar API if available
-        if ('calendar' in navigator && 'requestPermission' in navigator.calendar) {
-          const permission = await (navigator.calendar as any).requestPermission();
-          if (permission === 'granted') {
-            onUpdateSettings({
-              ...settings,
-              reminders: { ...settings.reminders, useDeviceCalendar: true }
-            });
-          }
-        } else {
-          // Fallback: Create calendar event URL
-          const now = new Date();
-          const [hours, minutes] = settings.reminders.time.split(':').map(Number);
-          const eventDate = new Date();
-          eventDate.setHours(hours, minutes, 0, 0);
-          
-          // Create Google Calendar URL
-          const googleCalendarUrl = `https://calendar.google.com/calendar/render?action=TEMPLATE&text=Grounded Reflection Reminder&dates=${eventDate.toISOString().replace(/[-:]/g, '').split('.')[0]}Z/${eventDate.toISOString().replace(/[-:]/g, '').split('.')[0]}Z&details=Time to reflect on your values`;
-          window.open(googleCalendarUrl, '_blank');
-          
-          onUpdateSettings({
-            ...settings,
-            reminders: { ...settings.reminders, useDeviceCalendar: true }
-          });
-        }
-      } catch (error) {
-        console.error('Calendar access error:', error);
-        alert('Could not access calendar. You can manually add reminders to your calendar.');
-      }
-    } else {
-      onUpdateSettings({
-        ...settings,
-        reminders: { ...settings.reminders, useDeviceCalendar: false }
-      });
-    }
-  };
-
-  const handleNtfyToggle = () => {
-    if (!settings.reminders.useNtfyPush) {
-      // Generate a random topic if none exists
-      if (!settings.reminders.ntfyTopic) {
-        const randomTopic = generateRandomTopic();
-        onUpdateSettings({
-          ...settings,
-          reminders: { 
-            ...settings.reminders, 
-            useNtfyPush: true,
-            ntfyTopic: randomTopic
-          }
-        });
-      } else {
-        onUpdateSettings({
-          ...settings,
-          reminders: { ...settings.reminders, useNtfyPush: true }
-        });
-      }
-    } else {
-      onUpdateSettings({
-        ...settings,
-        reminders: { ...settings.reminders, useNtfyPush: false }
-      });
-    }
-  };
-
-  const handleNtfyTopicChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const topic = e.target.value.trim();
-    if (isValidTopic(topic) || topic === '') {
-      onUpdateSettings({
-        ...settings,
-        reminders: { ...settings.reminders, ntfyTopic: topic }
-      });
-    }
-  };
-
-  const handleTestNtfy = async () => {
-    if (!settings.reminders.ntfyTopic) {
-      alert('Please enter an ntfy topic name first.');
-      return;
-    }
-    
-    try {
-      const success = await sendNtfyNotification(
-        'This is a test notification from Grounded. If you received this, your push notifications are working!',
-        'Grounded Test',
-        {
-          topic: settings.reminders.ntfyTopic,
-          server: settings.reminders.ntfyServer
-        }
-      );
-      
-      if (success) {
-        alert('Test notification sent! Check your device running the ntfy app.');
-      } else {
-        alert('Failed to send test notification. Please check your topic name and try again.');
-      }
-    } catch (error) {
-      console.error('Test notification error:', error);
-      alert('Error sending test notification. Please try again.');
-    }
-  };
 
   const sortedLogs = [...logs].sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
 
   return (
     <div className="space-y-12 animate-fade-in pb-20 max-w-2xl mx-auto">
-      <div className="text-center space-y-3">
-        <h2 className="text-2xl sm:text-4xl font-black text-text-primary dark:text-white tracking-tight">Vault & Accountability</h2>
-        <p className="text-text-primary/60 dark:text-white/60 text-sm sm:text-lg">Manage your history and growth commitments.</p>
-      </div>
-
-      {/* Accountability Settings Card */}
+      {/* Total Impact - First H1 Header */}
       <div className="bg-white dark:bg-dark-bg-primary rounded-xl sm:rounded-2xl border border-border-soft dark:border-dark-border/30 shadow-xl overflow-hidden">
-        <div className="p-6 sm:p-8 lg:p-10 space-y-6 sm:space-y-8">
-          <div className="flex items-center justify-between">
-            <div className="space-y-1">
-              <h3 className="text-lg sm:text-xl font-black text-text-primary dark:text-white">Accountability Engine</h3>
-              <p className="text-xs text-text-primary/60 dark:text-white/60 font-medium">Keep your North Star in sight throughout the day.</p>
+        <div className="p-6 sm:p-8 lg:p-10">
+          <h1 className="text-2xl sm:text-4xl font-black text-text-primary dark:text-white tracking-tight mb-2">Total Impact</h1>
+          <p className="text-text-primary/60 dark:text-white/60 text-sm sm:text-lg mb-6">Your journey in numbers</p>
+          <div className="flex flex-col sm:flex-row justify-between items-center gap-4 sm:gap-6">
+            <div className="text-center sm:text-left">
+              <p className="text-2xl sm:text-3xl font-black text-text-primary dark:text-white">{logs.length} Entries</p>
             </div>
-            <button 
-              onClick={toggleReminders}
-              className={`w-16 h-8 rounded-full transition-all relative ${settings.reminders.enabled ? 'bg-yellow-warm' : 'bg-border-soft dark:bg-dark-bg-primary'}`}
-            >
-              <div className={`absolute top-1 w-6 h-6 bg-white rounded-full shadow-md transition-all ${settings.reminders.enabled ? 'left-9' : 'left-1'}`} />
-            </button>
-          </div>
-
-          <div className={`space-y-6 transition-all duration-500 ${settings.reminders.enabled ? 'opacity-100 scale-100' : 'opacity-30 scale-95 pointer-events-none'}`}>
-            {/* Frequency Selector */}
-            <div className="space-y-3">
-              <label className="text-[10px] font-black text-text-primary/60 dark:text-white/60 uppercase tracking-widest block">
-                {(settings.reminders.frequency || 'daily').charAt(0).toUpperCase() + (settings.reminders.frequency || 'daily').slice(1)} Reflection Reminder
-              </label>
-              <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
-                {(['hourly', 'daily', 'weekly', 'monthly'] as ReminderFrequency[]).map((freq) => (
-                  <button
-                    key={freq}
-                    onClick={() => handleFrequencyChange(freq)}
-                    className={`px-4 py-3 rounded-xl font-black text-xs uppercase tracking-widest transition-all ${
-                      (settings.reminders.frequency || 'daily') === freq
-                        ? 'bg-yellow-warm text-text-primary shadow-lg scale-105'
-                        : 'bg-bg-secondary dark:bg-dark-bg-primary/50 text-text-primary/60 dark:text-white/60 hover:bg-yellow-warm/20 dark:hover:bg-yellow-warm/20'
-                    }`}
-                  >
-                    {freq}
-                  </button>
-                ))}
-              </div>
-            </div>
-
-            {/* Time and Schedule Options */}
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-              {((settings.reminders.frequency || 'daily') === 'daily' || (settings.reminders.frequency || 'daily') === 'weekly' || (settings.reminders.frequency || 'daily') === 'monthly') && (
-                <div className="space-y-2">
-                  <label className="text-[10px] font-black text-text-primary/60 dark:text-white/60 uppercase tracking-widest block">
-                    Time
-                  </label>
-                  <input 
-                    type="time" 
-                    value={settings.reminders.time}
-                    onChange={handleTimeChange}
-                    className="w-full bg-bg-secondary dark:bg-dark-bg-primary/50 border border-border-soft dark:border-dark-border/30 rounded-xl p-3 font-black text-text-primary dark:text-white focus:ring-2 focus:ring-yellow-warm transition-all outline-none"
-                  />
-                </div>
-              )}
-
-              {(settings.reminders.frequency || 'daily') === 'weekly' && (
-                <div className="space-y-2">
-                  <label className="text-[10px] font-black text-text-primary/60 dark:text-white/60 uppercase tracking-widest block">
-                    Day of Week
-                  </label>
-                  <select
-                    value={settings.reminders.dayOfWeek ?? 0}
-                    onChange={handleDayOfWeekChange}
-                    className="w-full bg-bg-secondary dark:bg-dark-bg-primary/50 border border-border-soft dark:border-dark-border/30 rounded-xl p-3 font-black text-text-primary dark:text-white focus:ring-2 focus:ring-yellow-warm transition-all outline-none"
-                  >
-                    <option value={0}>Sunday</option>
-                    <option value={1}>Monday</option>
-                    <option value={2}>Tuesday</option>
-                    <option value={3}>Wednesday</option>
-                    <option value={4}>Thursday</option>
-                    <option value={5}>Friday</option>
-                    <option value={6}>Saturday</option>
-                  </select>
-                </div>
-              )}
-
-              {(settings.reminders.frequency || 'daily') === 'monthly' && (
-                <div className="space-y-2">
-                  <label className="text-[10px] font-black text-text-primary/60 dark:text-white/60 uppercase tracking-widest block">
-                    Day of Month (1-31)
-                  </label>
-                  <input
-                    type="number"
-                    min="1"
-                    max="31"
-                    value={settings.reminders.dayOfMonth ?? 1}
-                    onChange={handleDayOfMonthChange}
-                    className="w-full bg-bg-secondary dark:bg-dark-bg-primary/50 border border-border-soft dark:border-dark-border/30 rounded-xl p-3 font-black text-text-primary dark:text-white focus:ring-2 focus:ring-yellow-warm transition-all outline-none"
-                  />
-                </div>
-              )}
-            </div>
-
-            {/* Device Calendar Integration */}
-            <div className="bg-bg-secondary dark:bg-dark-bg-primary/50 rounded-xl p-4 border border-border-soft dark:border-dark-border/30">
-              <div className="flex items-center justify-between">
-                <div className="space-y-1">
-                  <p className="text-[10px] font-black text-text-primary dark:text-white uppercase tracking-widest">
-                    Device Calendar
-                  </p>
-                  <p className="text-xs text-text-primary/60 dark:text-white/60">
-                    Add reminders to your device's calendar app
-                  </p>
-                </div>
-                <button
-                  onClick={handleCalendarToggle}
-                  className={`w-14 h-8 rounded-full transition-all relative ${
-                    settings.reminders.useDeviceCalendar
-                      ? 'bg-yellow-warm'
-                      : 'bg-border-soft dark:bg-dark-bg-primary'
-                  }`}
-                >
-                  <div className={`absolute top-1 w-6 h-6 bg-white rounded-full shadow-md transition-all ${
-                    settings.reminders.useDeviceCalendar ? 'left-7' : 'left-1'
-                  }`} />
-                </button>
-              </div>
-            </div>
-
-            {/* Ntfy.sh Push Notifications */}
-            <div className="bg-bg-secondary dark:bg-dark-bg-primary/50 rounded-xl p-4 border border-border-soft dark:border-dark-border/30 space-y-4">
-              <div className="flex items-center justify-between">
-                <div className="space-y-1">
-                  <p className="text-[10px] font-black text-text-primary dark:text-white uppercase tracking-widest">
-                    Push Notifications (ntfy.sh)
-                  </p>
-                  <p className="text-xs text-text-primary/60 dark:text-white/60">
-                    Secure push notifications to your device via ntfy.sh
-                  </p>
-                </div>
-                <button
-                  onClick={handleNtfyToggle}
-                  className={`w-12 h-6 rounded-full transition-all relative ${settings.reminders.useNtfyPush ? 'bg-yellow-warm' : 'bg-border-soft dark:bg-dark-bg-tertiary/50'}`}
-                >
-                  <div className={`absolute top-0.5 w-5 h-5 bg-white rounded-full shadow-sm transition-all ${settings.reminders.useNtfyPush ? 'left-6.5' : 'left-0.5'}`} />
-                </button>
-              </div>
-              
-              {settings.reminders.useNtfyPush && (
-                <div className="space-y-3 pt-3 border-t border-border-soft dark:border-dark-border/30">
-                  <div className="space-y-2">
-                    <label className="text-[9px] font-black text-text-primary/60 dark:text-white/60 uppercase tracking-widest block">
-                      Ntfy Topic Name
-                    </label>
-                    <div className="flex gap-2">
-                      <input
-                        type="text"
-                        value={settings.reminders.ntfyTopic || ''}
-                        onChange={handleNtfyTopicChange}
-                        placeholder="grounded-abc123xyz"
-                        className="flex-1 p-2 rounded-lg bg-white dark:bg-dark-bg-primary border border-border-soft dark:border-dark-border/30 text-xs font-medium text-text-primary dark:text-white focus:ring-2 focus:ring-yellow-warm transition-all outline-none"
-                      />
-                      <button
-                        onClick={() => {
-                          const randomTopic = generateRandomTopic();
-                          onUpdateSettings({
-                            ...settings,
-                            reminders: { ...settings.reminders, ntfyTopic: randomTopic }
-                          });
-                        }}
-                        className="px-3 py-2 bg-border-soft dark:bg-dark-bg-primary text-text-primary dark:text-white rounded-lg text-[9px] font-black uppercase tracking-widest hover:bg-border-soft dark:hover:bg-dark-bg-primary/80"
-                        title="Generate random topic"
-                      >
-                        🎲
-                      </button>
-                    </div>
-                    <p className="text-[8px] text-text-primary/50 dark:text-white/50">
-                      Use a unique, random topic name for privacy. Subscribe to this topic in the ntfy app on your device.
-                    </p>
-                  </div>
-                  
-                  <div className="space-y-2">
-                    <label className="text-[9px] font-black text-text-primary/60 dark:text-white/60 uppercase tracking-widest block">
-                      Custom Server (Optional)
-                    </label>
-                    <input
-                      type="text"
-                      value={settings.reminders.ntfyServer || ''}
-                      onChange={(e) => onUpdateSettings({
-                        ...settings,
-                        reminders: { ...settings.reminders, ntfyServer: e.target.value.trim() || undefined }
-                      })}
-                      placeholder="https://ntfy.sh (default)"
-                      className="w-full p-2 rounded-lg bg-white dark:bg-dark-bg-primary border border-border-soft dark:border-dark-border/30 text-xs font-medium text-text-primary dark:text-white focus:ring-2 focus:ring-yellow-warm transition-all outline-none"
-                    />
-                    <p className="text-[8px] text-text-primary/50 dark:text-white/50">
-                      Leave empty to use the free public server (https://ntfy.sh)
-                    </p>
-                  </div>
-                  
-                  <button
-                    onClick={handleTestNtfy}
-                    className="w-full px-4 py-2 bg-yellow-warm text-text-primary rounded-lg text-[9px] font-black uppercase tracking-widest hover:opacity-90"
-                  >
-                    Test Notification
-                  </button>
-                  
-                  <div className="p-3 bg-yellow-warm/10 dark:bg-yellow-warm/20 rounded-lg border border-yellow-warm/30">
-                    <p className="text-[8px] font-black text-yellow-warm uppercase tracking-widest mb-1">
-                      Setup Instructions
-                    </p>
-                    <ol className="text-[8px] text-text-primary dark:text-white space-y-1 list-decimal list-inside">
-                      <li>Install the ntfy app on your device (Android/iOS/Desktop)</li>
-                      <li>Subscribe to your topic: <code className="bg-white dark:bg-dark-bg-primary px-1 rounded">{settings.reminders.ntfyTopic || 'your-topic'}</code></li>
-                      <li>Click "Test Notification" to verify it works</li>
-                    </ol>
-                  </div>
-                </div>
-              )}
-            </div>
-
-            {/* Next Reminder Preview */}
-            <div className="bg-yellow-warm/10 dark:bg-yellow-warm/20 rounded-xl p-4 border border-yellow-warm/30">
-              <div className="flex justify-between items-center">
-                <span className="text-[10px] font-black text-text-primary dark:text-white uppercase tracking-widest">
-                  Next Reminder
-                </span>
-                <span className="text-sm font-black text-yellow-warm animate-pulse">
-                  {nextPulseInfo}
-                </span>
-              </div>
-            </div>
-            
-            <div className="w-full">
-              {notifPermission !== 'granted' ? (
-                <button 
-                  onClick={requestPermission}
-                  className="w-full px-6 py-4 bg-yellow-warm/20 dark:bg-yellow-warm/20 text-yellow-warm dark:text-yellow-warm rounded-2xl text-[10px] font-black uppercase tracking-widest hover:bg-yellow-warm/30 dark:hover:bg-yellow-warm/30 transition-colors flex items-center justify-center gap-2"
-                >
-                  <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={3} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" /></svg>
-                  Enable Browser Permissions
-                </button>
-              ) : (
-                <div className="px-6 py-4 bg-calm-sage/20 dark:bg-calm-sage/20 text-calm-sage dark:text-calm-sage rounded-2xl text-[10px] font-black uppercase tracking-widest flex items-center justify-center gap-2">
-                  <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={3} d="M5 13l4 4L19 7" /></svg>
-                  Nudge Engine Active
-                </div>
-              )}
-            </div>
-            <p className="text-[10px] text-text-tertiary font-medium italic text-center">Reminders trigger via system notifications while this tab is open.</p>
-          </div>
-        </div>
-      </div>
-
-      <div className="bg-white dark:bg-dark-bg-primary rounded-xl sm:rounded-2xl border border-border-soft dark:border-dark-border/30 shadow-xl overflow-hidden">
-        <div className="p-6 sm:p-8 lg:p-10 border-b border-border-soft dark:border-dark-border/30 flex flex-col sm:flex-row justify-between items-center gap-4 sm:gap-6">
-          <div className="text-center sm:text-left">
-            <p className="text-[10px] font-black text-text-primary/50 dark:text-white/50 uppercase tracking-widest mb-1">Total Impact</p>
-            <p className="text-2xl sm:text-3xl font-black text-text-primary dark:text-white">{logs.length} Entries</p>
-          </div>
           <div className="flex flex-col sm:flex-row gap-3 w-full sm:w-auto">
             <div className="flex flex-wrap gap-3">
               <button 
@@ -586,9 +144,10 @@ const VaultControl: React.FC<VaultControlProps> = ({ logs, goals, settings, onUp
               </div>
             )}
           </div>
+          </div>
         </div>
 
-        <div className="p-6 sm:p-8 lg:p-10 space-y-8 sm:space-y-10">
+        <div className="p-6 sm:p-8 lg:p-10">
           {sortedLogs.length === 0 ? (
             <div className="text-center py-16 sm:py-20 text-text-primary/30 dark:text-white/30 space-y-4">
               <svg className="w-12 sm:w-16 h-12 sm:h-16 mx-auto opacity-20" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 6.253v13m0-13C10.832 5.477 9.246 5 7.5 5S4.168 5.477 3 6.253v13C4.168 18.477 5.754 18 7.5 18s3.332.477 4.5 1.253m0-13C13.168 5.477 14.754 5 16.5 5c1.747 0 3.332.477 4.5 1.253v13C19.832 18.477 18.247 18 16.5 18c-1.746 0-3.332.477-4.5 1.253" /></svg>
@@ -596,60 +155,114 @@ const VaultControl: React.FC<VaultControlProps> = ({ logs, goals, settings, onUp
               <p className="text-xs sm:text-sm text-text-primary/60 dark:text-white/60">Start by reflecting on your values in the Dashboard.</p>
             </div>
           ) : (
-            <div className="relative pl-6 sm:pl-8 space-y-8 sm:space-y-10 before:absolute before:left-[8px] sm:before:left-[11px] before:top-2 before:bottom-2 before:w-[3px] before:bg-bg-secondary dark:before:bg-dark-bg-tertiary/30">
+            <div className="space-y-2">
               {sortedLogs.map((log) => {
                 const val = ALL_VALUES.find(v => v.id === log.valueId);
                 const isGoalAchieved = log.type === 'goal-completion';
                 const isCommitment = log.goalText && !isGoalAchieved;
+                const goalStatus = isGoalAchieved ? 'Goal Achieved' : isCommitment ? 'Goal Set' : 'Reflection';
+                const formattedDate = new Date(log.date).toLocaleDateString(undefined, { month: 'short', day: 'numeric', year: 'numeric' });
 
                 return (
-                  <div key={log.id} className="relative group">
-                    <div className={`absolute -left-[22px] sm:-left-[26px] top-1.5 w-5 h-5 sm:w-6 sm:h-6 rounded-full bg-white dark:bg-dark-bg-primary border-4 z-10 transition-all ${isGoalAchieved ? 'border-calm-sage scale-125' : isCommitment ? 'border-yellow-warm' : 'border-border-soft dark:border-dark-border/50'}`} />
-                    
-                    <div className={`rounded-2xl sm:rounded-[32px] p-6 sm:p-8 border-2 transition-all ${isGoalAchieved ? 'bg-calm-sage/10 dark:bg-calm-sage/20 border-calm-sage/30 shadow-emerald-50 dark:shadow-calm-sage/20' : 'bg-bg-secondary dark:bg-dark-bg-primary/50 border-border-soft dark:border-dark-border/30 group-hover:bg-white dark:group-hover:bg-dark-bg-primary group-hover:shadow-2xl'}`}>
-                      <div className="flex justify-between items-start mb-4">
-                        <div className="flex items-center gap-3 sm:gap-4">
-                          <span className="text-2xl sm:text-3xl" title={log.mood}>{log.mood || '✨'}</span>
-                          <div>
-                            <p className="font-black text-text-primary dark:text-white text-base sm:text-lg leading-none mb-1">{val?.name || 'Reflection'}</p>
-                            <p className="text-[9px] sm:text-[10px] font-bold text-text-primary/50 dark:text-white/50 uppercase tracking-widest">
-                              {new Date(log.date).toLocaleDateString(undefined, { month: 'short', day: 'numeric', year: 'numeric' })}
+                  <details
+                    key={log.id}
+                    className="group bg-white dark:bg-dark-bg-secondary border border-border-soft dark:border-dark-border rounded-xl overflow-hidden transition-all hover:shadow-md"
+                  >
+                    <summary className="cursor-pointer list-none">
+                      <div className="flex items-center justify-between p-4 sm:p-5 gap-3 sm:gap-4">
+                        {/* Date */}
+                        <div className="flex-shrink-0 w-24 sm:w-32">
+                          <p className="text-xs sm:text-sm font-black text-text-primary dark:text-white">
+                            {formattedDate}
+                          </p>
+                        </div>
+                        
+                        {/* Value */}
+                        <div className="flex-1 min-w-0">
+                          <div className="flex items-center gap-2">
+                            <span className="text-lg sm:text-xl flex-shrink-0" title={log.mood || log.emotionalState}>
+                              {log.mood || (log.emotionalState ? EMOTIONAL_STATES.find(e => e.state === log.emotionalState)?.emoji : '✨')}
+                            </span>
+                            <p className="text-xs sm:text-sm font-black text-text-primary dark:text-white truncate">
+                              {val?.name || 'Reflection'}
                             </p>
                           </div>
                         </div>
-                        {isGoalAchieved && (
-                           <span className="bg-calm-sage text-white text-[8px] sm:text-[9px] font-black px-2 sm:px-3 py-1 rounded-full uppercase tracking-widest animate-pulse">Goal Achieved</span>
-                        )}
+                        
+                        {/* Goal Status */}
+                        <div className="flex-shrink-0 flex items-center gap-2">
+                          <span className={`text-xs sm:text-sm font-black px-2 sm:px-3 py-1 rounded-full uppercase tracking-widest ${
+                            isGoalAchieved 
+                              ? 'bg-calm-sage text-white dark:text-white' 
+                              : isCommitment 
+                              ? 'bg-yellow-warm text-text-primary dark:text-text-primary'
+                              : 'bg-bg-tertiary dark:bg-dark-bg-tertiary text-text-secondary dark:text-text-secondary'
+                          }`}>
+                            {goalStatus}
+                          </span>
+                          <svg 
+                            className="w-4 h-4 text-text-tertiary dark:text-text-tertiary transition-transform group-open:rotate-180 flex-shrink-0" 
+                            fill="none" 
+                            viewBox="0 0 24 24" 
+                            stroke="currentColor"
+                          >
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
+                          </svg>
+                        </div>
                       </div>
-
-                      {log.deepReflection && (
-                        <div className="mb-3 p-3 bg-yellow-warm/10 dark:bg-yellow-warm/20 rounded-lg border border-yellow-warm/30">
-                          <p className="text-[9px] font-black text-yellow-warm uppercase tracking-widest mb-1">Deep Reflection</p>
-                          <p className="text-text-primary/80 dark:text-white/80 leading-relaxed text-xs sm:text-sm">{log.deepReflection}</p>
+                    </summary>
+                    
+                    {/* Expanded Content */}
+                    <div className="px-4 sm:px-5 pb-4 sm:pb-5 pt-0 space-y-4 border-t border-border-soft dark:border-dark-border">
+                      {/* Note */}
+                      {log.note && (
+                        <div>
+                          <p className="text-[9px] font-black text-text-primary/60 dark:text-white/60 uppercase tracking-widest mb-2">Reflection</p>
+                          <p className="text-sm sm:text-base text-text-primary dark:text-white leading-relaxed italic">"{log.note}"</p>
                         </div>
                       )}
+
+                      {/* Deep Reflection */}
+                      {log.deepReflection && (
+                        <div className="p-3 sm:p-4 bg-yellow-warm/10 dark:bg-yellow-warm/20 rounded-lg border border-yellow-warm/30">
+                          <p className="text-[9px] font-black text-yellow-warm uppercase tracking-widest mb-2">Deep Reflection</p>
+                          <p className="text-xs sm:text-sm text-text-primary/80 dark:text-white/80 leading-relaxed">{log.deepReflection}</p>
+                        </div>
+                      )}
+
+                      {/* Reflection Analysis */}
                       {log.reflectionAnalysis && (
-                        <div className="mb-3 p-3 bg-bg-secondary dark:bg-dark-bg-primary/50 rounded-lg border border-border-soft dark:border-dark-border/30">
-                          <p className="text-[9px] font-black text-text-primary/60 dark:text-white/60 uppercase tracking-widest mb-1">Reflection Analysis</p>
-                          <div className="text-text-primary/70 dark:text-white/70 leading-relaxed text-xs sm:text-sm whitespace-pre-line">
+                        <div className="p-3 sm:p-4 bg-bg-secondary dark:bg-dark-bg-primary/50 rounded-lg border border-border-soft dark:border-dark-border/30">
+                          <p className="text-[9px] font-black text-text-primary/60 dark:text-white/60 uppercase tracking-widest mb-2">Reflection Analysis</p>
+                          <div className="text-xs sm:text-sm text-text-primary/70 dark:text-white/70 leading-relaxed whitespace-pre-line">
                             {log.reflectionAnalysis}
                           </div>
                         </div>
                       )}
-                      <p className="text-text-primary/70 dark:text-white/70 leading-relaxed italic text-sm sm:text-base">"{log.note}"</p>
 
+                      {/* Goal Text */}
                       {log.goalText && (
-                        <div className={`mt-4 sm:mt-6 pt-4 sm:pt-6 border-t ${isGoalAchieved ? 'border-calm-sage/30' : 'border-border-soft dark:border-dark-border/30'} flex flex-col gap-2`}>
-                          <p className={`text-[9px] sm:text-[10px] font-black uppercase tracking-widest ${isGoalAchieved ? 'text-calm-sage' : 'text-yellow-warm'}`}>
+                        <div className={`p-3 sm:p-4 rounded-lg border ${
+                          isGoalAchieved 
+                            ? 'bg-calm-sage/10 dark:bg-calm-sage/20 border-calm-sage/30' 
+                            : 'bg-yellow-warm/10 dark:bg-yellow-warm/20 border-yellow-warm/30'
+                        }`}>
+                          <p className={`text-[9px] font-black uppercase tracking-widest mb-2 ${
+                            isGoalAchieved ? 'text-calm-sage' : 'text-yellow-warm'
+                          }`}>
                             {isGoalAchieved ? 'Accomplished Target' : 'Commitment Target'}
                           </p>
-                          <p className={`text-xs sm:text-sm font-bold ${isGoalAchieved ? 'text-calm-sage dark:text-calm-sage' : 'text-text-primary dark:text-white'}`}>
+                          <p className={`text-xs sm:text-sm font-bold ${
+                            isGoalAchieved 
+                              ? 'text-calm-sage dark:text-calm-sage' 
+                              : 'text-text-primary dark:text-white'
+                          }`}>
                             {log.goalText}
                           </p>
                         </div>
                       )}
                     </div>
-                  </div>
+                  </details>
                 );
               })}
             </div>

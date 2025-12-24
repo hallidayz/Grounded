@@ -996,8 +996,10 @@ export async function generateHumanReports(
     if (!counselingCoachModel) {
       const modelsLoaded = await initializeModels();
       if (!modelsLoaded) {
-        // Model initialization failed - throw error so UI can show message
-        throw new Error('Failed to load on-device models');
+        // Model initialization failed - use rule-based fallback silently
+        const fallbackReport = generateFallbackReport(logs, values);
+        const disclaimer = `\n\n---\n\n*This report was generated using rule-based analysis. All processing happens on your device for privacy.*`;
+        return `${fallbackReport}${disclaimer}`;
       }
     }
 
@@ -1042,14 +1044,7 @@ Format your response with clear sections for each format. Keep the tone supporti
 
     return report + disclaimer;
   } catch (error) {
-    // Check if this is a model loading error that should be shown to user
-    const errorMessage = error instanceof Error ? error.message : String(error);
-    if (errorMessage.includes('Failed to load on-device models')) {
-      // Re-throw model loading errors so UI can show appropriate message
-      throw error;
-    }
-    
-    // For other unexpected errors, log and return fallback
+    // For any errors, log and return fallback report gracefully
     console.error('Report generation error:', error);
     const fallbackReport = generateFallbackReport(logs, values);
     const disclaimer = `\n\n---\n\n*This report was generated using rule-based analysis. All processing happens on your device for privacy.*`;
