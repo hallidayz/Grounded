@@ -20,51 +20,56 @@ export const StyleGuide = {
   // ============================================
   buttons: {
     // Primary Action Button (Navy) - Main actions, confirmations
+    // Standard spacing: px-6 py-4 (60% rule - primary spacing)
     primary: {
-      base: 'px-6 py-3 sm:py-4 rounded-lg sm:rounded-xl font-black uppercase tracking-widest text-sm sm:text-base transition-all',
+      base: 'px-6 py-4 rounded-lg sm:rounded-xl font-black uppercase tracking-widest text-sm sm:text-base transition-all',
       colors: 'bg-navy-primary text-white dark:bg-navy-primary dark:text-white',
       hover: 'hover:opacity-90',
       active: 'active:scale-[0.98]',
       disabled: 'disabled:opacity-50 disabled:cursor-not-allowed',
       shadow: 'shadow-lg',
-      full: 'px-6 py-3 sm:py-4 bg-navy-primary text-white dark:bg-navy-primary dark:text-white rounded-lg sm:rounded-xl font-black uppercase tracking-widest text-sm sm:text-base hover:opacity-90 active:scale-[0.98] transition-all shadow-lg'
+      full: 'px-6 py-4 bg-navy-primary text-white dark:bg-navy-primary dark:text-white rounded-lg sm:rounded-xl font-black uppercase tracking-widest text-sm sm:text-base hover:opacity-90 active:scale-[0.98] transition-all shadow-lg'
     },
     
     // Accent Action Button (Yellow) - Important actions, CTAs
+    // Standard spacing: px-6 py-4 (30% rule - secondary spacing for CTAs)
     accent: {
-      base: 'px-6 py-3 sm:py-4 rounded-lg sm:rounded-xl font-black uppercase tracking-widest text-sm sm:text-base transition-all',
+      base: 'px-6 py-4 rounded-lg sm:rounded-xl font-black uppercase tracking-widest text-sm sm:text-base transition-all',
       colors: 'bg-yellow-warm text-text-primary dark:bg-yellow-warm dark:text-text-primary',
       hover: 'hover:opacity-90',
       active: 'active:scale-[0.98]',
       shadow: 'shadow-lg',
-      full: 'px-6 py-3 sm:py-4 bg-yellow-warm text-text-primary dark:bg-yellow-warm dark:text-text-primary rounded-lg sm:rounded-xl font-black uppercase tracking-widest text-sm sm:text-base hover:opacity-90 active:scale-[0.98] shadow-lg transition-all'
+      full: 'px-6 py-4 bg-yellow-warm text-text-primary dark:bg-yellow-warm dark:text-text-primary rounded-lg sm:rounded-xl font-black uppercase tracking-widest text-sm sm:text-base hover:opacity-90 active:scale-[0.98] shadow-lg transition-all'
     },
     
     // Secondary Button - Cancel, less important actions
+    // Compact spacing: px-4 py-3 (30% rule - secondary spacing)
     secondary: {
-      base: 'px-6 py-3 sm:py-4 rounded-lg sm:rounded-xl font-black uppercase tracking-widest text-sm sm:text-base transition-all',
+      base: 'px-4 py-3 rounded-lg sm:rounded-xl font-black uppercase tracking-widest text-sm sm:text-base transition-all',
       colors: 'bg-bg-primary dark:bg-dark-bg-primary/50 text-text-primary dark:text-white',
       hover: 'hover:opacity-80',
       border: 'border border-border-soft dark:border-dark-border/30',
-      full: 'px-6 py-3 sm:py-4 bg-bg-primary dark:bg-dark-bg-primary/50 text-text-primary dark:text-white rounded-lg sm:rounded-xl font-black uppercase tracking-widest text-sm sm:text-base hover:opacity-80 transition-all border border-border-soft dark:border-dark-border/30'
+      full: 'px-4 py-3 bg-bg-primary dark:bg-dark-bg-primary/50 text-text-primary dark:text-white rounded-lg sm:rounded-xl font-black uppercase tracking-widest text-sm sm:text-base hover:opacity-80 transition-all border border-border-soft dark:border-dark-border/30'
     },
     
     // Icon Button - Settings, help, logout (circular)
+    // Minimal spacing: p-2 (10% rule - accent spacing)
     icon: {
-      base: 'w-8 h-8 flex items-center justify-center rounded-full transition-all',
+      base: 'w-8 h-8 flex items-center justify-center rounded-full p-2 transition-all',
       colors: 'text-text-secondary dark:text-text-secondary',
       hover: 'hover:text-yellow-warm dark:hover:text-yellow-warm hover:bg-yellow-warm/10 dark:hover:bg-yellow-warm/20',
-      full: 'w-8 h-8 flex items-center justify-center rounded-full text-text-secondary dark:text-text-secondary hover:text-yellow-warm dark:hover:text-yellow-warm hover:bg-yellow-warm/10 dark:hover:bg-yellow-warm/20 transition-all'
+      full: 'w-8 h-8 flex items-center justify-center rounded-full p-2 text-text-secondary dark:text-text-secondary hover:text-yellow-warm dark:hover:text-yellow-warm hover:bg-yellow-warm/10 dark:hover:bg-yellow-warm/20 transition-all'
     },
     
     // Small Button - Compact spaces, inline actions
+    // Compact spacing: px-3 py-1.5 (10% rule - accent spacing)
     small: {
-      base: 'px-3 sm:px-4 py-1.5 sm:py-2 rounded-lg sm:rounded-xl font-black text-[8px] sm:text-[9px] uppercase tracking-widest transition-all',
+      base: 'px-3 py-1.5 rounded-lg sm:rounded-xl font-black text-[8px] sm:text-[9px] uppercase tracking-widest transition-all',
       primary: 'bg-navy-primary dark:bg-navy-primary text-white',
       accent: 'bg-yellow-warm text-text-primary hover:opacity-90',
       secondary: 'bg-bg-secondary dark:bg-dark-bg-primary/50 text-text-primary dark:text-white',
-      fullPrimary: 'px-3 sm:px-4 py-1.5 sm:py-2 bg-navy-primary dark:bg-navy-primary text-white rounded-lg sm:rounded-xl font-black text-[8px] sm:text-[9px] uppercase tracking-widest transition-all',
-      fullAccent: 'px-3 sm:px-4 py-1.5 sm:py-2 bg-yellow-warm text-text-primary rounded-lg sm:rounded-xl font-black text-[8px] sm:text-[9px] uppercase tracking-widest hover:opacity-90 transition-all'
+      fullPrimary: 'px-3 py-1.5 bg-navy-primary dark:bg-navy-primary text-white rounded-lg sm:rounded-xl font-black text-[8px] sm:text-[9px] uppercase tracking-widest transition-all',
+      fullAccent: 'px-3 py-1.5 bg-yellow-warm text-text-primary rounded-lg sm:rounded-xl font-black text-[8px] sm:text-[9px] uppercase tracking-widest hover:opacity-90 transition-all'
     },
     
     // Text Button - For links, subtle actions
@@ -152,26 +157,38 @@ export const StyleGuide = {
   },
 
   // ============================================
-  // SPACING PATTERNS
+  // SPACING PATTERNS (60/30/10 Rule)
   // ============================================
   spacing: {
-    // Section spacing
-    section: 'space-y-4 sm:space-y-6',
-    sectionLarge: 'space-y-6 sm:space-y-8',
+    // Primary spacing (60% of sections) - Main content areas
+    primary: 'space-y-6 sm:space-y-8',
+    primaryPadding: 'p-6 sm:p-8',
+    primaryGap: 'gap-6 sm:gap-8',
+    primaryMargin: 'mb-6 sm:mb-8',
     
-    // Card padding
-    card: 'p-4 sm:p-5',
-    cardLarge: 'p-6 sm:p-8',
-    cardSmall: 'p-3 sm:p-4',
+    // Secondary spacing (30% of sections) - Supporting content
+    secondary: 'space-y-4 sm:space-y-6',
+    secondaryPadding: 'p-4 sm:p-5',
+    secondaryGap: 'gap-4 sm:gap-6',
+    secondaryMargin: 'mb-4 sm:mb-6',
     
-    // Gaps
-    gap: 'gap-3 sm:gap-4',
-    gapSmall: 'gap-2 sm:gap-3',
-    gapLarge: 'gap-4 sm:gap-6',
+    // Accent spacing (10% of sections) - Highlights, emphasis
+    accent: 'space-y-2 sm:space-y-3',
+    accentPadding: 'p-2 sm:p-3',
+    accentGap: 'gap-2 sm:gap-3',
+    accentMargin: 'mb-2 sm:mb-3',
     
-    // Margins
-    marginSection: 'mb-4 sm:mb-6',
-    marginLarge: 'mb-6 sm:mb-8'
+    // Legacy aliases for backward compatibility
+    section: 'space-y-4 sm:space-y-6', // Maps to secondary
+    sectionLarge: 'space-y-6 sm:space-y-8', // Maps to primary
+    card: 'p-4 sm:p-5', // Maps to secondaryPadding
+    cardLarge: 'p-6 sm:p-8', // Maps to primaryPadding
+    cardSmall: 'p-3 sm:p-4', // Maps to accentPadding
+    gap: 'gap-3 sm:gap-4', // Maps to secondaryGap
+    gapSmall: 'gap-2 sm:gap-3', // Maps to accentGap
+    gapLarge: 'gap-4 sm:gap-6', // Maps to secondaryGap
+    marginSection: 'mb-4 sm:mb-6', // Maps to secondaryMargin
+    marginLarge: 'mb-6 sm:mb-8' // Maps to primaryMargin
   },
 
   // ============================================
@@ -351,6 +368,40 @@ export function getInputClass(
   
   // Fallback: combine base + focus
   return `${input.base} ${input.focus || ''}`.trim();
+}
+
+/**
+ * Get spacing class string based on 60/30/10 rule
+ * @param type - Spacing type: 'primary' | 'secondary' | 'accent'
+ * @param variant - Spacing variant: 'space' | 'padding' | 'gap' | 'margin'
+ * @returns Complete className string
+ */
+export function getSpacing(
+  type: 'primary' | 'secondary' | 'accent',
+  variant: 'space' | 'padding' | 'gap' | 'margin' = 'space'
+): string {
+  const spacing = StyleGuide.spacing;
+  
+  switch (variant) {
+    case 'space':
+      return type === 'primary' ? spacing.primary : 
+             type === 'secondary' ? spacing.secondary : 
+             spacing.accent;
+    case 'padding':
+      return type === 'primary' ? spacing.primaryPadding : 
+             type === 'secondary' ? spacing.secondaryPadding : 
+             spacing.accentPadding;
+    case 'gap':
+      return type === 'primary' ? spacing.primaryGap : 
+             type === 'secondary' ? spacing.secondaryGap : 
+             spacing.accentGap;
+    case 'margin':
+      return type === 'primary' ? spacing.primaryMargin : 
+             type === 'secondary' ? spacing.secondaryMargin : 
+             spacing.accentMargin;
+    default:
+      return spacing.secondary;
+  }
 }
 
 // Export for convenience

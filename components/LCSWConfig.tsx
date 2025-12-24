@@ -4,6 +4,7 @@ import EmailScheduleComponent from './EmailSchedule';
 import { hapticFeedback } from '../utils/animations';
 import { sendNtfyNotification, generateRandomTopic, isValidTopic } from '../services/ntfyService';
 import { ALL_VALUES } from '../constants';
+import { requestPermission, hasPermission, sendNotification } from '../services/notifications';
 
 interface LCSWConfigProps {
   config: LCSWConfig | undefined;
@@ -34,9 +35,18 @@ const LCSWConfigComponent: React.FC<LCSWConfigProps> = ({ config, onUpdate, onCl
   const protocolsContainerRef = useRef<HTMLDivElement>(null);
   
   // Accountability Engine state
-  const [notifPermission, setNotifPermission] = useState<NotificationPermission>(Notification.permission);
+  const [notifPermission, setNotifPermission] = useState<NotificationPermission>('default');
   const [nextPulseInfo, setNextPulseInfo] = useState<string>('');
   const [testStatus, setTestStatus] = useState<'idle' | 'sending' | 'success' | 'error'>('idle');
+
+  // Update permission state on mount
+  useEffect(() => {
+    if (hasPermission()) {
+      setNotifPermission('granted');
+    } else {
+      setNotifPermission('default');
+    }
+  }, []);
   
   // Dismiss tooltip when clicking outside on mobile
   useEffect(() => {
@@ -143,15 +153,15 @@ const LCSWConfigComponent: React.FC<LCSWConfigProps> = ({ config, onUpdate, onCl
     return () => clearInterval(interval);
   }, [settings?.reminders]);
 
-  const requestPermission = async () => {
-    const permission = await Notification.requestPermission();
+  const handleRequestPermission = async () => {
+    const permission = await requestPermission();
     setNotifPermission(permission);
   };
 
   const toggleReminders = () => {
     if (!settings || !onUpdateSettings) return;
     if (notifPermission !== 'granted') {
-      requestPermission();
+      handleRequestPermission();
     }
     onUpdateSettings({
       ...settings,
@@ -288,8 +298,8 @@ const LCSWConfigComponent: React.FC<LCSWConfigProps> = ({ config, onUpdate, onCl
     try {
       const testMessage = `💛 Test notification from Grounded! If you received this, push notifications are working perfectly!`;
       
-      if (Notification.permission === 'granted') {
-        new Notification('Grounded Test', {
+      if (hasPermission()) {
+        await sendNotification('Grounded Test', {
           body: testMessage,
           icon: '/favicon.ico'
         });

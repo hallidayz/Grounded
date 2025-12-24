@@ -12,16 +12,19 @@ import ThemeToggle from './components/ThemeToggle';
 import Login from './components/Login';
 import TermsAcceptance from './components/TermsAcceptance';
 import BottomNavigation from './components/BottomNavigation';
+import ErrorBoundary from './components/ErrorBoundary';
 import { preloadModels } from './services/aiService';
 import { dbService } from './services/database';
 import { isLoggedIn, getCurrentUser, acceptTerms, logoutUser } from './services/authService';
+import { getItemSync, setItemSync } from './services/storage';
+import { hasPermission, sendNotification } from './services/notifications';
 
-// Simple persistence helper
+// Simple persistence helper using storage abstraction
 const useLocalStorage = <T,>(key: string, initialValue: T): [T, React.Dispatch<React.SetStateAction<T>>] => {
   const [storedValue, setStoredValue] = useState<T>(() => {
     try {
-      const item = window.localStorage.getItem(key);
-      return item ? JSON.parse(item) : initialValue;
+      const item = getItemSync<T>(key);
+      return item !== null ? item : initialValue;
     } catch (error) {
       console.error(error);
       return initialValue;
@@ -30,7 +33,7 @@ const useLocalStorage = <T,>(key: string, initialValue: T): [T, React.Dispatch<R
 
   useEffect(() => {
     try {
-      window.localStorage.setItem(key, JSON.stringify(storedValue));
+      setItemSync(key, storedValue);
     } catch (error) {
       console.error(error);
     }
@@ -216,7 +219,7 @@ const App: React.FC = () => {
       const currentDay = now.getDay(); // 0 = Sunday, 6 = Saturday
       const currentDate = now.getDate(); // 1-31
 
-      if (Notification.permission !== 'granted') return;
+      if (!hasPermission()) return;
 
       // Get the top value (North Star) from selected values
       const topValue = selectedValueIds.length > 0 
@@ -277,10 +280,12 @@ const App: React.FC = () => {
       }
 
       if (shouldNotify) {
-        // Browser notification
-        new Notification('Grounded', {
+        // Send notification using abstraction
+        sendNotification('Grounded', {
           body: notificationBody,
           icon: '/favicon.ico'
+        }).catch(err => {
+          console.error('Failed to send notification:', err);
         });
         
         // Ntfy.sh push notification (if enabled)
@@ -457,8 +462,9 @@ const App: React.FC = () => {
   }
 
   return (
-    <div className="min-h-screen bg-bg-primary dark:bg-dark-bg-primary text-text-primary dark:text-white flex flex-col transition-colors duration-300">
-      <header className="bg-white dark:bg-dark-bg-primary border-b border-border-soft dark:border-dark-border sticky top-0 z-40 shadow-sm dark:shadow-lg">
+    <ErrorBoundary>
+      <div className="min-h-screen bg-bg-primary dark:bg-dark-bg-primary text-text-primary dark:text-white flex flex-col transition-colors duration-300">
+        <header className="bg-white dark:bg-dark-bg-primary border-b border-border-soft dark:border-dark-border sticky top-0 z-40 shadow-sm dark:shadow-lg">
         <div className="max-w-4xl mx-auto px-3 sm:px-4 h-14 flex items-center justify-between">
           <div className="flex items-center space-x-2">
             <div className="w-7 h-7 bg-navy-primary dark:bg-yellow-warm rounded-lg flex items-center justify-center text-white dark:text-navy-primary font-bold text-sm">
@@ -597,10 +603,11 @@ const App: React.FC = () => {
         />
       )}
 
-      <footer className="py-4 text-center text-text-tertiary dark:text-text-tertiary text-[10px] font-medium tracking-wide">
-        <p>Private & Secure. All AI processing happens on your device.</p>
-      </footer>
-    </div>
+        <footer className="py-4 text-center text-text-tertiary dark:text-text-tertiary text-[10px] font-medium tracking-wide">
+          <p>Private & Secure. All AI processing happens on your device.</p>
+        </footer>
+      </div>
+    </ErrorBoundary>
   );
 };
 

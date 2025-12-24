@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useState, useCallback } from 'react';
 import { motion } from 'framer-motion';
 
 interface AIResponseBubbleProps {
@@ -15,6 +15,10 @@ const AIResponseBubble: React.FC<AIResponseBubbleProps> = ({ message, emotion, o
     const timer = setTimeout(() => setIsVisible(true), 100);
     return () => clearTimeout(timer);
   }, []);
+
+  const handleActionClick = useCallback((action: 'reflection' | 'values' | 'resources') => {
+    onActionClick?.(action);
+  }, [onActionClick]);
 
   return (
     <motion.div
@@ -43,19 +47,19 @@ const AIResponseBubble: React.FC<AIResponseBubbleProps> = ({ message, emotion, o
           </p>
           <div className="space-y-2">
             <button
-              onClick={() => onActionClick('reflection')}
+              onClick={() => handleActionClick('reflection')}
               className="w-full bg-white dark:bg-dark-bg-tertiary text-text-primary dark:text-white rounded-xl p-4 text-left font-medium shadow-sm hover:shadow-md transition-all active:scale-98"
             >
               📝 Write a reflection
             </button>
             <button
-              onClick={() => onActionClick('values')}
+              onClick={() => handleActionClick('values')}
               className="w-full bg-white dark:bg-dark-bg-tertiary text-text-primary dark:text-white rounded-xl p-4 text-left font-medium shadow-sm hover:shadow-md transition-all active:scale-98"
             >
               🎯 See your values
             </button>
             <button
-              onClick={() => onActionClick('resources')}
+              onClick={() => handleActionClick('resources')}
               className="w-full bg-white dark:bg-dark-bg-tertiary text-text-primary dark:text-white rounded-xl p-4 text-left font-medium shadow-sm hover:shadow-md transition-all active:scale-98"
             >
               📞 View resources
@@ -67,5 +71,5 @@ const AIResponseBubble: React.FC<AIResponseBubbleProps> = ({ message, emotion, o
   );
 };
 
-export default AIResponseBubble;
+export default React.memo(AIResponseBubble);
 
