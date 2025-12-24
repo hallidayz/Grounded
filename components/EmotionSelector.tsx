@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useCallback } from 'react';
 import { motion } from 'framer-motion';
 import { EMOTIONAL_STATES, EmotionalState } from '../services/emotionalStates';
 import { hapticFeedback } from '../utils/animations';
@@ -10,11 +10,11 @@ interface EmotionSelectorProps {
 }
 
 const EmotionSelector: React.FC<EmotionSelectorProps> = ({ onSelect, selected, disabled = false }) => {
-  const handleSelect = (emotionId: EmotionalState) => {
+  const handleSelect = useCallback((emotionId: EmotionalState) => {
     if (disabled) return;
     hapticFeedback('light');
     onSelect(emotionId);
-  };
+  }, [disabled, onSelect]);
 
   return (
     <div className="space-y-4">
@@ -79,5 +79,5 @@ const EmotionSelector: React.FC<EmotionSelectorProps> = ({ onSelect, selected, d
   );
 };
 
-export default EmotionSelector;
+export default React.memo(EmotionSelector);
 

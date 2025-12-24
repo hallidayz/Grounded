@@ -65,5 +65,5 @@ const MoodTrendChart: React.FC<MoodTrendChartProps> = ({ data }) => {
   );
 };
 
-export default MoodTrendChart;
+export default React.memo(MoodTrendChart);
 

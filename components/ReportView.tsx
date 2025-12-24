@@ -1,5 +1,5 @@
 
-import React, { useState, useMemo } from 'react';
+import React, { useState, useMemo, useCallback } from 'react';
 import { LogEntry, ValueItem, LCSWConfig } from '../types';
 import { generateHumanReports } from '../services/aiService';
 import { shareViaEmail, generateEmailReport, isWebShareAvailable } from '../services/emailService';
@@ -20,7 +20,11 @@ const ReportView: React.FC<ReportViewProps> = ({ logs, values, lcswConfig }) => 
     return logs.filter(l => selectedLogIds.has(l.id));
   }, [logs, selectedLogIds]);
 
-  const handleGenerate = async () => {
+  const sortedLogs = useMemo(() => {
+    return [...logs].sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
+  }, [logs]);
+
+  const handleGenerate = useCallback(async () => {
     if (filteredLogs.length === 0) {
       alert("Please select at least one log to synthesize.");
       return;
@@ -43,18 +47,16 @@ const ReportView: React.FC<ReportViewProps> = ({ logs, values, lcswConfig }) => 
     } finally {
       setLoading(false);
     }
-  };
+  }, [filteredLogs, values, lcswConfig]);
 
-  const toggleLog = (id: string) => {
+  const toggleLog = useCallback((id: string) => {
     setSelectedLogIds(prev => {
       const next = new Set(prev);
       if (next.has(id)) next.delete(id);
       else next.add(id);
       return next;
     });
-  };
-
-  const sortedLogs = [...logs].sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
+  }, []);
 
   return (
     <div className="space-y-4 sm:space-y-6 lg:space-y-8 animate-fade-in pb-12 sm:pb-20">
@@ -179,4 +181,4 @@ const ReportView: React.FC<ReportViewProps> = ({ logs, values, lcswConfig }) => 
   );
 };
 
-export default ReportView;
+export default React.memo(ReportView);
