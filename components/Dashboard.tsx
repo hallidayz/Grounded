@@ -1,7 +1,7 @@
 
 import React, { useState, useEffect, useMemo } from 'react';
 import { ValueItem, LogEntry, Goal, GoalFrequency, GoalUpdate, LCSWConfig } from '../types';
-import { generateEncouragement, generateValueMantra, suggestGoal, detectCrisis, analyzeReflection } from '../services/aiService';
+import { generateEncouragement, generateEmotionalEncouragement, generateValueMantra, suggestGoal, detectCrisis, analyzeReflection } from '../services/aiService';
 import { shareViaEmail, generateGoalsEmail } from '../services/emailService';
 
 // Debounce hook to prevent rapid API calls
@@ -35,7 +35,10 @@ const Dashboard: React.FC<DashboardProps> = ({ values, onLog, goals, onUpdateGoa
   const [loading, setLoading] = useState(false);
   const [lastLoggedId, setLastLoggedId] = useState<string | null>(null);
   
-  const [guideMood, setGuideMood] = useState<GoalUpdate['mood']>('✨');
+  const [guideMood, setGuideMood] = useState<GoalUpdate['mood']>('✨'); // Keep for backward compatibility
+  const [emotionalState, setEmotionalState] = useState<'drained' | 'heavy' | 'mixed' | 'positive' | 'energized'>('mixed');
+  const [selectedFeeling, setSelectedFeeling] = useState<string | null>(null);
+  const [showFeelingsList, setShowFeelingsList] = useState(false);
   const debouncedGuideMood = useDebounce(guideMood, 500); // Debounce mood changes for 500ms
   const [reflectionText, setReflectionText] = useState('');
   const [goalText, setGoalText] = useState('');
@@ -47,6 +50,12 @@ const Dashboard: React.FC<DashboardProps> = ({ values, onLog, goals, onUpdateGoa
   const [reflectionAnalysis, setReflectionAnalysis] = useState<string | null>(null);
   const [analyzingReflection, setAnalyzingReflection] = useState(false);
   
+  // Encourage section state
+  const [encouragementText, setEncouragementText] = useState<string | null>(null);
+  const [encouragementLoading, setEncouragementLoading] = useState(false);
+  const [lastEncouragedState, setLastEncouragedState] = useState<string | null>(null);
+  const [lowStateCount, setLowStateCount] = useState(0); // Track consecutive low state selections
+  
   const debouncedReflectionText = useDebounce(reflectionText, 2000); // Analyze after 2 seconds of no typing
 
   const moodDetails = {
@@ -54,6 +63,44 @@ const Dashboard: React.FC<DashboardProps> = ({ values, onLog, goals, onUpdateGoa
     '🔥': { label: 'Momentum', desc: 'Action/Agency' },
     '✨': { label: 'Magic', desc: 'Alignment/Flow' },
     '🧗': { label: 'Challenge', desc: 'Resilience/Grit' }
+  };
+
+  const emotionalStates = {
+    drained: {
+      label: 'Very Low / Drained',
+      color: '#94a3b8', // Soft desaturated blue-gray
+      bgColor: 'bg-slate-300',
+      feelings: ['tired', 'empty', 'numb', 'burned out', 'exhausted', 'drained', 'flat', 'lifeless'],
+      description: 'Low energy, low arousal'
+    },
+    heavy: {
+      label: 'Low / Heavy',
+      color: '#475569', // Deeper muted blue-navy
+      bgColor: 'bg-slate-600',
+      feelings: ['sad', 'disappointed', 'lonely', 'discouraged', 'down', 'gloomy', 'melancholy', 'weighed down'],
+      description: 'Deeper emotions, reflection'
+    },
+    mixed: {
+      label: 'Medium / Mixed',
+      color: '#14b8a6', // Neutral teal
+      bgColor: 'bg-teal-500',
+      feelings: ['uncertain', 'okay', 'conflicted', 'reflective', 'neutral', 'ambivalent', 'contemplative', 'processing'],
+      description: 'In-between, balanced'
+    },
+    positive: {
+      label: 'High / Positive',
+      color: '#fbbf24', // Soft yellow-gold (muted)
+      bgColor: 'bg-yellow-400',
+      feelings: ['hopeful', 'curious', 'calm', 'engaged', 'content', 'peaceful', 'optimistic', 'grateful'],
+      description: 'Hopeful, optimistic'
+    },
+    energized: {
+      label: 'Very High / Energized',
+      color: '#f59e0b', // Warm yellow-orange / golden yellow
+      bgColor: 'bg-amber-500',
+      feelings: ['joyful', 'excited', 'inspired', 'proud', 'elated', 'enthusiastic', 'motivated', 'vibrant'],
+      description: 'High energy, enthusiasm'
+    }
   };
 
   const getReflectionPlaceholder = (freq: GoalFrequency) => {
@@ -194,6 +241,34 @@ const Dashboard: React.FC<DashboardProps> = ({ values, onLog, goals, onUpdateGoa
     onUpdateGoals(goals.filter(g => g.id !== goalId));
   };
 
+  const handleEmotionalEncourage = async (state: 'drained' | 'heavy' | 'mixed' | 'positive' | 'energized') => {
+    setEncouragementLoading(true);
+    setLastEncouragedState(state);
+    setEncouragementText(null);
+    
+    // Track low state selections
+    if (state === 'drained' || state === 'heavy') {
+      setLowStateCount(prev => prev + 1);
+    } else {
+      setLowStateCount(0); // Reset if not low state
+    }
+    
+    try {
+      const encouragement = await generateEmotionalEncouragement(
+        state,
+        selectedFeeling,
+        lowStateCount,
+        lcswConfig
+      );
+      setEncouragementText(encouragement);
+    } catch (error) {
+      console.error('Encouragement generation error:', error);
+      setEncouragementText("You're doing important work. Keep going, one step at a time.");
+    } finally {
+      setEncouragementLoading(false);
+    }
+  };
+
   const handleCommit = (valueId: string) => {
     if (!reflectionText.trim() && !goalText.trim()) return;
 
@@ -228,12 +303,16 @@ const Dashboard: React.FC<DashboardProps> = ({ values, onLog, goals, onUpdateGoa
       valueId,
       livedIt: true,
       note: reflectionText.trim() || "Observed without judgment.",
-      mood: guideMood,
+      mood: guideMood, // Keep for backward compatibility
       type: goalText.trim() ? 'goal-update' : 'standard',
       goalText: goalText.trim() || undefined,
       deepReflection: reflectionText.trim() || undefined,
       reflectionAnalysis: reflectionAnalysis || undefined
     });
+    
+    // Reset emotional state after logging
+    setEmotionalState('mixed');
+    setSelectedFeeling(null);
 
     localStorage.removeItem(`draft_reflection_${valueId}`);
     localStorage.removeItem(`draft_goal_${valueId}`);
@@ -261,6 +340,83 @@ const Dashboard: React.FC<DashboardProps> = ({ values, onLog, goals, onUpdateGoa
         </div>
       </div>
 
+      {/* Encourage Section - Always at the top */}
+      <div className="bg-white dark:bg-executive-depth rounded-xl sm:rounded-2xl border border-slate-100 dark:border-creative-depth/30 shadow-sm p-4 sm:p-5">
+        <div className="flex items-center justify-between mb-3 sm:mb-4">
+          <div>
+            <h3 className="text-sm sm:text-base font-black text-authority-navy dark:text-pure-foundation tracking-tight">Encourage</h3>
+            <p className="text-[8px] font-black text-authority-navy/50 dark:text-pure-foundation/50 uppercase tracking-widest">Tap how you're feeling for support</p>
+          </div>
+        </div>
+        
+        {/* Emotional State Tiles - Interactive */}
+        <div className="flex gap-1.5 sm:gap-2 w-full mb-4">
+          {(Object.entries(emotionalStates) as [keyof typeof emotionalStates, typeof emotionalStates[keyof typeof emotionalStates]][]).map(([state, details]) => (
+            <button
+              key={state}
+              onClick={() => {
+                setEmotionalState(state);
+                handleEmotionalEncourage(state);
+              }}
+              disabled={encouragementLoading}
+              className={`flex-1 flex flex-col items-center p-2 sm:p-3 rounded-lg sm:rounded-xl border-2 transition-all active:scale-95 disabled:opacity-50 disabled:cursor-not-allowed ${
+                lastEncouragedState === state && encouragementText
+                  ? 'border-authority-navy dark:border-pure-foundation shadow-md scale-105 bg-white dark:bg-executive-depth'
+                  : 'border-slate-200 dark:border-creative-depth/30 hover:border-slate-300 dark:hover:border-creative-depth/50 bg-white dark:bg-executive-depth'
+              }`}
+            >
+              <div 
+                className="w-full h-8 sm:h-10 rounded-md mb-1.5 sm:mb-2 transition-all"
+                style={{
+                  backgroundColor: details.color,
+                  boxShadow: lastEncouragedState === state && encouragementText 
+                    ? `0 0 0 2px ${details.color}, 0 2px 4px rgba(0,0,0,0.1)` 
+                    : 'none'
+                }}
+              />
+              <span className={`text-[7px] sm:text-[8px] font-black uppercase tracking-tight text-center leading-tight ${
+                lastEncouragedState === state && encouragementText
+                  ? 'text-authority-navy dark:text-pure-foundation'
+                  : 'text-authority-navy/60 dark:text-pure-foundation/60'
+              }`}>
+                {details.label.split(' / ')[1]}
+              </span>
+              {encouragementLoading && lastEncouragedState === state && (
+                <div className="text-[6px] text-brand-accent font-bold uppercase tracking-widest animate-pulse mt-1">
+                  ...
+                </div>
+              )}
+            </button>
+          ))}
+        </div>
+
+        {/* Display encouragement message */}
+        {encouragementText && (
+          <div className="mt-4 p-4 sm:p-5 bg-brand-accent/10 dark:bg-brand-accent/20 rounded-xl sm:rounded-2xl border border-brand-accent/30 animate-pop">
+            <div className="flex items-start gap-3">
+              <div className="flex-shrink-0 w-8 h-8 sm:w-10 sm:h-10 rounded-full bg-brand-accent/20 dark:bg-brand-accent/30 flex items-center justify-center">
+                <span className="text-lg sm:text-xl">✨</span>
+              </div>
+              <div className="flex-1 min-w-0">
+                <p className="text-[9px] sm:text-[10px] font-black text-brand-accent uppercase tracking-widest mb-2">
+                  {emotionalStates[lastEncouragedState as keyof typeof emotionalStates]?.label || 'Encouragement'}
+                </p>
+                <p className="text-xs sm:text-sm text-authority-navy dark:text-pure-foundation leading-relaxed font-medium">
+                  {encouragementText}
+                </p>
+                {lowStateCount >= 3 && (lastEncouragedState === 'drained' || lastEncouragedState === 'heavy') && (
+                  <div className="mt-3 p-3 bg-blue-50 dark:bg-blue-900/20 rounded-lg border border-blue-200 dark:border-blue-800">
+                    <p className="text-xs text-blue-900 dark:text-blue-200 font-medium">
+                      💙 <strong>Consider reaching out:</strong> You've been feeling low several times. Your therapist ({lcswConfig?.emergencyContact?.phone || 'contact them'}), a trusted friend, or the 988 Crisis & Suicide Lifeline can provide support. You don't have to go through this alone.
+                    </p>
+                  </div>
+                )}
+              </div>
+            </div>
+          </div>
+        )}
+      </div>
+
       <div className="grid grid-cols-1 gap-3">
         {values.map((value, index) => {
           const isActive = activeValueId === value.id;
@@ -285,7 +441,15 @@ const Dashboard: React.FC<DashboardProps> = ({ values, onLog, goals, onUpdateGoa
                   </div>
 
                   <button 
-                    onClick={() => setActiveValueId(isActive ? null : value.id)}
+                    onClick={() => {
+                      if (isActive) {
+                        // Reset emotional state when closing
+                        setEmotionalState('mixed');
+                        setSelectedFeeling(null);
+                        setShowFeelingsList(false);
+                      }
+                      setActiveValueId(isActive ? null : value.id);
+                    }}
                     className={`px-3 sm:px-4 py-1.5 sm:py-2 rounded-lg sm:rounded-xl font-black text-[8px] sm:text-[9px] uppercase tracking-widest transition-all shadow-sm active:scale-95 flex-shrink-0 ${isActive ? 'bg-authority-navy dark:bg-creative-depth text-white' : 'bg-brand-accent text-authority-navy hover:opacity-90'}`}
                   >
                     <span className="hidden sm:inline">{isActive ? 'Close' : 'Check-in'}</span>
@@ -311,19 +475,108 @@ const Dashboard: React.FC<DashboardProps> = ({ values, onLog, goals, onUpdateGoa
 
                 {isActive && (
                   <div className="mt-4 sm:mt-6 space-y-4 sm:space-y-6 animate-pop border-t border-slate-100 dark:border-creative-depth/30 pt-4 sm:pt-5">
-                    <div className="flex justify-center mb-3 sm:mb-4">
-                      <div className="grid grid-cols-4 gap-1.5 sm:gap-2 w-full max-w-xs">
-                        {(Object.entries(moodDetails) as [GoalUpdate['mood'], any][]).map(([m, info]) => (
-                          <button 
-                            key={m} 
-                            onClick={() => setGuideMood(m)}
-                            className={`flex flex-col items-center p-1.5 sm:p-2 rounded-lg border transition-all ${guideMood === m ? 'bg-brand-accent/20 dark:bg-brand-accent/30 border-brand-accent' : 'bg-pure-foundation dark:bg-executive-depth/50 border-transparent opacity-60'}`}
+                    {/* Emotional State Bar */}
+                    <div className="space-y-3">
+                      <label className="text-[8px] font-black text-authority-navy/50 dark:text-pure-foundation/50 uppercase tracking-widest block px-1">
+                        How are you feeling right now?
+                      </label>
+                      <div className="flex gap-1.5 sm:gap-2 w-full">
+                        {(Object.entries(emotionalStates) as [keyof typeof emotionalStates, typeof emotionalStates[keyof typeof emotionalStates]][]).map(([state, details]) => (
+                          <button
+                            key={state}
+                            onClick={() => {
+                              setEmotionalState(state);
+                              setShowFeelingsList(true);
+                            }}
+                            className={`flex-1 flex flex-col items-center p-2 sm:p-3 rounded-lg sm:rounded-xl border-2 transition-all active:scale-95 ${
+                              emotionalState === state
+                                ? 'border-authority-navy dark:border-pure-foundation shadow-md scale-105 bg-white dark:bg-executive-depth'
+                                : 'border-slate-200 dark:border-creative-depth/30 hover:border-slate-300 dark:hover:border-creative-depth/50 bg-white dark:bg-executive-depth'
+                            }`}
                           >
-                            <span className="text-base sm:text-lg">{m}</span>
-                            <span className={`text-[6px] font-black uppercase tracking-tight mt-0.5 ${guideMood === m ? 'text-brand-accent' : 'text-authority-navy/40 dark:text-pure-foundation/40'}`}>{info.label}</span>
+                            <div 
+                              className="w-full h-8 sm:h-10 rounded-md mb-1.5 sm:mb-2 transition-all"
+                              style={{
+                                backgroundColor: details.color,
+                                boxShadow: emotionalState === state ? `0 0 0 2px ${details.color}, 0 2px 4px rgba(0,0,0,0.1)` : 'none'
+                              }}
+                            />
+                            <span className={`text-[7px] sm:text-[8px] font-black uppercase tracking-tight text-center leading-tight ${
+                              emotionalState === state
+                                ? 'text-authority-navy dark:text-pure-foundation'
+                                : 'text-authority-navy/60 dark:text-pure-foundation/60'
+                            }`}>
+                              {details.label.split(' / ')[1]}
+                            </span>
                           </button>
                         ))}
                       </div>
+                      
+                      {/* Feelings List Modal */}
+                      {showFeelingsList && (
+                        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-sm" onClick={() => setShowFeelingsList(false)}>
+                          <div className="bg-white dark:bg-executive-depth rounded-2xl sm:rounded-3xl shadow-2xl max-w-md w-full max-h-[80vh] overflow-hidden" onClick={(e) => e.stopPropagation()}>
+                            <div className="p-4 sm:p-6">
+                              <div className="flex items-center justify-between mb-4">
+                                <div>
+                                  <h3 className="text-lg sm:text-xl font-black text-authority-navy dark:text-pure-foundation">
+                                    {emotionalStates[emotionalState].label}
+                                  </h3>
+                                  <p className="text-xs text-authority-navy/60 dark:text-pure-foundation/60 mt-1">
+                                    {emotionalStates[emotionalState].description}
+                                  </p>
+                                </div>
+                                <button
+                                  onClick={() => setShowFeelingsList(false)}
+                                  className="w-8 h-8 flex items-center justify-center rounded-full bg-slate-100 dark:bg-executive-depth/50 text-slate-400 hover:text-slate-900 dark:hover:text-pure-foundation"
+                                >
+                                  <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={3} d="M6 18L18 6M6 6l12 12" />
+                                  </svg>
+                                </button>
+                              </div>
+                              
+                              <div className="grid grid-cols-2 sm:grid-cols-3 gap-2 sm:gap-3">
+                                {emotionalStates[emotionalState].feelings.map((feeling) => (
+                                  <button
+                                    key={feeling}
+                                    onClick={() => {
+                                      setSelectedFeeling(feeling);
+                                      setShowFeelingsList(false);
+                                    }}
+                                    className={`p-3 sm:p-4 rounded-xl sm:rounded-2xl border-2 transition-all active:scale-95 ${
+                                      selectedFeeling === feeling
+                                        ? 'border-authority-navy dark:border-pure-foundation font-bold text-white dark:text-authority-navy'
+                                        : 'border-slate-200 dark:border-creative-depth/30 bg-pure-foundation dark:bg-executive-depth/50 text-authority-navy dark:text-pure-foundation hover:border-brand-accent/50'
+                                    }`}
+                                    style={selectedFeeling === feeling ? {
+                                      backgroundColor: emotionalStates[emotionalState].color
+                                    } : {}}
+                                  >
+                                    <span className="text-xs sm:text-sm capitalize">{feeling}</span>
+                                  </button>
+                                ))}
+                              </div>
+                              
+                              {selectedFeeling && (
+                                <div className="mt-4 p-3 bg-brand-accent/10 dark:bg-brand-accent/20 rounded-xl border border-brand-accent/30">
+                                  <p className="text-xs text-authority-navy dark:text-pure-foundation">
+                                    <span className="font-bold">Selected:</span> {selectedFeeling}
+                                  </p>
+                                </div>
+                              )}
+                            </div>
+                          </div>
+                        </div>
+                      )}
+                      
+                      {selectedFeeling && (
+                        <div className="mt-2 p-2 sm:p-3 bg-brand-accent/10 dark:bg-brand-accent/20 rounded-lg border border-brand-accent/30">
+                          <p className="text-[9px] sm:text-[10px] text-authority-navy dark:text-pure-foundation">
+                            <span className="font-bold">Feeling:</span> {selectedFeeling} ({emotionalStates[emotionalState].label.split(' / ')[1]})
+                          </p>
+                        </div>
+                      )}
                     </div>
 
                     <div className="bg-authority-navy dark:bg-creative-depth rounded-xl sm:rounded-2xl p-3 sm:p-4 shadow-md border border-authority-navy/20 dark:border-creative-depth/50 relative overflow-hidden group">

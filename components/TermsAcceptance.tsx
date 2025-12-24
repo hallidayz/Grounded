@@ -1,4 +1,5 @@
 import React, { useState } from 'react';
+import { ALL_CRISIS_PHRASES, getCategoryDisplayName, CrisisCategory } from '../services/crisisConfig';
 
 interface TermsAcceptanceProps {
   onAccept: () => void;
@@ -61,6 +62,70 @@ const TermsAcceptance: React.FC<TermsAcceptanceProps> = ({ onAccept, onDecline }
               <p className="text-sm sm:text-base leading-relaxed pt-2">
                 By proceeding, you acknowledge that you understand and agree to these terms and that you accept full responsibility for your use of the App.
               </p>
+            </div>
+
+            <div className="space-y-4 pt-4 border-t border-slate-200 dark:border-creative-depth/30">
+              <h2 className="text-lg sm:text-xl font-black text-authority-navy dark:text-pure-foundation">
+                CRISIS DETECTION & SAFETY
+              </h2>
+              
+              <div className="space-y-3 text-sm sm:text-base leading-relaxed">
+                <p>
+                  <strong>This app includes automatic crisis detection</strong> to help protect your safety and wellbeing. The app monitors your journal entries and reflections for language that may indicate you are in crisis or at risk of self-harm.
+                </p>
+                
+                <p>
+                  <strong>If the app detects crisis language, it will:</strong>
+                </p>
+                <ul className="list-disc list-inside ml-2 space-y-1">
+                  <li>Immediately stop normal AI responses</li>
+                  <li>Display crisis resources and emergency contact information</li>
+                  <li>Encourage you to contact professional help or emergency services</li>
+                  <li>Provide direct links to crisis hotlines and support resources</li>
+                </ul>
+
+                <div className="bg-red-50 dark:bg-red-900/20 border-l-4 border-red-500 p-4 rounded">
+                  <p className="font-bold text-red-800 dark:text-red-300 mb-2">
+                    ⚠️ Important Safety Information
+                  </p>
+                  <p className="text-red-700 dark:text-red-200 text-sm">
+                    The app treats <strong>any direct or indirect self-harm language as a crisis trigger</strong>, even if used hypothetically or in a joking manner. This is to ensure your safety. All suicide and self-harm mentions are taken seriously and will trigger immediate crisis guidance.
+                  </p>
+                </div>
+
+                <details className="mt-4">
+                  <summary className="cursor-pointer font-bold text-authority-navy dark:text-pure-foundation hover:text-brand-accent">
+                    View Crisis Detection Categories (Click to expand)
+                  </summary>
+                  <div className="mt-3 space-y-4 pl-4 border-l-2 border-slate-200 dark:border-creative-depth/30">
+                    {Array.from(new Set(ALL_CRISIS_PHRASES.map(p => p.category))).map(category => {
+                      const categoryPhrases = ALL_CRISIS_PHRASES.filter(p => p.category === category);
+                      const severity = categoryPhrases[0]?.severity || 'moderate';
+                      return (
+                        <div key={category} className="space-y-2">
+                          <h3 className="font-bold text-sm">
+                            {getCategoryDisplayName(category as CrisisCategory)} 
+                            <span className={`ml-2 px-2 py-0.5 rounded text-xs ${
+                              severity === 'critical' ? 'bg-red-100 dark:bg-red-900/30 text-red-800 dark:text-red-300' :
+                              severity === 'high' ? 'bg-orange-100 dark:bg-orange-900/30 text-orange-800 dark:text-orange-300' :
+                              'bg-yellow-100 dark:bg-yellow-900/30 text-yellow-800 dark:text-yellow-300'
+                            }`}>
+                              {severity.toUpperCase()}
+                            </span>
+                          </h3>
+                          <p className="text-xs text-authority-navy/70 dark:text-pure-foundation/70">
+                            The app monitors for phrases like: "{categoryPhrases.slice(0, 3).map(p => p.phrase).join('", "')}" and {categoryPhrases.length - 3 > 0 ? `${categoryPhrases.length - 3} more similar phrases` : 'similar phrases'}.
+                          </p>
+                        </div>
+                      );
+                    })}
+                  </div>
+                </details>
+
+                <p className="text-xs text-authority-navy/60 dark:text-pure-foundation/60 italic pt-2">
+                  These crisis detection phrases are hardcoded into the app and cannot be modified or disabled. This ensures consistent safety monitoring regardless of settings.
+                </p>
+              </div>
             </div>
           </div>
 

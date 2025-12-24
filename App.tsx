@@ -47,7 +47,7 @@ const App: React.FC = () => {
   const [settings, setSettings] = useState<AppSettings>({
     reminders: { enabled: false, frequency: 'daily', time: '09:00' }
   });
-  const [view, setView] = useState<'onboarding' | 'dashboard' | 'report' | 'values' | 'vault'>('onboarding');
+  const [view, setView] = useState<'onboarding' | 'home' | 'report' | 'values' | 'vault'>('onboarding');
   const [showHelp, setShowHelp] = useState(false);
   const [showLCSWConfig, setShowLCSWConfig] = useState(false);
 
@@ -146,18 +146,60 @@ const App: React.FC = () => {
     }
   }, [userId, settings, logs, goals, selectedValueIds, authState]);
 
-  // Preload AI models on app start
+  // Preload AI models in the background - start as early as possible
+  // Don't wait for auth, start loading immediately for better UX
   useEffect(() => {
+    let retryCount = 0;
+    const maxRetries = 3;
+    const retryDelay = 5000; // 5 seconds between retries
+    let isMounted = true;
+    
+    const loadModels = async (attempt: number = 1) => {
+      if (!isMounted) return;
+      
+      // Only log on first attempt to reduce console noise
+      if (attempt === 1) {
+        console.log('🚀 Loading AI models in background...');
+      }
+      
+      const success = await preloadModels();
+      
+      if (!isMounted) return;
+      
+      if (!success && attempt <= maxRetries) {
+        // Silently retry without logging each attempt
+        setTimeout(() => {
+          if (isMounted) {
+            loadModels(attempt + 1);
+          }
+        }, retryDelay);
+      } else if (!success) {
+        // Only log once at the end if all retries failed
+        console.info('ℹ️ AI models unavailable. App is fully functional with rule-based responses.');
+      } else {
+        console.log('✅ AI models ready!');
+      }
+    };
+    
+    // Start loading immediately when component mounts
+    // Don't wait for auth - models can load in parallel
+    loadModels();
+    
+    // Also try again when user logs in (in case network was unavailable)
     if (authState === 'app') {
-      console.log('Preloading AI models...');
-      preloadModels()
-        .then(() => {
-          console.log('AI models loaded successfully');
-        })
-        .catch(err => {
-          console.error('Model preload failed, will retry on first use:', err);
-        });
+      // Models may already be loading, but ensure they're ready
+      setTimeout(() => {
+        if (isMounted) {
+          preloadModels().catch(() => {
+            console.warn('Model preload retry on login failed');
+          });
+        }
+      }, 2000);
     }
+    
+    return () => {
+      isMounted = false;
+    };
   }, [authState]);
 
   // Reminder Heartbeat - supports Hourly, Daily, Weekly, Monthly
@@ -292,7 +334,7 @@ const App: React.FC = () => {
   // Determine initial view based on data
   useEffect(() => {
     if (authState === 'app' && selectedValueIds.length > 0 && view === 'onboarding') {
-      setView('dashboard');
+      setView('home');
     }
   }, [selectedValueIds, view, authState]);
 
@@ -410,11 +452,11 @@ const App: React.FC = () => {
             {showNav && (
               <nav className="flex items-center space-x-0.5 sm:space-x-1">
                 <button 
-                  onClick={() => setView('dashboard')}
-                  className={`px-2 sm:px-3 py-1.5 rounded-lg text-[10px] sm:text-xs font-bold transition-colors ${view === 'dashboard' ? 'bg-brand-accent/20 dark:bg-brand-accent/30 text-brand-accent dark:text-brand-accent' : 'text-authority-navy/60 dark:text-pure-foundation/60 hover:text-authority-navy dark:hover:text-pure-foundation hover:bg-pure-foundation dark:hover:bg-executive-depth/50'}`}
+                  onClick={() => setView('home')}
+                  className={`px-2 sm:px-3 py-1.5 rounded-lg text-[10px] sm:text-xs font-bold transition-colors ${view === 'home' ? 'bg-brand-accent/20 dark:bg-brand-accent/30 text-brand-accent dark:text-brand-accent' : 'text-authority-navy/60 dark:text-pure-foundation/60 hover:text-authority-navy dark:hover:text-pure-foundation hover:bg-pure-foundation dark:hover:bg-executive-depth/50'}`}
                 >
-                  <span className="hidden sm:inline">Dash</span>
-                  <span className="sm:hidden">D</span>
+                  <span className="hidden sm:inline">Home</span>
+                  <span className="sm:hidden">H</span>
                 </button>
                 <button 
                   onClick={() => setView('values')}
@@ -484,7 +526,7 @@ const App: React.FC = () => {
           />
         )}
         
-        {view === 'dashboard' && (
+        {view === 'home' && (
           <Dashboard 
             values={selectedValues} 
             onLog={handleLogEntry}

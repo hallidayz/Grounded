@@ -88,20 +88,36 @@ const LCSWConfigComponent: React.FC<LCSWConfigProps> = ({ config, onUpdate, onCl
               </div>
             </div>
 
-            {/* Crisis Phrases */}
+            {/* Crisis Phrases - Non-editable notice */}
             <div>
               <label className="text-xs font-black text-slate-400 uppercase tracking-widest mb-3 block">
-                Crisis Detection Phrases
+                Crisis Detection
               </label>
-              <p className="text-xs text-slate-500 mb-2">
-                One phrase per line. When detected, the app will show crisis resources instead of AI responses.
-              </p>
-              <textarea
-                value={crisisPhrases}
-                onChange={(e) => setCrisisPhrases(e.target.value)}
-                placeholder="suicide&#10;kill myself&#10;end my life&#10;self harm"
-                className="w-full p-4 rounded-2xl bg-slate-50 border-none focus:ring-2 focus:ring-indigo-100 outline-none text-slate-700 min-h-[120px] resize-none text-sm"
-              />
+              <div className="p-4 bg-blue-50 dark:bg-blue-900/20 rounded-2xl border border-blue-200 dark:border-blue-800 mb-4">
+                <p className="text-xs font-bold text-blue-900 dark:text-blue-300 mb-2">
+                  🔒 Automatic Crisis Detection (Non-Editable)
+                </p>
+                <p className="text-xs text-blue-800 dark:text-blue-200 leading-relaxed">
+                  The app uses <strong>comprehensive, hardcoded crisis detection</strong> that monitors for over 100+ phrases across 8 categories including direct suicide statements, self-harm language, planning indicators, and immediate danger signals. These detection phrases <strong>cannot be modified or disabled</strong> to ensure consistent safety monitoring.
+                </p>
+                <p className="text-xs text-blue-700 dark:text-blue-300 mt-2 italic">
+                  When crisis language is detected, the app immediately stops normal responses and displays emergency resources, crisis hotlines (988), and encourages contacting professional help or emergency services.
+                </p>
+              </div>
+              <div className="p-4 bg-slate-50 dark:bg-slate-800/50 rounded-2xl">
+                <p className="text-xs font-bold text-slate-700 dark:text-slate-300 mb-2">
+                  Additional Custom Phrases (Optional)
+                </p>
+                <p className="text-xs text-slate-600 dark:text-slate-400 mb-2">
+                  You can add custom phrases here, but note that the comprehensive hardcoded detection will still be active. Custom phrases are in addition to, not replacements for, the built-in safety monitoring.
+                </p>
+                <textarea
+                  value={crisisPhrases}
+                  onChange={(e) => setCrisisPhrases(e.target.value)}
+                  placeholder="Add any additional phrases specific to your practice (optional)&#10;Note: Built-in crisis detection remains active"
+                  className="w-full p-4 rounded-xl bg-white dark:bg-slate-700 border border-slate-200 dark:border-slate-600 focus:ring-2 focus:ring-indigo-100 dark:focus:ring-indigo-900 outline-none text-slate-700 dark:text-slate-200 min-h-[100px] resize-none text-sm"
+                />
+              </div>
             </div>
 
             {/* Emergency Contact */}
@@ -225,8 +241,12 @@ const LCSWConfigComponent: React.FC<LCSWConfigProps> = ({ config, onUpdate, onCl
                     if (confirm('This will clear and re-download the AI model. This may take a few minutes and requires internet connection. Continue?')) {
                       try {
                         const { initializeModels } = await import('../services/aiService');
-                        await initializeModels(true); // Force reload
-                        alert('Model update complete! The new model has been downloaded and cached on your device.');
+                        const success = await initializeModels(true); // Force reload
+                        if (success) {
+                          alert('Model update complete! The new model has been downloaded and cached on your device.');
+                        } else {
+                          alert('Model update failed. The app will continue using rule-based responses. This may be due to browser compatibility or network issues. Please check your internet connection and try again.');
+                        }
                       } catch (error) {
                         console.error('Model update error:', error);
                         alert('Error updating model. Please try again later.');
