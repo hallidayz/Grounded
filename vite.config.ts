@@ -44,11 +44,6 @@ export default defineConfig({
             type: 'image/png',
             purpose: 'any maskable'
           },
-          {
-            src: 'apple-touch-icon.png',
-            sizes: '180x180',
-            type: 'image/png'
-          }
         ],
         categories: ['health', 'lifestyle', 'medical'],
         screenshots: []
@@ -92,6 +87,8 @@ export default defineConfig({
   resolve: {
     alias: {
       '@': path.resolve(__dirname, '.'),
+      'react': path.resolve(__dirname, 'node_modules/react'),
+      'react-dom': path.resolve(__dirname, 'node_modules/react-dom'),
     },
     dedupe: ['react', 'react-dom'] // Ensure single React instance
   },

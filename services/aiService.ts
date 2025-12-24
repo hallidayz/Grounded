@@ -13,15 +13,41 @@ let isModelLoading = false;
 let modelLoadPromise: Promise<void> | null = null;
 
 /**
+ * Clear models to force re-download/update
+ */
+export async function clearModels(): Promise<void> {
+  moodTrackerModel = null;
+  counselingCoachModel = null;
+  isModelLoading = false;
+  modelLoadPromise = null;
+  
+  // Clear model cache
+  if ('caches' in window) {
+    const cacheKeys = await caches.keys();
+    for (const key of cacheKeys) {
+      if (key.includes('transformers') || key.includes('model') || key.includes('onnx')) {
+        await caches.delete(key);
+      }
+    }
+  }
+}
+
+/**
  * Initialize on-device models
  * Uses @xenova/transformers for browser-based inference
+ * Can be called to update/reload models
+ * @param forceReload - If true, clears existing models and reloads
  */
-async function initializeModels(): Promise<void> {
-  if (moodTrackerModel && counselingCoachModel) {
+export async function initializeModels(forceReload: boolean = false): Promise<void> {
+  if (forceReload) {
+    await clearModels();
+  }
+  
+  if (moodTrackerModel && counselingCoachModel && !forceReload) {
     return; // Already loaded
   }
 
-  if (isModelLoading && modelLoadPromise) {
+  if (isModelLoading && modelLoadPromise && !forceReload) {
     return modelLoadPromise; // Wait for existing load
   }
 
@@ -32,52 +58,41 @@ async function initializeModels(): Promise<void> {
       const { pipeline, env } = await import('@xenova/transformers');
       
       // Configure transformers.js for browser use
+      // Set the backend to 'webgpu' or 'wasm' (webgpu is faster but requires support)
+      env.allowLocalModels = true;
+      env.allowRemoteModels = true;
+      env.useBrowserCache = true;
+      env.useCustomCache = false;
+      
+      // Configure ONNX Runtime backend - check if it exists before accessing
+      if (env.backends && env.backends.onnx && env.backends.onnx.wasm) {
+        env.backends.onnx.wasm.proxy = false;
+        env.backends.onnx.wasm.numThreads = 1;
+      }
+      
       // Models will be downloaded and cached locally on first use
       
       // Model A: Mental state tracker (mood/anxiety/depression assessment)
       // Using sentiment analysis model for mood tracking
       // In production, replace with MiniCPM4-0.5B fine-tuned for mental health assessment
       try {
+        console.log('Loading mood tracker model...');
         moodTrackerModel = await pipeline(
           'text-classification',
           'Xenova/distilbert-base-uncased-finetuned-sst-2-english',
           { quantized: true }
         );
+        console.log('Mood tracker model loaded successfully');
       } catch (error) {
         console.warn('Mood tracker model load failed, using fallback:', error);
         moodTrackerModel = null; // Will use rule-based fallback
       }
 
-      // Model B: Counseling coach (structured guidance and homework support)
-      // Using a small, efficient text-generation model
-      // In production, replace with MiniCPM4-0.5B quantized version when available
-      try {
-        // Try to load a small instruction-following model
-        // Note: Actual model availability depends on HuggingFace
-        // This is a placeholder - replace with actual MiniCPM4-0.5B when available
-        counselingCoachModel = await pipeline(
-          'text-generation',
-          'Xenova/Qwen2.5-0.5B-Instruct',
-          { 
-            quantized: true,
-            // Fallback to a smaller model if the above isn't available
-            model_file: 'model_quantized.onnx'
-          }
-        );
-      } catch (error) {
-        console.warn('Counseling coach model load failed, using fallback:', error);
-        // Try a smaller fallback model
-        try {
-          counselingCoachModel = await pipeline(
-            'text-generation',
-            'Xenova/gpt2',
-            { quantized: true }
-          );
-        } catch (fallbackError) {
-          console.warn('Fallback model also failed:', fallbackError);
-          counselingCoachModel = null; // Will use rule-based fallback
-        }
-      }
+      // Model B: Counseling coach - Skip text-generation models for now
+      // Text-generation models require more complex ONNX setup and are causing errors
+      // We'll use rule-based fallback which works reliably
+      counselingCoachModel = null;
+      console.log('Using rule-based counseling guidance (text-generation models disabled for stability)');
 
       isModelLoading = false;
     } catch (error) {
@@ -242,6 +257,125 @@ export async function assessMentalState(
 }
 
 /**
+ * Analyze reflection with LCSW-focused lens
+ * Provides: Core Themes, LCSW Lens, Reflective Inquiry, Session Prep
+ */
+export async function analyzeReflection(
+  reflection: string,
+  frequency: GoalFrequency,
+  lcswConfig?: LCSWConfig
+): Promise<string> {
+  try {
+    // Check for crisis first
+    const crisisCheck = detectCrisis(reflection, lcswConfig);
+    if (crisisCheck.isCrisis) {
+      return getCrisisResponse(crisisCheck, lcswConfig);
+    }
+
+    if (!reflection.trim()) {
+      return 'Please enter your reflection to receive analysis.';
+    }
+
+    const protocols = lcswConfig?.protocols || [];
+    const protocolContext = protocols.length > 0 
+      ? `The user is working with an LCSW using ${protocols.join(', ')} protocols.`
+      : 'The user is working with a licensed clinical social worker.';
+
+    const frequencyLabel = frequency === 'quarterly' ? 'monthly' : frequency;
+    const prompt = `I am providing a deep reflection of my ${frequencyLabel} below under the heading [Observation].
+
+Acting as a supportive and insightful reflective partner, please analyze my notes and provide the following:
+
+**Core Themes**: Identify 2–3 recurring emotional or situational themes you notice in my reflection.
+
+**The 'LCSW Lens'**: Note any connections between my environment (work, relationships, physical space) and my internal mental state. Focus on social work pillars: environment, coping mechanisms, and self-advocacy.
+
+**Reflective Inquiry**: Ask me 2 'growth-oriented' questions that challenge me to look deeper into a specific part of my observation.
+
+**Session Prep**: Summarize one key takeaway or 'priority topic' I should consider bringing to my next therapy session to ensure I'm making the most of my time.
+
+${protocolContext}
+
+[Observation]
+${reflection}
+
+Format your response clearly with these four sections. Be supportive, insightful, and focused on helping me prepare for meaningful work in my next therapy session.`;
+
+    // Use rule-based analysis since text-generation models are disabled
+    return generateFallbackReflectionAnalysis(reflection, frequency, lcswConfig);
+  } catch (error) {
+    console.error('Reflection analysis error:', error);
+    return generateFallbackReflectionAnalysis(reflection, frequency, lcswConfig);
+  }
+}
+
+/**
+ * Fallback reflection analysis using rule-based approach
+ */
+function generateFallbackReflectionAnalysis(
+  reflection: string,
+  frequency: GoalFrequency,
+  lcswConfig?: LCSWConfig
+): string {
+  const lowerReflection = reflection.toLowerCase();
+  
+  // Detect themes
+  const themes: string[] = [];
+  if (lowerReflection.includes('anxious') || lowerReflection.includes('worried') || lowerReflection.includes('stress')) {
+    themes.push('Anxiety/Stress');
+  }
+  if (lowerReflection.includes('sad') || lowerReflection.includes('down') || lowerReflection.includes('depressed')) {
+    themes.push('Mood/Low Energy');
+  }
+  if (lowerReflection.includes('work') || lowerReflection.includes('job') || lowerReflection.includes('colleague')) {
+    themes.push('Work Environment');
+  }
+  if (lowerReflection.includes('family') || lowerReflection.includes('relationship') || lowerReflection.includes('friend')) {
+    themes.push('Interpersonal Relationships');
+  }
+  if (lowerReflection.includes('sleep') || lowerReflection.includes('tired') || lowerReflection.includes('exhausted')) {
+    themes.push('Physical Well-being');
+  }
+  if (themes.length === 0) {
+    themes.push('Self-Reflection', 'Personal Growth');
+  }
+
+  // Environment connections
+  let environmentNote = '';
+  if (lowerReflection.includes('work') || lowerReflection.includes('office')) {
+    environmentNote = 'Your work environment appears to be influencing your mental state. Notice how your physical space and work relationships impact your internal experience.';
+  } else if (lowerReflection.includes('home') || lowerReflection.includes('house')) {
+    environmentNote = 'Your home environment seems significant in this reflection. Consider how your physical space and home relationships affect your well-being.';
+  } else {
+    environmentNote = 'Consider how your environment—whether work, home, or social spaces—connects to what you\'re experiencing internally.';
+  }
+
+  // Generate questions
+  const questions = [
+    `What specific coping mechanism did you use (or could you use) in response to what you observed?`,
+    `How might advocating for yourself in this situation look different than what you've done before?`
+  ];
+
+  // Session prep
+  const frequencyLabel = frequency === 'quarterly' ? 'monthly' : frequency;
+  const sessionPrep = themes.length > 0 
+    ? `Bring the theme of "${themes[0]}" to your next session. Consider discussing how your environment and coping strategies are working (or not working) for you right now.`
+    : `Focus on discussing your reflection about ${frequencyLabel} patterns with your therapist. Consider what you want to explore more deeply.`;
+
+  return `## Core Themes
+${themes.slice(0, 3).map(t => `- ${t}`).join('\n')}
+
+## The 'LCSW Lens'
+${environmentNote}
+
+## Reflective Inquiry
+${questions.map((q, i) => `${i + 1}. ${q}`).join('\n')}
+
+## Session Prep
+${sessionPrep}`;
+}
+
+/**
  * Model B: Counseling Coach
  * Provides structured guidance, homework reminders, and psychoeducation
  * Aligned with LCSW treatment plans, not replacing them
@@ -324,7 +458,7 @@ Remember: You are supporting therapy integration, not providing therapy. Keep re
   } catch (error) {
     console.error('Counseling guidance error:', error);
     // Fallback response
-    return `Your focus on ${value.name} shows self-awareness. Consider discussing this reflection with your LCSW in your next session.`;
+    return `Your focus on ${value.name} shows self-awareness. Consider discussing this reflection with your therapist in your next session.`;
   }
 }
 
@@ -396,14 +530,45 @@ export async function suggestGoal(
     // Check for crisis
     const crisisCheck = detectCrisis(reflection, lcswConfig);
     if (crisisCheck.isCrisis) {
-      return `### Safety First\n- **Description**: Contact your LCSW or emergency services if you're in crisis\n- **What this helps with**: Immediate support and safety\n- **How do I measure progress**:\n  1. Reached out to a professional\n  2. Followed your safety plan\n  3. Engaged with your support network`;
+      return `### Safety First\n- **Description**: Contact your therapist or emergency services if you're in crisis\n- **What this helps with**: Immediate support and safety\n- **How do I measure progress**:\n  1. Reached out to a professional\n  2. Followed your safety plan\n  3. Engaged with your support network`;
     }
 
     if (!counselingCoachModel) {
       await initializeModels();
     }
 
-    const prompt = `Suggest a specific, achievable micro-goal for someone focusing on the value "${value.name}" (${value.description}).
+    // Check if reflection contains deep reflection and/or analysis
+    const hasDeepReflection = reflection.includes('Deep Reflection:') || reflection.trim().length > 50;
+    const hasAnalysis = reflection.includes('## Core Themes') || reflection.includes('## The \'LCSW Lens\'') || reflection.includes('Reflection Analysis:');
+    
+    const prompt = (hasDeepReflection || hasAnalysis)
+      ? `Based on the following deep reflection and analysis, suggest a specific, achievable "commit to do" next step that helps the user see they have options and different approaches to their growth and success.
+
+The user is focusing on the value: "${value.name}" (${value.description})
+Frequency: ${frequency}
+
+${reflection}
+
+Acting as a supportive and insightful reflective partner, generate a "commit to do" next guidance that:
+1. Directly addresses the specific themes, insights, and observations from their DEEP REFLECTION
+2. Shows them they have OPTIONS and different approaches (not just one path forward)
+3. Connects to their value: ${value.name}
+4. Is actionable and achievable within the ${frequency} timeframe
+5. Supports their therapy work and personal growth
+
+The goal is to help them see multiple pathways and approaches, not just one solution. Show them options.
+
+Format the response as:
+### Structured Aim
+- **Description**: [One specific action they can commit to do - show them this is ONE option among many]
+- **What this helps with**: [Brief benefit related to their value and the reflection themes - emphasize this is one approach]
+- **How do I measure progress**:
+  1. [First milestone]
+  2. [Second milestone]
+  3. [Third milestone]
+
+Keep it small, specific, and aligned with the insights from their deep reflection. Help them see they have choices.`
+      : `Suggest a specific, achievable micro-goal for someone focusing on the value "${value.name}" (${value.description}).
 
 Frequency: ${frequency}
 Recent reflection: "${reflection}"
@@ -479,10 +644,10 @@ export async function generateHumanReports(
     const prompt = `You are a therapy integration assistant helping synthesize a client's reflection logs for review with their LCSW.
 
 Generate a comprehensive report in SOAP, DAP, and BIRP formats.
-
+      
 Logs:
-${summary}
-
+      ${summary}
+      
 Format your response with clear sections for each format. Keep the tone supportive, clinical yet human, and focused on patterns and themes that would be useful for therapy integration.`;
 
     let report = generateFallbackReport(logs, values);
@@ -521,14 +686,14 @@ Format your response with clear sections for each format. Keep the tone supporti
  */
 function getCrisisResponse(crisis: CrisisDetection, lcswConfig?: LCSWConfig): string {
   if (crisis.severity === 'critical') {
-    return `🚨 **CRISIS DETECTED**\n\nYour safety is the priority. Please:\n\n1. Contact emergency services: 911\n2. Contact your LCSW: ${lcswConfig?.emergencyContact?.phone || 'Your LCSW\'s emergency line'}\n3. Reach out to a crisis hotline: 988 (Suicide & Crisis Lifeline)\n\nThis app cannot provide crisis support. Please connect with a professional immediately.`;
+    return `🚨 **CRISIS DETECTED**\n\nYour safety is the priority. Please:\n\n1. Contact emergency services: 911\n2. Contact your therapist: ${lcswConfig?.emergencyContact?.phone || 'Your therapist\'s emergency line'}\n3. Reach out to a crisis hotline: 988 (Suicide & Crisis Lifeline)\n\nThis app cannot provide crisis support. Please connect with a professional immediately.`;
   }
 
   if (crisis.severity === 'high') {
-    return `⚠️ **Support Needed**\n\nYour reflection contains concerning content. Please:\n\n1. Contact your LCSW as soon as possible\n2. Reach out to your support network\n3. Use your safety plan if you have one\n\nThis is not a crisis response system. For immediate support, contact a professional.`;
+    return `⚠️ **Support Needed**\n\nYour reflection contains concerning content. Please:\n\n1. Contact your therapist as soon as possible\n2. Reach out to your support network\n3. Use your safety plan if you have one\n\nThis is not a crisis response system. For immediate support, contact a professional.`;
   }
 
-  return `Your reflection contains some difficult content. Consider discussing this with your LCSW in your next session. If you need immediate support, contact ${lcswConfig?.emergencyContact?.phone || 'your LCSW'}.`;
+  return `Your reflection contains some difficult content. Consider discussing this with your therapist in your next session. If you need immediate support, contact ${lcswConfig?.emergencyContact?.phone || 'your therapist'}.`;
 }
 
 /**
@@ -600,7 +765,7 @@ function generateFallbackReport(logs: LogEntry[], values: ValueItem[]): string {
 ---
 
 *This is a basic summary. For detailed analysis, please review entries manually or discuss with your LCSW.*`;
-}
+  }
 
 /**
  * Preload models in the background (call this early in app lifecycle)

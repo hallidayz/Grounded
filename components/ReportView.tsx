@@ -27,7 +27,7 @@ const ReportView: React.FC<ReportViewProps> = ({ logs, values, lcswConfig }) => 
     }
     setLoading(true);
     try {
-      // Generate report using on-device AI with LCSW configuration
+      // Generate report using on-device AI with configuration
       const report = await generateHumanReports(filteredLogs, values, lcswConfig);
       setGeneratedReport(report);
       setMode('generate');
@@ -95,6 +95,11 @@ const ReportView: React.FC<ReportViewProps> = ({ logs, values, lcswConfig }) => 
                         <span className="text-xl sm:text-2xl">{log.mood}</span>
                       </div>
                       <p className="text-base sm:text-lg font-black text-authority-navy dark:text-pure-foundation truncate">{val?.name}</p>
+                      {log.deepReflection && (
+                        <p className="text-authority-navy/80 dark:text-pure-foundation/80 mt-2 sm:mt-3 leading-relaxed text-xs sm:text-sm line-clamp-2 font-medium">
+                          Deep Reflection: {log.deepReflection.substring(0, 100)}{log.deepReflection.length > 100 ? '...' : ''}
+                        </p>
+                      )}
                       <p className="text-authority-navy/70 dark:text-pure-foundation/70 mt-2 sm:mt-3 italic leading-relaxed text-sm sm:text-base line-clamp-2">"{log.note}"</p>
                     </div>
                   </button>
@@ -125,13 +130,13 @@ const ReportView: React.FC<ReportViewProps> = ({ logs, values, lcswConfig }) => 
               <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3 sm:gap-0 mb-6 sm:mb-10 pb-4 sm:pb-6 border-b border-slate-100 dark:border-creative-depth/30">
                 <p className="text-[10px] font-black text-brand-accent uppercase tracking-[0.3em]">Confidential Clinical Summary</p>
                 <div className="flex flex-wrap gap-2">
-                  <button 
-                    onClick={() => {
-                      navigator.clipboard.writeText(generatedReport);
-                      alert("All formats copied to clipboard!");
-                    }}
+                <button 
+                  onClick={() => {
+                    navigator.clipboard.writeText(generatedReport);
+                    alert("All formats copied to clipboard!");
+                  }}
                     className="px-4 sm:px-6 py-2 bg-brand-accent/20 dark:bg-brand-accent/30 text-brand-accent rounded-full text-[9px] sm:text-[10px] font-black uppercase tracking-widest hover:bg-brand-accent/30 dark:hover:bg-brand-accent/40"
-                  >
+                >
                     Copy
                   </button>
                   <button 
@@ -148,7 +153,7 @@ const ReportView: React.FC<ReportViewProps> = ({ logs, values, lcswConfig }) => 
                     className="px-4 sm:px-6 py-2 bg-brand-accent text-authority-navy rounded-full text-[9px] sm:text-[10px] font-black uppercase tracking-widest hover:opacity-90"
                   >
                     {isWebShareAvailable() ? '📧 Share' : '📧 Email'}
-                  </button>
+                </button>
                 </div>
               </div>
               <div className="whitespace-pre-wrap font-sans text-authority-navy dark:text-pure-foundation leading-relaxed text-sm sm:text-base lg:text-lg">

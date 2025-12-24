@@ -48,7 +48,7 @@ const LCSWConfigComponent: React.FC<LCSWConfigProps> = ({ config, onUpdate, onCl
         <div className="p-8 space-y-8">
           <div className="flex justify-between items-center">
             <div>
-              <h2 className="text-2xl font-black text-slate-900">LCSW Configuration</h2>
+              <h2 className="text-2xl font-black text-slate-900">Configuration</h2>
               <p className="text-sm text-slate-500 mt-1">Configure therapy integration settings</p>
             </div>
             <button 
@@ -110,7 +110,7 @@ const LCSWConfigComponent: React.FC<LCSWConfigProps> = ({ config, onUpdate, onCl
                   type="text"
                   value={emergencyName}
                   onChange={(e) => setEmergencyName(e.target.value)}
-                  placeholder="LCSW Name"
+                  placeholder="Therapist Name"
                   className="w-full p-4 rounded-2xl bg-slate-50 border-none focus:ring-2 focus:ring-indigo-100 outline-none text-slate-700"
                 />
                 <input
@@ -135,7 +135,7 @@ const LCSWConfigComponent: React.FC<LCSWConfigProps> = ({ config, onUpdate, onCl
                 Custom Homework/Worksheets
               </label>
               <p className="text-xs text-slate-500 mb-2">
-                Custom prompts or worksheets your LCSW wants you to focus on. One per line.
+                Custom prompts or worksheets your therapist wants you to focus on. One per line.
               </p>
               <textarea
                 value={customPrompts}

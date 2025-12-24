@@ -99,7 +99,15 @@ export function generateEmailReport(
       body += `Recent Activity:\n`;
       logs.slice(0, 10).forEach(log => {
         const value = values.find(v => v.id === log.valueId);
-        body += `\n- ${new Date(log.date).toLocaleDateString()}: ${value?.name || 'General'} - ${log.note.substring(0, 100)}...\n`;
+        let entry = `\n- ${new Date(log.date).toLocaleDateString()}: ${value?.name || 'General'}`;
+        if (log.deepReflection) {
+          entry += `\n  Deep Reflection: ${log.deepReflection.substring(0, 150)}${log.deepReflection.length > 150 ? '...' : ''}`;
+        }
+        if (log.reflectionAnalysis) {
+          entry += `\n  Analysis: ${log.reflectionAnalysis.substring(0, 200)}${log.reflectionAnalysis.length > 200 ? '...' : ''}`;
+        }
+        entry += `\n  Note: ${log.note.substring(0, 100)}${log.note.length > 100 ? '...' : ''}\n`;
+        body += entry;
       });
     }
   }

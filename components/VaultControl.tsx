@@ -1,6 +1,6 @@
 
 import React, { useState, useEffect } from 'react';
-import { LogEntry, Goal, AppSettings } from '../types';
+import { LogEntry, Goal, AppSettings, ReminderFrequency } from '../types';
 import { ALL_VALUES } from '../constants';
 import { shareViaEmail, generateDataExportEmail, isWebShareAvailable } from '../services/emailService';
 import EmailScheduleComponent from './EmailSchedule';
@@ -36,13 +36,30 @@ const VaultControl: React.FC<VaultControlProps> = ({ logs, goals, settings, onUp
 
       const now = new Date();
       const currentHour = now.getHours();
+      const currentDay = now.getDay();
+      const currentDate = now.getDate();
       
-      // Check for next hourly pulse if we are in daylight hours
-      if (settings.reminders.recurringHourly && currentHour >= 8 && currentHour < 20) {
-        setNextPulseInfo(`Hourly: ${currentHour + 1}:00`);
-      } else {
-        // Show the daily reminder time
-        setNextPulseInfo(`Daily: ${settings.reminders.time}`);
+      switch (settings.reminders.frequency) {
+        case 'hourly':
+          if (currentHour >= 8 && currentHour < 20) {
+            setNextPulseInfo(`Hourly: ${currentHour + 1}:00`);
+          } else {
+            setNextPulseInfo('Hourly: 8:00 AM');
+          }
+          break;
+        case 'daily':
+          setNextPulseInfo(`Daily: ${settings.reminders.time}`);
+          break;
+        case 'weekly':
+          const days = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'];
+          const targetDay = settings.reminders.dayOfWeek ?? 0;
+          const dayName = days[targetDay];
+          setNextPulseInfo(`Weekly: ${dayName} at ${settings.reminders.time}`);
+          break;
+        case 'monthly':
+          const day = settings.reminders.dayOfMonth ?? 1;
+          setNextPulseInfo(`Monthly: Day ${day} at ${settings.reminders.time}`);
+          break;
       }
     };
 
@@ -86,10 +103,10 @@ const VaultControl: React.FC<VaultControlProps> = ({ logs, goals, settings, onUp
     });
   };
 
-  const toggleHourly = () => {
+  const handleFrequencyChange = (frequency: ReminderFrequency) => {
     onUpdateSettings({
       ...settings,
-      reminders: { ...settings.reminders, recurringHourly: !settings.reminders.recurringHourly }
+      reminders: { ...settings.reminders, frequency }
     });
   };
 
@@ -98,6 +115,64 @@ const VaultControl: React.FC<VaultControlProps> = ({ logs, goals, settings, onUp
       ...settings,
       reminders: { ...settings.reminders, time: e.target.value }
     });
+  };
+
+  const handleDayOfWeekChange = (e: React.ChangeEvent<HTMLSelectElement>) => {
+    onUpdateSettings({
+      ...settings,
+      reminders: { ...settings.reminders, dayOfWeek: parseInt(e.target.value) }
+    });
+  };
+
+  const handleDayOfMonthChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const day = parseInt(e.target.value);
+    if (day >= 1 && day <= 31) {
+      onUpdateSettings({
+        ...settings,
+        reminders: { ...settings.reminders, dayOfMonth: day }
+      });
+    }
+  };
+
+  const handleCalendarToggle = async () => {
+    if (!settings.reminders.useDeviceCalendar) {
+      // Request calendar access and create event
+      try {
+        // Use Web Calendar API if available
+        if ('calendar' in navigator && 'requestPermission' in navigator.calendar) {
+          const permission = await (navigator.calendar as any).requestPermission();
+          if (permission === 'granted') {
+            onUpdateSettings({
+              ...settings,
+              reminders: { ...settings.reminders, useDeviceCalendar: true }
+            });
+          }
+        } else {
+          // Fallback: Create calendar event URL
+          const now = new Date();
+          const [hours, minutes] = settings.reminders.time.split(':').map(Number);
+          const eventDate = new Date();
+          eventDate.setHours(hours, minutes, 0, 0);
+          
+          // Create Google Calendar URL
+          const googleCalendarUrl = `https://calendar.google.com/calendar/render?action=TEMPLATE&text=Grounded Reflection Reminder&dates=${eventDate.toISOString().replace(/[-:]/g, '').split('.')[0]}Z/${eventDate.toISOString().replace(/[-:]/g, '').split('.')[0]}Z&details=Time to reflect on your values`;
+          window.open(googleCalendarUrl, '_blank');
+          
+          onUpdateSettings({
+            ...settings,
+            reminders: { ...settings.reminders, useDeviceCalendar: true }
+          });
+        }
+      } catch (error) {
+        console.error('Calendar access error:', error);
+        alert('Could not access calendar. You can manually add reminders to your calendar.');
+      }
+    } else {
+      onUpdateSettings({
+        ...settings,
+        reminders: { ...settings.reminders, useDeviceCalendar: false }
+      });
+    }
   };
 
   const sortedLogs = [...logs].sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
@@ -137,6 +212,48 @@ const VaultControl: React.FC<VaultControlProps> = ({ logs, goals, settings, onUp
         </div>
       </div>
 
+      {/* AI Model Settings Card */}
+      <div className="bg-white dark:bg-executive-depth rounded-xl sm:rounded-2xl border border-slate-100 dark:border-creative-depth/30 shadow-xl overflow-hidden">
+        <div className="p-6 sm:p-8 lg:p-10 space-y-6">
+          <div className="flex items-center justify-between">
+            <div className="space-y-1">
+              <h3 className="text-lg sm:text-xl font-black text-authority-navy dark:text-pure-foundation">AI Model</h3>
+              <p className="text-xs text-authority-navy/60 dark:text-pure-foundation/60 font-medium">Update the on-device psychology-centric assistant</p>
+            </div>
+          </div>
+          <div className="space-y-4">
+            <div className="p-4 bg-pure-foundation dark:bg-executive-depth/50 rounded-xl">
+              <p className="text-xs text-authority-navy dark:text-pure-foundation mb-2">
+                <strong>Current Model:</strong> DistilBERT (Text Classification)
+              </p>
+              <p className="text-[10px] text-authority-navy/60 dark:text-pure-foundation/60">
+                A tiny, on-device, psychology-centric assistant that avoids wild speculation. Models are quantized for mobile devices.
+              </p>
+            </div>
+            <button
+              onClick={async () => {
+                if (confirm('This will clear and re-download the AI model. This may take a few minutes and requires internet connection. Continue?')) {
+                  try {
+                    const { initializeModels } = await import('../services/aiService');
+                    await initializeModels(true); // Force reload
+                    alert('Model update complete! The new model has been downloaded and cached on your device.');
+                  } catch (error) {
+                    console.error('Model update error:', error);
+                    alert('Error updating model. Please try again later.');
+                  }
+                }
+              }}
+              className="w-full px-4 sm:px-6 py-3 bg-brand-accent text-authority-navy rounded-xl text-xs sm:text-sm font-black uppercase tracking-widest hover:opacity-90"
+            >
+              Update AI Model
+            </button>
+            <p className="text-[9px] text-authority-navy/50 dark:text-pure-foundation/50 text-center">
+              Recommended: MiniCPM-0.5B or TinyLlama-1.1B (quantized for mobile)
+            </p>
+          </div>
+        </div>
+      </div>
+
       {/* Accountability Settings Card */}
       <div className="bg-white dark:bg-executive-depth rounded-xl sm:rounded-2xl border border-slate-100 dark:border-creative-depth/30 shadow-xl overflow-hidden">
         <div className="p-6 sm:p-8 lg:p-10 space-y-6 sm:space-y-8">
@@ -153,35 +270,118 @@ const VaultControl: React.FC<VaultControlProps> = ({ logs, goals, settings, onUp
             </button>
           </div>
 
-          <div className={`space-y-8 transition-all duration-500 ${settings.reminders.enabled ? 'opacity-100 scale-100' : 'opacity-30 scale-95 pointer-events-none'}`}>
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-8">
-              <div className="space-y-2">
-                <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Daily Reflection Time</label>
-                <input 
-                  type="time" 
-                  value={settings.reminders.time}
-                  onChange={handleTimeChange}
-                  className="w-full bg-slate-50 border-none rounded-2xl p-4 font-black text-slate-900 focus:ring-4 focus:ring-indigo-100 transition-all outline-none"
-                />
-              </div>
-
-              <div className="bg-slate-50 rounded-2xl p-4 flex flex-col justify-between">
-                <div className="flex items-center justify-between">
-                  <div className="space-y-0.5">
-                    <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Hourly Pulse</p>
-                    <p className="text-xs font-bold text-slate-700">8 AM - 8 PM only</p>
-                  </div>
-                  <button 
-                    onClick={toggleHourly}
-                    className={`w-12 h-6 rounded-full transition-all relative ${settings.reminders.recurringHourly ? 'bg-indigo-500' : 'bg-slate-300'}`}
+          <div className={`space-y-6 transition-all duration-500 ${settings.reminders.enabled ? 'opacity-100 scale-100' : 'opacity-30 scale-95 pointer-events-none'}`}>
+            {/* Frequency Selector */}
+            <div className="space-y-3">
+              <label className="text-[10px] font-black text-authority-navy/60 dark:text-pure-foundation/60 uppercase tracking-widest block">
+                {settings.reminders.frequency.charAt(0).toUpperCase() + settings.reminders.frequency.slice(1)} Reflection Reminder
+              </label>
+              <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
+                {(['hourly', 'daily', 'weekly', 'monthly'] as ReminderFrequency[]).map((freq) => (
+                  <button
+                    key={freq}
+                    onClick={() => handleFrequencyChange(freq)}
+                    className={`px-4 py-3 rounded-xl font-black text-xs uppercase tracking-widest transition-all ${
+                      settings.reminders.frequency === freq
+                        ? 'bg-brand-accent text-authority-navy shadow-lg scale-105'
+                        : 'bg-pure-foundation dark:bg-executive-depth/50 text-authority-navy/60 dark:text-pure-foundation/60 hover:bg-brand-accent/20 dark:hover:bg-brand-accent/20'
+                    }`}
                   >
-                    <div className={`absolute top-0.5 w-5 h-5 bg-white rounded-full shadow-sm transition-all ${settings.reminders.recurringHourly ? 'left-6.5' : 'left-0.5'}`} />
+                    {freq}
                   </button>
+                ))}
+              </div>
+            </div>
+
+            {/* Time and Schedule Options */}
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+              {(settings.reminders.frequency === 'daily' || settings.reminders.frequency === 'weekly' || settings.reminders.frequency === 'monthly') && (
+                <div className="space-y-2">
+                  <label className="text-[10px] font-black text-authority-navy/60 dark:text-pure-foundation/60 uppercase tracking-widest block">
+                    Time
+                  </label>
+                  <input 
+                    type="time" 
+                    value={settings.reminders.time}
+                    onChange={handleTimeChange}
+                    className="w-full bg-pure-foundation dark:bg-executive-depth/50 border border-slate-200 dark:border-creative-depth/30 rounded-xl p-3 font-black text-authority-navy dark:text-pure-foundation focus:ring-2 focus:ring-brand-accent transition-all outline-none"
+                  />
                 </div>
-                <div className="mt-4 pt-4 border-t border-slate-100 flex justify-between items-center">
-                   <span className="text-[9px] font-black text-slate-400 uppercase tracking-widest">Next Pulse</span>
-                   <span className="text-xs font-black text-indigo-600 animate-pulse">{nextPulseInfo}</span>
+              )}
+
+              {settings.reminders.frequency === 'weekly' && (
+                <div className="space-y-2">
+                  <label className="text-[10px] font-black text-authority-navy/60 dark:text-pure-foundation/60 uppercase tracking-widest block">
+                    Day of Week
+                  </label>
+                  <select
+                    value={settings.reminders.dayOfWeek ?? 0}
+                    onChange={handleDayOfWeekChange}
+                    className="w-full bg-pure-foundation dark:bg-executive-depth/50 border border-slate-200 dark:border-creative-depth/30 rounded-xl p-3 font-black text-authority-navy dark:text-pure-foundation focus:ring-2 focus:ring-brand-accent transition-all outline-none"
+                  >
+                    <option value={0}>Sunday</option>
+                    <option value={1}>Monday</option>
+                    <option value={2}>Tuesday</option>
+                    <option value={3}>Wednesday</option>
+                    <option value={4}>Thursday</option>
+                    <option value={5}>Friday</option>
+                    <option value={6}>Saturday</option>
+                  </select>
                 </div>
+              )}
+
+              {settings.reminders.frequency === 'monthly' && (
+                <div className="space-y-2">
+                  <label className="text-[10px] font-black text-authority-navy/60 dark:text-pure-foundation/60 uppercase tracking-widest block">
+                    Day of Month (1-31)
+                  </label>
+                  <input
+                    type="number"
+                    min="1"
+                    max="31"
+                    value={settings.reminders.dayOfMonth ?? 1}
+                    onChange={handleDayOfMonthChange}
+                    className="w-full bg-pure-foundation dark:bg-executive-depth/50 border border-slate-200 dark:border-creative-depth/30 rounded-xl p-3 font-black text-authority-navy dark:text-pure-foundation focus:ring-2 focus:ring-brand-accent transition-all outline-none"
+                  />
+                </div>
+              )}
+            </div>
+
+            {/* Device Calendar Integration */}
+            <div className="bg-pure-foundation dark:bg-executive-depth/50 rounded-xl p-4 border border-slate-200 dark:border-creative-depth/30">
+              <div className="flex items-center justify-between">
+                <div className="space-y-1">
+                  <p className="text-[10px] font-black text-authority-navy dark:text-pure-foundation uppercase tracking-widest">
+                    Use Device Calendar
+                  </p>
+                  <p className="text-xs text-authority-navy/60 dark:text-pure-foundation/60">
+                    Add reminders to your device's calendar app
+                  </p>
+                </div>
+                <button
+                  onClick={handleCalendarToggle}
+                  className={`w-14 h-8 rounded-full transition-all relative ${
+                    settings.reminders.useDeviceCalendar
+                      ? 'bg-brand-accent'
+                      : 'bg-slate-200 dark:bg-executive-depth'
+                  }`}
+                >
+                  <div className={`absolute top-1 w-6 h-6 bg-white rounded-full shadow-md transition-all ${
+                    settings.reminders.useDeviceCalendar ? 'left-7' : 'left-1'
+                  }`} />
+                </button>
+              </div>
+            </div>
+
+            {/* Next Reminder Preview */}
+            <div className="bg-brand-accent/10 dark:bg-brand-accent/20 rounded-xl p-4 border border-brand-accent/30">
+              <div className="flex justify-between items-center">
+                <span className="text-[10px] font-black text-authority-navy dark:text-pure-foundation uppercase tracking-widest">
+                  Next Reminder
+                </span>
+                <span className="text-sm font-black text-brand-accent animate-pulse">
+                  {nextPulseInfo}
+                </span>
               </div>
             </div>
             
@@ -255,6 +455,20 @@ const VaultControl: React.FC<VaultControlProps> = ({ logs, goals, settings, onUp
                         )}
                       </div>
 
+                      {log.deepReflection && (
+                        <div className="mb-3 p-3 bg-brand-accent/10 dark:bg-brand-accent/20 rounded-lg border border-brand-accent/30">
+                          <p className="text-[9px] font-black text-brand-accent uppercase tracking-widest mb-1">Deep Reflection</p>
+                          <p className="text-authority-navy/80 dark:text-pure-foundation/80 leading-relaxed text-xs sm:text-sm">{log.deepReflection}</p>
+                        </div>
+                      )}
+                      {log.reflectionAnalysis && (
+                        <div className="mb-3 p-3 bg-pure-foundation dark:bg-executive-depth/50 rounded-lg border border-slate-200 dark:border-creative-depth/30">
+                          <p className="text-[9px] font-black text-authority-navy/60 dark:text-pure-foundation/60 uppercase tracking-widest mb-1">Reflection Analysis</p>
+                          <div className="text-authority-navy/70 dark:text-pure-foundation/70 leading-relaxed text-xs sm:text-sm whitespace-pre-line">
+                            {log.reflectionAnalysis}
+                          </div>
+                        </div>
+                      )}
                       <p className="text-authority-navy/70 dark:text-pure-foundation/70 leading-relaxed italic text-sm sm:text-base">"{log.note}"</p>
 
                       {log.goalText && (

@@ -17,6 +17,8 @@ export interface LogEntry {
   mood?: '🌱' | '🔥' | '✨' | '🧗';
   type?: LogType;
   goalText?: string;
+  deepReflection?: string; // The user's deep reflection text
+  reflectionAnalysis?: string; // The AI-generated analysis
 }
 
 export type GoalFrequency = 'daily' | 'weekly' | 'monthly' | 'quarterly';
@@ -28,11 +30,16 @@ export interface GoalUpdate {
   mood?: '🌱' | '🔥' | '✨' | '🧗'; // Growing, On Fire, Magic, Climbing
 }
 
+export type ReminderFrequency = 'hourly' | 'daily' | 'weekly' | 'monthly';
+
 export interface AppReminder {
   enabled: boolean;
-  time: string; // HH:mm format
-  recurringHourly?: boolean; // New: Repeat every hour during daylight
-  lastNotifiedDay?: string; // YYYY-MM-DD to avoid duplicate notifications for daily
+  frequency: ReminderFrequency; // Hourly, Daily, Weekly, Monthly
+  time: string; // HH:mm format (for daily/weekly/monthly)
+  dayOfWeek?: number; // 0-6 for weekly (0 = Sunday)
+  dayOfMonth?: number; // 1-31 for monthly
+  useDeviceCalendar?: boolean; // Use device calendar for scheduling
+  lastNotifiedDay?: string; // YYYY-MM-DD to avoid duplicate notifications
   lastNotifiedHour?: number; // Last hour notified to avoid multiple triggers in same hour
 }
 

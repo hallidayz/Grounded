@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<html lang="en" class="light">
+<html lang="en" class="light" data-theme="light">
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
@@ -14,7 +14,7 @@
     
     <!-- Android/Chrome PWA Meta Tags -->
     <meta name="mobile-web-app-capable" content="yes" />
-    <link rel="manifest" href="/manifest.webmanifest" />
+    <link rel="manifest" href="/manifest.json" />
     
     <title>Grounded</title>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&display=swap" rel="stylesheet">
@@ -36,8 +36,43 @@
         }
       }
     </style>
-</head>
+  </head>
   <body>
     <div id="root"></div>
+    <script>
+      // Force unregister any existing service workers from other apps
+      // This MUST run before React loads to prevent conflicts
+      (function() {
+        if ('serviceWorker' in navigator) {
+          navigator.serviceWorker.getRegistrations().then(function(registrations) {
+            for(let registration of registrations) {
+              registration.unregister().then(function(success) {
+                console.log('Unregistered service worker:', registration.scope, success);
+              }).catch(function(err) {
+                console.error('Error unregistering service worker:', err);
+              });
+            }
+          }).catch(function(err) {
+            console.error('Error getting service worker registrations:', err);
+          });
+        }
+        
+        // Clear all caches
+        if ('caches' in window) {
+          caches.keys().then(function(names) {
+            for (let name of names) {
+              caches.delete(name).then(function(success) {
+                console.log('Deleted cache:', name, success);
+              }).catch(function(err) {
+                console.error('Error deleting cache:', err);
+              });
+            }
+          }).catch(function(err) {
+            console.error('Error getting cache names:', err);
+          });
+        }
+      })();
+    </script>
+    <script type="module" src="/index.tsx"></script>
   </body>
 </html>
