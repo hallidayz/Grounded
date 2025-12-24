@@ -11,6 +11,7 @@ import LCSWConfigComponent from './components/LCSWConfig';
 import ThemeToggle from './components/ThemeToggle';
 import Login from './components/Login';
 import TermsAcceptance from './components/TermsAcceptance';
+import BottomNavigation from './components/BottomNavigation';
 import { preloadModels } from './services/aiService';
 import { dbService } from './services/database';
 import { isLoggedIn, getCurrentUser, acceptTerms, logoutUser } from './services/authService';
@@ -417,12 +418,12 @@ const App: React.FC = () => {
   // Show loading state while checking auth
   if (authState === 'checking') {
     return (
-      <div className="min-h-screen bg-pure-foundation dark:bg-executive-depth flex items-center justify-center">
+      <div className="min-h-screen bg-bg-primary dark:bg-dark-bg-primary flex items-center justify-center">
         <div className="text-center space-y-4">
-          <div className="w-16 h-16 bg-authority-navy dark:bg-brand-accent rounded-xl flex items-center justify-center text-white font-black text-2xl mx-auto animate-pulse">
+          <div className="w-16 h-16 bg-navy-primary dark:bg-yellow-warm rounded-xl flex items-center justify-center text-white dark:text-navy-primary font-black text-2xl mx-auto animate-pulse">
             IC
           </div>
-          <p className="text-authority-navy/60 dark:text-pure-foundation/60">Loading...</p>
+          <p className="text-text-secondary dark:text-text-secondary">Loading...</p>
         </div>
       </div>
     );
@@ -439,42 +440,43 @@ const App: React.FC = () => {
   }
 
   return (
-    <div className="min-h-screen bg-pure-foundation dark:bg-executive-depth text-authority-navy dark:text-pure-foundation flex flex-col transition-colors duration-300">
-      <header className="bg-white dark:bg-executive-depth border-b border-slate-200 dark:border-creative-depth/30 sticky top-0 z-40 shadow-sm dark:shadow-lg">
+    <div className="min-h-screen bg-bg-primary dark:bg-dark-bg-primary text-text-primary dark:text-white flex flex-col transition-colors duration-300">
+      <header className="bg-white dark:bg-dark-bg-primary border-b border-border-soft dark:border-dark-border sticky top-0 z-40 shadow-sm dark:shadow-lg">
         <div className="max-w-4xl mx-auto px-3 sm:px-4 h-14 flex items-center justify-between">
           <div className="flex items-center space-x-2">
-            <div className="w-7 h-7 bg-authority-navy dark:bg-brand-accent rounded-lg flex items-center justify-center text-white font-bold text-sm">
+            <div className="w-7 h-7 bg-navy-primary dark:bg-yellow-warm rounded-lg flex items-center justify-center text-white dark:text-navy-primary font-bold text-sm">
               IC
             </div>
-            <span className="font-bold text-base sm:text-lg tracking-tight text-authority-navy dark:text-pure-foundation hidden sm:inline">Grounded</span>
+            <span className="font-bold text-base sm:text-lg tracking-tight text-text-primary dark:text-white hidden sm:inline">Grounded</span>
           </div>
           <div className="flex items-center space-x-1.5 sm:space-x-2">
+            {/* Top navigation kept for desktop, bottom nav for mobile */}
             {showNav && (
-              <nav className="flex items-center space-x-0.5 sm:space-x-1">
+              <nav className="hidden lg:flex items-center space-x-0.5 sm:space-x-1">
                 <button 
                   onClick={() => setView('home')}
-                  className={`px-2 sm:px-3 py-1.5 rounded-lg text-[10px] sm:text-xs font-bold transition-colors ${view === 'home' ? 'bg-brand-accent/20 dark:bg-brand-accent/30 text-brand-accent dark:text-brand-accent' : 'text-authority-navy/60 dark:text-pure-foundation/60 hover:text-authority-navy dark:hover:text-pure-foundation hover:bg-pure-foundation dark:hover:bg-executive-depth/50'}`}
+                  className={`px-2 sm:px-3 py-1.5 rounded-lg text-[10px] sm:text-xs font-bold transition-colors ${view === 'home' ? 'bg-yellow-warm/20 dark:bg-yellow-warm/30 text-yellow-warm dark:text-yellow-warm' : 'text-text-secondary dark:text-text-secondary hover:text-text-primary dark:hover:text-white hover:bg-bg-secondary dark:hover:bg-dark-bg-secondary'}`}
                 >
                   <span className="hidden sm:inline">Home</span>
                   <span className="sm:hidden">H</span>
                 </button>
                 <button 
                   onClick={() => setView('values')}
-                  className={`px-2 sm:px-3 py-1.5 rounded-lg text-[10px] sm:text-xs font-bold transition-colors ${view === 'values' ? 'bg-brand-accent/20 dark:bg-brand-accent/30 text-brand-accent dark:text-brand-accent' : 'text-authority-navy/60 dark:text-pure-foundation/60 hover:text-authority-navy dark:hover:text-pure-foundation hover:bg-pure-foundation dark:hover:bg-executive-depth/50'}`}
+                  className={`px-2 sm:px-3 py-1.5 rounded-lg text-[10px] sm:text-xs font-bold transition-colors ${view === 'values' ? 'bg-yellow-warm/20 dark:bg-yellow-warm/30 text-yellow-warm dark:text-yellow-warm' : 'text-text-secondary dark:text-text-secondary hover:text-text-primary dark:hover:text-white hover:bg-bg-secondary dark:hover:bg-dark-bg-secondary'}`}
                 >
                   <span className="hidden sm:inline">Values</span>
                   <span className="sm:hidden">V</span>
                 </button>
                 <button 
                   onClick={() => setView('report')}
-                  className={`px-2 sm:px-3 py-1.5 rounded-lg text-[10px] sm:text-xs font-bold transition-colors ${view === 'report' ? 'bg-brand-accent/20 dark:bg-brand-accent/30 text-brand-accent dark:text-brand-accent' : 'text-authority-navy/60 dark:text-pure-foundation/60 hover:text-authority-navy dark:hover:text-pure-foundation hover:bg-pure-foundation dark:hover:bg-executive-depth/50'}`}
+                  className={`px-2 sm:px-3 py-1.5 rounded-lg text-[10px] sm:text-xs font-bold transition-colors ${view === 'report' ? 'bg-yellow-warm/20 dark:bg-yellow-warm/30 text-yellow-warm dark:text-yellow-warm' : 'text-text-secondary dark:text-text-secondary hover:text-text-primary dark:hover:text-white hover:bg-bg-secondary dark:hover:bg-dark-bg-secondary'}`}
                 >
                   <span className="hidden sm:inline">Reports</span>
                   <span className="sm:hidden">R</span>
                 </button>
                 <button 
                   onClick={() => setView('vault')}
-                  className={`px-2 sm:px-3 py-1.5 rounded-lg text-[10px] sm:text-xs font-bold transition-colors ${view === 'vault' ? 'bg-brand-accent/20 dark:bg-brand-accent/30 text-brand-accent dark:text-brand-accent' : 'text-authority-navy/60 dark:text-pure-foundation/60 hover:text-authority-navy dark:hover:text-pure-foundation hover:bg-pure-foundation dark:hover:bg-executive-depth/50'}`}
+                  className={`px-2 sm:px-3 py-1.5 rounded-lg text-[10px] sm:text-xs font-bold transition-colors ${view === 'vault' ? 'bg-yellow-warm/20 dark:bg-yellow-warm/30 text-yellow-warm dark:text-yellow-warm' : 'text-text-secondary dark:text-text-secondary hover:text-text-primary dark:hover:text-white hover:bg-bg-secondary dark:hover:bg-dark-bg-secondary'}`}
                 >
                   <span className="hidden sm:inline">Vault</span>
                   <span className="sm:hidden">V</span>
@@ -484,7 +486,7 @@ const App: React.FC = () => {
             {showNav && (
               <button 
                 onClick={() => setShowLCSWConfig(true)}
-                className="w-8 h-8 flex items-center justify-center rounded-full text-authority-navy/60 dark:text-pure-foundation/60 hover:text-brand-accent dark:hover:text-brand-accent hover:bg-brand-accent/10 dark:hover:bg-brand-accent/20 transition-all"
+                className="w-8 h-8 flex items-center justify-center rounded-full text-text-secondary dark:text-text-secondary hover:text-yellow-warm dark:hover:text-yellow-warm hover:bg-yellow-warm/10 dark:hover:bg-yellow-warm/20 transition-all"
                 aria-label="Configuration"
                 title="Configuration"
               >
@@ -494,14 +496,14 @@ const App: React.FC = () => {
             <ThemeToggle />
             <button 
               onClick={() => setShowHelp(true)}
-              className="w-8 h-8 flex items-center justify-center rounded-full text-authority-navy/60 dark:text-pure-foundation/60 hover:text-brand-accent dark:hover:text-brand-accent hover:bg-brand-accent/10 dark:hover:bg-brand-accent/20 transition-all"
+              className="w-8 h-8 flex items-center justify-center rounded-full text-text-secondary dark:text-text-secondary hover:text-yellow-warm dark:hover:text-yellow-warm hover:bg-yellow-warm/10 dark:hover:bg-yellow-warm/20 transition-all"
               aria-label="Help"
             >
               <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M8.228 9c.549-1.165 2.03-2 3.772-2 2.21 0 4 1.343 4 3 0 1.4-1.278 2.575-3.006 2.907-.542.104-.994.54-.994 1.093m0 3h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>
             </button>
             <button 
               onClick={handleLogout}
-              className="w-8 h-8 flex items-center justify-center rounded-full text-authority-navy/60 dark:text-pure-foundation/60 hover:text-red-500 dark:hover:text-red-400 hover:bg-red-50 dark:hover:bg-red-900/20 transition-all"
+              className="w-8 h-8 flex items-center justify-center rounded-full text-text-secondary dark:text-text-secondary hover:text-red-500 dark:hover:text-red-400 hover:bg-red-50 dark:hover:bg-red-900/20 transition-all"
               aria-label="Logout"
               title="Logout"
             >
@@ -511,7 +513,7 @@ const App: React.FC = () => {
         </div>
       </header>
 
-      <main className="flex-grow max-w-4xl w-full mx-auto px-3 sm:px-4 py-4 sm:py-6">
+      <main className="flex-grow max-w-4xl w-full mx-auto px-3 sm:px-4 py-4 sm:py-6 pb-24 lg:pb-6">
         {view === 'onboarding' && (
           <ValueSelection 
             initialSelected={selectedValueIds} 
@@ -555,6 +557,14 @@ const App: React.FC = () => {
         )}
       </main>
 
+      {/* Bottom Navigation - Mobile First */}
+      {showNav && (
+        <BottomNavigation
+          currentView={view}
+          onViewChange={(newView) => setView(newView)}
+        />
+      )}
+
       {showHelp && <HelpOverlay onClose={() => setShowHelp(false)} />}
 
       {showLCSWConfig && (
@@ -567,7 +577,7 @@ const App: React.FC = () => {
         />
       )}
 
-      <footer className="py-4 text-center text-authority-navy/50 dark:text-pure-foundation/50 text-[10px] font-medium tracking-wide">
+      <footer className="py-4 text-center text-text-tertiary dark:text-text-tertiary text-[10px] font-medium tracking-wide">
         <p>Private & Secure. All AI processing happens on your device.</p>
       </footer>
     </div>

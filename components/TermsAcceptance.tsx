@@ -13,25 +13,25 @@ const TermsAcceptance: React.FC<TermsAcceptanceProps> = ({ onAccept, onDecline }
   const canAccept = readTerms && readDisclaimer;
 
   return (
-    <div className="min-h-screen bg-pure-foundation dark:bg-executive-depth flex items-center justify-center p-4 sm:p-6">
-      <div className="max-w-2xl w-full bg-white dark:bg-executive-depth rounded-xl sm:rounded-2xl shadow-2xl border border-slate-200 dark:border-creative-depth/30 overflow-hidden">
+    <div className="min-h-screen bg-bg-primary dark:bg-dark-bg-primary flex items-center justify-center p-4 sm:p-6">
+      <div className="max-w-2xl w-full bg-white dark:bg-dark-bg-primary rounded-xl sm:rounded-2xl shadow-2xl border border-border-soft dark:border-dark-border/30 overflow-hidden">
         <div className="p-6 sm:p-8 lg:p-10 space-y-6 sm:space-y-8 max-h-[90vh] overflow-y-auto custom-scrollbar">
           <div className="text-center space-y-2">
-            <h1 className="text-2xl sm:text-3xl font-black text-authority-navy dark:text-pure-foundation tracking-tight">
+            <h1 className="text-2xl sm:text-3xl font-black text-text-primary dark:text-white tracking-tight">
               Acceptance of Terms and Conditions
             </h1>
-            <p className="text-sm sm:text-base text-authority-navy/60 dark:text-pure-foundation/60">
+            <p className="text-sm sm:text-base text-text-primary/60 dark:text-white/60">
               Please read the following information carefully before using this app.
             </p>
           </div>
 
-          <div className="space-y-4 text-authority-navy dark:text-pure-foundation">
+          <div className="space-y-4 text-text-primary dark:text-white">
             <p className="text-sm sm:text-base leading-relaxed">
               By selecting "I Accept," you confirm that you have read, understood, and agree to the Terms and Conditions governing the use of this application ("the App").
             </p>
 
-            <div className="space-y-4 pt-4 border-t border-slate-200 dark:border-creative-depth/30">
-              <h2 className="text-lg sm:text-xl font-black text-authority-navy dark:text-pure-foundation">
+            <div className="space-y-4 pt-4 border-t border-border-soft dark:border-dark-border/30">
+              <h2 className="text-lg sm:text-xl font-black text-text-primary dark:text-white">
                 DISCLAIMER
               </h2>
               
@@ -49,7 +49,7 @@ const TermsAcceptance: React.FC<TermsAcceptanceProps> = ({ onAccept, onDecline }
                 </p>
               </div>
 
-              <div className="bg-pure-foundation dark:bg-executive-depth/50 rounded-lg p-4 sm:p-5 space-y-2">
+              <div className="bg-bg-primary dark:bg-dark-bg-primary/50 rounded-lg p-4 sm:p-5 space-y-2">
                 <p className="font-bold text-sm sm:text-base">In the United States:</p>
                 <ul className="space-y-2 text-sm sm:text-base list-disc list-inside ml-2">
                   <li>Call <strong>911</strong> for emergencies</li>
@@ -64,8 +64,8 @@ const TermsAcceptance: React.FC<TermsAcceptanceProps> = ({ onAccept, onDecline }
               </p>
             </div>
 
-            <div className="space-y-4 pt-4 border-t border-slate-200 dark:border-creative-depth/30">
-              <h2 className="text-lg sm:text-xl font-black text-authority-navy dark:text-pure-foundation">
+            <div className="space-y-4 pt-4 border-t border-border-soft dark:border-dark-border/30">
+              <h2 className="text-lg sm:text-xl font-black text-text-primary dark:text-white">
                 CRISIS DETECTION & SAFETY
               </h2>
               
@@ -94,10 +94,10 @@ const TermsAcceptance: React.FC<TermsAcceptanceProps> = ({ onAccept, onDecline }
                 </div>
 
                 <details className="mt-4">
-                  <summary className="cursor-pointer font-bold text-authority-navy dark:text-pure-foundation hover:text-brand-accent">
+                  <summary className="cursor-pointer font-bold text-text-primary dark:text-white hover:text-yellow-warm">
                     View Crisis Detection Categories (Click to expand)
                   </summary>
-                  <div className="mt-3 space-y-4 pl-4 border-l-2 border-slate-200 dark:border-creative-depth/30">
+                  <div className="mt-3 space-y-4 pl-4 border-l-2 border-border-soft dark:border-dark-border/30">
                     {Array.from(new Set(ALL_CRISIS_PHRASES.map(p => p.category))).map(category => {
                       const categoryPhrases = ALL_CRISIS_PHRASES.filter(p => p.category === category);
                       const severity = categoryPhrases[0]?.severity || 'moderate';
@@ -113,7 +113,7 @@ const TermsAcceptance: React.FC<TermsAcceptanceProps> = ({ onAccept, onDecline }
                               {severity.toUpperCase()}
                             </span>
                           </h3>
-                          <p className="text-xs text-authority-navy/70 dark:text-pure-foundation/70">
+                          <p className="text-xs text-text-primary/70 dark:text-white/70">
                             The app monitors for phrases like: "{categoryPhrases.slice(0, 3).map(p => p.phrase).join('", "')}" and {categoryPhrases.length - 3 > 0 ? `${categoryPhrases.length - 3} more similar phrases` : 'similar phrases'}.
                           </p>
                         </div>
@@ -122,22 +122,22 @@ const TermsAcceptance: React.FC<TermsAcceptanceProps> = ({ onAccept, onDecline }
                   </div>
                 </details>
 
-                <p className="text-xs text-authority-navy/60 dark:text-pure-foundation/60 italic pt-2">
+                <p className="text-xs text-text-primary/60 dark:text-white/60 italic pt-2">
                   These crisis detection phrases are hardcoded into the app and cannot be modified or disabled. This ensures consistent safety monitoring regardless of settings.
                 </p>
               </div>
             </div>
           </div>
 
-          <div className="space-y-4 pt-4 border-t border-slate-200 dark:border-creative-depth/30">
+          <div className="space-y-4 pt-4 border-t border-border-soft dark:border-dark-border/30">
             <label className="flex items-start gap-3 cursor-pointer group">
               <input
                 type="checkbox"
                 checked={readTerms}
                 onChange={(e) => setReadTerms(e.target.checked)}
-                className="mt-1 w-5 h-5 rounded border-2 border-authority-navy/30 dark:border-pure-foundation/30 text-brand-accent focus:ring-2 focus:ring-brand-accent/50 cursor-pointer"
+                className="mt-1 w-5 h-5 rounded border-2 border-text-primary/30 dark:border-white/30 text-yellow-warm focus:ring-2 focus:ring-yellow-warm/50 cursor-pointer"
               />
-              <span className="text-sm sm:text-base text-authority-navy dark:text-pure-foundation leading-relaxed flex-1">
+              <span className="text-sm sm:text-base text-text-primary dark:text-white leading-relaxed flex-1">
                 I have read and understand the Terms and Conditions.
               </span>
             </label>
@@ -147,9 +147,9 @@ const TermsAcceptance: React.FC<TermsAcceptanceProps> = ({ onAccept, onDecline }
                 type="checkbox"
                 checked={readDisclaimer}
                 onChange={(e) => setReadDisclaimer(e.target.checked)}
-                className="mt-1 w-5 h-5 rounded border-2 border-authority-navy/30 dark:border-pure-foundation/30 text-brand-accent focus:ring-2 focus:ring-brand-accent/50 cursor-pointer"
+                className="mt-1 w-5 h-5 rounded border-2 border-text-primary/30 dark:border-white/30 text-yellow-warm focus:ring-2 focus:ring-yellow-warm/50 cursor-pointer"
               />
-              <span className="text-sm sm:text-base text-authority-navy dark:text-pure-foundation leading-relaxed flex-1">
+              <span className="text-sm sm:text-base text-text-primary dark:text-white leading-relaxed flex-1">
                 I acknowledge this App does not replace professional therapy or emergency resources.
               </span>
             </label>
@@ -158,7 +158,7 @@ const TermsAcceptance: React.FC<TermsAcceptanceProps> = ({ onAccept, onDecline }
           <div className="flex flex-col sm:flex-row gap-3 sm:gap-4 pt-4">
             <button
               onClick={onDecline}
-              className="flex-1 px-6 py-3 sm:py-4 bg-pure-foundation dark:bg-executive-depth/50 text-authority-navy dark:text-pure-foundation rounded-lg sm:rounded-xl font-black uppercase tracking-widest text-sm sm:text-base hover:opacity-80 transition-all border border-slate-200 dark:border-creative-depth/30"
+              className="flex-1 px-6 py-3 sm:py-4 bg-bg-primary dark:bg-dark-bg-primary/50 text-text-primary dark:text-white rounded-lg sm:rounded-xl font-black uppercase tracking-widest text-sm sm:text-base hover:opacity-80 transition-all border border-border-soft dark:border-dark-border/30"
             >
               Decline
             </button>
@@ -167,8 +167,8 @@ const TermsAcceptance: React.FC<TermsAcceptanceProps> = ({ onAccept, onDecline }
               disabled={!canAccept}
               className={`flex-1 px-6 py-3 sm:py-4 rounded-lg sm:rounded-xl font-black uppercase tracking-widest text-sm sm:text-base transition-all ${
                 canAccept
-                  ? 'bg-brand-accent text-authority-navy hover:opacity-90 shadow-lg active:scale-[0.98]'
-                  : 'bg-slate-200 dark:bg-executive-depth/30 text-slate-400 dark:text-pure-foundation/30 cursor-not-allowed'
+                  ? 'bg-yellow-warm text-text-primary hover:opacity-90 shadow-lg active:scale-[0.98]'
+                  : 'bg-border-soft dark:bg-dark-bg-primary/30 text-text-tertiary dark:text-white/30 cursor-not-allowed'
               }`}
             >
               Accept

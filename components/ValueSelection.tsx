@@ -85,20 +85,20 @@ const ValueSelection: React.FC<ValueSelectionProps> = ({ initialSelected, onComp
   return (
     <div className="max-w-2xl mx-auto space-y-3 sm:space-y-4 animate-fade-in pb-20 sm:pb-24">
       <div className="text-center space-y-2 px-3 sm:px-0">
-        <h1 className="text-lg sm:text-xl font-black text-authority-navy dark:text-pure-foundation tracking-tight">
-          {viewMode === 'pick' ? 'Define Your ' : 'Rank Your '}<span className="text-brand-accent">Compass</span>
+        <h1 className="text-lg sm:text-xl font-black text-text-primary dark:text-white tracking-tight">
+          {viewMode === 'pick' ? 'Define Your ' : 'Rank Your '}<span className="text-yellow-warm">Compass</span>
         </h1>
         <div className="flex justify-center gap-1 mt-1">
            <button 
              onClick={() => setViewMode('pick')}
-             className={`px-3 py-1 rounded-lg font-bold text-[9px] uppercase tracking-widest transition-all ${viewMode === 'pick' ? 'bg-brand-accent text-authority-navy shadow-sm' : 'bg-white dark:bg-executive-depth text-authority-navy/60 dark:text-pure-foundation/60 border border-slate-200 dark:border-creative-depth/30'}`}
+             className={`px-3 py-1 rounded-lg font-bold text-[9px] uppercase tracking-widest transition-all ${viewMode === 'pick' ? 'bg-yellow-warm text-text-primary shadow-sm' : 'bg-white dark:bg-dark-bg-primary text-text-primary/60 dark:text-white/60 border border-border-soft dark:border-dark-border/30'}`}
            >
              Selection
            </button>
            <button 
              onClick={() => setViewMode('sort')}
              disabled={selected.length === 0}
-             className={`px-3 py-1 rounded-lg font-bold text-[9px] uppercase tracking-widest transition-all ${viewMode === 'sort' ? 'bg-brand-accent text-authority-navy shadow-sm' : 'bg-white dark:bg-executive-depth text-authority-navy/60 dark:text-pure-foundation/60 border border-slate-200 dark:border-creative-depth/30'} disabled:opacity-30`}
+             className={`px-3 py-1 rounded-lg font-bold text-[9px] uppercase tracking-widest transition-all ${viewMode === 'sort' ? 'bg-yellow-warm text-text-primary shadow-sm' : 'bg-white dark:bg-dark-bg-primary text-text-primary/60 dark:text-white/60 border border-border-soft dark:border-dark-border/30'} disabled:opacity-30`}
            >
              Priority
            </button>
@@ -112,20 +112,20 @@ const ValueSelection: React.FC<ValueSelectionProps> = ({ initialSelected, onComp
             const selectedInCategory = items.filter(v => selected.includes(v.id)).length;
             
             return (
-              <section key={category} className="bg-white dark:bg-executive-depth rounded-xl border border-slate-100 dark:border-creative-depth/30 overflow-hidden shadow-sm">
+              <section key={category} className="bg-white dark:bg-dark-bg-primary rounded-xl border border-border-soft dark:border-dark-border/30 overflow-hidden shadow-sm">
                 <button 
                   onClick={() => toggleCategory(category)}
-                  className="w-full flex items-center justify-between p-3 bg-pure-foundation/50 dark:bg-executive-depth/50 hover:bg-pure-foundation dark:hover:bg-executive-depth transition-colors text-left"
+                  className="w-full flex items-center justify-between p-3 bg-bg-secondary/50 dark:bg-dark-bg-primary/50 hover:bg-bg-secondary dark:hover:bg-dark-bg-primary transition-colors text-left"
                 >
                   <div className="flex items-center gap-2">
-                    <h2 className="text-[10px] font-black text-authority-navy dark:text-pure-foundation uppercase tracking-widest">{category}</h2>
+                    <h2 className="text-[10px] font-black text-text-primary dark:text-white uppercase tracking-widest">{category}</h2>
                     {selectedInCategory > 0 && (
-                      <span className="bg-brand-accent text-authority-navy text-[7px] font-black px-1.5 py-0.5 rounded uppercase">
+                      <span className="bg-yellow-warm text-text-primary text-[7px] font-black px-1.5 py-0.5 rounded uppercase">
                         {selectedInCategory}
                       </span>
                     )}
                   </div>
-                  <svg className={`w-3 h-3 text-authority-navy/40 dark:text-pure-foundation/40 transition-transform ${isCollapsed ? '-rotate-90' : ''}`} fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={3} d="M19 9l-7 7-7-7" /></svg>
+                  <svg className={`w-3 h-3 text-text-primary/40 dark:text-white/40 transition-transform ${isCollapsed ? '-rotate-90' : ''}`} fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={3} d="M19 9l-7 7-7-7" /></svg>
                 </button>
 
                 <div className={`transition-all duration-300 ${isCollapsed ? 'max-h-0 opacity-0' : 'max-h-[1000px] opacity-100 p-2 sm:p-3'}`}>
@@ -136,10 +136,10 @@ const ValueSelection: React.FC<ValueSelectionProps> = ({ initialSelected, onComp
                         <button
                           key={value.id}
                           onClick={() => toggleValue(value.id)}
-                          className={`p-2 sm:p-3 rounded-lg sm:rounded-xl border text-left transition-all ${isSelected ? 'border-brand-accent bg-brand-accent/10 dark:bg-brand-accent/20 shadow-sm' : 'border-slate-100 dark:border-creative-depth/30 bg-white dark:bg-executive-depth/50 hover:border-brand-accent/50'} ${shakeId === value.id ? 'animate-shake' : ''}`}
+                          className={`p-2 sm:p-3 rounded-lg sm:rounded-xl border text-left transition-all ${isSelected ? 'border-yellow-warm bg-yellow-warm/10 dark:bg-yellow-warm/20 shadow-sm' : 'border-border-soft dark:border-dark-border/30 bg-white dark:bg-dark-bg-primary/50 hover:border-yellow-warm/50'} ${shakeId === value.id ? 'animate-shake' : ''}`}
                         >
-                          <h3 className={`font-black text-[10px] sm:text-[11px] tracking-tight ${isSelected ? 'text-authority-navy dark:text-pure-foundation' : 'text-authority-navy dark:text-pure-foundation'}`}>{value.name}</h3>
-                          <p className={`text-[8px] leading-tight font-medium mt-0.5 ${isSelected ? 'text-authority-navy/70 dark:text-pure-foundation/70' : 'text-authority-navy/50 dark:text-pure-foundation/50'}`}>{value.description.substring(0, 45)}...</p>
+                          <h3 className={`font-black text-[10px] sm:text-[11px] tracking-tight ${isSelected ? 'text-text-primary dark:text-white' : 'text-text-primary dark:text-white'}`}>{value.name}</h3>
+                          <p className={`text-[8px] leading-tight font-medium mt-0.5 ${isSelected ? 'text-text-primary/70 dark:text-white/70' : 'text-text-primary/50 dark:text-white/50'}`}>{value.description.substring(0, 45)}...</p>
                         </button>
                       );
                     })}
@@ -163,20 +163,20 @@ const ValueSelection: React.FC<ValueSelectionProps> = ({ initialSelected, onComp
                 onDragOver={(e) => handleDragOver(e, index)}
                 onDragLeave={() => setDragOverIndex(null)}
                 onDrop={() => handleDrop(index)}
-                className={`flex items-center gap-2 sm:gap-3 bg-white dark:bg-executive-depth p-2 sm:p-2.5 rounded-lg sm:rounded-xl border transition-all cursor-grab active:cursor-grabbing ${isDragging ? 'opacity-30 scale-95 border-dashed border-brand-accent/50' : 'border-slate-100 dark:border-creative-depth/30 shadow-sm'} ${isDragOver ? 'border-brand-accent' : ''}`}
+                className={`flex items-center gap-2 sm:gap-3 bg-white dark:bg-dark-bg-primary p-2 sm:p-2.5 rounded-lg sm:rounded-xl border transition-all cursor-grab active:cursor-grabbing ${isDragging ? 'opacity-30 scale-95 border-dashed border-yellow-warm/50' : 'border-border-soft dark:border-dark-border/30 shadow-sm'} ${isDragOver ? 'border-yellow-warm' : ''}`}
               >
-                <div className="flex flex-col gap-0.5 items-center bg-pure-foundation dark:bg-executive-depth/50 p-1 rounded-md">
-                  <button onClick={(e) => { e.stopPropagation(); moveValue(index, 'up'); }} disabled={index === 0} className="text-authority-navy/30 dark:text-pure-foundation/30 hover:text-brand-accent disabled:opacity-0"><svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={3} d="M5 15l7-7 7 7" /></svg></button>
-                  <button onClick={(e) => { e.stopPropagation(); moveValue(index, 'down'); }} disabled={index === selected.length - 1} className="text-authority-navy/30 dark:text-pure-foundation/30 hover:text-brand-accent disabled:opacity-0"><svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={3} d="M19 9l-7 7-7-7" /></svg></button>
+                <div className="flex flex-col gap-0.5 items-center bg-bg-secondary dark:bg-dark-bg-primary/50 p-1 rounded-md">
+                  <button onClick={(e) => { e.stopPropagation(); moveValue(index, 'up'); }} disabled={index === 0} className="text-text-primary/30 dark:text-white/30 hover:text-yellow-warm disabled:opacity-0"><svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={3} d="M5 15l7-7 7 7" /></svg></button>
+                  <button onClick={(e) => { e.stopPropagation(); moveValue(index, 'down'); }} disabled={index === selected.length - 1} className="text-text-primary/30 dark:text-white/30 hover:text-yellow-warm disabled:opacity-0"><svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={3} d="M19 9l-7 7-7-7" /></svg></button>
                 </div>
                 <div className="flex-grow select-none flex items-center gap-2 min-w-0">
-                  <span className={`text-[8px] font-black w-4 h-4 rounded-full flex items-center justify-center flex-shrink-0 ${index === 0 ? 'bg-brand-accent text-authority-navy' : 'bg-authority-navy dark:bg-creative-depth text-white dark:text-pure-foundation'}`}>{index + 1}</span>
+                  <span className={`text-[8px] font-black w-4 h-4 rounded-full flex items-center justify-center flex-shrink-0 ${index === 0 ? 'bg-yellow-warm text-text-primary' : 'bg-navy-primary dark:bg-navy-primary text-white dark:text-white'}`}>{index + 1}</span>
                   <div className="min-w-0 flex-1">
-                    <h4 className="font-black text-authority-navy dark:text-pure-foundation text-[11px] sm:text-[12px] tracking-tight truncate">{value.name}</h4>
-                    <p className="text-[7px] text-authority-navy/50 dark:text-pure-foundation/50 font-bold uppercase tracking-widest">{value.category}</p>
+                    <h4 className="font-black text-text-primary dark:text-white text-[11px] sm:text-[12px] tracking-tight truncate">{value.name}</h4>
+                    <p className="text-[7px] text-text-primary/50 dark:text-white/50 font-bold uppercase tracking-widest">{value.category}</p>
                   </div>
                 </div>
-                <div className="text-authority-navy/20 dark:text-pure-foundation/20 pr-1 flex-shrink-0"><svg className="w-3 h-3" fill="currentColor" viewBox="0 0 24 24"><path d="M11 18c0 1.1-.9 2-2 2s-2-.9-2-2 .9-2 2-2 2 .9 2 2zm-2-8c-1.1 0-2 .9-2 2s.9 2 2 2 2-.9 2-2-.9-2-2-2zm0-6c-1.1 0-2 .9-2 2s.9 2 2 2 2-.9 2-2-.9-2-2-2zm6 4c1.1 0 2-.9 2-2s-.9-2-2-2-2 .9-2 2 .9 2 2 2zm0 2c-1.1 0-2 .9-2 2s.9 2 2 2 2-.9 2-2-.9-2-2-2zm0 6c-1.1 0-2 .9-2 2s.9 2 2 2 2-.9 2-2-.9-2-2-2z" /></svg></div>
+                <div className="text-text-primary/20 dark:text-white/20 pr-1 flex-shrink-0"><svg className="w-3 h-3" fill="currentColor" viewBox="0 0 24 24"><path d="M11 18c0 1.1-.9 2-2 2s-2-.9-2-2 .9-2 2-2 2 .9 2 2zm-2-8c-1.1 0-2 .9-2 2s.9 2 2 2 2-.9 2-2-.9-2-2-2zm0-6c-1.1 0-2 .9-2 2s.9 2 2 2 2-.9 2-2-.9-2-2-2zm6 4c1.1 0 2-.9 2-2s-.9-2-2-2-2 .9-2 2 .9 2 2 2zm0 2c-1.1 0-2 .9-2 2s.9 2 2 2 2-.9 2-2-.9-2-2-2zm0 6c-1.1 0-2 .9-2 2s.9 2 2 2 2-.9 2-2-.9-2-2-2z" /></svg></div>
               </div>
             );
           })}
@@ -184,15 +184,15 @@ const ValueSelection: React.FC<ValueSelectionProps> = ({ initialSelected, onComp
       )}
 
       <div className="fixed bottom-0 left-0 right-0 p-3 z-30 safe-area-inset-bottom">
-        <div className="max-w-md mx-auto bg-white/95 dark:bg-executive-depth/95 backdrop-blur shadow-2xl border border-slate-200 dark:border-creative-depth/30 rounded-xl sm:rounded-2xl p-2 flex items-center justify-between">
+        <div className="max-w-md mx-auto bg-white/95 dark:bg-dark-bg-primary/95 backdrop-blur shadow-2xl border border-border-soft dark:border-dark-border/30 rounded-xl sm:rounded-2xl p-2 flex items-center justify-between">
           <div className="px-2 sm:px-3">
-            <p className="text-[7px] text-authority-navy/50 dark:text-pure-foundation/50 font-black uppercase tracking-widest">Strength</p>
-            <p className="text-[10px] font-bold text-authority-navy dark:text-pure-foundation">{selected.length}/10</p>
+            <p className="text-[7px] text-text-primary/50 dark:text-white/50 font-black uppercase tracking-widest">Strength</p>
+            <p className="text-[10px] font-bold text-text-primary dark:text-white">{selected.length}/10</p>
           </div>
           <button
             onClick={() => onComplete(selected)}
             disabled={selected.length === 0}
-            className={`px-6 sm:px-8 py-2 sm:py-2.5 rounded-lg sm:rounded-xl font-black text-[8px] sm:text-[9px] uppercase tracking-widest transition-all ${selected.length > 0 ? 'bg-brand-accent text-authority-navy hover:opacity-90' : 'bg-pure-foundation dark:bg-executive-depth/50 text-authority-navy/30 dark:text-pure-foundation/30'}`}
+            className={`px-6 sm:px-8 py-2 sm:py-2.5 rounded-lg sm:rounded-xl font-black text-[8px] sm:text-[9px] uppercase tracking-widest transition-all ${selected.length > 0 ? 'bg-yellow-warm text-text-primary hover:opacity-90' : 'bg-bg-secondary dark:bg-dark-bg-primary/50 text-text-primary/30 dark:text-white/30'}`}
           >
             <span className="hidden sm:inline">Confirm Compass</span>
             <span className="sm:hidden">Confirm</span>

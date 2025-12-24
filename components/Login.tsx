@@ -116,17 +116,17 @@ const Login: React.FC<LoginProps> = ({ onLogin }) => {
   };
 
   return (
-    <div className="min-h-screen bg-pure-foundation dark:bg-executive-depth flex items-center justify-center p-4 sm:p-6">
-      <div className="max-w-md w-full bg-white dark:bg-executive-depth rounded-xl sm:rounded-2xl shadow-2xl border border-slate-200 dark:border-creative-depth/30 overflow-hidden">
+    <div className="min-h-screen bg-bg-primary dark:bg-dark-bg-primary flex items-center justify-center p-4 sm:p-6">
+      <div className="max-w-md w-full bg-white dark:bg-dark-bg-primary rounded-xl sm:rounded-2xl shadow-2xl border border-border-soft dark:border-dark-border/30 overflow-hidden">
         <div className="p-6 sm:p-8 space-y-6">
           <div className="text-center space-y-2">
-            <div className="w-12 h-12 sm:w-16 sm:h-16 bg-authority-navy dark:bg-brand-accent rounded-xl flex items-center justify-center text-white font-black text-xl sm:text-2xl mx-auto">
+            <div className="w-12 h-12 sm:w-16 sm:h-16 bg-navy-primary dark:bg-yellow-warm rounded-xl flex items-center justify-center text-white font-black text-xl sm:text-2xl mx-auto">
               IC
             </div>
-            <h1 className="text-2xl sm:text-3xl font-black text-authority-navy dark:text-pure-foundation tracking-tight">
+            <h1 className="text-2xl sm:text-3xl font-black text-text-primary dark:text-white tracking-tight">
               Grounded
             </h1>
-            <p className="text-sm sm:text-base text-authority-navy/60 dark:text-pure-foundation/60">
+            <p className="text-sm sm:text-base text-text-primary/60 dark:text-white/60">
               {mode === 'login' && 'Sign in to continue'}
               {mode === 'register' && 'Create your account'}
               {mode === 'forgot' && 'Reset your password'}
@@ -141,11 +141,11 @@ const Login: React.FC<LoginProps> = ({ onLogin }) => {
           )}
 
           {resetLink && mode === 'forgot' && (
-            <div className="bg-brand-accent/20 dark:bg-brand-accent/30 border border-brand-accent/50 rounded-lg p-4 space-y-3">
-              <p className="text-sm font-bold text-authority-navy dark:text-pure-foundation">
+            <div className="bg-yellow-warm/20 dark:bg-yellow-warm/30 border border-yellow-warm/50 rounded-lg p-4 space-y-3">
+              <p className="text-sm font-bold text-text-primary dark:text-white">
                 Reset Link Generated
               </p>
-              <p className="text-xs text-authority-navy/70 dark:text-pure-foundation/70">
+              <p className="text-xs text-text-primary/70 dark:text-white/70">
                 Copy this link to reset your password. It will expire in 24 hours.
               </p>
               <div className="flex gap-2">
@@ -153,11 +153,11 @@ const Login: React.FC<LoginProps> = ({ onLogin }) => {
                   type="text"
                   value={resetLink}
                   readOnly
-                  className="flex-1 px-3 py-2 bg-white dark:bg-executive-depth rounded-lg text-xs border border-slate-200 dark:border-creative-depth/30 text-authority-navy dark:text-pure-foundation"
+                  className="flex-1 px-3 py-2 bg-white dark:bg-dark-bg-primary rounded-lg text-xs border border-border-soft dark:border-dark-border/30 text-text-primary dark:text-white"
                 />
                 <button
                   onClick={copyResetLink}
-                  className="px-4 py-2 bg-brand-accent text-authority-navy rounded-lg text-xs font-bold uppercase tracking-widest hover:opacity-90"
+                  className="px-4 py-2 bg-yellow-warm text-text-primary rounded-lg text-xs font-bold uppercase tracking-widest hover:opacity-90"
                 >
                   Copy
                 </button>
@@ -168,7 +168,7 @@ const Login: React.FC<LoginProps> = ({ onLogin }) => {
           {mode === 'login' && (
             <form onSubmit={handleLogin} className="space-y-4">
               <div>
-                <label className="block text-xs font-black text-authority-navy dark:text-pure-foundation uppercase tracking-widest mb-2">
+                <label className="block text-xs font-black text-text-primary dark:text-white uppercase tracking-widest mb-2">
                   Username
                 </label>
                 <input
@@ -176,12 +176,12 @@ const Login: React.FC<LoginProps> = ({ onLogin }) => {
                   value={username}
                   onChange={(e) => setUsername(e.target.value)}
                   required
-                  className="w-full px-4 py-3 rounded-lg bg-pure-foundation dark:bg-executive-depth/50 border border-slate-200 dark:border-creative-depth/30 text-authority-navy dark:text-pure-foundation focus:ring-2 focus:ring-brand-accent/50 outline-none"
+                  className="w-full px-4 py-3 rounded-lg bg-bg-primary dark:bg-dark-bg-primary/50 border border-border-soft dark:border-dark-border/30 text-text-primary dark:text-white focus:ring-2 focus:ring-yellow-warm/50 outline-none"
                   placeholder="Enter your username"
                 />
               </div>
               <div>
-                <label className="block text-xs font-black text-authority-navy dark:text-pure-foundation uppercase tracking-widest mb-2">
+                <label className="block text-xs font-black text-text-primary dark:text-white uppercase tracking-widest mb-2">
                   Password
                 </label>
                 <input
@@ -189,14 +189,14 @@ const Login: React.FC<LoginProps> = ({ onLogin }) => {
                   value={password}
                   onChange={(e) => setPassword(e.target.value)}
                   required
-                  className="w-full px-4 py-3 rounded-lg bg-pure-foundation dark:bg-executive-depth/50 border border-slate-200 dark:border-creative-depth/30 text-authority-navy dark:text-pure-foundation focus:ring-2 focus:ring-brand-accent/50 outline-none"
+                  className="w-full px-4 py-3 rounded-lg bg-bg-primary dark:bg-dark-bg-primary/50 border border-border-soft dark:border-dark-border/30 text-text-primary dark:text-white focus:ring-2 focus:ring-yellow-warm/50 outline-none"
                   placeholder="Enter your password"
                 />
               </div>
               <button
                 type="submit"
                 disabled={loading}
-                className="w-full py-3 sm:py-4 bg-brand-accent text-authority-navy rounded-lg sm:rounded-xl font-black uppercase tracking-widest text-sm sm:text-base hover:opacity-90 transition-all disabled:opacity-50 shadow-lg"
+                className="w-full py-3 sm:py-4 bg-yellow-warm text-text-primary rounded-lg sm:rounded-xl font-black uppercase tracking-widest text-sm sm:text-base hover:opacity-90 transition-all disabled:opacity-50 shadow-lg"
               >
                 {loading ? 'Signing in...' : 'Sign In'}
               </button>
@@ -204,14 +204,14 @@ const Login: React.FC<LoginProps> = ({ onLogin }) => {
                 <button
                   type="button"
                   onClick={() => setMode('register')}
-                  className="text-xs sm:text-sm text-brand-accent hover:underline"
+                  className="text-xs sm:text-sm text-yellow-warm hover:underline"
                 >
                   Create Account
                 </button>
                 <button
                   type="button"
                   onClick={() => setMode('forgot')}
-                  className="text-xs sm:text-sm text-authority-navy/60 dark:text-pure-foundation/60 hover:underline"
+                  className="text-xs sm:text-sm text-text-primary/60 dark:text-white/60 hover:underline"
                 >
                   Forgot Password?
                 </button>
@@ -222,7 +222,7 @@ const Login: React.FC<LoginProps> = ({ onLogin }) => {
           {mode === 'register' && (
             <form onSubmit={handleRegister} className="space-y-4">
               <div>
-                <label className="block text-xs font-black text-authority-navy dark:text-pure-foundation uppercase tracking-widest mb-2">
+                <label className="block text-xs font-black text-text-primary dark:text-white uppercase tracking-widest mb-2">
                   Username
                 </label>
                 <input
@@ -231,12 +231,12 @@ const Login: React.FC<LoginProps> = ({ onLogin }) => {
                   onChange={(e) => setUsername(e.target.value)}
                   required
                   minLength={3}
-                  className="w-full px-4 py-3 rounded-lg bg-pure-foundation dark:bg-executive-depth/50 border border-slate-200 dark:border-creative-depth/30 text-authority-navy dark:text-pure-foundation focus:ring-2 focus:ring-brand-accent/50 outline-none"
+                  className="w-full px-4 py-3 rounded-lg bg-bg-primary dark:bg-dark-bg-primary/50 border border-border-soft dark:border-dark-border/30 text-text-primary dark:text-white focus:ring-2 focus:ring-yellow-warm/50 outline-none"
                   placeholder="Choose a username (min 3 characters)"
                 />
               </div>
               <div>
-                <label className="block text-xs font-black text-authority-navy dark:text-pure-foundation uppercase tracking-widest mb-2">
+                <label className="block text-xs font-black text-text-primary dark:text-white uppercase tracking-widest mb-2">
                   Email
                 </label>
                 <input
@@ -244,12 +244,12 @@ const Login: React.FC<LoginProps> = ({ onLogin }) => {
                   value={email}
                   onChange={(e) => setEmail(e.target.value)}
                   required
-                  className="w-full px-4 py-3 rounded-lg bg-pure-foundation dark:bg-executive-depth/50 border border-slate-200 dark:border-creative-depth/30 text-authority-navy dark:text-pure-foundation focus:ring-2 focus:ring-brand-accent/50 outline-none"
+                  className="w-full px-4 py-3 rounded-lg bg-bg-primary dark:bg-dark-bg-primary/50 border border-border-soft dark:border-dark-border/30 text-text-primary dark:text-white focus:ring-2 focus:ring-yellow-warm/50 outline-none"
                   placeholder="your.email@example.com"
                 />
               </div>
               <div>
-                <label className="block text-xs font-black text-authority-navy dark:text-pure-foundation uppercase tracking-widest mb-2">
+                <label className="block text-xs font-black text-text-primary dark:text-white uppercase tracking-widest mb-2">
                   Password
                 </label>
                 <input
@@ -258,12 +258,12 @@ const Login: React.FC<LoginProps> = ({ onLogin }) => {
                   onChange={(e) => setPassword(e.target.value)}
                   required
                   minLength={6}
-                  className="w-full px-4 py-3 rounded-lg bg-pure-foundation dark:bg-executive-depth/50 border border-slate-200 dark:border-creative-depth/30 text-authority-navy dark:text-pure-foundation focus:ring-2 focus:ring-brand-accent/50 outline-none"
+                  className="w-full px-4 py-3 rounded-lg bg-bg-primary dark:bg-dark-bg-primary/50 border border-border-soft dark:border-dark-border/30 text-text-primary dark:text-white focus:ring-2 focus:ring-yellow-warm/50 outline-none"
                   placeholder="Choose a password (min 6 characters)"
                 />
               </div>
               <div>
-                <label className="block text-xs font-black text-authority-navy dark:text-pure-foundation uppercase tracking-widest mb-2">
+                <label className="block text-xs font-black text-text-primary dark:text-white uppercase tracking-widest mb-2">
                   Confirm Password
                 </label>
                 <input
@@ -272,14 +272,14 @@ const Login: React.FC<LoginProps> = ({ onLogin }) => {
                   onChange={(e) => setConfirmPassword(e.target.value)}
                   required
                   minLength={6}
-                  className="w-full px-4 py-3 rounded-lg bg-pure-foundation dark:bg-executive-depth/50 border border-slate-200 dark:border-creative-depth/30 text-authority-navy dark:text-pure-foundation focus:ring-2 focus:ring-brand-accent/50 outline-none"
+                  className="w-full px-4 py-3 rounded-lg bg-bg-primary dark:bg-dark-bg-primary/50 border border-border-soft dark:border-dark-border/30 text-text-primary dark:text-white focus:ring-2 focus:ring-yellow-warm/50 outline-none"
                   placeholder="Confirm your password"
                 />
               </div>
               <button
                 type="submit"
                 disabled={loading}
-                className="w-full py-3 sm:py-4 bg-brand-accent text-authority-navy rounded-lg sm:rounded-xl font-black uppercase tracking-widest text-sm sm:text-base hover:opacity-90 transition-all disabled:opacity-50 shadow-lg"
+                className="w-full py-3 sm:py-4 bg-yellow-warm text-text-primary rounded-lg sm:rounded-xl font-black uppercase tracking-widest text-sm sm:text-base hover:opacity-90 transition-all disabled:opacity-50 shadow-lg"
               >
                 {loading ? 'Creating Account...' : 'Create Account'}
               </button>
@@ -287,7 +287,7 @@ const Login: React.FC<LoginProps> = ({ onLogin }) => {
                 <button
                   type="button"
                   onClick={() => setMode('login')}
-                  className="text-xs sm:text-sm text-brand-accent hover:underline"
+                  className="text-xs sm:text-sm text-yellow-warm hover:underline"
                 >
                   Already have an account? Sign In
                 </button>
@@ -298,7 +298,7 @@ const Login: React.FC<LoginProps> = ({ onLogin }) => {
           {mode === 'forgot' && (
             <form onSubmit={handleForgotPassword} className="space-y-4">
               <div>
-                <label className="block text-xs font-black text-authority-navy dark:text-pure-foundation uppercase tracking-widest mb-2">
+                <label className="block text-xs font-black text-text-primary dark:text-white uppercase tracking-widest mb-2">
                   Email Address
                 </label>
                 <input
@@ -306,17 +306,17 @@ const Login: React.FC<LoginProps> = ({ onLogin }) => {
                   value={email}
                   onChange={(e) => setEmail(e.target.value)}
                   required
-                  className="w-full px-4 py-3 rounded-lg bg-pure-foundation dark:bg-executive-depth/50 border border-slate-200 dark:border-creative-depth/30 text-authority-navy dark:text-pure-foundation focus:ring-2 focus:ring-brand-accent/50 outline-none"
+                  className="w-full px-4 py-3 rounded-lg bg-bg-primary dark:bg-dark-bg-primary/50 border border-border-soft dark:border-dark-border/30 text-text-primary dark:text-white focus:ring-2 focus:ring-yellow-warm/50 outline-none"
                   placeholder="Enter your email address"
                 />
               </div>
-              <p className="text-xs text-authority-navy/60 dark:text-pure-foundation/60">
+              <p className="text-xs text-text-primary/60 dark:text-white/60">
                 A reset link will be generated. Copy and save it to reset your password.
               </p>
               <button
                 type="submit"
                 disabled={loading}
-                className="w-full py-3 sm:py-4 bg-brand-accent text-authority-navy rounded-lg sm:rounded-xl font-black uppercase tracking-widest text-sm sm:text-base hover:opacity-90 transition-all disabled:opacity-50 shadow-lg"
+                className="w-full py-3 sm:py-4 bg-yellow-warm text-text-primary rounded-lg sm:rounded-xl font-black uppercase tracking-widest text-sm sm:text-base hover:opacity-90 transition-all disabled:opacity-50 shadow-lg"
               >
                 {loading ? 'Generating Link...' : 'Generate Reset Link'}
               </button>
@@ -328,7 +328,7 @@ const Login: React.FC<LoginProps> = ({ onLogin }) => {
                     setEmail('');
                     setResetLink('');
                   }}
-                  className="text-xs sm:text-sm text-brand-accent hover:underline"
+                  className="text-xs sm:text-sm text-yellow-warm hover:underline"
                 >
                   Back to Sign In
                 </button>
@@ -339,7 +339,7 @@ const Login: React.FC<LoginProps> = ({ onLogin }) => {
           {mode === 'reset' && (
             <form onSubmit={handleResetPassword} className="space-y-4">
               <div>
-                <label className="block text-xs font-black text-authority-navy dark:text-pure-foundation uppercase tracking-widest mb-2">
+                <label className="block text-xs font-black text-text-primary dark:text-white uppercase tracking-widest mb-2">
                   New Password
                 </label>
                 <input
@@ -348,12 +348,12 @@ const Login: React.FC<LoginProps> = ({ onLogin }) => {
                   onChange={(e) => setNewPassword(e.target.value)}
                   required
                   minLength={6}
-                  className="w-full px-4 py-3 rounded-lg bg-pure-foundation dark:bg-executive-depth/50 border border-slate-200 dark:border-creative-depth/30 text-authority-navy dark:text-pure-foundation focus:ring-2 focus:ring-brand-accent/50 outline-none"
+                  className="w-full px-4 py-3 rounded-lg bg-bg-primary dark:bg-dark-bg-primary/50 border border-border-soft dark:border-dark-border/30 text-text-primary dark:text-white focus:ring-2 focus:ring-yellow-warm/50 outline-none"
                   placeholder="Enter new password (min 6 characters)"
                 />
               </div>
               <div>
-                <label className="block text-xs font-black text-authority-navy dark:text-pure-foundation uppercase tracking-widest mb-2">
+                <label className="block text-xs font-black text-text-primary dark:text-white uppercase tracking-widest mb-2">
                   Confirm New Password
                 </label>
                 <input
@@ -362,14 +362,14 @@ const Login: React.FC<LoginProps> = ({ onLogin }) => {
                   onChange={(e) => setConfirmPassword(e.target.value)}
                   required
                   minLength={6}
-                  className="w-full px-4 py-3 rounded-lg bg-pure-foundation dark:bg-executive-depth/50 border border-slate-200 dark:border-creative-depth/30 text-authority-navy dark:text-pure-foundation focus:ring-2 focus:ring-brand-accent/50 outline-none"
+                  className="w-full px-4 py-3 rounded-lg bg-bg-primary dark:bg-dark-bg-primary/50 border border-border-soft dark:border-dark-border/30 text-text-primary dark:text-white focus:ring-2 focus:ring-yellow-warm/50 outline-none"
                   placeholder="Confirm new password"
                 />
               </div>
               <button
                 type="submit"
                 disabled={loading}
-                className="w-full py-3 sm:py-4 bg-brand-accent text-authority-navy rounded-lg sm:rounded-xl font-black uppercase tracking-widest text-sm sm:text-base hover:opacity-90 transition-all disabled:opacity-50 shadow-lg"
+                className="w-full py-3 sm:py-4 bg-yellow-warm text-text-primary rounded-lg sm:rounded-xl font-black uppercase tracking-widest text-sm sm:text-base hover:opacity-90 transition-all disabled:opacity-50 shadow-lg"
               >
                 {loading ? 'Resetting Password...' : 'Reset Password'}
               </button>

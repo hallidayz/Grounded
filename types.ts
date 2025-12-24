@@ -19,6 +19,8 @@ export interface LogEntry {
   goalText?: string;
   deepReflection?: string; // The user's deep reflection text
   reflectionAnalysis?: string; // The AI-generated analysis
+  emotionalState?: 'drained' | 'heavy' | 'overwhelmed' | 'mixed' | 'calm' | 'hopeful' | 'positive' | 'energized'; // 8 emotional states
+  selectedFeeling?: string; // Specific feeling word selected
 }
 
 export type GoalFrequency = 'daily' | 'weekly' | 'monthly' | 'quarterly';

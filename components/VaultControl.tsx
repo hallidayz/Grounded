@@ -265,21 +265,21 @@ const VaultControl: React.FC<VaultControlProps> = ({ logs, goals, settings, onUp
   return (
     <div className="space-y-12 animate-fade-in pb-20 max-w-2xl mx-auto">
       <div className="text-center space-y-3">
-        <h2 className="text-2xl sm:text-4xl font-black text-authority-navy dark:text-pure-foundation tracking-tight">Vault & Accountability</h2>
-        <p className="text-authority-navy/60 dark:text-pure-foundation/60 text-sm sm:text-lg">Manage your history and growth commitments.</p>
+        <h2 className="text-2xl sm:text-4xl font-black text-text-primary dark:text-white tracking-tight">Vault & Accountability</h2>
+        <p className="text-text-primary/60 dark:text-white/60 text-sm sm:text-lg">Manage your history and growth commitments.</p>
       </div>
 
       {/* Accountability Settings Card */}
-      <div className="bg-white dark:bg-executive-depth rounded-xl sm:rounded-2xl border border-slate-100 dark:border-creative-depth/30 shadow-xl overflow-hidden">
+      <div className="bg-white dark:bg-dark-bg-primary rounded-xl sm:rounded-2xl border border-border-soft dark:border-dark-border/30 shadow-xl overflow-hidden">
         <div className="p-6 sm:p-8 lg:p-10 space-y-6 sm:space-y-8">
           <div className="flex items-center justify-between">
             <div className="space-y-1">
-              <h3 className="text-lg sm:text-xl font-black text-authority-navy dark:text-pure-foundation">Accountability Engine</h3>
-              <p className="text-xs text-authority-navy/60 dark:text-pure-foundation/60 font-medium">Keep your North Star in sight throughout the day.</p>
+              <h3 className="text-lg sm:text-xl font-black text-text-primary dark:text-white">Accountability Engine</h3>
+              <p className="text-xs text-text-primary/60 dark:text-white/60 font-medium">Keep your North Star in sight throughout the day.</p>
             </div>
             <button 
               onClick={toggleReminders}
-              className={`w-16 h-8 rounded-full transition-all relative ${settings.reminders.enabled ? 'bg-brand-accent' : 'bg-slate-200 dark:bg-executive-depth'}`}
+              className={`w-16 h-8 rounded-full transition-all relative ${settings.reminders.enabled ? 'bg-yellow-warm' : 'bg-border-soft dark:bg-dark-bg-primary'}`}
             >
               <div className={`absolute top-1 w-6 h-6 bg-white rounded-full shadow-md transition-all ${settings.reminders.enabled ? 'left-9' : 'left-1'}`} />
             </button>
@@ -288,7 +288,7 @@ const VaultControl: React.FC<VaultControlProps> = ({ logs, goals, settings, onUp
           <div className={`space-y-6 transition-all duration-500 ${settings.reminders.enabled ? 'opacity-100 scale-100' : 'opacity-30 scale-95 pointer-events-none'}`}>
             {/* Frequency Selector */}
             <div className="space-y-3">
-              <label className="text-[10px] font-black text-authority-navy/60 dark:text-pure-foundation/60 uppercase tracking-widest block">
+              <label className="text-[10px] font-black text-text-primary/60 dark:text-white/60 uppercase tracking-widest block">
                 {(settings.reminders.frequency || 'daily').charAt(0).toUpperCase() + (settings.reminders.frequency || 'daily').slice(1)} Reflection Reminder
               </label>
               <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
@@ -298,8 +298,8 @@ const VaultControl: React.FC<VaultControlProps> = ({ logs, goals, settings, onUp
                     onClick={() => handleFrequencyChange(freq)}
                     className={`px-4 py-3 rounded-xl font-black text-xs uppercase tracking-widest transition-all ${
                       (settings.reminders.frequency || 'daily') === freq
-                        ? 'bg-brand-accent text-authority-navy shadow-lg scale-105'
-                        : 'bg-pure-foundation dark:bg-executive-depth/50 text-authority-navy/60 dark:text-pure-foundation/60 hover:bg-brand-accent/20 dark:hover:bg-brand-accent/20'
+                        ? 'bg-yellow-warm text-text-primary shadow-lg scale-105'
+                        : 'bg-bg-secondary dark:bg-dark-bg-primary/50 text-text-primary/60 dark:text-white/60 hover:bg-yellow-warm/20 dark:hover:bg-yellow-warm/20'
                     }`}
                   >
                     {freq}
@@ -312,27 +312,27 @@ const VaultControl: React.FC<VaultControlProps> = ({ logs, goals, settings, onUp
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
               {((settings.reminders.frequency || 'daily') === 'daily' || (settings.reminders.frequency || 'daily') === 'weekly' || (settings.reminders.frequency || 'daily') === 'monthly') && (
                 <div className="space-y-2">
-                  <label className="text-[10px] font-black text-authority-navy/60 dark:text-pure-foundation/60 uppercase tracking-widest block">
+                  <label className="text-[10px] font-black text-text-primary/60 dark:text-white/60 uppercase tracking-widest block">
                     Time
                   </label>
                   <input 
                     type="time" 
                     value={settings.reminders.time}
                     onChange={handleTimeChange}
-                    className="w-full bg-pure-foundation dark:bg-executive-depth/50 border border-slate-200 dark:border-creative-depth/30 rounded-xl p-3 font-black text-authority-navy dark:text-pure-foundation focus:ring-2 focus:ring-brand-accent transition-all outline-none"
+                    className="w-full bg-bg-secondary dark:bg-dark-bg-primary/50 border border-border-soft dark:border-dark-border/30 rounded-xl p-3 font-black text-text-primary dark:text-white focus:ring-2 focus:ring-yellow-warm transition-all outline-none"
                   />
                 </div>
               )}
 
               {(settings.reminders.frequency || 'daily') === 'weekly' && (
                 <div className="space-y-2">
-                  <label className="text-[10px] font-black text-authority-navy/60 dark:text-pure-foundation/60 uppercase tracking-widest block">
+                  <label className="text-[10px] font-black text-text-primary/60 dark:text-white/60 uppercase tracking-widest block">
                     Day of Week
                   </label>
                   <select
                     value={settings.reminders.dayOfWeek ?? 0}
                     onChange={handleDayOfWeekChange}
-                    className="w-full bg-pure-foundation dark:bg-executive-depth/50 border border-slate-200 dark:border-creative-depth/30 rounded-xl p-3 font-black text-authority-navy dark:text-pure-foundation focus:ring-2 focus:ring-brand-accent transition-all outline-none"
+                    className="w-full bg-bg-secondary dark:bg-dark-bg-primary/50 border border-border-soft dark:border-dark-border/30 rounded-xl p-3 font-black text-text-primary dark:text-white focus:ring-2 focus:ring-yellow-warm transition-all outline-none"
                   >
                     <option value={0}>Sunday</option>
                     <option value={1}>Monday</option>
@@ -347,7 +347,7 @@ const VaultControl: React.FC<VaultControlProps> = ({ logs, goals, settings, onUp
 
               {(settings.reminders.frequency || 'daily') === 'monthly' && (
                 <div className="space-y-2">
-                  <label className="text-[10px] font-black text-authority-navy/60 dark:text-pure-foundation/60 uppercase tracking-widest block">
+                  <label className="text-[10px] font-black text-text-primary/60 dark:text-white/60 uppercase tracking-widest block">
                     Day of Month (1-31)
                   </label>
                   <input
@@ -356,20 +356,20 @@ const VaultControl: React.FC<VaultControlProps> = ({ logs, goals, settings, onUp
                     max="31"
                     value={settings.reminders.dayOfMonth ?? 1}
                     onChange={handleDayOfMonthChange}
-                    className="w-full bg-pure-foundation dark:bg-executive-depth/50 border border-slate-200 dark:border-creative-depth/30 rounded-xl p-3 font-black text-authority-navy dark:text-pure-foundation focus:ring-2 focus:ring-brand-accent transition-all outline-none"
+                    className="w-full bg-bg-secondary dark:bg-dark-bg-primary/50 border border-border-soft dark:border-dark-border/30 rounded-xl p-3 font-black text-text-primary dark:text-white focus:ring-2 focus:ring-yellow-warm transition-all outline-none"
                   />
                 </div>
               )}
             </div>
 
             {/* Device Calendar Integration */}
-            <div className="bg-pure-foundation dark:bg-executive-depth/50 rounded-xl p-4 border border-slate-200 dark:border-creative-depth/30">
+            <div className="bg-bg-secondary dark:bg-dark-bg-primary/50 rounded-xl p-4 border border-border-soft dark:border-dark-border/30">
               <div className="flex items-center justify-between">
                 <div className="space-y-1">
-                  <p className="text-[10px] font-black text-authority-navy dark:text-pure-foundation uppercase tracking-widest">
+                  <p className="text-[10px] font-black text-text-primary dark:text-white uppercase tracking-widest">
                     Device Calendar
                   </p>
-                  <p className="text-xs text-authority-navy/60 dark:text-pure-foundation/60">
+                  <p className="text-xs text-text-primary/60 dark:text-white/60">
                     Add reminders to your device's calendar app
                   </p>
                 </div>
@@ -377,8 +377,8 @@ const VaultControl: React.FC<VaultControlProps> = ({ logs, goals, settings, onUp
                   onClick={handleCalendarToggle}
                   className={`w-14 h-8 rounded-full transition-all relative ${
                     settings.reminders.useDeviceCalendar
-                      ? 'bg-brand-accent'
-                      : 'bg-slate-200 dark:bg-executive-depth'
+                      ? 'bg-yellow-warm'
+                      : 'bg-border-soft dark:bg-dark-bg-primary'
                   }`}
                 >
                   <div className={`absolute top-1 w-6 h-6 bg-white rounded-full shadow-md transition-all ${
@@ -389,28 +389,28 @@ const VaultControl: React.FC<VaultControlProps> = ({ logs, goals, settings, onUp
             </div>
 
             {/* Ntfy.sh Push Notifications */}
-            <div className="bg-pure-foundation dark:bg-executive-depth/50 rounded-xl p-4 border border-slate-200 dark:border-creative-depth/30 space-y-4">
+            <div className="bg-bg-secondary dark:bg-dark-bg-primary/50 rounded-xl p-4 border border-border-soft dark:border-dark-border/30 space-y-4">
               <div className="flex items-center justify-between">
                 <div className="space-y-1">
-                  <p className="text-[10px] font-black text-authority-navy dark:text-pure-foundation uppercase tracking-widest">
+                  <p className="text-[10px] font-black text-text-primary dark:text-white uppercase tracking-widest">
                     Push Notifications (ntfy.sh)
                   </p>
-                  <p className="text-xs text-authority-navy/60 dark:text-pure-foundation/60">
+                  <p className="text-xs text-text-primary/60 dark:text-white/60">
                     Secure push notifications to your device via ntfy.sh
                   </p>
                 </div>
                 <button
                   onClick={handleNtfyToggle}
-                  className={`w-12 h-6 rounded-full transition-all relative ${settings.reminders.useNtfyPush ? 'bg-brand-accent' : 'bg-slate-300 dark:bg-creative-depth/50'}`}
+                  className={`w-12 h-6 rounded-full transition-all relative ${settings.reminders.useNtfyPush ? 'bg-yellow-warm' : 'bg-border-soft dark:bg-dark-bg-tertiary/50'}`}
                 >
                   <div className={`absolute top-0.5 w-5 h-5 bg-white rounded-full shadow-sm transition-all ${settings.reminders.useNtfyPush ? 'left-6.5' : 'left-0.5'}`} />
                 </button>
               </div>
               
               {settings.reminders.useNtfyPush && (
-                <div className="space-y-3 pt-3 border-t border-slate-200 dark:border-creative-depth/30">
+                <div className="space-y-3 pt-3 border-t border-border-soft dark:border-dark-border/30">
                   <div className="space-y-2">
-                    <label className="text-[9px] font-black text-authority-navy/60 dark:text-pure-foundation/60 uppercase tracking-widest block">
+                    <label className="text-[9px] font-black text-text-primary/60 dark:text-white/60 uppercase tracking-widest block">
                       Ntfy Topic Name
                     </label>
                     <div className="flex gap-2">
@@ -419,7 +419,7 @@ const VaultControl: React.FC<VaultControlProps> = ({ logs, goals, settings, onUp
                         value={settings.reminders.ntfyTopic || ''}
                         onChange={handleNtfyTopicChange}
                         placeholder="grounded-abc123xyz"
-                        className="flex-1 p-2 rounded-lg bg-white dark:bg-executive-depth border border-slate-200 dark:border-creative-depth/30 text-xs font-medium text-authority-navy dark:text-pure-foundation focus:ring-2 focus:ring-brand-accent transition-all outline-none"
+                        className="flex-1 p-2 rounded-lg bg-white dark:bg-dark-bg-primary border border-border-soft dark:border-dark-border/30 text-xs font-medium text-text-primary dark:text-white focus:ring-2 focus:ring-yellow-warm transition-all outline-none"
                       />
                       <button
                         onClick={() => {
@@ -429,19 +429,19 @@ const VaultControl: React.FC<VaultControlProps> = ({ logs, goals, settings, onUp
                             reminders: { ...settings.reminders, ntfyTopic: randomTopic }
                           });
                         }}
-                        className="px-3 py-2 bg-slate-200 dark:bg-executive-depth text-slate-700 dark:text-pure-foundation rounded-lg text-[9px] font-black uppercase tracking-widest hover:bg-slate-300 dark:hover:bg-executive-depth/80"
+                        className="px-3 py-2 bg-border-soft dark:bg-dark-bg-primary text-text-primary dark:text-white rounded-lg text-[9px] font-black uppercase tracking-widest hover:bg-border-soft dark:hover:bg-dark-bg-primary/80"
                         title="Generate random topic"
                       >
                         🎲
                       </button>
                     </div>
-                    <p className="text-[8px] text-authority-navy/50 dark:text-pure-foundation/50">
+                    <p className="text-[8px] text-text-primary/50 dark:text-white/50">
                       Use a unique, random topic name for privacy. Subscribe to this topic in the ntfy app on your device.
                     </p>
                   </div>
                   
                   <div className="space-y-2">
-                    <label className="text-[9px] font-black text-authority-navy/60 dark:text-pure-foundation/60 uppercase tracking-widest block">
+                    <label className="text-[9px] font-black text-text-primary/60 dark:text-white/60 uppercase tracking-widest block">
                       Custom Server (Optional)
                     </label>
                     <input
@@ -452,27 +452,27 @@ const VaultControl: React.FC<VaultControlProps> = ({ logs, goals, settings, onUp
                         reminders: { ...settings.reminders, ntfyServer: e.target.value.trim() || undefined }
                       })}
                       placeholder="https://ntfy.sh (default)"
-                      className="w-full p-2 rounded-lg bg-white dark:bg-executive-depth border border-slate-200 dark:border-creative-depth/30 text-xs font-medium text-authority-navy dark:text-pure-foundation focus:ring-2 focus:ring-brand-accent transition-all outline-none"
+                      className="w-full p-2 rounded-lg bg-white dark:bg-dark-bg-primary border border-border-soft dark:border-dark-border/30 text-xs font-medium text-text-primary dark:text-white focus:ring-2 focus:ring-yellow-warm transition-all outline-none"
                     />
-                    <p className="text-[8px] text-authority-navy/50 dark:text-pure-foundation/50">
+                    <p className="text-[8px] text-text-primary/50 dark:text-white/50">
                       Leave empty to use the free public server (https://ntfy.sh)
                     </p>
                   </div>
                   
                   <button
                     onClick={handleTestNtfy}
-                    className="w-full px-4 py-2 bg-brand-accent text-authority-navy rounded-lg text-[9px] font-black uppercase tracking-widest hover:opacity-90"
+                    className="w-full px-4 py-2 bg-yellow-warm text-text-primary rounded-lg text-[9px] font-black uppercase tracking-widest hover:opacity-90"
                   >
                     Test Notification
                   </button>
                   
-                  <div className="p-3 bg-brand-accent/10 dark:bg-brand-accent/20 rounded-lg border border-brand-accent/30">
-                    <p className="text-[8px] font-black text-brand-accent uppercase tracking-widest mb-1">
+                  <div className="p-3 bg-yellow-warm/10 dark:bg-yellow-warm/20 rounded-lg border border-yellow-warm/30">
+                    <p className="text-[8px] font-black text-yellow-warm uppercase tracking-widest mb-1">
                       Setup Instructions
                     </p>
-                    <ol className="text-[8px] text-authority-navy dark:text-pure-foundation space-y-1 list-decimal list-inside">
+                    <ol className="text-[8px] text-text-primary dark:text-white space-y-1 list-decimal list-inside">
                       <li>Install the ntfy app on your device (Android/iOS/Desktop)</li>
-                      <li>Subscribe to your topic: <code className="bg-white dark:bg-executive-depth px-1 rounded">{settings.reminders.ntfyTopic || 'your-topic'}</code></li>
+                      <li>Subscribe to your topic: <code className="bg-white dark:bg-dark-bg-primary px-1 rounded">{settings.reminders.ntfyTopic || 'your-topic'}</code></li>
                       <li>Click "Test Notification" to verify it works</li>
                     </ol>
                   </div>
@@ -481,12 +481,12 @@ const VaultControl: React.FC<VaultControlProps> = ({ logs, goals, settings, onUp
             </div>
 
             {/* Next Reminder Preview */}
-            <div className="bg-brand-accent/10 dark:bg-brand-accent/20 rounded-xl p-4 border border-brand-accent/30">
+            <div className="bg-yellow-warm/10 dark:bg-yellow-warm/20 rounded-xl p-4 border border-yellow-warm/30">
               <div className="flex justify-between items-center">
-                <span className="text-[10px] font-black text-authority-navy dark:text-pure-foundation uppercase tracking-widest">
+                <span className="text-[10px] font-black text-text-primary dark:text-white uppercase tracking-widest">
                   Next Reminder
                 </span>
-                <span className="text-sm font-black text-brand-accent animate-pulse">
+                <span className="text-sm font-black text-yellow-warm animate-pulse">
                   {nextPulseInfo}
                 </span>
               </div>
@@ -496,40 +496,40 @@ const VaultControl: React.FC<VaultControlProps> = ({ logs, goals, settings, onUp
               {notifPermission !== 'granted' ? (
                 <button 
                   onClick={requestPermission}
-                  className="w-full px-6 py-4 bg-amber-50 text-amber-700 rounded-2xl text-[10px] font-black uppercase tracking-widest hover:bg-amber-100 transition-colors flex items-center justify-center gap-2"
+                  className="w-full px-6 py-4 bg-yellow-warm/20 dark:bg-yellow-warm/20 text-yellow-warm dark:text-yellow-warm rounded-2xl text-[10px] font-black uppercase tracking-widest hover:bg-yellow-warm/30 dark:hover:bg-yellow-warm/30 transition-colors flex items-center justify-center gap-2"
                 >
                   <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={3} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" /></svg>
                   Enable Browser Permissions
                 </button>
               ) : (
-                <div className="px-6 py-4 bg-emerald-50 text-emerald-700 rounded-2xl text-[10px] font-black uppercase tracking-widest flex items-center justify-center gap-2">
+                <div className="px-6 py-4 bg-calm-sage/20 dark:bg-calm-sage/20 text-calm-sage dark:text-calm-sage rounded-2xl text-[10px] font-black uppercase tracking-widest flex items-center justify-center gap-2">
                   <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={3} d="M5 13l4 4L19 7" /></svg>
                   Nudge Engine Active
                 </div>
               )}
             </div>
-            <p className="text-[10px] text-slate-400 font-medium italic text-center">Reminders trigger via system notifications while this tab is open.</p>
+            <p className="text-[10px] text-text-tertiary font-medium italic text-center">Reminders trigger via system notifications while this tab is open.</p>
           </div>
         </div>
       </div>
 
-      <div className="bg-white dark:bg-executive-depth rounded-xl sm:rounded-2xl border border-slate-100 dark:border-creative-depth/30 shadow-xl overflow-hidden">
-        <div className="p-6 sm:p-8 lg:p-10 border-b border-slate-50 dark:border-creative-depth/30 flex flex-col sm:flex-row justify-between items-center gap-4 sm:gap-6">
+      <div className="bg-white dark:bg-dark-bg-primary rounded-xl sm:rounded-2xl border border-border-soft dark:border-dark-border/30 shadow-xl overflow-hidden">
+        <div className="p-6 sm:p-8 lg:p-10 border-b border-border-soft dark:border-dark-border/30 flex flex-col sm:flex-row justify-between items-center gap-4 sm:gap-6">
           <div className="text-center sm:text-left">
-            <p className="text-[10px] font-black text-authority-navy/50 dark:text-pure-foundation/50 uppercase tracking-widest mb-1">Total Impact</p>
-            <p className="text-2xl sm:text-3xl font-black text-authority-navy dark:text-pure-foundation">{logs.length} Entries</p>
+            <p className="text-[10px] font-black text-text-primary/50 dark:text-white/50 uppercase tracking-widest mb-1">Total Impact</p>
+            <p className="text-2xl sm:text-3xl font-black text-text-primary dark:text-white">{logs.length} Entries</p>
           </div>
           <div className="flex flex-col sm:flex-row gap-3 w-full sm:w-auto">
             <div className="flex flex-wrap gap-3">
               <button 
                 onClick={() => setShowDateRangePicker(!showDateRangePicker)}
-                className="flex-1 sm:flex-none px-4 sm:px-6 py-3 bg-pure-foundation dark:bg-executive-depth/50 text-authority-navy dark:text-pure-foundation rounded-xl sm:rounded-2xl text-[9px] sm:text-[10px] font-black uppercase tracking-widest hover:opacity-80 transition-colors"
+                className="flex-1 sm:flex-none px-4 sm:px-6 py-3 bg-bg-secondary dark:bg-dark-bg-primary/50 text-text-primary dark:text-white rounded-xl sm:rounded-2xl text-[9px] sm:text-[10px] font-black uppercase tracking-widest hover:opacity-80 transition-colors"
               >
                 {selectedStartDate || selectedEndDate ? '📅 Date Range' : '📅 Select Dates'}
               </button>
               <button 
                 onClick={handleEmailExport} 
-                className="flex-1 sm:flex-none px-4 sm:px-6 py-3 bg-brand-accent text-authority-navy rounded-xl sm:rounded-2xl text-[9px] sm:text-[10px] font-black uppercase tracking-widest hover:opacity-90 transition-colors"
+                className="flex-1 sm:flex-none px-4 sm:px-6 py-3 bg-yellow-warm text-text-primary rounded-xl sm:rounded-2xl text-[9px] sm:text-[10px] font-black uppercase tracking-widest hover:opacity-90 transition-colors"
               >
                 {isWebShareAvailable() ? '📧 Share' : '📧 Email'}
               </button>
@@ -541,28 +541,28 @@ const VaultControl: React.FC<VaultControlProps> = ({ logs, goals, settings, onUp
               </button>
             </div>
             {showDateRangePicker && (
-              <div className="bg-pure-foundation dark:bg-executive-depth/50 rounded-xl p-4 space-y-3">
+              <div className="bg-bg-secondary dark:bg-dark-bg-primary/50 rounded-xl p-4 space-y-3">
                 <div className="grid grid-cols-2 gap-3">
                   <div>
-                    <label className="text-[9px] font-black text-authority-navy/60 dark:text-pure-foundation/60 uppercase tracking-widest block mb-1">
+                    <label className="text-[9px] font-black text-text-primary/60 dark:text-white/60 uppercase tracking-widest block mb-1">
                       Start Date
                     </label>
                     <input
                       type="date"
                       value={selectedStartDate}
                       onChange={(e) => setSelectedStartDate(e.target.value)}
-                      className="w-full p-2 rounded-lg bg-white dark:bg-executive-depth border border-slate-200 dark:border-creative-depth/30 text-xs"
+                      className="w-full p-2 rounded-lg bg-white dark:bg-dark-bg-primary border border-border-soft dark:border-dark-border/30 text-xs"
                     />
                   </div>
                   <div>
-                    <label className="text-[9px] font-black text-authority-navy/60 dark:text-pure-foundation/60 uppercase tracking-widest block mb-1">
+                    <label className="text-[9px] font-black text-text-primary/60 dark:text-white/60 uppercase tracking-widest block mb-1">
                       End Date
                     </label>
                     <input
                       type="date"
                       value={selectedEndDate}
                       onChange={(e) => setSelectedEndDate(e.target.value)}
-                      className="w-full p-2 rounded-lg bg-white dark:bg-executive-depth border border-slate-200 dark:border-creative-depth/30 text-xs"
+                      className="w-full p-2 rounded-lg bg-white dark:bg-dark-bg-primary border border-border-soft dark:border-dark-border/30 text-xs"
                     />
                   </div>
                 </div>
@@ -572,13 +572,13 @@ const VaultControl: React.FC<VaultControlProps> = ({ logs, goals, settings, onUp
                       setSelectedStartDate('');
                       setSelectedEndDate('');
                     }}
-                    className="flex-1 px-3 py-2 bg-slate-200 dark:bg-executive-depth text-slate-700 dark:text-pure-foundation rounded-lg text-[9px] font-black uppercase tracking-widest"
+                    className="flex-1 px-3 py-2 bg-border-soft dark:bg-dark-bg-primary text-text-primary dark:text-white rounded-lg text-[9px] font-black uppercase tracking-widest"
                   >
                     Clear
                   </button>
                   <button
                     onClick={() => setShowDateRangePicker(false)}
-                    className="flex-1 px-3 py-2 bg-brand-accent text-authority-navy rounded-lg text-[9px] font-black uppercase tracking-widest"
+                    className="flex-1 px-3 py-2 bg-yellow-warm text-text-primary rounded-lg text-[9px] font-black uppercase tracking-widest"
                   >
                     Done
                   </button>
@@ -590,13 +590,13 @@ const VaultControl: React.FC<VaultControlProps> = ({ logs, goals, settings, onUp
 
         <div className="p-6 sm:p-8 lg:p-10 space-y-8 sm:space-y-10">
           {sortedLogs.length === 0 ? (
-            <div className="text-center py-16 sm:py-20 text-authority-navy/30 dark:text-pure-foundation/30 space-y-4">
+            <div className="text-center py-16 sm:py-20 text-text-primary/30 dark:text-white/30 space-y-4">
               <svg className="w-12 sm:w-16 h-12 sm:h-16 mx-auto opacity-20" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 6.253v13m0-13C10.832 5.477 9.246 5 7.5 5S4.168 5.477 3 6.253v13C4.168 18.477 5.754 18 7.5 18s3.332.477 4.5 1.253m0-13C13.168 5.477 14.754 5 16.5 5c1.747 0 3.332.477 4.5 1.253v13C19.832 18.477 18.247 18 16.5 18c-1.746 0-3.332.477-4.5 1.253" /></svg>
-              <p className="font-bold text-lg sm:text-xl text-authority-navy dark:text-pure-foundation">The Vault is currently empty.</p>
-              <p className="text-xs sm:text-sm text-authority-navy/60 dark:text-pure-foundation/60">Start by reflecting on your values in the Dashboard.</p>
+              <p className="font-bold text-lg sm:text-xl text-text-primary dark:text-white">The Vault is currently empty.</p>
+              <p className="text-xs sm:text-sm text-text-primary/60 dark:text-white/60">Start by reflecting on your values in the Dashboard.</p>
             </div>
           ) : (
-            <div className="relative pl-6 sm:pl-8 space-y-8 sm:space-y-10 before:absolute before:left-[8px] sm:before:left-[11px] before:top-2 before:bottom-2 before:w-[3px] before:bg-slate-50 dark:before:bg-creative-depth/30">
+            <div className="relative pl-6 sm:pl-8 space-y-8 sm:space-y-10 before:absolute before:left-[8px] sm:before:left-[11px] before:top-2 before:bottom-2 before:w-[3px] before:bg-bg-secondary dark:before:bg-dark-bg-tertiary/30">
               {sortedLogs.map((log) => {
                 const val = ALL_VALUES.find(v => v.id === log.valueId);
                 const isGoalAchieved = log.type === 'goal-completion';
@@ -604,46 +604,46 @@ const VaultControl: React.FC<VaultControlProps> = ({ logs, goals, settings, onUp
 
                 return (
                   <div key={log.id} className="relative group">
-                    <div className={`absolute -left-[22px] sm:-left-[26px] top-1.5 w-5 h-5 sm:w-6 sm:h-6 rounded-full bg-white dark:bg-executive-depth border-4 z-10 transition-all ${isGoalAchieved ? 'border-success-forest scale-125' : isCommitment ? 'border-brand-accent' : 'border-slate-200 dark:border-creative-depth/50'}`} />
+                    <div className={`absolute -left-[22px] sm:-left-[26px] top-1.5 w-5 h-5 sm:w-6 sm:h-6 rounded-full bg-white dark:bg-dark-bg-primary border-4 z-10 transition-all ${isGoalAchieved ? 'border-calm-sage scale-125' : isCommitment ? 'border-yellow-warm' : 'border-border-soft dark:border-dark-border/50'}`} />
                     
-                    <div className={`rounded-2xl sm:rounded-[32px] p-6 sm:p-8 border-2 transition-all ${isGoalAchieved ? 'bg-success-forest/10 dark:bg-success-forest/20 border-success-forest/30 shadow-emerald-50 dark:shadow-success-forest/20' : 'bg-slate-50 dark:bg-executive-depth/50 border-slate-100 dark:border-creative-depth/30 group-hover:bg-white dark:group-hover:bg-executive-depth group-hover:shadow-2xl'}`}>
+                    <div className={`rounded-2xl sm:rounded-[32px] p-6 sm:p-8 border-2 transition-all ${isGoalAchieved ? 'bg-calm-sage/10 dark:bg-calm-sage/20 border-calm-sage/30 shadow-emerald-50 dark:shadow-calm-sage/20' : 'bg-bg-secondary dark:bg-dark-bg-primary/50 border-border-soft dark:border-dark-border/30 group-hover:bg-white dark:group-hover:bg-dark-bg-primary group-hover:shadow-2xl'}`}>
                       <div className="flex justify-between items-start mb-4">
                         <div className="flex items-center gap-3 sm:gap-4">
                           <span className="text-2xl sm:text-3xl" title={log.mood}>{log.mood || '✨'}</span>
                           <div>
-                            <p className="font-black text-authority-navy dark:text-pure-foundation text-base sm:text-lg leading-none mb-1">{val?.name || 'Reflection'}</p>
-                            <p className="text-[9px] sm:text-[10px] font-bold text-authority-navy/50 dark:text-pure-foundation/50 uppercase tracking-widest">
+                            <p className="font-black text-text-primary dark:text-white text-base sm:text-lg leading-none mb-1">{val?.name || 'Reflection'}</p>
+                            <p className="text-[9px] sm:text-[10px] font-bold text-text-primary/50 dark:text-white/50 uppercase tracking-widest">
                               {new Date(log.date).toLocaleDateString(undefined, { month: 'short', day: 'numeric', year: 'numeric' })}
                             </p>
                           </div>
                         </div>
                         {isGoalAchieved && (
-                           <span className="bg-success-forest text-white text-[8px] sm:text-[9px] font-black px-2 sm:px-3 py-1 rounded-full uppercase tracking-widest animate-pulse">Goal Achieved</span>
+                           <span className="bg-calm-sage text-white text-[8px] sm:text-[9px] font-black px-2 sm:px-3 py-1 rounded-full uppercase tracking-widest animate-pulse">Goal Achieved</span>
                         )}
                       </div>
 
                       {log.deepReflection && (
-                        <div className="mb-3 p-3 bg-brand-accent/10 dark:bg-brand-accent/20 rounded-lg border border-brand-accent/30">
-                          <p className="text-[9px] font-black text-brand-accent uppercase tracking-widest mb-1">Deep Reflection</p>
-                          <p className="text-authority-navy/80 dark:text-pure-foundation/80 leading-relaxed text-xs sm:text-sm">{log.deepReflection}</p>
+                        <div className="mb-3 p-3 bg-yellow-warm/10 dark:bg-yellow-warm/20 rounded-lg border border-yellow-warm/30">
+                          <p className="text-[9px] font-black text-yellow-warm uppercase tracking-widest mb-1">Deep Reflection</p>
+                          <p className="text-text-primary/80 dark:text-white/80 leading-relaxed text-xs sm:text-sm">{log.deepReflection}</p>
                         </div>
                       )}
                       {log.reflectionAnalysis && (
-                        <div className="mb-3 p-3 bg-pure-foundation dark:bg-executive-depth/50 rounded-lg border border-slate-200 dark:border-creative-depth/30">
-                          <p className="text-[9px] font-black text-authority-navy/60 dark:text-pure-foundation/60 uppercase tracking-widest mb-1">Reflection Analysis</p>
-                          <div className="text-authority-navy/70 dark:text-pure-foundation/70 leading-relaxed text-xs sm:text-sm whitespace-pre-line">
+                        <div className="mb-3 p-3 bg-bg-secondary dark:bg-dark-bg-primary/50 rounded-lg border border-border-soft dark:border-dark-border/30">
+                          <p className="text-[9px] font-black text-text-primary/60 dark:text-white/60 uppercase tracking-widest mb-1">Reflection Analysis</p>
+                          <div className="text-text-primary/70 dark:text-white/70 leading-relaxed text-xs sm:text-sm whitespace-pre-line">
                             {log.reflectionAnalysis}
                           </div>
                         </div>
                       )}
-                      <p className="text-authority-navy/70 dark:text-pure-foundation/70 leading-relaxed italic text-sm sm:text-base">"{log.note}"</p>
+                      <p className="text-text-primary/70 dark:text-white/70 leading-relaxed italic text-sm sm:text-base">"{log.note}"</p>
 
                       {log.goalText && (
-                        <div className={`mt-4 sm:mt-6 pt-4 sm:pt-6 border-t ${isGoalAchieved ? 'border-success-forest/30' : 'border-slate-200 dark:border-creative-depth/30'} flex flex-col gap-2`}>
-                          <p className={`text-[9px] sm:text-[10px] font-black uppercase tracking-widest ${isGoalAchieved ? 'text-success-forest' : 'text-brand-accent'}`}>
+                        <div className={`mt-4 sm:mt-6 pt-4 sm:pt-6 border-t ${isGoalAchieved ? 'border-calm-sage/30' : 'border-border-soft dark:border-dark-border/30'} flex flex-col gap-2`}>
+                          <p className={`text-[9px] sm:text-[10px] font-black uppercase tracking-widest ${isGoalAchieved ? 'text-calm-sage' : 'text-yellow-warm'}`}>
                             {isGoalAchieved ? 'Accomplished Target' : 'Commitment Target'}
                           </p>
-                          <p className={`text-xs sm:text-sm font-bold ${isGoalAchieved ? 'text-success-forest dark:text-success-forest' : 'text-authority-navy dark:text-pure-foundation'}`}>
+                          <p className={`text-xs sm:text-sm font-bold ${isGoalAchieved ? 'text-calm-sage dark:text-calm-sage' : 'text-text-primary dark:text-white'}`}>
                             {log.goalText}
                           </p>
                         </div>
@@ -657,7 +657,7 @@ const VaultControl: React.FC<VaultControlProps> = ({ logs, goals, settings, onUp
         </div>
       </div>
       
-      <div className="text-center text-xs text-authority-navy/50 dark:text-pure-foundation/50 font-medium">
+      <div className="text-center text-xs text-text-primary/50 dark:text-white/50 font-medium">
         Encrypted local storage. Your data remains strictly on your device.
       </div>
 
