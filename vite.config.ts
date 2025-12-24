@@ -70,17 +70,6 @@ export default defineConfig({
             }
           },
           {
-            urlPattern: /^https:\/\/cdn\.tailwindcss\.com\/.*/i,
-            handler: 'CacheFirst',
-            options: {
-              cacheName: 'tailwind-cache',
-              expiration: {
-                maxEntries: 1,
-                maxAgeSeconds: 60 * 60 * 24 * 365 // 1 year
-              }
-            }
-          },
-          {
             urlPattern: /^https:\/\/esm\.sh\/.*/i,
             handler: 'NetworkFirst',
             options: {
@@ -106,7 +95,8 @@ export default defineConfig({
   },
   // Optimize for on-device AI model loading
   optimizeDeps: {
-    exclude: ['@xenova/transformers']
+    exclude: ['@xenova/transformers'],
+    include: ['react', 'react-dom']
   },
   build: {
     minify: 'terser',
