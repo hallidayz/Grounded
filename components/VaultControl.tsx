@@ -3,7 +3,6 @@ import React, { useState, useEffect } from 'react';
 import { LogEntry, Goal, AppSettings, ReminderFrequency } from '../types';
 import { ALL_VALUES } from '../constants';
 import { shareViaEmail, generateDataExportEmail, isWebShareAvailable } from '../services/emailService';
-import EmailScheduleComponent from './EmailSchedule';
 import { getCurrentUser } from '../services/authService';
 
 interface VaultControlProps {
@@ -17,7 +16,6 @@ interface VaultControlProps {
 const VaultControl: React.FC<VaultControlProps> = ({ logs, goals, settings, onUpdateSettings, onClearData }) => {
   const [notifPermission, setNotifPermission] = useState<NotificationPermission>(Notification.permission);
   const [nextPulseInfo, setNextPulseInfo] = useState<string>('');
-  const [showEmailSchedule, setShowEmailSchedule] = useState(false);
   const [userId, setUserId] = useState<string | null>(null);
 
   useEffect(() => {
@@ -39,7 +37,10 @@ const VaultControl: React.FC<VaultControlProps> = ({ logs, goals, settings, onUp
       const currentDay = now.getDay();
       const currentDate = now.getDate();
       
-      switch (settings.reminders.frequency) {
+      // Ensure frequency has a valid default value
+      const frequency = settings.reminders.frequency || 'daily';
+      
+      switch (frequency) {
         case 'hourly':
           if (currentHour >= 8 && currentHour < 20) {
             setNextPulseInfo(`Hourly: ${currentHour + 1}:00`);
@@ -59,6 +60,10 @@ const VaultControl: React.FC<VaultControlProps> = ({ logs, goals, settings, onUp
         case 'monthly':
           const day = settings.reminders.dayOfMonth ?? 1;
           setNextPulseInfo(`Monthly: Day ${day} at ${settings.reminders.time}`);
+          break;
+        default:
+          // Fallback to daily if frequency is invalid or undefined
+          setNextPulseInfo(`Daily: ${settings.reminders.time}`);
           break;
       }
     };
@@ -80,11 +85,27 @@ const VaultControl: React.FC<VaultControlProps> = ({ logs, goals, settings, onUp
   };
 
   const handleEmailExport = async () => {
-    const values = ALL_VALUES.filter(v => logs.some(l => l.valueId === v.id));
-    const emailData = generateDataExportEmail(logs, [], values, settings);
+    // Filter logs by date range if selected
+    let filteredLogs = logs;
+    if (selectedStartDate || selectedEndDate) {
+      filteredLogs = logs.filter(log => {
+        const logDate = new Date(log.date).toISOString().split('T')[0];
+        if (selectedStartDate && logDate < selectedStartDate) return false;
+        if (selectedEndDate && logDate > selectedEndDate) return false;
+        return true;
+      });
+      
+      if (filteredLogs.length === 0) {
+        alert('No entries found in the selected date range.');
+        return;
+      }
+    }
+    
+    const values = ALL_VALUES.filter(v => filteredLogs.some(l => l.valueId === v.id));
+    const emailData = generateDataExportEmail(filteredLogs, [], values, settings);
     const success = await shareViaEmail(emailData, []);
     if (!success) {
-      alert("Could not open email. Please use the Export JSON button and attach manually.");
+      alert("Could not open email. Please try again.");
     }
   };
 
@@ -175,6 +196,70 @@ const VaultControl: React.FC<VaultControlProps> = ({ logs, goals, settings, onUp
     }
   };
 
+  const handleNtfyToggle = () => {
+    if (!settings.reminders.useNtfyPush) {
+      // Generate a random topic if none exists
+      if (!settings.reminders.ntfyTopic) {
+        const randomTopic = generateRandomTopic();
+        onUpdateSettings({
+          ...settings,
+          reminders: { 
+            ...settings.reminders, 
+            useNtfyPush: true,
+            ntfyTopic: randomTopic
+          }
+        });
+      } else {
+        onUpdateSettings({
+          ...settings,
+          reminders: { ...settings.reminders, useNtfyPush: true }
+        });
+      }
+    } else {
+      onUpdateSettings({
+        ...settings,
+        reminders: { ...settings.reminders, useNtfyPush: false }
+      });
+    }
+  };
+
+  const handleNtfyTopicChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const topic = e.target.value.trim();
+    if (isValidTopic(topic) || topic === '') {
+      onUpdateSettings({
+        ...settings,
+        reminders: { ...settings.reminders, ntfyTopic: topic }
+      });
+    }
+  };
+
+  const handleTestNtfy = async () => {
+    if (!settings.reminders.ntfyTopic) {
+      alert('Please enter an ntfy topic name first.');
+      return;
+    }
+    
+    try {
+      const success = await sendNtfyNotification(
+        'This is a test notification from Grounded. If you received this, your push notifications are working!',
+        'Grounded Test',
+        {
+          topic: settings.reminders.ntfyTopic,
+          server: settings.reminders.ntfyServer
+        }
+      );
+      
+      if (success) {
+        alert('Test notification sent! Check your device running the ntfy app.');
+      } else {
+        alert('Failed to send test notification. Please check your topic name and try again.');
+      }
+    } catch (error) {
+      console.error('Test notification error:', error);
+      alert('Error sending test notification. Please try again.');
+    }
+  };
+
   const sortedLogs = [...logs].sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
 
   return (
@@ -182,76 +267,6 @@ const VaultControl: React.FC<VaultControlProps> = ({ logs, goals, settings, onUp
       <div className="text-center space-y-3">
         <h2 className="text-2xl sm:text-4xl font-black text-authority-navy dark:text-pure-foundation tracking-tight">Vault & Accountability</h2>
         <p className="text-authority-navy/60 dark:text-pure-foundation/60 text-sm sm:text-lg">Manage your history and growth commitments.</p>
-      </div>
-
-      {/* Email Schedule Card */}
-      <div className="bg-white dark:bg-executive-depth rounded-xl sm:rounded-2xl border border-slate-100 dark:border-creative-depth/30 shadow-xl overflow-hidden">
-        <div className="p-6 sm:p-8 lg:p-10 space-y-6">
-          <div className="flex items-center justify-between">
-            <div className="space-y-1">
-              <h3 className="text-lg sm:text-xl font-black text-authority-navy dark:text-pure-foundation">Email Summaries</h3>
-              <p className="text-xs text-authority-navy/60 dark:text-pure-foundation/60 font-medium">Schedule automatic reports to your therapist</p>
-            </div>
-            <button
-              onClick={() => setShowEmailSchedule(true)}
-              className="px-4 sm:px-6 py-2 bg-brand-accent text-authority-navy rounded-xl text-xs sm:text-sm font-black uppercase tracking-widest hover:opacity-90"
-            >
-              Configure
-            </button>
-          </div>
-          {settings.emailSchedule?.enabled && (
-            <div className="p-4 bg-pure-foundation dark:bg-executive-depth/50 rounded-xl">
-              <p className="text-xs text-authority-navy dark:text-pure-foundation">
-                <strong>Active:</strong> {settings.emailSchedule.frequency} at {settings.emailSchedule.time}
-              </p>
-              <p className="text-xs text-authority-navy/60 dark:text-pure-foundation/60 mt-1">
-                Recipients: {settings.emailSchedule.recipientEmails.length} email(s)
-              </p>
-            </div>
-          )}
-        </div>
-      </div>
-
-      {/* AI Model Settings Card */}
-      <div className="bg-white dark:bg-executive-depth rounded-xl sm:rounded-2xl border border-slate-100 dark:border-creative-depth/30 shadow-xl overflow-hidden">
-        <div className="p-6 sm:p-8 lg:p-10 space-y-6">
-          <div className="flex items-center justify-between">
-            <div className="space-y-1">
-              <h3 className="text-lg sm:text-xl font-black text-authority-navy dark:text-pure-foundation">AI Model</h3>
-              <p className="text-xs text-authority-navy/60 dark:text-pure-foundation/60 font-medium">Update the on-device psychology-centric assistant</p>
-            </div>
-          </div>
-          <div className="space-y-4">
-            <div className="p-4 bg-pure-foundation dark:bg-executive-depth/50 rounded-xl">
-              <p className="text-xs text-authority-navy dark:text-pure-foundation mb-2">
-                <strong>Current Model:</strong> DistilBERT (Text Classification)
-              </p>
-              <p className="text-[10px] text-authority-navy/60 dark:text-pure-foundation/60">
-                A tiny, on-device, psychology-centric assistant that avoids wild speculation. Models are quantized for mobile devices.
-              </p>
-            </div>
-            <button
-              onClick={async () => {
-                if (confirm('This will clear and re-download the AI model. This may take a few minutes and requires internet connection. Continue?')) {
-                  try {
-                    const { initializeModels } = await import('../services/aiService');
-                    await initializeModels(true); // Force reload
-                    alert('Model update complete! The new model has been downloaded and cached on your device.');
-                  } catch (error) {
-                    console.error('Model update error:', error);
-                    alert('Error updating model. Please try again later.');
-                  }
-                }
-              }}
-              className="w-full px-4 sm:px-6 py-3 bg-brand-accent text-authority-navy rounded-xl text-xs sm:text-sm font-black uppercase tracking-widest hover:opacity-90"
-            >
-              Update AI Model
-            </button>
-            <p className="text-[9px] text-authority-navy/50 dark:text-pure-foundation/50 text-center">
-              Recommended: MiniCPM-0.5B or TinyLlama-1.1B (quantized for mobile)
-            </p>
-          </div>
-        </div>
       </div>
 
       {/* Accountability Settings Card */}
@@ -274,7 +289,7 @@ const VaultControl: React.FC<VaultControlProps> = ({ logs, goals, settings, onUp
             {/* Frequency Selector */}
             <div className="space-y-3">
               <label className="text-[10px] font-black text-authority-navy/60 dark:text-pure-foundation/60 uppercase tracking-widest block">
-                {settings.reminders.frequency.charAt(0).toUpperCase() + settings.reminders.frequency.slice(1)} Reflection Reminder
+                {(settings.reminders.frequency || 'daily').charAt(0).toUpperCase() + (settings.reminders.frequency || 'daily').slice(1)} Reflection Reminder
               </label>
               <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
                 {(['hourly', 'daily', 'weekly', 'monthly'] as ReminderFrequency[]).map((freq) => (
@@ -282,7 +297,7 @@ const VaultControl: React.FC<VaultControlProps> = ({ logs, goals, settings, onUp
                     key={freq}
                     onClick={() => handleFrequencyChange(freq)}
                     className={`px-4 py-3 rounded-xl font-black text-xs uppercase tracking-widest transition-all ${
-                      settings.reminders.frequency === freq
+                      (settings.reminders.frequency || 'daily') === freq
                         ? 'bg-brand-accent text-authority-navy shadow-lg scale-105'
                         : 'bg-pure-foundation dark:bg-executive-depth/50 text-authority-navy/60 dark:text-pure-foundation/60 hover:bg-brand-accent/20 dark:hover:bg-brand-accent/20'
                     }`}
@@ -295,7 +310,7 @@ const VaultControl: React.FC<VaultControlProps> = ({ logs, goals, settings, onUp
 
             {/* Time and Schedule Options */}
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-              {(settings.reminders.frequency === 'daily' || settings.reminders.frequency === 'weekly' || settings.reminders.frequency === 'monthly') && (
+              {((settings.reminders.frequency || 'daily') === 'daily' || (settings.reminders.frequency || 'daily') === 'weekly' || (settings.reminders.frequency || 'daily') === 'monthly') && (
                 <div className="space-y-2">
                   <label className="text-[10px] font-black text-authority-navy/60 dark:text-pure-foundation/60 uppercase tracking-widest block">
                     Time
@@ -309,7 +324,7 @@ const VaultControl: React.FC<VaultControlProps> = ({ logs, goals, settings, onUp
                 </div>
               )}
 
-              {settings.reminders.frequency === 'weekly' && (
+              {(settings.reminders.frequency || 'daily') === 'weekly' && (
                 <div className="space-y-2">
                   <label className="text-[10px] font-black text-authority-navy/60 dark:text-pure-foundation/60 uppercase tracking-widest block">
                     Day of Week
@@ -330,7 +345,7 @@ const VaultControl: React.FC<VaultControlProps> = ({ logs, goals, settings, onUp
                 </div>
               )}
 
-              {settings.reminders.frequency === 'monthly' && (
+              {(settings.reminders.frequency || 'daily') === 'monthly' && (
                 <div className="space-y-2">
                   <label className="text-[10px] font-black text-authority-navy/60 dark:text-pure-foundation/60 uppercase tracking-widest block">
                     Day of Month (1-31)
@@ -352,7 +367,7 @@ const VaultControl: React.FC<VaultControlProps> = ({ logs, goals, settings, onUp
               <div className="flex items-center justify-between">
                 <div className="space-y-1">
                   <p className="text-[10px] font-black text-authority-navy dark:text-pure-foundation uppercase tracking-widest">
-                    Use Device Calendar
+                    Device Calendar
                   </p>
                   <p className="text-xs text-authority-navy/60 dark:text-pure-foundation/60">
                     Add reminders to your device's calendar app
@@ -371,6 +386,98 @@ const VaultControl: React.FC<VaultControlProps> = ({ logs, goals, settings, onUp
                   }`} />
                 </button>
               </div>
+            </div>
+
+            {/* Ntfy.sh Push Notifications */}
+            <div className="bg-pure-foundation dark:bg-executive-depth/50 rounded-xl p-4 border border-slate-200 dark:border-creative-depth/30 space-y-4">
+              <div className="flex items-center justify-between">
+                <div className="space-y-1">
+                  <p className="text-[10px] font-black text-authority-navy dark:text-pure-foundation uppercase tracking-widest">
+                    Push Notifications (ntfy.sh)
+                  </p>
+                  <p className="text-xs text-authority-navy/60 dark:text-pure-foundation/60">
+                    Secure push notifications to your device via ntfy.sh
+                  </p>
+                </div>
+                <button
+                  onClick={handleNtfyToggle}
+                  className={`w-12 h-6 rounded-full transition-all relative ${settings.reminders.useNtfyPush ? 'bg-brand-accent' : 'bg-slate-300 dark:bg-creative-depth/50'}`}
+                >
+                  <div className={`absolute top-0.5 w-5 h-5 bg-white rounded-full shadow-sm transition-all ${settings.reminders.useNtfyPush ? 'left-6.5' : 'left-0.5'}`} />
+                </button>
+              </div>
+              
+              {settings.reminders.useNtfyPush && (
+                <div className="space-y-3 pt-3 border-t border-slate-200 dark:border-creative-depth/30">
+                  <div className="space-y-2">
+                    <label className="text-[9px] font-black text-authority-navy/60 dark:text-pure-foundation/60 uppercase tracking-widest block">
+                      Ntfy Topic Name
+                    </label>
+                    <div className="flex gap-2">
+                      <input
+                        type="text"
+                        value={settings.reminders.ntfyTopic || ''}
+                        onChange={handleNtfyTopicChange}
+                        placeholder="grounded-abc123xyz"
+                        className="flex-1 p-2 rounded-lg bg-white dark:bg-executive-depth border border-slate-200 dark:border-creative-depth/30 text-xs font-medium text-authority-navy dark:text-pure-foundation focus:ring-2 focus:ring-brand-accent transition-all outline-none"
+                      />
+                      <button
+                        onClick={() => {
+                          const randomTopic = generateRandomTopic();
+                          onUpdateSettings({
+                            ...settings,
+                            reminders: { ...settings.reminders, ntfyTopic: randomTopic }
+                          });
+                        }}
+                        className="px-3 py-2 bg-slate-200 dark:bg-executive-depth text-slate-700 dark:text-pure-foundation rounded-lg text-[9px] font-black uppercase tracking-widest hover:bg-slate-300 dark:hover:bg-executive-depth/80"
+                        title="Generate random topic"
+                      >
+                        🎲
+                      </button>
+                    </div>
+                    <p className="text-[8px] text-authority-navy/50 dark:text-pure-foundation/50">
+                      Use a unique, random topic name for privacy. Subscribe to this topic in the ntfy app on your device.
+                    </p>
+                  </div>
+                  
+                  <div className="space-y-2">
+                    <label className="text-[9px] font-black text-authority-navy/60 dark:text-pure-foundation/60 uppercase tracking-widest block">
+                      Custom Server (Optional)
+                    </label>
+                    <input
+                      type="text"
+                      value={settings.reminders.ntfyServer || ''}
+                      onChange={(e) => onUpdateSettings({
+                        ...settings,
+                        reminders: { ...settings.reminders, ntfyServer: e.target.value.trim() || undefined }
+                      })}
+                      placeholder="https://ntfy.sh (default)"
+                      className="w-full p-2 rounded-lg bg-white dark:bg-executive-depth border border-slate-200 dark:border-creative-depth/30 text-xs font-medium text-authority-navy dark:text-pure-foundation focus:ring-2 focus:ring-brand-accent transition-all outline-none"
+                    />
+                    <p className="text-[8px] text-authority-navy/50 dark:text-pure-foundation/50">
+                      Leave empty to use the free public server (https://ntfy.sh)
+                    </p>
+                  </div>
+                  
+                  <button
+                    onClick={handleTestNtfy}
+                    className="w-full px-4 py-2 bg-brand-accent text-authority-navy rounded-lg text-[9px] font-black uppercase tracking-widest hover:opacity-90"
+                  >
+                    Test Notification
+                  </button>
+                  
+                  <div className="p-3 bg-brand-accent/10 dark:bg-brand-accent/20 rounded-lg border border-brand-accent/30">
+                    <p className="text-[8px] font-black text-brand-accent uppercase tracking-widest mb-1">
+                      Setup Instructions
+                    </p>
+                    <ol className="text-[8px] text-authority-navy dark:text-pure-foundation space-y-1 list-decimal list-inside">
+                      <li>Install the ntfy app on your device (Android/iOS/Desktop)</li>
+                      <li>Subscribe to your topic: <code className="bg-white dark:bg-executive-depth px-1 rounded">{settings.reminders.ntfyTopic || 'your-topic'}</code></li>
+                      <li>Click "Test Notification" to verify it works</li>
+                    </ol>
+                  </div>
+                </div>
+              )}
             </div>
 
             {/* Next Reminder Preview */}
@@ -412,12 +519,72 @@ const VaultControl: React.FC<VaultControlProps> = ({ logs, goals, settings, onUp
             <p className="text-[10px] font-black text-authority-navy/50 dark:text-pure-foundation/50 uppercase tracking-widest mb-1">Total Impact</p>
             <p className="text-2xl sm:text-3xl font-black text-authority-navy dark:text-pure-foundation">{logs.length} Entries</p>
           </div>
-          <div className="flex flex-wrap gap-3 w-full sm:w-auto">
-            <button onClick={handleExport} className="flex-1 sm:flex-none px-4 sm:px-6 py-3 bg-pure-foundation dark:bg-executive-depth/50 text-authority-navy dark:text-pure-foundation rounded-xl sm:rounded-2xl text-[9px] sm:text-[10px] font-black uppercase tracking-widest hover:opacity-80 transition-colors">Export JSON</button>
-            <button onClick={handleEmailExport} className="flex-1 sm:flex-none px-4 sm:px-6 py-3 bg-brand-accent text-authority-navy rounded-xl sm:rounded-2xl text-[9px] sm:text-[10px] font-black uppercase tracking-widest hover:opacity-90 transition-colors">
-              {isWebShareAvailable() ? '📧 Share' : '📧 Email'}
-            </button>
-            <button onClick={onClearData} className="flex-1 sm:flex-none px-4 sm:px-6 py-3 bg-red-50 dark:bg-red-900/20 text-red-600 dark:text-red-400 rounded-xl sm:rounded-2xl text-[9px] sm:text-[10px] font-black uppercase tracking-widest hover:bg-red-100 dark:hover:bg-red-900/30 transition-colors">Wipe Data</button>
+          <div className="flex flex-col sm:flex-row gap-3 w-full sm:w-auto">
+            <div className="flex flex-wrap gap-3">
+              <button 
+                onClick={() => setShowDateRangePicker(!showDateRangePicker)}
+                className="flex-1 sm:flex-none px-4 sm:px-6 py-3 bg-pure-foundation dark:bg-executive-depth/50 text-authority-navy dark:text-pure-foundation rounded-xl sm:rounded-2xl text-[9px] sm:text-[10px] font-black uppercase tracking-widest hover:opacity-80 transition-colors"
+              >
+                {selectedStartDate || selectedEndDate ? '📅 Date Range' : '📅 Select Dates'}
+              </button>
+              <button 
+                onClick={handleEmailExport} 
+                className="flex-1 sm:flex-none px-4 sm:px-6 py-3 bg-brand-accent text-authority-navy rounded-xl sm:rounded-2xl text-[9px] sm:text-[10px] font-black uppercase tracking-widest hover:opacity-90 transition-colors"
+              >
+                {isWebShareAvailable() ? '📧 Share' : '📧 Email'}
+              </button>
+              <button 
+                onClick={onClearData} 
+                className="flex-1 sm:flex-none px-4 sm:px-6 py-3 bg-red-50 dark:bg-red-900/20 text-red-600 dark:text-red-400 rounded-xl sm:rounded-2xl text-[9px] sm:text-[10px] font-black uppercase tracking-widest hover:bg-red-100 dark:hover:bg-red-900/30 transition-colors"
+              >
+                Wipe Data
+              </button>
+            </div>
+            {showDateRangePicker && (
+              <div className="bg-pure-foundation dark:bg-executive-depth/50 rounded-xl p-4 space-y-3">
+                <div className="grid grid-cols-2 gap-3">
+                  <div>
+                    <label className="text-[9px] font-black text-authority-navy/60 dark:text-pure-foundation/60 uppercase tracking-widest block mb-1">
+                      Start Date
+                    </label>
+                    <input
+                      type="date"
+                      value={selectedStartDate}
+                      onChange={(e) => setSelectedStartDate(e.target.value)}
+                      className="w-full p-2 rounded-lg bg-white dark:bg-executive-depth border border-slate-200 dark:border-creative-depth/30 text-xs"
+                    />
+                  </div>
+                  <div>
+                    <label className="text-[9px] font-black text-authority-navy/60 dark:text-pure-foundation/60 uppercase tracking-widest block mb-1">
+                      End Date
+                    </label>
+                    <input
+                      type="date"
+                      value={selectedEndDate}
+                      onChange={(e) => setSelectedEndDate(e.target.value)}
+                      className="w-full p-2 rounded-lg bg-white dark:bg-executive-depth border border-slate-200 dark:border-creative-depth/30 text-xs"
+                    />
+                  </div>
+                </div>
+                <div className="flex gap-2">
+                  <button
+                    onClick={() => {
+                      setSelectedStartDate('');
+                      setSelectedEndDate('');
+                    }}
+                    className="flex-1 px-3 py-2 bg-slate-200 dark:bg-executive-depth text-slate-700 dark:text-pure-foundation rounded-lg text-[9px] font-black uppercase tracking-widest"
+                  >
+                    Clear
+                  </button>
+                  <button
+                    onClick={() => setShowDateRangePicker(false)}
+                    className="flex-1 px-3 py-2 bg-brand-accent text-authority-navy rounded-lg text-[9px] font-black uppercase tracking-widest"
+                  >
+                    Done
+                  </button>
+                </div>
+              </div>
+            )}
           </div>
         </div>
 
@@ -494,17 +661,6 @@ const VaultControl: React.FC<VaultControlProps> = ({ logs, goals, settings, onUp
         Encrypted local storage. Your data remains strictly on your device.
       </div>
 
-      {showEmailSchedule && userId && (
-        <EmailScheduleComponent
-          userId={userId}
-          logs={logs}
-          goals={goals}
-          values={ALL_VALUES}
-          schedule={settings.emailSchedule}
-          onUpdate={(schedule) => onUpdateSettings({ ...settings, emailSchedule: schedule })}
-          onClose={() => setShowEmailSchedule(false)}
-        />
-      )}
     </div>
   );
 };
