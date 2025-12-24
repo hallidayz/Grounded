@@ -1,0 +1,7 @@
+{
+  "name": "InnerCompass",
+  "description": "A privacy-focused self-help tool to identify personal values, track daily progress, and generate clinical reports (SOAP, DAP, BIRP) for professional sharing.",
+  "requestFramePermissions": [
+    "microphone"
+  ]
+}
