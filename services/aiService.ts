@@ -710,11 +710,25 @@ export async function generateEncouragement(
  * Provides personalized support and opportunities based on how the user is feeling
  */
 export async function generateEmotionalEncouragement(
-  emotionalState: 'drained' | 'heavy' | 'mixed' | 'positive' | 'energized',
+  emotionalState: 'drained' | 'heavy' | 'overwhelmed' | 'mixed' | 'calm' | 'hopeful' | 'positive' | 'energized',
   selectedFeeling: string | null,
   lowStateCount: number,
-  lcswConfig?: LCSWConfig
+  lcswConfig?: LCSWConfig,
+  context?: {
+    recentJournalText?: string;
+    timeOfDay?: 'morning' | 'afternoon' | 'evening' | 'night';
+    userPatterns?: { frequentStates: string[], progress: number };
+  }
 ): Promise<string> {
+  // Import emotional states configuration
+  const { getEmotionalState } = await import('./emotionalStates');
+  const stateConfig = getEmotionalState(emotionalState);
+  
+  if (!stateConfig) {
+    // Fallback if state not found
+    return "You're doing important work. Keep going, one step at a time.";
+  }
+
   const protocols = lcswConfig?.protocols || [];
   const protocolContext = protocols.length > 0 
     ? `The user is working with an LCSW using ${protocols.join(', ')} protocols.`
@@ -722,98 +736,71 @@ export async function generateEmotionalEncouragement(
 
   const feelingContext = selectedFeeling ? ` They're specifically feeling ${selectedFeeling}.` : '';
   
-  // Build context-aware encouragement prompts
-  let prompt = '';
-  let fallbackResponse = '';
+  // Build time-of-day context
+  const timeContext = context?.timeOfDay 
+    ? context.timeOfDay === 'morning' 
+      ? ' It is morning—a time for fresh starts and forward momentum.'
+      : context.timeOfDay === 'evening' || context.timeOfDay === 'night'
+      ? ' It is evening/night—a time for reflection and rest.'
+      : ' It is afternoon—a time for continued engagement.'
+    : '';
 
-  if (emotionalState === 'drained' || emotionalState === 'heavy') {
-    // Low states - focus on support, validation, and connection
-    const isRepeated = lowStateCount >= 3;
-    const connectionPrompt = isRepeated 
-      ? ' Strongly encourage them to reach out to a trusted person, their therapist, or a support line. Emphasize that they don\'t have to go through this alone.'
-      : ' Gently suggest that connecting with someone they trust might be helpful.';
-    
-    prompt = `You are a supportive therapy integration assistant. The user is feeling ${emotionalState === 'drained' ? 'very low and drained' : 'low and heavy'}.${feelingContext}
+  // Build journal context
+  const journalContext = context?.recentJournalText 
+    ? ` Recent reflection: "${context.recentJournalText.substring(0, 200)}"`
+    : '';
+
+  // Build pattern context
+  const patternContext = context?.userPatterns && context.userPatterns.frequentStates.length > 0
+    ? ` The user has been feeling ${context.userPatterns.frequentStates.join(', ')} frequently.`
+    : '';
+
+  // Low states tracking (drained, heavy, overwhelmed)
+  const isLowState = emotionalState === 'drained' || emotionalState === 'heavy' || emotionalState === 'overwhelmed';
+  const isRepeated = isLowState && lowStateCount >= 3;
+  const connectionPrompt = isRepeated 
+    ? ' Strongly encourage them to reach out to a trusted person, their therapist, or a support line (988). Emphasize that they don\'t have to go through this alone.'
+    : isLowState
+    ? ' Gently suggest that connecting with someone they trust might be helpful.'
+    : '';
+
+  // Use encouragement instruction from state config
+  const baseInstruction = stateConfig.encouragementPrompt.instruction;
+  
+  // Build dynamic prompt
+  const prompt = `You are a supportive therapy integration assistant.${timeContext}${journalContext}${patternContext}
+
+The user is feeling ${stateConfig.label.toLowerCase()}.${feelingContext}
 
 ${protocolContext}
 
-Your role is to:
-- Validate their experience without minimizing it
-- Help them see opportunities and possibilities for themselves
-- Remphasize that difficult feelings are temporary and manageable
-- Suggest gentle, achievable steps they can take
-${connectionPrompt}
+${baseInstruction}${connectionPrompt}
 
-Provide warm, compassionate encouragement (2-3 sentences) that:
+Provide warm, compassionate encouragement (30-60 words, 2-3 sentences) that:
 1. Acknowledges what they're experiencing
 2. Helps them see possibilities and opportunities ahead
-3. Offers gentle support and next steps
-4. ${isRepeated ? 'Strongly encourages reaching out to someone for support' : 'Suggests connection if appropriate'}
+3. Offers gentle support and next steps${isRepeated ? '\n4. Strongly encourages reaching out to someone for support' : ''}
 
 Be genuine, hopeful, and supportive. Avoid platitudes or toxic positivity.`;
 
-    fallbackResponse = emotionalState === 'drained'
-      ? `Feeling drained is real and valid. Right now might feel heavy, but there are opportunities ahead. Consider reaching out to someone you trust—you don't have to carry this alone. Small steps forward are still progress.`
-      : `Feeling heavy is understandable. These moments can feel overwhelming, but they also show your capacity to feel deeply. There are possibilities and opportunities waiting for you. ${isRepeated ? 'Please consider reaching out to your therapist, a trusted friend, or a support line (988). You deserve support.' : 'Consider connecting with someone who cares about you.'}`;
-
+  // Build fallback response based on state
+  let fallbackResponse = '';
+  
+  if (emotionalState === 'drained') {
+    fallbackResponse = `Feeling drained is real and valid. Right now might feel heavy, but there are opportunities ahead. Consider reaching out to someone you trust—you don't have to carry this alone. Small steps forward are still progress.${isRepeated ? ' Please consider reaching out to your therapist, a trusted friend, or the 988 Crisis & Suicide Lifeline. You deserve support.' : ''}`;
+  } else if (emotionalState === 'heavy') {
+    fallbackResponse = `Feeling heavy is understandable. These moments can feel overwhelming, but they also show your capacity to feel deeply. There are possibilities and opportunities waiting for you.${isRepeated ? ' Please consider reaching out to your therapist, a trusted friend, or a support line (988). You deserve support.' : ' Consider connecting with someone who cares about you.'}`;
+  } else if (emotionalState === 'overwhelmed') {
+    fallbackResponse = `Feeling overwhelmed is completely understandable when there's so much happening. Take a moment to breathe. You can break things down into smaller, manageable steps. There are opportunities ahead, and you have the capacity to navigate them.${isRepeated ? ' Consider reaching out to someone you trust for support.' : ''}`;
   } else if (emotionalState === 'mixed') {
-    prompt = `You are a supportive therapy integration assistant. The user is feeling mixed or uncertain.${feelingContext}
-
-${protocolContext}
-
-Your role is to:
-- Validate that mixed feelings are normal and valid
-- Help them see opportunities and possibilities
-- Support them in navigating uncertainty
-- Suggest gentle reflection or connection
-
-Provide warm, supportive encouragement (2-3 sentences) that:
-1. Normalizes mixed feelings
-2. Helps them see possibilities and opportunities
-3. Offers gentle guidance for navigating uncertainty
-
-Be genuine and supportive.`;
-
     fallbackResponse = `Mixed feelings are completely normal and valid. This in-between space can actually be a place of growth and possibility. There are opportunities ahead, and you have the capacity to navigate them. Consider what feels most authentic to you right now.`;
-
+  } else if (emotionalState === 'calm') {
+    fallbackResponse = `It's wonderful that you're feeling calm and centered. This peaceful state is a gift—take time to appreciate it and notice what brought you here. There are opportunities to build on this sense of stability.`;
+  } else if (emotionalState === 'hopeful') {
+    fallbackResponse = `Feeling hopeful is a sign of resilience and possibility. This forward-looking energy is valuable—there are opportunities ahead that align with your values and goals. How can you channel this hope into meaningful action?`;
   } else if (emotionalState === 'positive') {
-    prompt = `You are a supportive therapy integration assistant. The user is feeling positive and hopeful.${feelingContext}
-
-${protocolContext}
-
-Your role is to:
-- Celebrate their positive state
-- Help them see and build on opportunities
-- Support them in maintaining this energy
-- Suggest ways to channel this positivity
-
-Provide warm, encouraging support (2-3 sentences) that:
-1. Acknowledges their positive state
-2. Helps them see possibilities and opportunities to build on this
-3. Supports them in maintaining and channeling this energy
-
-Be genuine and uplifting.`;
-
-    fallbackResponse = `It's wonderful that you're feeling positive and hopeful. This is a great time to explore opportunities and possibilities. Consider what you'd like to build on or move toward. You have momentum—how can you channel this energy in meaningful ways?`;
-
+    fallbackResponse = `It's wonderful that you're feeling positive and grounded. This is a great time to explore opportunities and possibilities. Consider what you'd like to build on or move toward. You have momentum—how can you channel this energy in meaningful ways?`;
   } else { // energized
-    prompt = `You are a supportive therapy integration assistant. The user is feeling energized and motivated.${feelingContext}
-
-${protocolContext}
-
-Your role is to:
-- Celebrate their energized state
-- Help them see and act on opportunities
-- Support them in channeling this energy productively
-- Suggest ways to build on this momentum
-
-Provide warm, enthusiastic support (2-3 sentences) that:
-1. Celebrates their energized state
-2. Helps them see possibilities and opportunities to act on
-3. Supports them in channeling this energy meaningfully
-
-Be genuine and energizing.`;
-
     fallbackResponse = `You're feeling energized and motivated—that's powerful! This is a great time to explore opportunities and take meaningful action. What possibilities are calling to you? How can you channel this energy toward what matters most to you?`;
   }
 

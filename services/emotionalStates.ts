@@ -1,0 +1,156 @@
+/**
+ * EMOTIONAL STATES CONFIGURATION
+ * 
+ * Defines 8 emotional states with reflection prompts and AI encouragement instructions.
+ * Used throughout the app for emotion-first entry, check-ins, and AI-generated support.
+ */
+
+export type EmotionalState = 
+  | 'drained' 
+  | 'heavy' 
+  | 'overwhelmed' 
+  | 'mixed' 
+  | 'calm' 
+  | 'hopeful' 
+  | 'positive' 
+  | 'energized';
+
+export interface EmotionalStateConfig {
+  state: EmotionalState;
+  label: string; // e.g., "🌧️ Drained — running on empty"
+  emoji: string;
+  shortLabel: string; // e.g., "Drained"
+  color: string; // Hex color for UI
+  bgColor: string; // Tailwind class
+  reflectionPrompt: string; // e.g., "I feel drained because..."
+  encouragementPrompt: {
+    type: 'AI_GENERATED';
+    instruction: string; // Specific instruction for AI
+  };
+  feelings: string[]; // Specific feeling words
+}
+
+export const EMOTIONAL_STATES: EmotionalStateConfig[] = [
+  {
+    state: 'drained',
+    label: '🌧️ Drained — running on empty',
+    emoji: '🌧️',
+    shortLabel: 'Drained',
+    color: '#94a3b8', // Soft desaturated blue-gray
+    bgColor: 'bg-slate-300',
+    reflectionPrompt: 'I feel drained because...',
+    encouragementPrompt: {
+      type: 'AI_GENERATED',
+      instruction: 'Generate compassionate and restorative encouragement for someone feeling drained. Acknowledge exhaustion, promote rest or small self-care actions.'
+    },
+    feelings: ['tired', 'empty', 'numb', 'burned out', 'exhausted', 'drained', 'flat', 'lifeless']
+  },
+  {
+    state: 'heavy',
+    label: '🩶 Heavy — carrying a lot right now',
+    emoji: '🩶',
+    shortLabel: 'Heavy',
+    color: '#475569', // Deeper muted blue-navy
+    bgColor: 'bg-slate-600',
+    reflectionPrompt: 'I feel heavy because...',
+    encouragementPrompt: {
+      type: 'AI_GENERATED',
+      instruction: 'Generate supportive encouragement for someone feeling emotionally weighed down. Validate emotions and offer gentle release or comfort.'
+    },
+    feelings: ['sad', 'disappointed', 'lonely', 'discouraged', 'down', 'gloomy', 'melancholy', 'weighed down']
+  },
+  {
+    state: 'overwhelmed',
+    label: '🌫️ Overwhelmed — too much at once',
+    emoji: '🌫️',
+    shortLabel: 'Overwhelmed',
+    color: '#64748b', // Medium blue-gray
+    bgColor: 'bg-slate-500',
+    reflectionPrompt: 'I feel overwhelmed because...',
+    encouragementPrompt: {
+      type: 'AI_GENERATED',
+      instruction: 'Generate a calming message for someone feeling overwhelmed. Focus on grounding, prioritization, and reassurance.'
+    },
+    feelings: ['anxious', 'stressed', 'scattered', 'pressured', 'swamped', 'flooded', 'chaotic', 'unable to focus']
+  },
+  {
+    state: 'mixed',
+    label: '🌗 Mixed — somewhere in between',
+    emoji: '🌗',
+    shortLabel: 'Mixed',
+    color: '#14b8a6', // Neutral teal
+    bgColor: 'bg-teal-500',
+    reflectionPrompt: 'I feel mixed because...',
+    encouragementPrompt: {
+      type: 'AI_GENERATED',
+      instruction: 'Generate a balanced reflection for someone with mixed emotions. Encourage mindfulness and acceptance of multiple feelings.'
+    },
+    feelings: ['uncertain', 'okay', 'conflicted', 'reflective', 'neutral', 'ambivalent', 'contemplative', 'processing']
+  },
+  {
+    state: 'calm',
+    label: '🌿 Calm — steady and centered',
+    emoji: '🌿',
+    shortLabel: 'Calm',
+    color: '#34d399', // Soft green
+    bgColor: 'bg-emerald-400',
+    reflectionPrompt: 'I feel calm because...',
+    encouragementPrompt: {
+      type: 'AI_GENERATED',
+      instruction: 'Generate gratitude-based encouragement for someone feeling calm. Reinforce peace and mindfulness.'
+    },
+    feelings: ['peaceful', 'centered', 'balanced', 'serene', 'grounded', 'stable', 'tranquil', 'at ease']
+  },
+  {
+    state: 'hopeful',
+    label: '🌱 Hopeful — seeing a small light ahead',
+    emoji: '🌱',
+    shortLabel: 'Hopeful',
+    color: '#a3e635', // Light green-yellow
+    bgColor: 'bg-lime-400',
+    reflectionPrompt: 'I feel hopeful because...',
+    encouragementPrompt: {
+      type: 'AI_GENERATED',
+      instruction: 'Generate uplifting encouragement for someone feeling hopeful. Support optimism and momentum toward goals.'
+    },
+    feelings: ['optimistic', 'encouraged', 'motivated', 'inspired', 'forward-looking', 'promising', 'bright', 'upward']
+  },
+  {
+    state: 'positive',
+    label: '🌤️ Positive — grounded and grateful',
+    emoji: '🌤️',
+    shortLabel: 'Positive',
+    color: '#fbbf24', // Soft yellow-gold
+    bgColor: 'bg-yellow-400',
+    reflectionPrompt: 'I feel positive because...',
+    encouragementPrompt: {
+      type: 'AI_GENERATED',
+      instruction: 'Generate reflective encouragement for someone feeling positive. Celebrate gratitude and inspire sharing kindness.'
+    },
+    feelings: ['hopeful', 'curious', 'calm', 'engaged', 'content', 'peaceful', 'optimistic', 'grateful']
+  },
+  {
+    state: 'energized',
+    label: '☀️ Energized — ready to move forward',
+    emoji: '☀️',
+    shortLabel: 'Energized',
+    color: '#f59e0b', // Warm yellow-orange
+    bgColor: 'bg-amber-500',
+    reflectionPrompt: 'I feel energized because...',
+    encouragementPrompt: {
+      type: 'AI_GENERATED',
+      instruction: 'Generate motivational encouragement for someone feeling energized. Focus on purposeful action and balanced enthusiasm.'
+    },
+    feelings: ['joyful', 'excited', 'inspired', 'proud', 'elated', 'enthusiastic', 'motivated', 'vibrant']
+  }
+];
+
+// Helper functions
+export function getEmotionalState(state: EmotionalState): EmotionalStateConfig | undefined {
+  return EMOTIONAL_STATES.find(s => s.state === state);
+}
+
+export function getAllEmotionalStates(): EmotionalStateConfig[] {
+  return EMOTIONAL_STATES;
+}
+

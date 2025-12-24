@@ -8,29 +8,46 @@ export default {
   theme: {
     extend: {
       colors: {
-        // Light Mode Brand Colors
+        // Core Brand (Navy)
+        'navy-primary': '#2c5282',
+        'navy-dark': '#1e3a5f',
+        'navy-light': '#5b7c99',
+        
+        // Accent (Yellow/Gold)
+        'yellow-warm': '#f7c948',
+        'yellow-light': '#ffd166',
+        'gold-muted': '#e6b84d',
+        
+        // Mood-Driven Colors
+        'calm-sage': '#a8c5a0',
+        'calm-lavender': '#c4b5d5',
+        'warm-coral': '#ffb088',
+        'energized-mint': '#90e0b6',
+        
+        // Neutrals (Warm-toned)
+        'bg-primary': '#fafaf9',
+        'bg-secondary': '#f8f7f4',
+        'bg-tertiary': '#f0eeeb',
+        'border-soft': '#e5e3df',
+        'text-primary': '#4a5568',
+        'text-secondary': '#6b7280',
+        'text-tertiary': '#9ca3af',
+        
+        // Dark Mode
+        'dark-bg-primary': '#1b3448',
+        'dark-bg-secondary': '#243b53',
+        'dark-bg-tertiary': '#2d4a5f',
+        'dark-border': '#334e68',
+        
+        // Legacy colors (for backward compatibility during migration)
         'authority-navy': '#02295b',
         'achievement-gold': '#fda700',
         'strategic-forest': '#2c5f41',
         'pure-foundation': '#f6f7f9',
-        
-        // Dark Mode Brand Colors
         'success-forest': '#4a6741',
         'creative-depth': '#6b4e71',
         'executive-depth': '#1b3448',
-        
-        // Semantic color mappings
-        brand: {
-          primary: '#02295b',      // Authority Navy (light mode)
-          accent: '#fda700',       // Achievement Gold (both modes)
-          growth: '#2c5f41',       // Strategic Forest (light mode)
-          background: '#f6f7f9',   // Pure Foundation (light mode)
-          // Dark mode variants
-          'primary-dark': '#1b3448',    // Executive Depth
-          'growth-dark': '#4a6741',     // Success Forest
-          'creative-dark': '#6b4e71',    // Creative Depth
-          'background-dark': '#1b3448', // Executive Depth
-        }
+        'brand-accent': '#fda700',
       },
       fontFamily: {
         sans: ['Inter', 'system-ui', 'sans-serif'],
