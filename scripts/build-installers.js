@@ -176,8 +176,12 @@ function main() {
         copyFileSync(apkPath, dest);
         log(`   📦 Android: ${basename(dest)}`, 'green');
       }
+    } else if (!javaInstalled) {
+      // Java error message already logged above, don't show misleading Android Studio message
+      log('\n⚠️  Android build skipped due to missing Java JDK', 'yellow');
     } else {
-      log('\n⚠️  Android build skipped (Android Studio may not be installed)', 'yellow');
+      log('\n⚠️  Android build failed. Check error messages above for details.', 'yellow');
+      log('   Common issues: Android SDK not configured or Gradle build errors', 'yellow');
     }
   }
   
