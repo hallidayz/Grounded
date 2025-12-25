@@ -173,7 +173,7 @@ const ReportView: React.FC<ReportViewProps> = ({ logs, values, lcswConfig }) => 
                 </button>
                 </div>
               </div>
-              <div className="whitespace-pre-wrap font-sans text-text-primary dark:text-white leading-relaxed text-sm sm:text-base lg:text-lg">
+              <div className="whitespace-pre-wrap font-sans text-text-primary dark:text-white leading-relaxed text-sm sm:text-base lg:text-lg prose prose-slate dark:prose-invert max-w-none clinical-report">
                 {generatedReport}
               </div>
            </div>

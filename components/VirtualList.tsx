@@ -87,10 +87,14 @@ function VirtualList<T extends { id?: string }>({
     }));
   }, [items, startIndex, endIndex, shouldVirtualize]);
 
-  // Throttled scroll handler for better performance
+  // Optimized scroll handler with requestAnimationFrame for smooth 60fps
   const handleScroll = useCallback((e: React.UIEvent<HTMLDivElement>) => {
     const newScrollTop = e.currentTarget.scrollTop;
-    setScrollTop(newScrollTop);
+    
+    // Use requestAnimationFrame for immediate visual updates
+    requestAnimationFrame(() => {
+      setScrollTop(newScrollTop);
+    });
     
     // Throttle onScroll callback
     if (onScroll) {
@@ -153,7 +157,7 @@ function VirtualList<T extends { id?: string }>({
           willChange: 'contents',
         }}
       >
-        {/* Transform container - optimized with will-change */}
+        {/* Transform container - optimized with will-change and GPU acceleration */}
         <div
           style={{
             transform: `translate3d(0, ${offsetY}px, 0)`,
@@ -162,9 +166,13 @@ function VirtualList<T extends { id?: string }>({
             left: 0,
             right: 0,
             willChange: 'transform',
-            // Force GPU acceleration
+            // Force GPU acceleration for smooth scrolling
             backfaceVisibility: 'hidden',
             perspective: 1000,
+            // Additional performance optimizations
+            transformOrigin: 'top left',
+            // Prevent layout thrashing
+            contain: 'layout style paint',
           }}
         >
           {visibleItems.map(({ item, index }) => (
@@ -172,7 +180,9 @@ function VirtualList<T extends { id?: string }>({
               key={item.id || index}
               style={{
                 height: itemHeight,
-                willChange: 'contents',
+                willChange: 'auto',
+                // Optimize item rendering
+                contain: 'layout style',
               }}
             >
               {renderItem(item, index)}
