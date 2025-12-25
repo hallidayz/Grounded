@@ -85,7 +85,9 @@ function checkJava() {
   const installed = checkCommand('java -version', 'Java');
   if (installed) {
     try {
-      const version = execSync('java -version', { encoding: 'utf-8', stdio: ['ignore', 'pipe', 'ignore'] }).split('\n')[0];
+      // java -version writes to stderr, so redirect stderr to stdout (2>&1)
+      const output = execSync('java -version 2>&1', { encoding: 'utf-8' });
+      const version = output.split('\n')[0].trim();
       log(`  ✓ Java: ${version}`, 'green');
       return true;
     } catch {
@@ -143,7 +145,13 @@ function main() {
     return 0;
   } else if (desktopReady) {
     log('\n✅ Desktop build ready!', 'green');
-    log('   Android build requires Android Studio setup.\n', 'yellow');
+    if (!checks.java) {
+      log('   Android build requires Java JDK and Android SDK setup.\n', 'yellow');
+    } else if (!checks.android) {
+      log('   Android build requires Android SDK setup.\n', 'yellow');
+    } else {
+      log('   Android build requires Java JDK and Android SDK setup.\n', 'yellow');
+    }
     return 0;
   } else if (allBasic) {
     log('\n⚠️  Basic prerequisites installed', 'yellow');
