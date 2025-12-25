@@ -22,7 +22,7 @@ export default defineConfig({
       includeAssets: ['favicon.ico', 'apple-touch-icon.png', 'mask-icon.svg'],
       filename: 'manifest.webmanifest', // Explicitly set manifest filename
       manifest: {
-        name: 'Grounded',
+        name: 'Grounded by AC MiNDS',
         short_name: 'Grounded',
         description: 'Privacy-first therapy integration app for values-based reflection and mental health support',
         theme_color: '#02295b',
@@ -31,6 +31,8 @@ export default defineConfig({
         orientation: 'portrait',
         scope: '/',
         start_url: '/',
+        dir: 'ltr',
+        lang: 'en',
         icons: [
           {
             src: 'pwa-192x192.png',
@@ -44,9 +46,31 @@ export default defineConfig({
             type: 'image/png',
             purpose: 'any maskable'
           },
+          {
+            src: 'apple-touch-icon.png',
+            sizes: '180x180',
+            type: 'image/png',
+            purpose: 'any'
+          }
         ],
         categories: ['health', 'lifestyle', 'medical'],
-        screenshots: []
+        shortcuts: [
+          {
+            name: 'New Log Entry',
+            short_name: 'New Log',
+            description: 'Create a new reflection log entry',
+            url: '/?action=new-log',
+            icons: [{ src: 'pwa-192x192.png', sizes: '192x192' }]
+          },
+          {
+            name: 'View Reports',
+            short_name: 'Reports',
+            description: 'View clinical reports and summaries',
+            url: '/?view=report',
+            icons: [{ src: 'pwa-192x192.png', sizes: '192x192' }]
+          }
+        ],
+        prefer_related_applications: false
       },
       workbox: {
         globPatterns: ['**/*.{js,css,html,ico,png,svg,woff2}'],
@@ -110,17 +134,38 @@ export default defineConfig({
     terserOptions: {
       compress: {
         drop_console: true,
-        drop_debugger: true
+        drop_debugger: true,
+        // Tauri-specific optimizations
+        passes: 2,
+        pure_funcs: ['console.log', 'console.info', 'console.debug']
       }
     },
     rollupOptions: {
       output: {
-        manualChunks: {
-          'react-vendor': ['react', 'react-dom'],
-          'transformers': ['@xenova/transformers']
+        manualChunks: (id) => {
+          // Tauri-optimized chunk splitting
+          if (id.includes('node_modules')) {
+            if (id.includes('react') || id.includes('react-dom')) {
+              return 'react-vendor';
+            }
+            if (id.includes('@xenova/transformers')) {
+              return 'transformers';
+            }
+            if (id.includes('framer-motion')) {
+              return 'animations';
+            }
+            return 'vendor';
+          }
+          // Split services for better code splitting
+          if (id.includes('services/ai/')) {
+            return 'ai-services';
+          }
         }
       }
     },
-    chunkSizeWarningLimit: 1000
+    chunkSizeWarningLimit: 1000,
+    // Tauri-specific build optimizations
+    target: 'esnext',
+    sourcemap: isTauriBuild ? false : true // Disable sourcemaps for Tauri builds
   }
 });

@@ -36,7 +36,7 @@ const MoodTrendChart: React.FC<MoodTrendChartProps> = ({ data }) => {
       
       <div className="space-y-3">
         {data.map((mood, index) => (
-          <div key={index} className="space-y-1">
+          <div key={`${mood.state}-${index}`} className="space-y-1">
             <div className="flex items-center justify-between text-sm">
               <span className="flex items-center space-x-2">
                 <span className="text-xl">{mood.emoji}</span>

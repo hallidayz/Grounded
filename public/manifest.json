@@ -1,5 +1,5 @@
 {
-  "name": "Grounded",
+  "name": "Grounded by AC MiNDS",
   "short_name": "Grounded",
   "description": "Privacy-first therapy integration app for values-based reflection and mental health support",
   "theme_color": "#02295b",
@@ -8,6 +8,8 @@
   "orientation": "portrait",
   "scope": "/",
   "start_url": "/",
+  "dir": "ltr",
+  "lang": "en",
   "icons": [
     {
       "src": "pwa-192x192.png",
@@ -24,9 +26,47 @@
     {
       "src": "apple-touch-icon.png",
       "sizes": "180x180",
-      "type": "image/png"
+      "type": "image/png",
+      "purpose": "any"
     }
   ],
-  "categories": ["health", "lifestyle", "medical"]
+  "categories": ["health", "lifestyle", "medical"],
+  "screenshots": [],
+  "shortcuts": [
+    {
+      "name": "New Log Entry",
+      "short_name": "New Log",
+      "description": "Create a new reflection log entry",
+      "url": "/?action=new-log",
+      "icons": [
+        {
+          "src": "pwa-192x192.png",
+          "sizes": "192x192"
+        }
+      ]
+    },
+    {
+      "name": "View Reports",
+      "short_name": "Reports",
+      "description": "View clinical reports and summaries",
+      "url": "/?view=report",
+      "icons": [
+        {
+          "src": "pwa-192x192.png",
+          "sizes": "192x192"
+        }
+      ]
+    }
+  ],
+  "share_target": {
+    "action": "/",
+    "method": "GET",
+    "params": {
+      "title": "title",
+      "text": "text",
+      "url": "url"
+    }
+  },
+  "prefer_related_applications": false
 }
 

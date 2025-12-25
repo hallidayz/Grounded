@@ -258,4 +258,4 @@ const Dashboard: React.FC<DashboardProps> = ({ values, onLog, goals, onUpdateGoa
   );
 };
 
-export default Dashboard;
+export default React.memo(Dashboard);

@@ -10,6 +10,7 @@ import TermsAcceptance from './components/TermsAcceptance';
 import BottomNavigation from './components/BottomNavigation';
 import ErrorBoundary from './components/ErrorBoundary';
 import SkeletonCard from './components/SkeletonCard';
+import PWAInstallPrompt from './components/PWAInstallPrompt';
 
 // Code splitting: Lazy load heavy components
 const Dashboard = lazy(() => import('./components/Dashboard'));
@@ -445,9 +446,11 @@ const App: React.FC = () => {
     return (
       <div className="min-h-screen bg-bg-primary dark:bg-dark-bg-primary flex items-center justify-center">
         <div className="text-center space-y-4">
-          <div className="w-16 h-16 bg-navy-primary dark:bg-yellow-warm rounded-xl flex items-center justify-center text-white dark:text-navy-primary font-black text-2xl mx-auto animate-pulse">
-            IC
-          </div>
+          <img 
+            src="/ac-minds-logo.png" 
+            alt="AC MINDS" 
+            className="w-16 h-16 object-contain mx-auto animate-pulse"
+          />
           <p className="text-text-secondary dark:text-text-secondary">Loading...</p>
         </div>
       </div>
@@ -470,9 +473,11 @@ const App: React.FC = () => {
         <header className="bg-white dark:bg-dark-bg-primary border-b border-border-soft dark:border-dark-border sticky top-0 z-40 shadow-sm dark:shadow-lg">
         <div className="max-w-4xl mx-auto px-3 sm:px-4 h-14 flex items-center justify-between">
           <div className="flex items-center space-x-2">
-            <div className="w-7 h-7 bg-navy-primary dark:bg-yellow-warm rounded-lg flex items-center justify-center text-white dark:text-navy-primary font-bold text-sm">
-              IC
-            </div>
+            <img 
+              src="/ac-minds-logo.png" 
+              alt="AC MINDS" 
+              className="w-7 h-7 object-contain"
+            />
             <span className="font-bold text-base sm:text-lg tracking-tight text-text-primary dark:text-white hidden sm:inline">Grounded</span>
           </div>
           <div className="flex items-center space-x-1.5 sm:space-x-2">
@@ -601,6 +606,8 @@ const App: React.FC = () => {
       )}
 
       {showHelp && <HelpOverlay onClose={() => setShowHelp(false)} />}
+
+      <PWAInstallPrompt />
 
       {showLCSWConfig && (
         <Suspense fallback={<SkeletonCard lines={5} showHeader={true} />}>

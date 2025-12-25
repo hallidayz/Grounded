@@ -120,9 +120,11 @@ const Login: React.FC<LoginProps> = ({ onLogin }) => {
       <div className="max-w-md w-full bg-white dark:bg-dark-bg-primary rounded-xl sm:rounded-2xl shadow-2xl border border-border-soft dark:border-dark-border/30 overflow-hidden">
         <div className="p-6 sm:p-8 space-y-6">
           <div className="text-center space-y-2">
-            <div className="w-12 h-12 sm:w-16 sm:h-16 bg-navy-primary dark:bg-yellow-warm rounded-xl flex items-center justify-center text-white font-black text-xl sm:text-2xl mx-auto">
-              IC
-            </div>
+            <img 
+              src="/ac-minds-logo.png" 
+              alt="AC MINDS" 
+              className="w-12 h-12 sm:w-16 sm:h-16 object-contain mx-auto"
+            />
             <h1 className="text-2xl sm:text-3xl font-black text-text-primary dark:text-white tracking-tight">
               Grounded
             </h1>

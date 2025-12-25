@@ -137,8 +137,8 @@ export async function requestPasswordReset(email: string): Promise<{ success: bo
   try {
     const user = await dbService.getUserByEmail(email);
     if (!user) {
-      // Don't reveal if email exists for security
-      return { success: true, resetLink: 'reset-link-placeholder' };
+      // Don't reveal if email exists for security - return success but no link
+      return { success: true };
     }
 
     const token = await dbService.createResetToken(user.id, email);

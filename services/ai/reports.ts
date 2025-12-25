@@ -247,7 +247,25 @@ Format your response with clear sections for each format. Keep the tone supporti
     let report = generateFallbackReport(logs, values);
     
     // If model is available, try to generate AI report
-    const currentCounselingCoachModel = getCounselingCoachModel();
+    let currentCounselingCoachModel = getCounselingCoachModel();
+    
+    // Ensure model is loaded
+    if (!currentCounselingCoachModel) {
+      const isModelLoading = getIsModelLoading();
+      if (isModelLoading) {
+        // Wait for current load (up to 30 seconds)
+        const maxWaitTime = 30000;
+        const startTime = Date.now();
+        while (!currentCounselingCoachModel && (Date.now() - startTime) < maxWaitTime) {
+          await new Promise(resolve => setTimeout(resolve, 500));
+          currentCounselingCoachModel = getCounselingCoachModel();
+        }
+      } else {
+        await initializeModels();
+        currentCounselingCoachModel = getCounselingCoachModel();
+      }
+    }
+    
     if (currentCounselingCoachModel) {
       try {
         const result = await currentCounselingCoachModel(prompt, {
@@ -263,6 +281,30 @@ Format your response with clear sections for each format. Keep the tone supporti
         }
       } catch (error) {
         console.warn('Report generation inference failed:', error);
+        // Try reload if model type mismatch
+        if (error instanceof Error && (
+          error.message.includes('not a function') ||
+          error.message.includes('Cannot read')
+        )) {
+          await initializeModels(true);
+          const reloadedModel = getCounselingCoachModel();
+          if (reloadedModel) {
+            try {
+              const retryResult = await reloadedModel(prompt, {
+                max_new_tokens: 1000,
+                temperature: 0.7,
+                do_sample: true
+              });
+              const retryText = retryResult[0]?.generated_text || '';
+              const retryExtracted = retryText.replace(prompt, '').trim();
+              if (retryExtracted) {
+                report = retryExtracted;
+              }
+            } catch (retryError) {
+              console.warn('Retry report generation failed:', retryError);
+            }
+          }
+        }
         // Use fallback report - inference failures are handled gracefully
       }
     }

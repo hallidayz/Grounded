@@ -1,10 +1,12 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { LCSWConfig, AppSettings, ReminderFrequency } from '../types';
 import EmailScheduleComponent from './EmailSchedule';
+import AIDiagnostics from './AIDiagnostics';
 import { hapticFeedback } from '../utils/animations';
 import { sendNtfyNotification, generateRandomTopic, isValidTopic } from '../services/ntfyService';
 import { ALL_VALUES } from '../constants';
 import { requestPermission, hasPermission, sendNotification } from '../services/notifications';
+import { getModelStatus, areModelsLoaded } from '../services/aiService';
 
 interface LCSWConfigProps {
   config: LCSWConfig | undefined;
@@ -38,6 +40,10 @@ const LCSWConfigComponent: React.FC<LCSWConfigProps> = ({ config, onUpdate, onCl
   const [notifPermission, setNotifPermission] = useState<NotificationPermission>('default');
   const [nextPulseInfo, setNextPulseInfo] = useState<string>('');
   const [testStatus, setTestStatus] = useState<'idle' | 'sending' | 'success' | 'error'>('idle');
+  
+  // AI Model status
+  const [modelStatus, setModelStatus] = useState<{ loaded: boolean; loading: boolean; moodTracker: boolean; counselingCoach: boolean } | null>(null);
+  const [updatingModel, setUpdatingModel] = useState(false);
 
   // Update permission state on mount
   useEffect(() => {
@@ -46,6 +52,24 @@ const LCSWConfigComponent: React.FC<LCSWConfigProps> = ({ config, onUpdate, onCl
     } else {
       setNotifPermission('default');
     }
+  }, []);
+  
+  // Update model status
+  useEffect(() => {
+    const updateModelStatus = () => {
+      try {
+        const status = getModelStatus();
+        setModelStatus(status);
+      } catch (error) {
+        console.warn('Could not get model status:', error);
+      }
+    };
+    
+    updateModelStatus();
+    // Update status every 2 seconds to show real-time loading state
+    const interval = setInterval(updateModelStatus, 2000);
+    
+    return () => clearInterval(interval);
   }, []);
   
   // Dismiss tooltip when clicking outside on mobile
@@ -986,40 +1010,101 @@ const LCSWConfigComponent: React.FC<LCSWConfigProps> = ({ config, onUpdate, onCl
               </summary>
               <div className="mt-3 space-y-4">
                 <p className="text-xs text-text-secondary dark:text-text-secondary">
-                  Update the on-device psychology-centric assistant
+                  Update the on-device AI model for better guidance and encouragement. Models are downloaded and cached on your device for privacy.
                 </p>
-                <div className="p-4 bg-bg-secondary dark:bg-dark-bg-secondary rounded-xl border border-border-soft dark:border-dark-border">
-                  <p className="text-xs text-text-primary dark:text-white mb-2">
-                    <strong>Current Model:</strong> DistilBERT (Text Classification)
-                  </p>
-                  <p className="text-[10px] text-text-secondary dark:text-text-secondary">
-                    A tiny, on-device, psychology-centric assistant that avoids wild speculation. Models are quantized for mobile devices.
-                  </p>
-                </div>
+                
+                {/* AI Diagnostics Component */}
+                <AIDiagnostics />
+                
+                {/* Model Status Display */}
+                {modelStatus && (
+                  <div className="p-3 bg-bg-secondary dark:bg-dark-bg-secondary rounded-lg border border-border-soft dark:border-dark-border space-y-2">
+                    <div className="flex items-center justify-between text-xs">
+                      <span className="text-text-secondary dark:text-text-secondary">Model Status:</span>
+                      <span className={`font-semibold ${modelStatus.loaded ? 'text-green-600 dark:text-green-400' : modelStatus.loading ? 'text-yellow-600 dark:text-yellow-400' : 'text-red-600 dark:text-red-400'}`}>
+                        {modelStatus.loaded ? '✓ Loaded' : modelStatus.loading ? '⏳ Loading...' : '✗ Not Available'}
+                      </span>
+                    </div>
+                    <div className="grid grid-cols-2 gap-2 text-[10px]">
+                      <div className="flex items-center justify-between">
+                        <span className="text-text-tertiary dark:text-text-tertiary">Mood Tracker:</span>
+                        <span className={modelStatus.moodTracker ? 'text-green-600 dark:text-green-400' : 'text-red-600 dark:text-red-400'}>
+                          {modelStatus.moodTracker ? '✓' : '✗'}
+                        </span>
+                      </div>
+                      <div className="flex items-center justify-between">
+                        <span className="text-text-tertiary dark:text-text-tertiary">Counseling Coach:</span>
+                        <span className={modelStatus.counselingCoach ? 'text-green-600 dark:text-green-400' : 'text-red-600 dark:text-red-400'}>
+                          {modelStatus.counselingCoach ? '✓' : '✗'}
+                        </span>
+                      </div>
+                    </div>
+                    {!modelStatus.loaded && !modelStatus.loading && (
+                      <p className="text-[10px] text-text-tertiary dark:text-text-tertiary mt-2">
+                        The app is using rule-based responses. This is normal if your browser doesn't support ONNX Runtime. All features remain fully functional.
+                      </p>
+                    )}
+                  </div>
+                )}
+                
                 <button
                   onClick={async () => {
                     if (confirm('This will clear and re-download the AI model. This may take a few minutes and requires internet connection. Continue?')) {
+                      setUpdatingModel(true);
                       try {
                         const { initializeModels } = await import('../services/aiService');
                         const success = await initializeModels(true); // Force reload
+                        
+                        // Update status after loading
+                        setTimeout(() => {
+                          const status = getModelStatus();
+                          setModelStatus(status);
+                        }, 1000);
+                        
                         if (success) {
-                          alert('Model update complete! The new model has been downloaded and cached on your device.');
+                          alert('✅ Model update complete! The new model has been downloaded and cached on your device. AI features are now available.');
                         } else {
-                          alert('Model update failed. The app will continue using rule-based responses. This may be due to browser compatibility or network issues. Please check your internet connection and try again.');
+                          const status = getModelStatus();
+                          let message = 'Model update failed. The app will continue using rule-based responses.';
+                          if (!status.moodTracker && !status.counselingCoach) {
+                            message += '\n\nThis is likely a browser compatibility issue with ONNX Runtime. The app is fully functional with rule-based responses.';
+                          } else if (!status.moodTracker || !status.counselingCoach) {
+                            message += `\n\nPartial loading: ${status.moodTracker ? 'Mood tracker ✓' : 'Mood tracker ✗'}, ${status.counselingCoach ? 'Counseling coach ✓' : 'Counseling coach ✗'}`;
+                          }
+                          alert(message);
                         }
-                      } catch (error) {
+                      } catch (error: any) {
                         console.error('Model update error:', error);
-                        alert('Error updating model. Please try again later.');
+                        const errorMsg = error?.message || String(error);
+                        let message = 'Error updating model. ';
+                        if (errorMsg.includes('registerBackend') || errorMsg.includes('ort-web')) {
+                          message += 'This appears to be a browser compatibility issue with ONNX Runtime. The app will continue using rule-based responses, which are fully functional.';
+                        } else {
+                          message += 'Please check your internet connection and try again.';
+                        }
+                        alert(message);
+                      } finally {
+                        setUpdatingModel(false);
                       }
                     }
                   }}
-                  className="w-full px-4 py-3 bg-navy-primary text-white dark:text-white rounded-xl text-xs font-black uppercase tracking-widest hover:opacity-90 shadow-sm border border-navy-primary"
+                  disabled={updatingModel || modelStatus?.loading}
+                  className={`w-full px-4 py-3 rounded-xl text-xs font-black uppercase tracking-widest shadow-sm border ${
+                    updatingModel || modelStatus?.loading
+                      ? 'bg-gray-400 dark:bg-gray-600 text-white cursor-not-allowed'
+                      : 'bg-navy-primary text-white dark:text-white hover:opacity-90 border-navy-primary'
+                  }`}
                 >
-                  Update AI Model
+                  {updatingModel ? '⏳ Updating...' : modelStatus?.loading ? '⏳ Loading...' : 'Update AI Model'}
                 </button>
                 <p className="text-[9px] text-text-tertiary dark:text-text-tertiary text-center">
                   Recommended: MiniCPM-0.5B or TinyLlama-1.1B (quantized for mobile)
                 </p>
+                {!modelStatus?.loaded && !modelStatus?.loading && (
+                  <p className="text-[9px] text-text-tertiary dark:text-text-tertiary text-center italic">
+                    Note: If models fail to load, this is typically a browser compatibility issue. The app remains fully functional with rule-based responses.
+                  </p>
+                )}
               </div>
             </details>
           </div>

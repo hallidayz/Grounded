@@ -241,10 +241,24 @@ try {
     fs.unlinkSync(zipPath);
   }
   
-  // Use zip command if available
-  execSync(`cd "${path.dirname(packageDir)}" && zip -r "${path.basename(zipPath)}" "${path.basename(packageDir)}" -x "*.DS_Store" "*.git*"`, {
+  // Create a temporary folder with the desired extraction name
+  const tempExtractDir = path.join(__dirname, '..', 'Grounded-Install');
+  if (fs.existsSync(tempExtractDir)) {
+    fs.rmSync(tempExtractDir, { recursive: true, force: true });
+  }
+  
+  // Copy package contents to Grounded-Install folder
+  console.log('📋 Preparing zip structure...');
+  fs.cpSync(packageDir, tempExtractDir, { recursive: true });
+  
+  // Create zip from the Grounded-Install folder
+  // This ensures the zip extracts to "Grounded-Install" folder
+  execSync(`cd "${path.dirname(tempExtractDir)}" && zip -r "${path.basename(zipPath)}" "${path.basename(tempExtractDir)}" -x "*.DS_Store" "*.git*"`, {
     stdio: 'inherit'
   });
+  
+  // Clean up temporary folder
+  fs.rmSync(tempExtractDir, { recursive: true, force: true });
   
   const zipSize = fs.statSync(zipPath).size;
   const zipSizeMB = (zipSize / 1024 / 1024).toFixed(2);
@@ -252,6 +266,7 @@ try {
   console.log(`\n✅ Zip archive created!`);
   console.log(`📦 File: ${zipPath}`);
   console.log(`📊 Zip size: ${zipSizeMB} MB`);
+  console.log(`📁 Extracts to: Grounded-Install/`);
   if (hasNativeInstallers) {
     console.log(`\n📱 Native installers included! Users can double-click to install.`);
   } else {
@@ -260,5 +275,6 @@ try {
 } catch (error) {
   console.log('\n⚠️  Could not create zip automatically.');
   console.log('💡 Manually zip the "package" folder to create a distributable file.');
+  console.log('   Rename the folder to "Grounded-Install" before zipping.');
   console.log('   The package folder is ready for distribution.');
 }
