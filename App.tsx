@@ -1,18 +1,21 @@
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, Suspense, lazy } from 'react';
 import { ALL_VALUES } from './constants';
 import { ValueItem, LogEntry, Goal, AppSettings, LCSWConfig } from './types';
 import ValueSelection from './components/ValueSelection';
-import Dashboard from './components/Dashboard';
-import ReportView from './components/ReportView';
-import VaultControl from './components/VaultControl';
 import HelpOverlay from './components/HelpOverlay';
-import LCSWConfigComponent from './components/LCSWConfig';
 import ThemeToggle from './components/ThemeToggle';
 import Login from './components/Login';
 import TermsAcceptance from './components/TermsAcceptance';
 import BottomNavigation from './components/BottomNavigation';
 import ErrorBoundary from './components/ErrorBoundary';
+import SkeletonCard from './components/SkeletonCard';
+
+// Code splitting: Lazy load heavy components
+const Dashboard = lazy(() => import('./components/Dashboard'));
+const ReportView = lazy(() => import('./components/ReportView'));
+const VaultControl = lazy(() => import('./components/VaultControl'));
+const LCSWConfigComponent = lazy(() => import('./components/LCSWConfig'));
 import { preloadModels } from './services/aiService';
 import { dbService } from './services/database';
 import { isLoggedIn, getCurrentUser, acceptTerms, logoutUser } from './services/authService';
@@ -552,34 +555,40 @@ const App: React.FC = () => {
         )}
         
         {view === 'home' && (
-          <Dashboard 
-            values={selectedValues} 
-            onLog={handleLogEntry}
-            goals={goals}
-            onUpdateGoals={handleUpdateGoals}
-            logs={logs}
-            lcswConfig={settings.lcswConfig}
-            onNavigate={(view) => setView(view)}
-          />
+          <Suspense fallback={<SkeletonCard lines={5} showHeader={true} />}>
+            <Dashboard 
+              values={selectedValues} 
+              onLog={handleLogEntry}
+              goals={goals}
+              onUpdateGoals={handleUpdateGoals}
+              logs={logs}
+              lcswConfig={settings.lcswConfig}
+              onNavigate={(view) => setView(view)}
+            />
+          </Suspense>
         )}
 
         {view === 'report' && (
-          <ReportView 
-            logs={logs} 
-            values={selectedValues} 
-            lcswConfig={settings.lcswConfig}
-          />
+          <Suspense fallback={<SkeletonCard lines={5} showHeader={true} />}>
+            <ReportView 
+              logs={logs} 
+              values={selectedValues} 
+              lcswConfig={settings.lcswConfig}
+            />
+          </Suspense>
         )}
 
         {view === 'vault' && (
-          <VaultControl
-            logs={logs}
-            goals={goals}
-            settings={settings}
-            onUpdateSettings={setSettings}
-            onClearData={handleClearData}
-            selectedValueIds={selectedValueIds}
-          />
+          <Suspense fallback={<SkeletonCard lines={5} showHeader={true} />}>
+            <VaultControl
+              logs={logs}
+              goals={goals}
+              settings={settings}
+              onUpdateSettings={setSettings}
+              onClearData={handleClearData}
+              selectedValueIds={selectedValueIds}
+            />
+          </Suspense>
         )}
       </main>
 
@@ -594,13 +603,15 @@ const App: React.FC = () => {
       {showHelp && <HelpOverlay onClose={() => setShowHelp(false)} />}
 
       {showLCSWConfig && (
-        <LCSWConfigComponent
-          config={settings.lcswConfig}
-          onUpdate={(config) => setSettings({ ...settings, lcswConfig: config })}
-          onClose={() => setShowLCSWConfig(false)}
-          settings={settings}
-          onUpdateSettings={setSettings}
-        />
+        <Suspense fallback={<SkeletonCard lines={5} showHeader={true} />}>
+          <LCSWConfigComponent
+            config={settings.lcswConfig}
+            onUpdate={(config) => setSettings({ ...settings, lcswConfig: config })}
+            onClose={() => setShowLCSWConfig(false)}
+            settings={settings}
+            onUpdateSettings={setSettings}
+          />
+        </Suspense>
       )}
 
         <footer className="py-4 text-center text-text-tertiary dark:text-text-tertiary text-[10px] font-medium tracking-wide">

@@ -626,13 +626,13 @@ const LCSWConfigComponent: React.FC<LCSWConfigProps> = ({ config, onUpdate, onCl
               </div>
               <button
                 onClick={() => setAllowRecommendations(!allowRecommendations)}
-                className={`w-16 h-8 rounded-full transition-all relative flex-shrink-0 ${
-                  allowRecommendations ? 'bg-navy-primary' : 'bg-border-soft dark:bg-dark-border'
+                className={`w-14 h-8 rounded-full transition-all relative flex-shrink-0 ${
+                  allowRecommendations ? 'bg-navy-primary' : 'bg-border-soft dark:bg-dark-bg-primary'
                 }`}
                 aria-label={allowRecommendations ? 'Disable recommendations' : 'Enable recommendations'}
               >
                 <div className={`absolute top-1 w-6 h-6 bg-white rounded-full shadow-md transition-all ${
-                  allowRecommendations ? 'left-9' : 'left-1'
+                  allowRecommendations ? 'right-1' : 'left-1'
                 }`} />
               </button>
             </div>
@@ -838,7 +838,7 @@ const LCSWConfigComponent: React.FC<LCSWConfigProps> = ({ config, onUpdate, onCl
                       </div>
                       <button
                         onClick={handleNtfyToggle}
-                        className={`w-14 h-8 rounded-full transition-all relative ${settings.reminders.useNtfyPush ? 'bg-yellow-warm' : 'bg-border-soft dark:bg-dark-bg-tertiary/50'}`}
+                        className={`w-14 h-8 rounded-full transition-all relative ${settings.reminders.useNtfyPush ? 'bg-yellow-warm' : 'bg-border-soft dark:bg-dark-bg-primary'}`}
                       >
                         <div className={`absolute top-1 w-6 h-6 bg-white rounded-full shadow-md transition-all ${settings.reminders.useNtfyPush ? 'right-1' : 'left-1'}`} />
                       </button>
