@@ -65,8 +65,9 @@ export async function sendNotification(
     if (isTauri()) {
       // Use Tauri notification plugin if available
       try {
-        // Use eval to prevent bundler from trying to resolve this at build time
-        const tauriNotifyModule = await (eval('import("@tauri-apps/plugin-notification")') as Promise<typeof import('@tauri-apps/plugin-notification')>);
+        // Use function to prevent bundler from trying to resolve this at build time
+        const getTauriNotifyImport = () => '@tauri-apps/plugin-notification';
+        const tauriNotifyModule = await import(getTauriNotifyImport());
         const { sendNotification: tauriNotify } = tauriNotifyModule;
         await tauriNotify({
           title,
