@@ -245,13 +245,19 @@ body {
   -webkit-overflow-scrolling: touch;
   /* Prevent layout shifts during scroll */
   contain: layout style paint;
+  /* Optimize scroll performance */
+  overscroll-behavior: contain;
+  /* Smooth scrolling */
+  scroll-behavior: smooth;
 }
 
 .virtual-list-item {
   /* Optimize item rendering */
-  will-change: contents;
+  will-change: auto;
   /* Prevent repaints during scroll */
   contain: layout style;
+  /* Force GPU layer for items */
+  transform: translateZ(0);
 }
 
 /* Smooth scrolling for virtual lists */
@@ -259,5 +265,70 @@ body {
   scroll-behavior: smooth;
   /* Optimize scroll performance */
   overscroll-behavior: contain;
+  /* Enable momentum scrolling on iOS */
+  -webkit-overflow-scrolling: touch;
+}
+
+/* Optimize transform performance */
+[style*="translate3d"] {
+  /* Force GPU acceleration */
+  transform: translate3d(0, 0, 0);
+  will-change: transform;
+  backface-visibility: hidden;
+  perspective: 1000px;
+}
+
+/* Clinical Report Goal Spacing Fix */
+.clinical-report h3 {
+  margin-top: 2rem !important;
+  margin-bottom: 1rem !important;
+  page-break-after: avoid;
+  clear: both;
+}
+
+.clinical-report h3:first-child {
+  margin-top: 0 !important;
+}
+
+.clinical-report ul,
+.clinical-report ol {
+  margin-top: 1rem !important;
+  margin-bottom: 1.5rem !important;
+  padding-left: 1.5rem;
+  clear: both;
+}
+
+.clinical-report li {
+  margin-top: 0.5rem !important;
+  margin-bottom: 0.5rem !important;
+  display: block;
+}
+
+.clinical-report p {
+  margin-top: 1rem !important;
+  margin-bottom: 1rem !important;
+  clear: both;
+}
+
+/* Ensure goal sections don't overlap - add spacing between sections */
+.clinical-report > * + h3 {
+  margin-top: 2.5rem !important;
+}
+
+.clinical-report > * + ul,
+.clinical-report > * + ol {
+  margin-top: 1.5rem !important;
+}
+
+/* Prevent overlapping with strong spacing for goal sections */
+.clinical-report h3 + ul,
+.clinical-report h3 + ol {
+  margin-top: 1.5rem !important;
+  margin-bottom: 2rem !important;
+}
+
+.clinical-report h3 + p {
+  margin-top: 1rem !important;
+  margin-bottom: 1.5rem !important;
 }
 
