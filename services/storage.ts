@@ -17,8 +17,9 @@ async function initStorage(): Promise<void> {
   if (isTauri()) {
     try {
       // Dynamic import to avoid errors in web environment
-      // Use eval to prevent bundler from trying to resolve this at build time
-      const tauriStoreModule = await (eval('import("@tauri-apps/plugin-store")') as Promise<typeof import('@tauri-apps/plugin-store')>);
+      // Use function to prevent bundler from trying to resolve this at build time
+      const getTauriStoreImport = () => '@tauri-apps/plugin-store';
+      const tauriStoreModule = await import(getTauriStoreImport());
       const { Store } = tauriStoreModule;
       tauriStore = new Store('.settings.dat');
     } catch (error) {

@@ -76,9 +76,47 @@ After installation:
    - `ANDROID_HOME`: `C:\Users\YourName\AppData\Local\Android\Sdk`
    - Add to PATH: `%ANDROID_HOME%\platform-tools`
 
-4. **Install Java JDK**:
-   - Android Studio includes JDK, or install separately
-   - Verify: `java -version`
+4. **Install Java JDK** (Required):
+   
+   **macOS (using Homebrew):**
+   ```bash
+   brew install --cask temurin
+   ```
+   
+   **macOS (manual):**
+   - Download from: https://adoptium.net/
+   - Choose: macOS → ARM64 (Apple Silicon) or x64 (Intel)
+   - Install the .pkg file
+   
+   **Windows:**
+   - Download from: https://adoptium.net/
+   - Choose: Windows → x64
+   - Run the installer
+   
+   **Linux:**
+   ```bash
+   # Ubuntu/Debian
+   sudo apt-get install openjdk-17-jdk
+   
+   # Or use Adoptium
+   wget https://github.com/adoptium/temurin17-binaries/releases/download/jdk-17.0.12%2B7/OpenJDK17U-jdk_x64_linux_hotspot_17.0.12_7.tar.gz
+   ```
+   
+   **Verify installation:**
+   ```bash
+   java -version
+   # Should show: openjdk version "17.x.x" or similar
+   ```
+   
+   **Note:** Android Studio includes a JDK, but you may need to set `JAVA_HOME`:
+   ```bash
+   # macOS/Linux (add to ~/.zshrc or ~/.bash_profile)
+   export JAVA_HOME=$(/usr/libexec/java_home)
+   # Or for Android Studio's JDK:
+   export JAVA_HOME=$HOME/Library/Android/sdk/jbr
+   
+   # Reload: source ~/.zshrc
+   ```
 
 5. **Reload terminal**:
    ```bash

@@ -141,6 +141,14 @@ export default defineConfig({
       }
     },
     rollupOptions: {
+      onwarn(warning, warn) {
+        // Suppress eval warnings from third-party libraries (onnxruntime-web)
+        // These are safe as they're from trusted dependencies
+        if (warning.code === 'EVAL' && warning.id?.includes('onnxruntime-web')) {
+          return;
+        }
+        warn(warning);
+      },
       output: {
         manualChunks: (id) => {
           // Tauri-optimized chunk splitting

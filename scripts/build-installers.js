@@ -56,12 +56,20 @@ function checkPrerequisites() {
   
   let rustInstalled = false;
   let androidReady = false;
+  let javaInstalled = false;
   
   try {
     execSync('cargo --version', { stdio: 'ignore' });
     rustInstalled = true;
   } catch {
     rustInstalled = false;
+  }
+  
+  try {
+    execSync('java -version', { stdio: 'ignore' });
+    javaInstalled = true;
+  } catch {
+    javaInstalled = false;
   }
   
   try {
@@ -73,7 +81,7 @@ function checkPrerequisites() {
     androidReady = false;
   }
   
-  return { rustInstalled, androidReady };
+  return { rustInstalled, androidReady, javaInstalled };
 }
 
 function main() {
@@ -83,7 +91,7 @@ function main() {
   const buildAll = platforms.length === 0;
   
   // Check prerequisites
-  const { rustInstalled, androidReady } = checkPrerequisites();
+  const { rustInstalled, androidReady, javaInstalled } = checkPrerequisites();
   
   // Create output directory
   const outputDir = join(process.cwd(), 'dist', 'installers');
@@ -145,13 +153,20 @@ function main() {
   if (buildAll || platforms.includes('android') || platforms.includes('all')) {
     log('\n📱 Building Android APK...', 'blue');
     
-    if (!androidReady) {
+    if (!javaInstalled) {
+      log('\n❌ Java JDK not found. Android builds require Java.', 'red');
+      log('   Install Java:', 'yellow');
+      log('   macOS: brew install --cask temurin', 'yellow');
+      log('   Or download from: https://adoptium.net/', 'yellow');
+      log('   After installation, restart terminal and try again\n', 'yellow');
+      log('   See PREREQUISITES.md for detailed instructions\n', 'yellow');
+    } else if (!androidReady) {
       log('\n⚠️  Android SDK not configured. Android build may fail.', 'yellow');
       log('   Set ANDROID_HOME environment variable', 'yellow');
       log('   See PREREQUISITES.md for setup instructions\n', 'yellow');
     }
     
-    if (exec('npm run build:android')) {
+    if (javaInstalled && exec('npm run build:android')) {
       log('\n✅ Android build complete!', 'green');
       
       // Find and copy APK

@@ -81,6 +81,25 @@ function checkNpm() {
   }
 }
 
+function checkJava() {
+  const installed = checkCommand('java -version', 'Java');
+  if (installed) {
+    try {
+      const version = execSync('java -version', { encoding: 'utf-8', stdio: ['ignore', 'pipe', 'ignore'] }).split('\n')[0];
+      log(`  ✓ Java: ${version}`, 'green');
+      return true;
+    } catch {
+      log(`  ✓ Java: Installed`, 'green');
+      return true;
+    }
+  } else {
+    log(`  ✗ Java: Not installed`, 'red');
+    log(`     macOS: brew install --cask temurin`, 'yellow');
+    log(`     Or download from: https://adoptium.net/`, 'yellow');
+    return false;
+  }
+}
+
 function checkAndroid() {
   const androidHome = process.env.ANDROID_HOME;
   const hasAdb = checkCommand('adb version', 'Android SDK');
@@ -108,6 +127,7 @@ function main() {
     node: checkNode(),
     npm: checkNpm(),
     rust: checkRust(),
+    java: checkJava(),
     android: checkAndroid(),
   };
   
@@ -115,7 +135,7 @@ function main() {
   
   const allBasic = checks.node && checks.npm;
   const desktopReady = allBasic && checks.rust;
-  const androidReady = allBasic && checks.android;
+  const androidReady = allBasic && checks.java && checks.android;
   
   if (desktopReady && androidReady) {
     log('\n✅ All prerequisites installed!', 'green');
