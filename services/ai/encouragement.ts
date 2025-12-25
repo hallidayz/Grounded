@@ -161,16 +161,22 @@ export async function generateCounselingGuidance(
     }
 
     // Ensure models are loaded - wait if they're currently loading
-    const counselingCoachModel = getCounselingCoachModel();
+    let counselingCoachModel = getCounselingCoachModel();
     const isModelLoading = getIsModelLoading();
     
     if (!counselingCoachModel) {
       if (isModelLoading) {
-        // Wait for current load to complete
-        await initializeModels();
+        // Wait for current load to complete (up to 30 seconds)
+        const maxWaitTime = 30000;
+        const startTime = Date.now();
+        while (!counselingCoachModel && (Date.now() - startTime) < maxWaitTime) {
+          await new Promise(resolve => setTimeout(resolve, 500));
+          counselingCoachModel = getCounselingCoachModel();
+        }
       } else {
         // Start loading if not already loading
         await initializeModels();
+        counselingCoachModel = getCounselingCoachModel();
       }
     }
 
@@ -204,10 +210,9 @@ Remember: You are supporting therapy integration, not providing therapy. Keep re
     // Generate response using the counseling coach model
     let response = "Your commitment to reflecting on your values is a meaningful step in your journey.";
     
-    const currentCounselingCoachModel = getCounselingCoachModel();
-    if (currentCounselingCoachModel) {
+    if (counselingCoachModel) {
       try {
-        const result = await currentCounselingCoachModel(prompt, {
+        const result = await counselingCoachModel(prompt, {
           max_new_tokens: 150,
           temperature: 0.7,
           do_sample: true,
@@ -222,7 +227,34 @@ Remember: You are supporting therapy integration, not providing therapy. Keep re
         }
       } catch (error) {
         console.warn('Counseling coach inference failed:', error);
-        // Use fallback response
+        // If error suggests model type mismatch, try to reload
+        if (error instanceof Error && (
+          error.message.includes('not a function') ||
+          error.message.includes('Cannot read') ||
+          error.message.includes('is not a function')
+        )) {
+          console.warn('Possible model type mismatch, attempting reload...');
+          await initializeModels(true); // Force reload
+          const reloadedModel = getCounselingCoachModel();
+          if (reloadedModel) {
+            try {
+              const retryResult = await reloadedModel(prompt, {
+                max_new_tokens: 150,
+                temperature: 0.7,
+                do_sample: true,
+                top_p: 0.9
+              });
+              const retryText = retryResult[0]?.generated_text || '';
+              const retryExtracted = retryText.replace(prompt, '').trim();
+              if (retryExtracted) {
+                response = retryExtracted;
+              }
+            } catch (retryError) {
+              console.warn('Retry inference failed:', retryError);
+            }
+          }
+        }
+        // Use fallback response if all attempts fail
       }
     }
     
@@ -350,7 +382,27 @@ Be genuine, hopeful, and supportive. Avoid platitudes or toxic positivity.`;
   }
 
   // Try to use AI model if available
-  const counselingCoachModel = getCounselingCoachModel();
+  let counselingCoachModel = getCounselingCoachModel();
+  
+  // If model not available, try to initialize it
+  if (!counselingCoachModel) {
+    const isModelLoading = getIsModelLoading();
+    if (!isModelLoading) {
+      // Try to initialize models
+      await initializeModels();
+      counselingCoachModel = getCounselingCoachModel();
+    } else {
+      // Wait for current load to complete
+      // Wait up to 30 seconds for model to load
+      const maxWaitTime = 30000;
+      const startTime = Date.now();
+      while (!counselingCoachModel && (Date.now() - startTime) < maxWaitTime) {
+        await new Promise(resolve => setTimeout(resolve, 500));
+        counselingCoachModel = getCounselingCoachModel();
+      }
+    }
+  }
+  
   if (counselingCoachModel) {
     try {
       const result = await counselingCoachModel(prompt, {
@@ -367,6 +419,34 @@ Be genuine, hopeful, and supportive. Avoid platitudes or toxic positivity.`;
       }
     } catch (error) {
       console.warn('Emotional encouragement inference failed:', error);
+      // If inference fails, check if it's because model is wrong type
+      // and try to reload with correct model type
+      if (error instanceof Error && (
+        error.message.includes('not a function') ||
+        error.message.includes('Cannot read') ||
+        error.message.includes('is not a function')
+      )) {
+        console.warn('Model type mismatch detected, attempting to reload...');
+        await initializeModels(true); // Force reload
+        const reloadedModel = getCounselingCoachModel();
+        if (reloadedModel) {
+          try {
+            const retryResult = await reloadedModel(prompt, {
+              max_new_tokens: 200,
+              temperature: 0.8,
+              do_sample: true,
+              top_p: 0.9
+            });
+            const retryText = retryResult[0]?.generated_text || '';
+            const retryExtracted = retryText.replace(prompt, '').trim();
+            if (retryExtracted && retryExtracted.length > 20) {
+              return retryExtracted;
+            }
+          } catch (retryError) {
+            console.warn('Retry inference also failed:', retryError);
+          }
+        }
+      }
     }
   }
 
@@ -434,9 +514,21 @@ export async function suggestGoal(
       return `### Safety First\n- **Description**: Contact your therapist or emergency services if you're in crisis\n- **What this helps with**: Immediate support and safety\n- **How do I measure progress**:\n  1. Reached out to a professional\n  2. Followed your safety plan\n  3. Engaged with your support network`;
     }
 
-    const counselingCoachModel = getCounselingCoachModel();
+    let counselingCoachModel = getCounselingCoachModel();
     if (!counselingCoachModel) {
-      await initializeModels();
+      const isModelLoading = getIsModelLoading();
+      if (isModelLoading) {
+        // Wait for current load (up to 30 seconds)
+        const maxWaitTime = 30000;
+        const startTime = Date.now();
+        while (!counselingCoachModel && (Date.now() - startTime) < maxWaitTime) {
+          await new Promise(resolve => setTimeout(resolve, 500));
+          counselingCoachModel = getCounselingCoachModel();
+        }
+      } else {
+        await initializeModels();
+        counselingCoachModel = getCounselingCoachModel();
+      }
     }
 
     // Check if reflection contains deep reflection and/or analysis
@@ -488,10 +580,9 @@ Keep it small, specific, and aligned with therapy integration.`;
 
     let response = `### Structured Aim\n- **Description**: Take one small action today that aligns with ${value.name}\n- **What this helps with**: Building consistency and self-efficacy\n- **How do I measure progress**:\n  1. Identified the action\n  2. Completed the action\n  3. Reflected on the experience`;
     
-    const currentCounselingCoachModel = getCounselingCoachModel();
-    if (currentCounselingCoachModel) {
+    if (counselingCoachModel) {
       try {
-        const result = await currentCounselingCoachModel(prompt, {
+        const result = await counselingCoachModel(prompt, {
           max_new_tokens: 200,
           temperature: 0.8,
           do_sample: true
@@ -504,6 +595,30 @@ Keep it small, specific, and aligned with therapy integration.`;
         }
       } catch (error) {
         console.warn('Goal suggestion inference failed:', error);
+        // Try reload if model type mismatch
+        if (error instanceof Error && (
+          error.message.includes('not a function') ||
+          error.message.includes('Cannot read')
+        )) {
+          await initializeModels(true);
+          const reloadedModel = getCounselingCoachModel();
+          if (reloadedModel) {
+            try {
+              const retryResult = await reloadedModel(prompt, {
+                max_new_tokens: 200,
+                temperature: 0.8,
+                do_sample: true
+              });
+              const retryText = retryResult[0]?.generated_text || '';
+              const retryExtracted = retryText.replace(prompt, '').trim();
+              if (retryExtracted) {
+                response = retryExtracted;
+              }
+            } catch (retryError) {
+              console.warn('Retry goal suggestion failed:', retryError);
+            }
+          }
+        }
       }
     }
     

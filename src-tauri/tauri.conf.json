@@ -18,13 +18,19 @@
         "resizable": true,
         "fullscreen": false,
         "transparent": false,
-        "decorations": true
+        "decorations": true,
+        "center": true,
+        "skipTaskbar": false,
+        "visible": true
       }
     ],
     "security": {
-      "csp": null
+      "csp": null,
+      "dangerousDisableAssetCspModification": false,
+      "freezePrototype": false
     },
-    "macOSPrivateApi": true
+    "macOSPrivateApi": true,
+    "withGlobalTauri": false
   },
   "bundle": {
     "active": true,

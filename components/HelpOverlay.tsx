@@ -19,7 +19,7 @@ const HelpOverlay: React.FC<HelpOverlayProps> = ({ onClose }) => {
           <svg className="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={3} d="M6 18L18 6M6 6l12 12" /></svg>
         </button>
 
-        <div className="p-10 space-y-8">
+        <div className="p-10 space-y-8 max-h-[90vh] overflow-y-auto">
           <div className="space-y-2">
             <h2 className="text-3xl font-black text-text-primary dark:text-white tracking-tight">How to navigate</h2>
             <p className="text-text-secondary dark:text-text-secondary font-medium">Mastering Grounded in 3 steps.</p>
@@ -59,7 +59,55 @@ const HelpOverlay: React.FC<HelpOverlayProps> = ({ onClose }) => {
                   <p className="text-xs text-text-secondary dark:text-text-secondary leading-relaxed font-medium">Head to <b>Settings</b> to enable "Growth and Progress" nudges—system notifications that keep your North Star top-of-mind.</p>
                 </div>
              </div>
+          </div>
 
+          <div className="pt-4 border-t border-border-soft dark:border-dark-border space-y-4">
+            <h3 className="text-lg font-black text-text-primary dark:text-white">Support</h3>
+            <div className="bg-bg-secondary dark:bg-dark-bg-secondary p-6 rounded-3xl space-y-2">
+              <p className="text-sm text-text-secondary dark:text-text-secondary leading-relaxed">
+                Need help or have questions? We're here to assist you.
+              </p>
+              <div className="flex items-center gap-3 pt-2">
+                <svg className="w-5 h-5 text-navy-primary dark:text-yellow-warm flex-shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z" />
+                </svg>
+                <a 
+                  href="mailto:ac.minds.ai@gmail.com?subject=Grounded App Support"
+                  className="text-sm font-bold text-navy-primary dark:text-yellow-warm hover:underline"
+                >
+                  ac.minds.ai@gmail.com
+                </a>
+              </div>
+            </div>
+          </div>
+
+          <div className="pt-4 border-t border-border-soft dark:border-dark-border space-y-4">
+            <h3 className="text-lg font-black text-text-primary dark:text-white">License</h3>
+            <div className="bg-bg-secondary dark:bg-dark-bg-secondary p-6 rounded-3xl space-y-3">
+              <p className="text-xs font-black text-text-primary dark:text-white uppercase tracking-widest">Apache License 2.0</p>
+              <div className="space-y-2 text-xs text-text-secondary dark:text-text-secondary leading-relaxed">
+                <p>
+                  Copyright {new Date().getFullYear()} AC MiNDS
+                </p>
+                <p>
+                  Licensed under the Apache License, Version 2.0 (the "License"); you may not use this file except in compliance with the License. You may obtain a copy of the License at:
+                </p>
+                <a 
+                  href="http://www.apache.org/licenses/LICENSE-2.0"
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="text-navy-primary dark:text-yellow-warm hover:underline break-all"
+                >
+                  http://www.apache.org/licenses/LICENSE-2.0
+                </a>
+                <p>
+                  Unless required by applicable law or agreed to in writing, software distributed under the License is distributed on an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied. See the License for the specific language governing permissions and limitations under the License.
+                </p>
+              </div>
+            </div>
+          </div>
+
+          <div className="pt-4">
              <button 
                onClick={onClose}
                className="w-full py-5 bg-navy-primary dark:bg-navy-primary text-white dark:text-white rounded-[24px] font-black uppercase tracking-[0.2em] shadow-xl hover:opacity-90 transition-all active:scale-[0.98]"

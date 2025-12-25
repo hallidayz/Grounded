@@ -17,8 +17,20 @@ export {
   initializeModels,
   preloadModels,
   areModelsLoaded,
-  getModelStatus
+  getModelStatus,
+  getCompatibilityReport,
+  // Internal helper functions (for advanced use cases)
+  getMoodTrackerModel,
+  getCounselingCoachModel,
+  getIsModelLoading,
+  isTextGenerationModel
 } from './ai/models';
+
+// Re-export compatibility functions
+export {
+  checkBrowserCompatibility,
+  getCompatibilitySummary
+} from './ai/browserCompatibility';
 
 // Re-export crisis functions
 export {

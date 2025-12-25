@@ -5,11 +5,15 @@
  * Uses @xenova/transformers for browser-based inference.
  */
 
+import { checkBrowserCompatibility, CompatibilityReport, getCompatibilitySummary } from './browserCompatibility';
+
 // Model loading state
 let moodTrackerModel: any = null;
 let counselingCoachModel: any = null;
 let isModelLoading = false;
 let modelLoadPromise: Promise<boolean> | null = null;
+let compatibilityReport: CompatibilityReport | null = null;
+let lastErrorCategory: 'coop-coep' | 'memory' | 'webgpu' | 'network' | 'wasm' | 'unknown' | null = null;
 
 /**
  * Get model references (for use by other modules)
@@ -24,6 +28,31 @@ export function getCounselingCoachModel() {
 
 export function getIsModelLoading() {
   return isModelLoading;
+}
+
+/**
+ * Check if a model supports text generation
+ */
+export function isTextGenerationModel(model: any): boolean {
+  if (!model) return false;
+  
+  try {
+    // Check if model has task property indicating text-generation
+    if (model.task === 'text-generation') {
+      return true;
+    }
+    
+    // Check if model is a function that accepts generation options
+    // Text-generation models accept (text, options) signature
+    if (typeof model === 'function') {
+      // Generation models typically accept options object
+      return true; // Assume function models are generation-capable
+    }
+    
+    return false;
+  } catch {
+    return false;
+  }
 }
 
 /**
@@ -75,6 +104,24 @@ export async function initializeModels(forceReload: boolean = false): Promise<bo
   isModelLoading = true;
   modelLoadPromise = (async () => {
     try {
+      // Run browser compatibility check first
+      compatibilityReport = checkBrowserCompatibility();
+      lastErrorCategory = null;
+      
+      // Log compatibility summary
+      const summary = getCompatibilitySummary(compatibilityReport);
+      console.log(`🔍 Browser compatibility: ${summary}`);
+      
+      // If AI cannot be used at all (e.g., no WASM), skip initialization
+      if (!compatibilityReport.canUseAI) {
+        console.warn('⚠️ AI models cannot be used on this browser. Using rule-based responses.');
+        if (!compatibilityReport.wasm) {
+          lastErrorCategory = 'wasm';
+        }
+        isModelLoading = false;
+        return false;
+      }
+      
       // Set up environment before importing
       if (typeof window !== 'undefined') {
         (window as any).__TRANSFORMERS_ENV__ = (window as any).__TRANSFORMERS_ENV__ || {};
@@ -99,15 +146,24 @@ export async function initializeModels(forceReload: boolean = false): Promise<bo
         const errorMsg = importError?.message || String(importError);
         const errorStack = importError?.stack || '';
         
-        // This is a known browser compatibility issue - not a critical error
-        const isKnownIssue = errorMsg.includes('registerBackend') || 
-                            errorMsg.includes('ort-web') ||
-                            errorStack.includes('ort-web') ||
-                            errorMsg.includes('Cannot read properties');
-        
-        if (isKnownIssue) {
-          console.info('ℹ️ AI models unavailable: Browser compatibility issue with ONNX Runtime. App uses rule-based responses (fully functional).');
+        // Categorize the error
+        if (errorMsg.includes('registerBackend') || errorMsg.includes('ort-web') || errorStack.includes('ort-web')) {
+          lastErrorCategory = 'coop-coep';
+          console.info('ℹ️ AI models unavailable: ONNX Runtime backend initialization failed.');
+          if (compatibilityReport && !compatibilityReport.sharedArrayBuffer) {
+            console.info('ℹ️ This is likely due to missing COOP/COEP headers. See SERVER_CONFIG.md for setup instructions.');
+          }
+          console.info('ℹ️ App uses rule-based responses (fully functional).');
+        } else if (errorMsg.includes('memory') || errorMsg.includes('OOM') || errorMsg.includes('out of memory')) {
+          lastErrorCategory = 'memory';
+          console.info('ℹ️ AI models unavailable: Insufficient device memory.');
+          console.info('ℹ️ App uses rule-based responses (fully functional).');
+        } else if (errorMsg.includes('network') || errorMsg.includes('fetch') || errorMsg.includes('Failed to fetch')) {
+          lastErrorCategory = 'network';
+          console.info('ℹ️ AI models unavailable: Network error during download.');
+          console.info('ℹ️ App uses rule-based responses (fully functional).');
         } else {
+          lastErrorCategory = 'unknown';
           console.info('ℹ️ AI models unavailable. App uses rule-based responses (fully functional).');
         }
         return false;
@@ -125,7 +181,7 @@ export async function initializeModels(forceReload: boolean = false): Promise<bo
         throw new Error('Pipeline function not available in transformers module');
       }
       
-      // Configure transformers.js for browser use - use minimal configuration
+      // Configure transformers.js for browser use based on compatibility
       // Configure BEFORE any backend access to avoid registerBackend errors
       try {
         env.allowLocalModels = true;
@@ -135,6 +191,26 @@ export async function initializeModels(forceReload: boolean = false): Promise<bo
         
         // Set cache directory for models
         env.cacheDir = './models-cache';
+        
+        // Configure based on compatibility report
+        if (compatibilityReport) {
+          // Disable WebGPU if not available
+          if (!compatibilityReport.webGPU) {
+            try {
+              env.backends = env.backends || {};
+              // Prefer CPU backend when WebGPU unavailable
+              console.log('⚠️ WebGPU unavailable, using CPU backend');
+            } catch (e) {
+              // Ignore if backends config not available
+            }
+          }
+          
+          // Use single-threaded mode if SharedArrayBuffer unavailable
+          if (!compatibilityReport.sharedArrayBuffer) {
+            console.log('⚠️ SharedArrayBuffer unavailable, using single-threaded mode');
+            // Note: transformers.js will automatically fall back to single-threaded
+          }
+        }
       } catch (configError) {
         console.warn('Could not configure transformers environment, using defaults:', configError);
         // Continue anyway - library may have defaults
@@ -163,19 +239,25 @@ export async function initializeModels(forceReload: boolean = false): Promise<bo
         }
       };
       
+      // Choose model based on compatibility strategy
+      const strategy = compatibilityReport?.suggestedStrategy || 'standard';
+      const useLowMemory = strategy === 'low-memory' || (compatibilityReport?.estimatedMemory !== null && compatibilityReport.estimatedMemory < 2048);
+      
       // Try loading a reliable text-classification model first (more stable)
       // This model is smaller and loads faster, good for sentiment analysis
-      try {
-        console.log('Attempting to load DistilBERT (text classification)...');
-        moodTrackerModel = await pipeline(
-          'text-classification',
-          'Xenova/distilbert-base-uncased-finetuned-sst-2-english',
-          { 
-            quantized: true,
-            progress_callback: progressCallback
-          }
-        );
-        console.log('✓ DistilBERT model loaded successfully');
+      // Skip DistilBERT if low-memory mode (use TinyLlama directly)
+      if (!useLowMemory) {
+        try {
+          console.log('Attempting to load DistilBERT (text classification)...');
+          moodTrackerModel = await pipeline(
+            'text-classification',
+            'Xenova/distilbert-base-uncased-finetuned-sst-2-english',
+            { 
+              quantized: true,
+              progress_callback: progressCallback
+            }
+          );
+          console.log('✓ DistilBERT model loaded successfully');
       } catch (distilbertError: any) {
         const errorMsg = distilbertError?.message || String(distilbertError);
         const errorStack = distilbertError?.stack || '';
@@ -187,7 +269,11 @@ export async function initializeModels(forceReload: boolean = false): Promise<bo
                                errorMsg.includes('Cannot read properties');
         
         if (isBackendError) {
+          lastErrorCategory = 'coop-coep';
           console.error('Backend initialization error detected. This is likely a browser compatibility issue with ONNX Runtime.');
+          if (compatibilityReport && !compatibilityReport.sharedArrayBuffer) {
+            console.warn('SharedArrayBuffer unavailable. Enable COOP/COEP headers (see SERVER_CONFIG.md).');
+          }
           console.warn('The app will continue using rule-based responses. AI features will not be available.');
           moodTrackerModel = null;
         } else {
@@ -213,15 +299,144 @@ export async function initializeModels(forceReload: boolean = false): Promise<bo
                                             tinyLlamaStack.includes('ort-web');
             
             if (isTinyLlamaBackendError) {
+              lastErrorCategory = 'coop-coep';
               console.error('Backend initialization error with TinyLlama. Browser may not support ONNX Runtime.');
               moodTrackerModel = null;
             } else {
-              console.warn('TinyLlama load failed, trying MiniCPM:', tinyLlamaError);
+              // Only try MiniCPM if not in low-memory mode (it's larger)
+              if (!useLowMemory) {
+                console.warn('TinyLlama load failed, trying MiniCPM:', tinyLlamaError);
+                
+                // Final fallback to MiniCPM
+                try {
+                  console.log('Attempting to load MiniCPM (text generation)...');
+                  moodTrackerModel = await pipeline(
+                    'text-generation',
+                    'Xenova/MiniCPM-2-4B-ONNX',
+                    { 
+                      quantized: true,
+                      progress_callback: progressCallback
+                    }
+                  );
+                  console.log('✓ MiniCPM model loaded successfully');
+                } catch (miniCPMError: any) {
+                  const miniCPMMsg = miniCPMError?.message || String(miniCPMError);
+                  const miniCPMStack = miniCPMError?.stack || '';
+                  const isMiniCPMBackendError = miniCPMMsg.includes('registerBackend') || 
+                                                 miniCPMMsg.includes('ort-web') ||
+                                                 miniCPMStack.includes('ort-web');
+                  
+                  if (isMiniCPMBackendError) {
+                    lastErrorCategory = 'coop-coep';
+                    console.error('Backend initialization error with all models. Browser compatibility issue detected.');
+                  } else if (miniCPMMsg.includes('memory') || miniCPMMsg.includes('OOM')) {
+                    lastErrorCategory = 'memory';
+                    console.error('Memory error loading MiniCPM. Device may have insufficient memory.');
+                  } else {
+                    lastErrorCategory = 'unknown';
+                    console.error('All model loading attempts failed:', miniCPMError);
+                  }
+                  moodTrackerModel = null; // Will use rule-based fallback
+                }
+              } else {
+                // Low memory mode - don't try larger models
+                lastErrorCategory = 'memory';
+                console.warn('TinyLlama failed in low-memory mode. Skipping larger models.');
+                moodTrackerModel = null;
+              }
+            }
+          }
+        }
+        }
+      } else {
+        // Low memory mode - skip DistilBERT, go straight to TinyLlama
+        console.log('Low-memory mode: Skipping DistilBERT, loading TinyLlama directly...');
+        try {
+          console.log('Attempting to load TinyLlama (text generation, low-memory mode)...');
+          moodTrackerModel = await pipeline(
+            'text-generation',
+            'Xenova/TinyLlama-1.1B-Chat-v1.0',
+            { 
+              quantized: true,
+              progress_callback: progressCallback
+            }
+          );
+          console.log('✓ TinyLlama model loaded successfully (low-memory mode)');
+        } catch (tinyLlamaError: any) {
+          const tinyLlamaMsg = tinyLlamaError?.message || String(tinyLlamaError);
+          const tinyLlamaStack = tinyLlamaError?.stack || '';
+          const isTinyLlamaBackendError = tinyLlamaMsg.includes('registerBackend') || 
+                                          tinyLlamaMsg.includes('ort-web') ||
+                                          tinyLlamaStack.includes('ort-web');
+          
+          if (isTinyLlamaBackendError) {
+            lastErrorCategory = 'coop-coep';
+            console.error('Backend initialization error with TinyLlama. Browser may not support ONNX Runtime.');
+          } else if (tinyLlamaMsg.includes('memory') || tinyLlamaMsg.includes('OOM')) {
+            lastErrorCategory = 'memory';
+            console.error('Memory error: Device has insufficient memory for AI models.');
+          } else {
+            lastErrorCategory = 'unknown';
+            console.error('TinyLlama load failed:', tinyLlamaError);
+          }
+          moodTrackerModel = null;
+        }
+      }
+
+      // Model B: Counseling coach - Load a text-generation model specifically
+      // Don't reuse classification models for generation tasks
+      // Counseling needs text-generation, not classification
+      console.log('Loading counseling coach model (text-generation)...');
+      
+      // Check if moodTrackerModel is already a text-generation model we can reuse
+      let canReuseModel = false;
+      if (moodTrackerModel) {
+        try {
+          // Try to check if it's a generation model by checking its task property
+          const modelTask = (moodTrackerModel as any).task;
+          if (modelTask === 'text-generation') {
+            canReuseModel = true;
+            console.log('✓ Reusing text-generation model for counseling');
+          }
+        } catch {
+          // If we can't determine, assume we need a separate model
+          canReuseModel = false;
+        }
+      }
+      
+      if (!canReuseModel) {
+        // Load a dedicated text-generation model for counseling
+        try {
+          console.log('Attempting to load TinyLlama for counseling (text generation)...');
+          counselingCoachModel = await pipeline(
+            'text-generation',
+            'Xenova/TinyLlama-1.1B-Chat-v1.0',
+            { 
+              quantized: true,
+              progress_callback: progressCallback
+            }
+          );
+          console.log('✓ Counseling coach model (TinyLlama) loaded successfully');
+        } catch (tinyLlamaError: any) {
+          const tinyLlamaMsg = tinyLlamaError?.message || String(tinyLlamaError);
+          const tinyLlamaStack = tinyLlamaError?.stack || '';
+          const isTinyLlamaBackendError = tinyLlamaMsg.includes('registerBackend') || 
+                                          tinyLlamaMsg.includes('ort-web') ||
+                                          tinyLlamaStack.includes('ort-web');
+          
+          if (isTinyLlamaBackendError) {
+            lastErrorCategory = 'coop-coep';
+            console.error('Backend initialization error with TinyLlama. Browser may not support ONNX Runtime.');
+            counselingCoachModel = null;
+          } else {
+            // Only try MiniCPM if not in low-memory mode
+            if (!useLowMemory) {
+              console.warn('TinyLlama load failed, trying MiniCPM for counseling:', tinyLlamaError);
               
-              // Final fallback to MiniCPM
+              // Final fallback to MiniCPM for counseling
               try {
-                console.log('Attempting to load MiniCPM (text generation)...');
-                moodTrackerModel = await pipeline(
+                console.log('Attempting to load MiniCPM for counseling (text generation)...');
+                counselingCoachModel = await pipeline(
                   'text-generation',
                   'Xenova/MiniCPM-2-4B-ONNX',
                   { 
@@ -229,7 +444,7 @@ export async function initializeModels(forceReload: boolean = false): Promise<bo
                     progress_callback: progressCallback
                   }
                 );
-                console.log('✓ MiniCPM model loaded successfully');
+                console.log('✓ Counseling coach model (MiniCPM) loaded successfully');
               } catch (miniCPMError: any) {
                 const miniCPMMsg = miniCPMError?.message || String(miniCPMError);
                 const miniCPMStack = miniCPMError?.stack || '';
@@ -238,23 +453,33 @@ export async function initializeModels(forceReload: boolean = false): Promise<bo
                                                miniCPMStack.includes('ort-web');
                 
                 if (isMiniCPMBackendError) {
-                  console.error('Backend initialization error with all models. Browser compatibility issue detected.');
+                  lastErrorCategory = 'coop-coep';
+                  console.error('Backend initialization error with MiniCPM for counseling. Browser compatibility issue detected.');
+                } else if (miniCPMMsg.includes('memory') || miniCPMMsg.includes('OOM')) {
+                  lastErrorCategory = 'memory';
+                  console.error('Memory error loading MiniCPM for counseling.');
                 } else {
-                  console.error('All model loading attempts failed:', miniCPMError);
+                  lastErrorCategory = 'unknown';
+                  console.error('All counseling model loading attempts failed:', miniCPMError);
                 }
-                moodTrackerModel = null; // Will use rule-based fallback
+                counselingCoachModel = null; // Will use rule-based fallback
               }
+            } else {
+              // Low memory mode - don't try larger models
+              lastErrorCategory = 'memory';
+              console.warn('TinyLlama failed for counseling in low-memory mode. Skipping larger models.');
+              counselingCoachModel = null;
             }
           }
         }
+      } else {
+        // Reuse the text-generation model for both tasks
+        counselingCoachModel = moodTrackerModel;
+        console.log('✓ Using shared text-generation model for counseling guidance');
       }
-
-      // Model B: Counseling coach - Use same model for text generation
-      // For now, we'll use the mood tracker model for both tasks
-      // In future, can load separate specialized model
-      counselingCoachModel = moodTrackerModel;
+      
       if (counselingCoachModel) {
-        console.log('✓ Using psychology-centric model for counseling guidance');
+        console.log('✓ Counseling coach model ready for guidance and encouragement');
       } else {
         console.log('⚠️ Using rule-based counseling guidance (models unavailable)');
       }
@@ -264,8 +489,20 @@ export async function initializeModels(forceReload: boolean = false): Promise<bo
       
       if (modelsReady) {
         console.log('✅ All AI models loaded and ready!');
+        console.log(`  - Mood tracker: ${moodTrackerModel ? '✓' : '✗'}`);
+        console.log(`  - Counseling coach: ${counselingCoachModel ? '✓' : '✗'}`);
       } else {
         console.warn('⚠️ AI models not available. App will use rule-based responses.');
+        console.warn(`  - Mood tracker: ${moodTrackerModel ? '✓ Loaded' : '✗ Failed'}`);
+        console.warn(`  - Counseling coach: ${counselingCoachModel ? '✓ Loaded' : '✗ Failed'}`);
+        
+        // If at least one model loaded, log that partial loading is available
+        if (moodTrackerModel || counselingCoachModel) {
+          console.info('ℹ️ Partial model loading: Some AI features may be available.');
+        } else {
+          console.info('ℹ️ All models failed to load. This is likely a browser compatibility issue with ONNX Runtime.');
+          console.info('ℹ️ The app will use rule-based responses which are fully functional.');
+        }
       }
       
       return modelsReady;
@@ -275,23 +512,51 @@ export async function initializeModels(forceReload: boolean = false): Promise<bo
       moodTrackerModel = null;
       counselingCoachModel = null;
       
-      // Provide more specific error message
+      // Provide more specific error message based on category
       const errorMessage = error instanceof Error ? error.message : String(error);
-      if (errorMessage.includes('registerBackend') || errorMessage.includes('backend')) {
-        console.error('Backend initialization failed. This may be a compatibility issue with @xenova/transformers.');
-        console.warn('App will continue with rule-based responses. AI features will not be available.');
-        // Return false to indicate failure, but don't throw
-        return false;
-      } else if (errorMessage.includes('network') || errorMessage.includes('fetch')) {
-        console.warn('Failed to download AI models. App will use rule-based responses.');
-        // Return false to indicate failure, but don't throw
-        return false;
-      } else {
-        // Fallback: models will use rule-based responses
-        console.warn('Failed to load on-device models. App will use rule-based responses instead.');
-        // Return false to indicate failure, but don't throw
-        return false;
+      
+      if (!lastErrorCategory) {
+        // Categorize error if not already categorized
+        if (errorMessage.includes('registerBackend') || errorMessage.includes('backend') || errorMessage.includes('ort-web')) {
+          lastErrorCategory = 'coop-coep';
+        } else if (errorMessage.includes('memory') || errorMessage.includes('OOM') || errorMessage.includes('out of memory')) {
+          lastErrorCategory = 'memory';
+        } else if (errorMessage.includes('network') || errorMessage.includes('fetch') || errorMessage.includes('Failed to fetch')) {
+          lastErrorCategory = 'network';
+        } else if (errorMessage.includes('WebAssembly') || errorMessage.includes('WASM')) {
+          lastErrorCategory = 'wasm';
+        } else {
+          lastErrorCategory = 'unknown';
+        }
       }
+      
+      // Provide specific error messages
+      switch (lastErrorCategory) {
+        case 'coop-coep':
+          console.error('Backend initialization failed. This is likely due to missing COOP/COEP headers.');
+          if (compatibilityReport && !compatibilityReport.sharedArrayBuffer) {
+            console.warn('SharedArrayBuffer unavailable. See SERVER_CONFIG.md for server configuration.');
+          }
+          console.warn('App will continue with rule-based responses. AI features will not be available.');
+          break;
+        case 'memory':
+          console.error('Memory error: Device has insufficient memory for AI models.');
+          console.warn('App will continue with rule-based responses. AI features will not be available.');
+          break;
+        case 'network':
+          console.warn('Failed to download AI models. Check your internet connection.');
+          console.warn('App will use rule-based responses.');
+          break;
+        case 'wasm':
+          console.error('WebAssembly not supported. AI models cannot run on this browser.');
+          console.warn('App will continue with rule-based responses.');
+          break;
+        default:
+          console.warn('Failed to load on-device models. App will use rule-based responses instead.');
+      }
+      
+      // Return false to indicate failure, but don't throw
+      return false;
     }
   })();
 
@@ -306,18 +571,46 @@ export async function preloadModels(): Promise<boolean> {
   console.log('🚀 Starting background model preload...');
   
   try {
+    // Check if models are already loaded
+    if (areModelsLoaded()) {
+      console.log('✅ Models already loaded, skipping preload.');
+      return true;
+    }
+    
     // Try to load models with retries
     let attempts = 0;
     const maxAttempts = 4;
+    let lastError: any = null;
     
     while (attempts < maxAttempts) {
       attempts++;
-      console.log(`🚀 Starting AI model preload in background (attempt ${attempts}/${maxAttempts})...`);
       
-      const loaded = await initializeModels();
-      if (loaded) {
-        console.log('✅ Background model preload successful!');
-        return true;
+      // Only log first and last attempts to reduce console noise
+      if (attempts === 1 || attempts === maxAttempts) {
+        console.log(`🚀 Starting AI model preload in background (attempt ${attempts}/${maxAttempts})...`);
+      }
+      
+      try {
+        const loaded = await initializeModels();
+        if (loaded) {
+          console.log('✅ Background model preload successful!');
+          return true;
+        }
+        
+        // Check what we actually have
+        const moodModel = getMoodTrackerModel();
+        const counselingModel = getCounselingCoachModel();
+        
+        if (moodModel || counselingModel) {
+          console.log(`ℹ️ Partial model loading: ${moodModel ? 'Mood tracker ✓' : 'Mood tracker ✗'}, ${counselingModel ? 'Counseling coach ✓' : 'Counseling coach ✗'}`);
+          // Continue trying to load the missing model
+        }
+      } catch (error) {
+        lastError = error;
+        const errorMsg = error instanceof Error ? error.message : String(error);
+        if (attempts === maxAttempts) {
+          console.warn(`Model preload attempt ${attempts} failed:`, errorMsg);
+        }
       }
       
       if (attempts < maxAttempts) {
@@ -327,7 +620,26 @@ export async function preloadModels(): Promise<boolean> {
       }
     }
     
-    console.log('⚠️ Model preload completed but models not available. Will use rule-based fallbacks.');
+    // Final status check
+    const finalMoodModel = getMoodTrackerModel();
+    const finalCounselingModel = getCounselingCoachModel();
+    
+    if (finalMoodModel || finalCounselingModel) {
+      console.log(`⚠️ Model preload completed with partial loading:`);
+      console.log(`  - Mood tracker: ${finalMoodModel ? '✓' : '✗'}`);
+      console.log(`  - Counseling coach: ${finalCounselingModel ? '✓' : '✗'}`);
+      console.log(`  - Some AI features may be available.`);
+    } else {
+      console.log('⚠️ Model preload completed but models not available. Will use rule-based fallbacks.');
+      if (lastError) {
+        const errorMsg = lastError instanceof Error ? lastError.message : String(lastError);
+        if (errorMsg.includes('registerBackend') || errorMsg.includes('ort-web')) {
+          console.info('ℹ️ This appears to be a browser compatibility issue with ONNX Runtime.');
+          console.info('ℹ️ The app is fully functional with rule-based responses.');
+        }
+      }
+    }
+    
     return false;
   } catch (error) {
     console.warn('Model preload error (non-critical):', error);
@@ -337,18 +649,40 @@ export async function preloadModels(): Promise<boolean> {
 
 /**
  * Check if models are currently loaded
+ * @param requireBoth - If true, requires both models. If false, returns true if at least one is loaded.
  */
-export function areModelsLoaded(): boolean {
-  return moodTrackerModel !== null && counselingCoachModel !== null;
+export function areModelsLoaded(requireBoth: boolean = true): boolean {
+  if (requireBoth) {
+    return moodTrackerModel !== null && counselingCoachModel !== null;
+  }
+  return moodTrackerModel !== null || counselingCoachModel !== null;
 }
 
 /**
  * Get current model status
  */
-export function getModelStatus(): { loaded: boolean; loading: boolean } {
+export function getModelStatus(): { 
+  loaded: boolean; 
+  loading: boolean;
+  moodTracker: boolean;
+  counselingCoach: boolean;
+  compatibility?: CompatibilityReport;
+  errorCategory?: 'coop-coep' | 'memory' | 'webgpu' | 'network' | 'wasm' | 'unknown' | null;
+} {
   return {
     loaded: areModelsLoaded(),
-    loading: isModelLoading
+    loading: isModelLoading,
+    moodTracker: moodTrackerModel !== null,
+    counselingCoach: counselingCoachModel !== null,
+    compatibility: compatibilityReport,
+    errorCategory: lastErrorCategory
   };
+}
+
+/**
+ * Get compatibility report
+ */
+export function getCompatibilityReport(): CompatibilityReport | null {
+  return compatibilityReport;
 }
 
