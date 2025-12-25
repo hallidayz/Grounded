@@ -5,6 +5,7 @@ import { ALL_VALUES } from '../constants';
 import { shareViaEmail, generateDataExportEmail, isWebShareAvailable } from '../services/emailService';
 import { getCurrentUser } from '../services/authService';
 import { EMOTIONAL_STATES } from '../services/emotionalStates';
+import VirtualList from './VirtualList';
 
 interface VaultControlProps {
   logs: LogEntry[];
@@ -155,8 +156,14 @@ const VaultControl: React.FC<VaultControlProps> = ({ logs, goals, settings, onUp
               <p className="text-xs sm:text-sm text-text-primary/60 dark:text-white/60">Start by reflecting on your values in the Dashboard.</p>
             </div>
           ) : (
-            <div className="space-y-2">
-              {sortedLogs.map((log) => {
+            <VirtualList
+              items={sortedLogs}
+              itemHeight={100}
+              containerHeight={typeof window !== 'undefined' ? Math.min(600, window.innerHeight * 0.6) : 600}
+              overscan={2}
+              className="space-y-2"
+              threshold={5}
+              renderItem={(log, index) => {
                 const val = ALL_VALUES.find(v => v.id === log.valueId);
                 const isGoalAchieved = log.type === 'goal-completion';
                 const isCommitment = log.goalText && !isGoalAchieved;
@@ -264,8 +271,8 @@ const VaultControl: React.FC<VaultControlProps> = ({ logs, goals, settings, onUp
                     </div>
                   </details>
                 );
-              })}
-            </div>
+              }}
+            />
           )}
         </div>
       </div>

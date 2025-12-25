@@ -3,6 +3,8 @@ import React, { useState, useMemo, useCallback } from 'react';
 import { LogEntry, ValueItem, LCSWConfig } from '../types';
 import { generateHumanReports } from '../services/aiService';
 import { shareViaEmail, generateEmailReport, isWebShareAvailable } from '../services/emailService';
+import SkeletonCard from './SkeletonCard';
+import VirtualList from './VirtualList';
 
 interface ReportViewProps {
   logs: LogEntry[];
@@ -79,41 +81,48 @@ const ReportView: React.FC<ReportViewProps> = ({ logs, values, lcswConfig }) => 
               <h3 className="text-[10px] font-black text-text-secondary dark:text-text-secondary uppercase tracking-widest">Select your records</h3>
               <span className="text-[10px] font-bold text-yellow-warm bg-yellow-warm/20 dark:bg-yellow-warm/30 px-2 sm:px-3 py-1 rounded-full uppercase">{selectedLogIds.size} Ready</span>
             </div>
-            <div className="space-y-3 sm:space-y-4 max-h-[60vh] sm:max-h-[70vh] overflow-y-auto pr-2 custom-scrollbar">
-              {sortedLogs.length === 0 && (
-                 <div className="text-center py-16 sm:py-24 bg-white dark:bg-dark-bg-primary rounded-2xl sm:rounded-[40px] border border-dashed border-border-soft dark:border-dark-border text-text-tertiary dark:text-text-tertiary">
-                    No data in the vault yet.
-                 </div>
-              )}
-              {sortedLogs.map(log => {
-                const val = values.find(v => v.id === log.valueId);
-                const isSelected = selectedLogIds.has(log.id);
-                return (
-                  <button 
-                    key={log.id} 
-                    onClick={() => toggleLog(log.id)}
-                    className={`w-full text-left bg-white dark:bg-dark-bg-primary p-4 sm:p-6 lg:p-8 rounded-2xl sm:rounded-[32px] border-2 transition-all flex gap-3 sm:gap-6 ${isSelected ? 'border-yellow-warm shadow-xl' : 'border-border-soft dark:border-dark-border opacity-50'}`}
-                  >
-                    <div className={`w-6 h-6 sm:w-8 sm:h-8 rounded-full border-2 flex items-center justify-center transition-colors flex-shrink-0 mt-1 ${isSelected ? 'bg-yellow-warm border-yellow-warm' : 'border-border-soft dark:border-dark-border'}`}>
-                      {isSelected && <svg className="w-3 h-3 sm:w-4 sm:h-4 text-navy-primary" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={4} d="M5 13l4 4L19 7" /></svg>}
-                    </div>
-                    <div className="flex-grow min-w-0">
-                      <div className="flex justify-between mb-2">
-                        <span className="text-[9px] sm:text-[10px] font-black text-text-secondary dark:text-text-secondary uppercase tracking-widest">{new Date(log.date).toLocaleDateString()}</span>
-                        <span className="text-xl sm:text-2xl">{log.mood}</span>
+            {sortedLogs.length === 0 ? (
+              <div className="text-center py-16 sm:py-24 bg-white dark:bg-dark-bg-primary rounded-2xl sm:rounded-[40px] border border-dashed border-border-soft dark:border-dark-border text-text-tertiary dark:text-text-tertiary">
+                No data in the vault yet.
+              </div>
+            ) : (
+              <VirtualList
+                items={sortedLogs}
+                itemHeight={140}
+                containerHeight={typeof window !== 'undefined' ? Math.min(600, window.innerHeight * 0.6) : 600}
+                overscan={2}
+                className="space-y-3 sm:space-y-4 pr-2 custom-scrollbar"
+                threshold={5}
+                renderItem={(log, index) => {
+                  const val = values.find(v => v.id === log.valueId);
+                  const isSelected = selectedLogIds.has(log.id);
+                  return (
+                    <button 
+                      key={log.id} 
+                      onClick={() => toggleLog(log.id)}
+                      className={`w-full text-left bg-white dark:bg-dark-bg-primary p-4 sm:p-6 lg:p-8 rounded-2xl sm:rounded-[32px] border-2 transition-all flex gap-3 sm:gap-6 ${isSelected ? 'border-yellow-warm shadow-xl' : 'border-border-soft dark:border-dark-border opacity-50'}`}
+                    >
+                      <div className={`w-6 h-6 sm:w-8 sm:h-8 rounded-full border-2 flex items-center justify-center transition-colors flex-shrink-0 mt-1 ${isSelected ? 'bg-yellow-warm border-yellow-warm' : 'border-border-soft dark:border-dark-border'}`}>
+                        {isSelected && <svg className="w-3 h-3 sm:w-4 sm:h-4 text-navy-primary" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={4} d="M5 13l4 4L19 7" /></svg>}
                       </div>
-                      <p className="text-base sm:text-lg font-black text-text-primary dark:text-white truncate">{val?.name}</p>
-                      {log.deepReflection && (
-                        <p className="text-text-primary dark:text-white/80 mt-2 sm:mt-3 leading-relaxed text-xs sm:text-sm line-clamp-2 font-medium">
-                          Deep Reflection: {log.deepReflection.substring(0, 100)}{log.deepReflection.length > 100 ? '...' : ''}
-                        </p>
-                      )}
-                      <p className="text-text-primary/70 dark:text-white/70 mt-2 sm:mt-3 italic leading-relaxed text-sm sm:text-base line-clamp-2">"{log.note}"</p>
-                    </div>
-                  </button>
-                );
-              })}
-            </div>
+                      <div className="flex-grow min-w-0">
+                        <div className="flex justify-between mb-2">
+                          <span className="text-[9px] sm:text-[10px] font-black text-text-secondary dark:text-text-secondary uppercase tracking-widest">{new Date(log.date).toLocaleDateString()}</span>
+                          <span className="text-xl sm:text-2xl">{log.mood}</span>
+                        </div>
+                        <p className="text-base sm:text-lg font-black text-text-primary dark:text-white truncate">{val?.name}</p>
+                        {log.deepReflection && (
+                          <p className="text-text-primary dark:text-white/80 mt-2 sm:mt-3 leading-relaxed text-xs sm:text-sm line-clamp-2 font-medium">
+                            Deep Reflection: {log.deepReflection.substring(0, 100)}{log.deepReflection.length > 100 ? '...' : ''}
+                          </p>
+                        )}
+                        <p className="text-text-primary/70 dark:text-white/70 mt-2 sm:mt-3 italic leading-relaxed text-sm sm:text-base line-clamp-2">"{log.note}"</p>
+                      </div>
+                    </button>
+                  );
+                }}
+              />
+            )}
           </div>
 
           <div className="lg:col-span-1">

@@ -235,3 +235,29 @@ body {
   background-size: 1000px 100%;
 }
 
+/* Virtual Scrolling Performance Optimizations */
+.virtual-list-container {
+  /* Enable hardware acceleration for smooth scrolling */
+  transform: translateZ(0);
+  -webkit-transform: translateZ(0);
+  will-change: scroll-position;
+  /* Optimize scrolling on mobile */
+  -webkit-overflow-scrolling: touch;
+  /* Prevent layout shifts during scroll */
+  contain: layout style paint;
+}
+
+.virtual-list-item {
+  /* Optimize item rendering */
+  will-change: contents;
+  /* Prevent repaints during scroll */
+  contain: layout style;
+}
+
+/* Smooth scrolling for virtual lists */
+.virtual-list-scroll {
+  scroll-behavior: smooth;
+  /* Optimize scroll performance */
+  overscroll-behavior: contain;
+}
+
