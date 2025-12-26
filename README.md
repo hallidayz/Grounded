@@ -1,18 +1,24 @@
 # Grounded - On-Device Therapy Integration App
 
-**Grounded by AC MiNDS** - Privacy-first therapy integration app for values-based reflection and mental health support.
+**Grounded by AC MiNDS** - Version 1.12.25
+
+Privacy-first therapy integration app for values-based reflection and mental health support.
 
 A privacy-first values-based reflection app designed to support clients working with Licensed Clinical Social Workers (LCSW). All AI processing happens **entirely on your device** - no data ever leaves your device.
 
 ## Key Features
 
-- **On-Device AI**: Uses MiniCPM4-0.5B style dual-model architecture for complete privacy
+- **On-Device AI**: Fast-loading dual-model architecture for complete privacy
   - **Model A**: Mental state tracker (mood/anxiety/depression assessment)
   - **Model B**: Counseling coach (structured guidance and homework support)
+  - **Smart Loading**: Models download immediately on app launch, ready when you need them
+  - **Persistent Caching**: Models cached in browser for instant subsequent launches
 - **LCSW Integration**: Configure treatment protocols, safety phrases, and emergency contacts
 - **Crisis Detection**: Automatic detection of crisis indicators with appropriate routing
 - **Local-Only Storage**: All data stored locally in your browser
 - **Value-Based Reflection**: Track progress on your core values between therapy sessions
+- **Progress Tracking**: Real-time progress bar shows AI model download status
+- **Debug Logging**: Built-in diagnostic tools for troubleshooting
 
 ## Architecture
 
@@ -43,7 +49,7 @@ This app implements a **MoPHES-style dual-model architecture**:
 
 3. The app will automatically open in your browser. If not, navigate to the URL shown in the terminal (usually `http://localhost:3000`)
 
-**Note**: On first run, AI models will be downloaded and cached locally. This may take a few minutes depending on your connection speed. Subsequent runs will use the cached models.
+**Note**: AI models begin downloading immediately when the app starts, even before you log in or accept terms. This ensures they're ready when you need them. The download progress is shown in the loading screen. Models are cached in your browser's IndexedDB for instant loading on subsequent launches.
 
 ## LCSW Configuration
 
@@ -78,13 +84,30 @@ This app is designed to **support therapy integration**, not replace it:
 - **@xenova/transformers** for on-device AI inference
 - **Tailwind CSS** for styling
 
-## Model Information
+## AI Model Information
 
 The app uses quantized transformer models that run efficiently in the browser:
-- Models are downloaded from HuggingFace on first use
+
+### Model Loading Strategy
+- **Immediate Download**: Models start downloading as soon as the app initializes
+- **Background Loading**: Downloads continue while you read terms or log in
+- **Terms Acceptance Trigger**: Model loading is prioritized when you accept terms
+- **Smart Caching**: Models cached in browser IndexedDB for instant subsequent launches
+- **Progress Tracking**: Real-time progress bar shows download status
+
+### Model Architecture
+- Models downloaded from HuggingFace on first use
+- Quantized for smaller file sizes and faster loading
 - Cached locally for offline use
 - Designed for mobile and desktop browsers
 - Similar architecture to MiniCPM4-0.5B (MoPHES framework)
+- Automatic fallback to rule-based responses if models fail to load
+
+### Model Selection
+The app intelligently selects models based on your device:
+- **Standard Mode**: DistilBERT (text classification) for mood tracking
+- **Low Memory Mode**: TinyLlama (smaller text generation model)
+- **Fallback**: MiniCPM for devices with more resources
 
 ## Development
 
@@ -124,7 +147,7 @@ npm run build:all
 
 **Output:**
 - macOS: `src-tauri/target/release/bundle/macos/Grounded.dmg`
-- Windows: `src-tauri/target/release/bundle/msi/Grounded_0.0.0_x64_en-US.msi`
+- Windows: `src-tauri/target/release/bundle/msi/Grounded_1.12.25_x64_en-US.msi`
 - Android: `android/app/build/outputs/apk/release/app-release.apk`
 
 ### Option 2: PWA Package (Web Distribution)
@@ -167,6 +190,48 @@ Or use online tools:
 - https://realfavicongenerator.net/
 - https://www.pwabuilder.com/imageGenerator
 
+## Installation
+
+### For End Users
+
+Choose your platform:
+- **macOS**: Download `Grounded.dmg` and drag to Applications
+- **Windows**: Download `Grounded_1.12.25_x64_en-US.msi` and run installer
+- **Android**: Download `app-release.apk` and enable "Install unknown apps"
+- **iOS**: Install via App Store, TestFlight, or enterprise distribution
+- **PWA**: Install from web browser (Chrome, Edge, Safari) - works on all platforms
+
+See `INSTALLATION_GUIDE.md` for detailed step-by-step instructions.
+
+### For Developers
+
+See `PREREQUISITES.md` for build requirements and `QUICK_START.md` for development setup.
+
+## Usage
+
+1. **First Launch**: Create an account or log in
+2. **Accept Terms**: Read and accept the terms and conditions
+3. **Select Values**: Choose up to 10 core values and rank them
+4. **Daily Reflection**: Use the Dashboard to reflect on your progress
+5. **Track Goals**: Set and track micro-goals aligned with your values
+6. **Generate Reports**: Create clinical-style summaries (SOAP/DAP) for therapy sessions
+
+See the in-app Help screen (click the ? icon) for detailed navigation instructions.
+
+## Support
+
+- **Email**: ac.minds.ai@gmail.com
+- **Debug Log**: Available in Help screen for troubleshooting
+- **Version**: 1.12.25
+
 ## License
 
-Private - For therapy integration support only.
+**Apache License 2.0**
+
+Copyright 2025 AC MiNDS
+
+Licensed under the Apache License, Version 2.0 (the "License"); you may not use this file except in compliance with the License. You may obtain a copy of the License at:
+
+http://www.apache.org/licenses/LICENSE-2.0
+
+Unless required by applicable law or agreed to in writing, software distributed under the License is distributed on an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied. See the License for the specific language governing permissions and limitations under the License.

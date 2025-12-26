@@ -1,6 +1,8 @@
 # Grounded Installation Guide
 
-**Grounded by AC MiNDS** - Privacy-first therapy integration app
+**Grounded by AC MiNDS** - Version 1.12.25
+
+Privacy-first therapy integration app for values-based reflection and mental health support.
 
 Welcome! This guide will help you install Grounded on your device. Choose your operating system below.
 
@@ -36,7 +38,7 @@ The app is now installed and ready to use.
 ## 🪟 Windows Installation
 
 ### Step 1: Download the Installer
-- You should have received a file named `Grounded_0.0.0_x64_en-US.msi` or `Grounded.exe`
+- You should have received a file named `Grounded_1.12.25_x64_en-US.msi` or `Grounded.exe`
 - If not, contact your therapist or download from the provided link
 
 ### Step 2: Install the App
@@ -189,6 +191,49 @@ The app is now installed and ready to use.
 
 ---
 
+## 🌐 PWA Installation (Progressive Web App)
+
+**Works on all platforms** - Install Grounded directly from your web browser!
+
+### Step 1: Open in Browser
+1. Navigate to the Grounded app URL (provided by your therapist or organization)
+2. The app will open in your browser
+
+### Step 2: Install the PWA
+
+**Chrome/Edge (Windows, Mac, Android):**
+1. Look for the install icon (➕) in the address bar
+2. Click **"Install"** or **"Add to Home Screen"**
+3. Confirm installation
+4. The app will appear in your applications/apps menu
+
+**Safari (iOS/macOS):**
+1. Tap the **Share** button (square with arrow)
+2. Scroll down and tap **"Add to Home Screen"**
+3. Tap **"Add"** in the top right
+4. The app will appear on your home screen
+
+**Firefox:**
+1. Click the menu (three lines) → **"Install"**
+2. Confirm installation
+3. The app will appear in your applications menu
+
+### Step 3: First Launch
+1. Open Grounded from your home screen/applications
+2. Create an account or log in
+3. Accept the terms and conditions
+4. **AI models will download automatically** - you'll see a progress bar
+5. Once models are loaded, you're ready to use the app!
+
+### Benefits of PWA Installation
+- ✅ Works offline after first load
+- ✅ App-like experience (no browser UI)
+- ✅ Automatic updates when you're online
+- ✅ Cross-platform (works on all devices)
+- ✅ No app store required
+
+---
+
 ## ❓ Troubleshooting
 
 ### macOS
@@ -261,6 +306,14 @@ After installation, verify everything works:
 1. Open the Grounded app
 2. You should see the login/registration screen
 3. Create an account or log in
-4. The app should load without errors
+4. Accept the terms and conditions
+5. You'll see a progress bar showing AI model download (first launch only)
+6. Once models are loaded, the app should load without errors
 
 **Congratulations!** You're ready to start using Grounded. 🎉
+
+### First Launch Notes
+- **AI Model Download**: On first launch, AI models will download automatically. This may take a few minutes depending on your internet connection. The progress bar shows download status.
+- **Subsequent Launches**: Models are cached locally, so future launches are instant.
+- **Offline Use**: Once models are downloaded, the app works completely offline.
+- **If Models Fail to Load**: The app will continue to work with rule-based responses. AI features will be unavailable, but core functionality remains.
