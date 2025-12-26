@@ -55,13 +55,54 @@ const HelpOverlay: React.FC<HelpOverlayProps> = ({ onClose }) => {
           </div>
 
           <div className="pt-4 border-t border-border-soft dark:border-dark-border space-y-4">
-             <div className="bg-bg-secondary dark:bg-dark-bg-secondary p-6 rounded-3xl flex items-start gap-4">
+            <h3 className="text-lg font-black text-text-primary dark:text-white">Tips & Best Practices</h3>
+            <div className="space-y-3">
+              <div className="bg-bg-secondary dark:bg-dark-bg-secondary p-6 rounded-3xl flex items-start gap-4">
                 <div className="text-2xl mt-1">💡</div>
                 <div className="space-y-1">
                   <p className="text-xs font-black text-text-primary dark:text-white uppercase tracking-widest">Pro Tip</p>
                   <p className="text-xs text-text-secondary dark:text-text-secondary leading-relaxed font-medium">Head to <b>Settings</b> to enable "Growth and Progress" nudges—system notifications that keep your North Star top-of-mind.</p>
                 </div>
-             </div>
+              </div>
+              <div className="bg-bg-secondary dark:bg-dark-bg-secondary p-6 rounded-3xl flex items-start gap-4">
+                <div className="text-2xl mt-1">📱</div>
+                <div className="space-y-1">
+                  <p className="text-xs font-black text-text-primary dark:text-white uppercase tracking-widest">Daily Practice</p>
+                  <p className="text-xs text-text-secondary dark:text-text-secondary leading-relaxed font-medium">Check your Dashboard daily to log wins and set micro-goals. Small consistent actions build lasting change.</p>
+                </div>
+              </div>
+              <div className="bg-bg-secondary dark:bg-dark-bg-secondary p-6 rounded-3xl flex items-start gap-4">
+                <div className="text-2xl mt-1">📊</div>
+                <div className="space-y-1">
+                  <p className="text-xs font-black text-text-primary dark:text-white uppercase tracking-widest">Therapy Integration</p>
+                  <p className="text-xs text-text-secondary dark:text-text-secondary leading-relaxed font-medium">Use the <b>Reports</b> feature to generate summaries you can share with your therapist during sessions.</p>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <div className="pt-4 border-t border-border-soft dark:border-dark-border space-y-4">
+            <h3 className="text-lg font-black text-text-primary dark:text-white">AI Model Information</h3>
+            <div className="bg-bg-secondary dark:bg-dark-bg-secondary p-6 rounded-3xl space-y-3">
+              <p className="text-xs font-black text-text-primary dark:text-white uppercase tracking-widest mb-2">On-Device AI Processing</p>
+              <div className="space-y-2 text-xs text-text-secondary dark:text-text-secondary leading-relaxed">
+                <p>
+                  <strong>Privacy First:</strong> All AI processing happens entirely on your device. No data is sent to external servers.
+                </p>
+                <p>
+                  <strong>Fast Loading:</strong> AI models begin downloading immediately when the app starts, so they're ready when you need them.
+                </p>
+                <p>
+                  <strong>Offline Capable:</strong> Once downloaded, models are cached locally for instant loading and offline use.
+                </p>
+                <p>
+                  <strong>Progress Tracking:</strong> Watch the progress bar during first launch to see model download status.
+                </p>
+                <p>
+                  <strong>Fallback Mode:</strong> If models fail to load, the app continues with rule-based responses. Core functionality remains available.
+                </p>
+              </div>
+            </div>
           </div>
 
           <div className="pt-4 border-t border-border-soft dark:border-dark-border space-y-4">
