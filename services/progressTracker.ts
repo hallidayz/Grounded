@@ -26,8 +26,14 @@ const callbacks: Set<ProgressCallback> = new Set();
  * Subscribe to progress updates
  */
 export function subscribeToProgress(callback: ProgressCallback): () => void {
+  // #region agent log
+  fetch('http://127.0.0.1:7245/ingest/7d9ee931-8dee-46f8-918b-e417134eb58f',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'progressTracker.ts:28',message:'subscribeToProgress called',data:{currentStatus:currentProgress.status,currentLabel:currentProgress.label,currentProgress:currentProgress.progress},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'A'})}).catch(()=>{});
+  // #endregion
   callbacks.add(callback);
   // Immediately call with current state
+  // #region agent log
+  fetch('http://127.0.0.1:7245/ingest/7d9ee931-8dee-46f8-918b-e417134eb58f',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'progressTracker.ts:31',message:'Immediately invoking callback with current state',data:{status:currentProgress.status,label:currentProgress.label,progress:currentProgress.progress},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'A'})}).catch(()=>{});
+  // #endregion
   callback(currentProgress);
   
   // Return unsubscribe function

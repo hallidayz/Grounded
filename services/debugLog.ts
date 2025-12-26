@@ -67,41 +67,60 @@ export interface DebugLog {
 const MAX_LOG_ENTRIES = 100;
 const logEntries: DebugLogEntry[] = [];
 
+// Track initialization state to prevent multiple initializations
+let isInitialized = false;
+let originalError: typeof console.error | null = null;
+let originalWarn: typeof console.warn | null = null;
+const errorHandler = (event: ErrorEvent) => {
+  logEntry('error', event.message, {
+    filename: event.filename,
+    lineno: event.lineno,
+    colno: event.colno,
+    stack: event.error?.stack,
+  });
+};
+const rejectionHandler = (event: PromiseRejectionEvent) => {
+  logEntry('error', `Unhandled Promise Rejection: ${event.reason}`, {
+    reason: event.reason,
+    stack: event.reason?.stack,
+  });
+};
+
 /**
  * Initialize debug logging - capture console errors and warnings
+ * Safe to call multiple times - will only initialize once
  */
 export function initializeDebugLogging() {
-  // Capture console errors
-  const originalError = console.error;
+  // Prevent multiple initializations
+  if (isInitialized) {
+    return;
+  }
+
+  // Store original console methods only on first call
+  if (!originalError) {
+    originalError = console.error.bind(console);
+  }
+  if (!originalWarn) {
+    originalWarn = console.warn.bind(console);
+  }
+
+  // Wrap console.error
   console.error = (...args: any[]) => {
     logEntry('error', args.join(' '), { args });
     originalError.apply(console, args);
   };
 
-  // Capture console warnings
-  const originalWarn = console.warn;
+  // Wrap console.warn
   console.warn = (...args: any[]) => {
     logEntry('warning', args.join(' '), { args });
     originalWarn.apply(console, args);
   };
 
-  // Capture unhandled errors
-  window.addEventListener('error', (event) => {
-    logEntry('error', event.message, {
-      filename: event.filename,
-      lineno: event.lineno,
-      colno: event.colno,
-      stack: event.error?.stack,
-    });
-  });
+  // Add event listeners (only once)
+  window.addEventListener('error', errorHandler);
+  window.addEventListener('unhandledrejection', rejectionHandler);
 
-  // Capture unhandled promise rejections
-  window.addEventListener('unhandledrejection', (event) => {
-    logEntry('error', `Unhandled Promise Rejection: ${event.reason}`, {
-      reason: event.reason,
-      stack: event.reason?.stack,
-    });
-  });
+  isInitialized = true;
 }
 
 /**

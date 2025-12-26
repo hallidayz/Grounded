@@ -52,3 +52,7 @@ Thumbs.db
 
 # Ignore Gradle build output directory
 build
+
+# Android local configuration (contains user-specific paths)
+local.properties
+android/local.properties

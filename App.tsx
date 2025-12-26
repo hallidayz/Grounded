@@ -23,6 +23,8 @@ import { isLoggedIn, getCurrentUser, acceptTerms, logoutUser } from './services/
 import { getItemSync, setItemSync } from './services/storage';
 import { hasPermission, sendNotification } from './services/notifications';
 import { initializeDebugLogging } from './services/debugLog';
+import { subscribeToProgress } from './services/progressTracker';
+import ProgressBar from './components/ProgressBar';
 
 // Simple persistence helper using storage abstraction
 const useLocalStorage = <T,>(key: string, initialValue: T): [T, React.Dispatch<React.SetStateAction<T>>] => {
@@ -445,17 +447,59 @@ const App: React.FC = () => {
 
   const showNav = selectedValueIds.length > 0 && view !== 'onboarding';
 
+  // Progress state for loading screen
+  const [progressState, setProgressState] = useState({ progress: 0, status: 'idle' as const, label: 'Initializing...', details: '' });
+
+  // Subscribe to progress updates
+  useEffect(() => {
+    // #region agent log
+    fetch('http://127.0.0.1:7245/ingest/7d9ee931-8dee-46f8-918b-e417134eb58f',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'App.tsx:454',message:'Progress subscription setup',data:{initialState:progressState},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'A'})}).catch(()=>{});
+    // #endregion
+    const unsubscribe = subscribeToProgress((state) => {
+      // #region agent log
+      fetch('http://127.0.0.1:7245/ingest/7d9ee931-8dee-46f8-918b-e417134eb58f',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'App.tsx:456',message:'Progress callback invoked',data:{receivedStatus:state.status,receivedLabel:state.label,receivedProgress:state.progress,willTransform:state.status==='idle'},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'A'})}).catch(()=>{});
+      // #endregion
+      const transformedStatus = state.status === 'idle' ? 'loading' : state.status;
+      // #region agent log
+      fetch('http://127.0.0.1:7245/ingest/7d9ee931-8dee-46f8-918b-e417134eb58f',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'App.tsx:460',message:'State transformation result',data:{originalStatus:state.status,transformedStatus,newLabel:state.label||'Loading...'},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'A'})}).catch(()=>{});
+      // #endregion
+      setProgressState({
+        progress: state.progress,
+        status: transformedStatus,
+        label: state.label || 'Loading...',
+        details: state.details || '',
+      });
+    });
+    return unsubscribe;
+  }, []);
+
   // Show loading state while checking auth
   if (authState === 'checking') {
     return (
-      <div className="min-h-screen bg-bg-primary dark:bg-dark-bg-primary flex items-center justify-center">
-        <div className="text-center space-y-4">
+      <div className="min-h-screen bg-bg-primary dark:bg-dark-bg-primary flex items-center justify-center p-4">
+        <div className="text-center space-y-6 w-full max-w-md">
           <img 
             src="/ac-minds-logo.png" 
             alt="AC MINDS" 
-            className="w-16 h-16 object-contain mx-auto animate-pulse"
+            className="w-20 h-20 object-contain mx-auto"
           />
-          <p className="text-text-secondary dark:text-text-secondary">Loading...</p>
+          <div className="space-y-4">
+            <h2 className="text-xl font-black text-text-primary dark:text-white">
+              {progressState.label}
+            </h2>
+            {progressState.details && (
+              <p className="text-sm text-text-secondary dark:text-text-secondary">
+                {progressState.details}
+              </p>
+            )}
+            <ProgressBar
+              progress={progressState.progress}
+              status={progressState.status}
+              showPercentage={true}
+              height="lg"
+              className="mt-4"
+            />
+          </div>
         </div>
       </div>
     );

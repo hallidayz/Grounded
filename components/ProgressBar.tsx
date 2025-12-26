@@ -110,8 +110,8 @@ const ProgressBar: React.FC<ProgressBarProps> = ({
         
         {/* Shimmer effect for loading */}
         {status === 'loading' && clampedProgress > 0 && clampedProgress < 100 && (
-          <div className="absolute top-0 left-0 w-full h-full">
-            <div className="h-full w-1/3 bg-white/30 dark:bg-white/20 animate-shimmer rounded-full" />
+          <div className="absolute top-0 left-0 w-full h-full overflow-hidden rounded-full">
+            <div className="h-full w-1/3 bg-white/30 dark:bg-white/20 animate-shimmer" />
           </div>
         )}
       </div>
