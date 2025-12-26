@@ -1,6 +1,6 @@
 [package]
 name = "grounded"
-version = "0.0.0"
+version = "1.12.25"
 description = "Privacy-first therapy integration app"
 authors = ["AC MiNDS"]
 license = ""
