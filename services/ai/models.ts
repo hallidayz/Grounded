@@ -190,8 +190,11 @@ export async function initializeModels(forceReload: boolean = false): Promise<bo
         env.useBrowserCache = true;
         env.useCustomCache = false;
         
-        // Set cache directory for models
+        // Set cache directory for models - use IndexedDB for persistent caching
         env.cacheDir = './models-cache';
+        
+        // Enable aggressive caching for faster subsequent loads
+        // Models are cached in browser IndexedDB automatically by transformers.js
         
         // Configure based on compatibility report
         if (compatibilityReport) {

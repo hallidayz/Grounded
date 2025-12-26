@@ -11,6 +11,7 @@ import BottomNavigation from './components/BottomNavigation';
 import ErrorBoundary from './components/ErrorBoundary';
 import SkeletonCard from './components/SkeletonCard';
 import PWAInstallPrompt from './components/PWAInstallPrompt';
+import FeedbackButton from './components/FeedbackButton';
 
 // Code splitting: Lazy load heavy components
 const Dashboard = lazy(() => import('./components/Dashboard'));
@@ -71,6 +72,12 @@ const App: React.FC = () => {
       try {
         // Initialize debug logging first
         initializeDebugLogging();
+        
+        // Start AI model download immediately - don't wait for anything
+        // This ensures models are downloading while user is reading terms/login
+        preloadModels().catch(() => {
+          // Silently fail - models will retry later
+        });
         
         await dbService.init();
         
@@ -160,60 +167,21 @@ const App: React.FC = () => {
     }
   }, [userId, settings, logs, goals, selectedValueIds, authState]);
 
-  // Preload AI models in the background - start as early as possible
-  // Don't wait for auth, start loading immediately for better UX
+  // Preload AI models in the background - retry mechanism
+  // Models start loading immediately in initialize() above
+  // This effect handles retries when auth state changes
   useEffect(() => {
-    let retryCount = 0;
-    const maxRetries = 3;
-    const retryDelay = 5000; // 5 seconds between retries
-    let isMounted = true;
-    
-    const loadModels = async (attempt: number = 1) => {
-      if (!isMounted) return;
-      
-      // Only log on first attempt to reduce console noise
-      if (attempt === 1) {
-        console.log('🚀 Loading AI models in background...');
-      }
-      
-      const success = await preloadModels();
-      
-      if (!isMounted) return;
-      
-      if (!success && attempt <= maxRetries) {
-        // Silently retry without logging each attempt
-        setTimeout(() => {
-          if (isMounted) {
-            loadModels(attempt + 1);
-          }
-        }, retryDelay);
-      } else if (!success) {
-        // Only log once at the end if all retries failed
-        console.info('ℹ️ AI models unavailable. App is fully functional with rule-based responses.');
-      } else {
-        console.log('✅ AI models ready!');
-      }
-    };
-    
-    // Start loading immediately when component mounts
-    // Don't wait for auth - models can load in parallel
-    loadModels();
-    
-    // Also try again when user logs in (in case network was unavailable)
     if (authState === 'app') {
-      // Models may already be loading, but ensure they're ready
-      setTimeout(() => {
-        if (isMounted) {
-          preloadModels().catch(() => {
-            console.warn('Model preload retry on login failed');
-          });
-        }
-      }, 2000);
+      // User is in the app - ensure models are ready
+      // Models may already be loading from initialize(), but retry if needed
+      const retryTimer = setTimeout(() => {
+        preloadModels().catch(() => {
+          // Silently fail - models may already be loading
+        });
+      }, 1000); // Short delay to avoid duplicate loads
+      
+      return () => clearTimeout(retryTimer);
     }
-    
-    return () => {
-      isMounted = false;
-    };
   }, [authState]);
 
   // Reminder Heartbeat - supports Hourly, Daily, Weekly, Monthly
@@ -400,6 +368,12 @@ const App: React.FC = () => {
     if (userId) {
       await acceptTerms(userId);
       setAuthState('app');
+      
+      // User has committed to using the app - ensure models are loading
+      // This is a good time to start/retry model loading if not already started
+      preloadModels().catch(() => {
+        // Silently fail - models may already be loading or will retry
+      });
     }
   };
 
@@ -453,15 +427,25 @@ const App: React.FC = () => {
   // Subscribe to progress updates
   useEffect(() => {
     // #region agent log
-    fetch('http://127.0.0.1:7245/ingest/7d9ee931-8dee-46f8-918b-e417134eb58f',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'App.tsx:454',message:'Progress subscription setup',data:{initialState:progressState},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'A'})}).catch(()=>{});
+    fetch('http://127.0.0.1:7245/ingest/7d9ee931-8dee-46f8-918b-e417134eb58f',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'App.tsx:454',message:'Progress subscription setup',data:{initialState:progressState},timestamp:Date.now(),sessionId:'debug-session',runId:'post-fix',hypothesisId:'A'})}).catch(()=>{});
     // #endregion
+    let isFirstCallback = true;
     const unsubscribe = subscribeToProgress((state) => {
       // #region agent log
-      fetch('http://127.0.0.1:7245/ingest/7d9ee931-8dee-46f8-918b-e417134eb58f',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'App.tsx:456',message:'Progress callback invoked',data:{receivedStatus:state.status,receivedLabel:state.label,receivedProgress:state.progress,willTransform:state.status==='idle'},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'A'})}).catch(()=>{});
+      fetch('http://127.0.0.1:7245/ingest/7d9ee931-8dee-46f8-918b-e417134eb58f',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'App.tsx:457',message:'Progress callback invoked',data:{receivedStatus:state.status,receivedLabel:state.label,receivedProgress:state.progress,isFirstCallback,willTransform:state.status==='idle'},timestamp:Date.now(),sessionId:'debug-session',runId:'post-fix',hypothesisId:'A'})}).catch(()=>{});
       // #endregion
+      // Skip transformation on first callback if it's idle with empty label (preserve initial "Initializing..." state)
+      if (isFirstCallback && state.status === 'idle' && !state.label) {
+        // #region agent log
+        fetch('http://127.0.0.1:7245/ingest/7d9ee931-8dee-46f8-918b-e417134eb58f',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'App.tsx:461',message:'Skipping first idle callback to preserve initial state',data:{preservedLabel:'Initializing...'},timestamp:Date.now(),sessionId:'debug-session',runId:'post-fix',hypothesisId:'A'})}).catch(()=>{});
+        // #endregion
+        isFirstCallback = false;
+        return; // Preserve initial state
+      }
+      isFirstCallback = false;
       const transformedStatus = state.status === 'idle' ? 'loading' : state.status;
       // #region agent log
-      fetch('http://127.0.0.1:7245/ingest/7d9ee931-8dee-46f8-918b-e417134eb58f',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'App.tsx:460',message:'State transformation result',data:{originalStatus:state.status,transformedStatus,newLabel:state.label||'Loading...'},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'A'})}).catch(()=>{});
+      fetch('http://127.0.0.1:7245/ingest/7d9ee931-8dee-46f8-918b-e417134eb58f',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'App.tsx:468',message:'State transformation result',data:{originalStatus:state.status,transformedStatus,newLabel:state.label||'Loading...'},timestamp:Date.now(),sessionId:'debug-session',runId:'post-fix',hypothesisId:'A'})}).catch(()=>{});
       // #endregion
       setProgressState({
         progress: state.progress,
@@ -656,6 +640,9 @@ const App: React.FC = () => {
       {showHelp && <HelpOverlay onClose={() => setShowHelp(false)} />}
 
       <PWAInstallPrompt />
+
+      {/* Feedback Button - Always accessible */}
+      {showNav && <FeedbackButton />}
 
       {showLCSWConfig && (
         <Suspense fallback={<SkeletonCard lines={5} showHeader={true} />}>
