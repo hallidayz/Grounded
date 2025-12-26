@@ -13,6 +13,18 @@ export default defineConfig({
     host: '0.0.0.0',
     strictPort: false, // Automatically try next available port if 3000 is in use
     open: '/', // Explicitly open the root path
+    headers: {
+      'Cross-Origin-Opener-Policy': 'same-origin',
+      'Cross-Origin-Embedder-Policy': 'require-corp',
+    },
+  },
+  preview: {
+    port: 8000,
+    host: '0.0.0.0',
+    headers: {
+      'Cross-Origin-Opener-Policy': 'same-origin',
+      'Cross-Origin-Embedder-Policy': 'require-corp',
+    },
   },
   plugins: [
     react(),

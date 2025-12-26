@@ -53,15 +53,28 @@ fs.copyFileSync(
   path.join(packageDir, 'INSTALLATION_GUIDE.md')
 );
 
-// Create a simple server script for local testing
+// Copy Node.js server script (preferred - includes COOP/COEP headers)
+console.log('📦 Copying server script...');
+const servePwaScript = path.join(__dirname, 'serve-pwa.js');
+if (fs.existsSync(servePwaScript)) {
+  fs.copyFileSync(servePwaScript, path.join(packageDir, 'serve-pwa.js'));
+  fs.chmodSync(path.join(packageDir, 'serve-pwa.js'), '755');
+}
+
+// Create a simple server script for local testing (fallback)
 const serverScript = `#!/bin/bash
 # Simple HTTP server for testing the PWA locally
 # Usage: ./serve.sh [port]
+# 
+# NOTE: For SharedArrayBuffer support (AI models), use serve-pwa.js instead:
+#   node serve-pwa.js [port]
 
 PORT=${process.argv[2] || 8000}
 cd "$(dirname "$0")/dist"
 echo "🌐 Serving Grounded on http://localhost:$PORT"
 echo "📱 Open this URL on your device to install the app"
+echo "⚠️  Note: This server doesn't include COOP/COEP headers."
+echo "   For AI model support, use: node ../serve-pwa.js"
 python3 -m http.server $PORT 2>/dev/null || python -m http.server $PORT 2>/dev/null || php -S localhost:$PORT || echo "Please install Python or PHP to run the server"
 `;
 

@@ -17,6 +17,7 @@
     "build:installers": "node scripts/build-installers.js",
     "check:prerequisites": "node scripts/check-prerequisites.js",
     "preview": "vite preview",
+    "serve": "node scripts/serve-pwa.js",
     "package": "node scripts/package.js",
     "tauri": "tauri"
   },
