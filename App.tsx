@@ -641,8 +641,8 @@ const App: React.FC = () => {
 
       <PWAInstallPrompt />
 
-      {/* Feedback Button - Always accessible */}
-      {showNav && <FeedbackButton />}
+      {/* Feedback Button - Always accessible when user is in the app */}
+      {authState === 'app' && <FeedbackButton />}
 
       {showLCSWConfig && (
         <Suspense fallback={<SkeletonCard lines={5} showHeader={true} />}>
