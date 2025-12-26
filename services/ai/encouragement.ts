@@ -384,21 +384,35 @@ Be genuine, hopeful, and supportive. Avoid platitudes or toxic positivity.`;
   // Try to use AI model if available
   let counselingCoachModel = getCounselingCoachModel();
   
-  // If model not available, try to initialize it
+  // If model not available, try to initialize it (with timeout)
   if (!counselingCoachModel) {
     const isModelLoading = getIsModelLoading();
     if (!isModelLoading) {
-      // Try to initialize models
-      await initializeModels();
-      counselingCoachModel = getCounselingCoachModel();
+      // Try to initialize models with a timeout
+      try {
+        const initPromise = initializeModels();
+        const timeoutPromise = new Promise<boolean>((_, reject) => 
+          setTimeout(() => reject(new Error('Model initialization timeout')), 10000)
+        );
+        await Promise.race([initPromise, timeoutPromise]);
+        counselingCoachModel = getCounselingCoachModel();
+      } catch (error) {
+        console.warn('Model initialization failed or timed out, using rule-based encouragement');
+        // Don't wait - just use rule-based
+      }
     } else {
-      // Wait for current load to complete
-      // Wait up to 30 seconds for model to load
-      const maxWaitTime = 30000;
+      // Wait for current load to complete, but with shorter timeout
+      // Wait up to 5 seconds for model to load (not 30)
+      const maxWaitTime = 5000;
       const startTime = Date.now();
       while (!counselingCoachModel && (Date.now() - startTime) < maxWaitTime) {
         await new Promise(resolve => setTimeout(resolve, 500));
         counselingCoachModel = getCounselingCoachModel();
+        // Check if loading failed
+        if (!getIsModelLoading() && !counselingCoachModel) {
+          // Loading completed but no model - break early
+          break;
+        }
       }
     }
   }

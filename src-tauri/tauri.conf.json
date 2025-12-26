@@ -4,7 +4,7 @@
   "identifier": "com.acminds.grounded",
   "build": {
     "beforeDevCommand": "npm run dev",
-    "beforeBuildCommand": "npm run build",
+    "beforeBuildCommand": "npm run download:models && npm run build",
     "frontendDist": "../dist"
   },
   "app": {

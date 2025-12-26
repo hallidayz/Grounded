@@ -152,33 +152,57 @@ function getBrowserInfo() {
   let browserVersion = 'Unknown';
   let engine = 'Unknown';
 
-  // Detect browser
-  if (ua.includes('Chrome') && !ua.includes('Edg')) {
+  // Detect browser - check Edge first since it includes Chrome in UA
+  if (ua.includes('Edg')) {
+    browserName = 'Edge';
+    const match = ua.match(/Edg\/(\d+)/);
+    browserVersion = match ? match[1] : 'Unknown';
+    engine = 'Blink';
+  } else if (ua.includes('Chrome') && !ua.includes('Edg')) {
     browserName = 'Chrome';
     const match = ua.match(/Chrome\/(\d+)/);
     browserVersion = match ? match[1] : 'Unknown';
+    engine = 'Blink';
   } else if (ua.includes('Safari') && !ua.includes('Chrome')) {
     browserName = 'Safari';
     const match = ua.match(/Version\/(\d+)/);
     browserVersion = match ? match[1] : 'Unknown';
+    engine = 'WebKit';
   } else if (ua.includes('Firefox')) {
     browserName = 'Firefox';
     const match = ua.match(/Firefox\/(\d+)/);
     browserVersion = match ? match[1] : 'Unknown';
-  } else if (ua.includes('Edg')) {
-    browserName = 'Edge';
-    const match = ua.match(/Edg\/(\d+)/);
-    browserVersion = match ? match[1] : 'Unknown';
-  }
-
-  // Detect engine
-  if (ua.includes('WebKit')) {
-    engine = 'WebKit';
-  } else if (ua.includes('Gecko')) {
     engine = 'Gecko';
   }
 
+  // Detect engine if not already set
+  if (engine === 'Unknown') {
+    if (ua.includes('WebKit')) {
+      engine = 'WebKit';
+    } else if (ua.includes('Gecko')) {
+      engine = 'Gecko';
+    }
+  }
+
   return { name: browserName, version: browserVersion, engine };
+}
+
+/**
+ * Get platform information
+ * Note: Apple Silicon Macs (M1, M2, M3, etc.) report as "MacIntel" in navigator.platform
+ * This is a browser limitation - the actual architecture cannot be reliably detected from JavaScript
+ */
+function getPlatformInfo(): string {
+  const platform = navigator.platform;
+  
+  // Add architecture hint if available (some browsers expose this)
+  if ('hardwareConcurrency' in navigator) {
+    const cores = navigator.hardwareConcurrency;
+    // Apple Silicon typically has more cores, but this is not reliable
+    // For now, just return the platform as reported by the browser
+  }
+  
+  return platform;
 }
 
 /**
@@ -289,7 +313,7 @@ export async function generateDebugLog(): Promise<DebugLog> {
     appVersion: '1.12.25', // Should match package.json version
     timestamp: new Date().toISOString(),
     userAgent: navigator.userAgent,
-    platform: navigator.platform,
+    platform: getPlatformInfo(),
     language: navigator.language,
     timezone: Intl.DateTimeFormat().resolvedOptions().timeZone,
     screenResolution: `${window.screen.width}x${window.screen.height}`,
