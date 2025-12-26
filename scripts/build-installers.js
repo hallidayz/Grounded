@@ -188,7 +188,10 @@ function main() {
   // Copy installation guides
   const guides = [
     'INSTALLATION_GUIDE.md',
-    'QUICK_INSTALL_GUIDE.md'
+    'QUICK_INSTALL_GUIDE.md',
+    'PREREQUISITES.md',
+    'README.md',
+    'USAGE_GUIDE.md'
   ];
   
   let guidesCopied = 0;

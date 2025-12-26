@@ -1,0 +1,124 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Clear Cache - Grounded</title>
+  <style>
+    body {
+      font-family: system-ui, -apple-system, sans-serif;
+      max-width: 600px;
+      margin: 50px auto;
+      padding: 20px;
+      background: #f6f7f9;
+    }
+    .container {
+      background: white;
+      padding: 30px;
+      border-radius: 12px;
+      box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+    }
+    h1 { color: #02295b; margin-top: 0; }
+    button {
+      background: #fda700;
+      color: #02295b;
+      border: none;
+      padding: 12px 24px;
+      border-radius: 8px;
+      font-weight: bold;
+      cursor: pointer;
+      margin: 10px 5px;
+    }
+    button:hover { opacity: 0.9; }
+    .status {
+      margin-top: 20px;
+      padding: 15px;
+      border-radius: 8px;
+      background: #f0f0f0;
+    }
+    .success { background: #d4edda; color: #155724; }
+    .error { background: #f8d7da; color: #721c24; }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <h1>🧹 Clear Cache & Service Workers</h1>
+    <p>This will unregister all service workers and clear caches for this domain.</p>
+    
+    <button onclick="clearAll()">Clear All Caches</button>
+    <button onclick="unregisterSW()">Unregister Service Workers</button>
+    <button onclick="clearStorage()">Clear All Storage</button>
+    
+    <div id="status"></div>
+  </div>
+
+  <script>
+    async function unregisterSW() {
+      const status = document.getElementById('status');
+      status.innerHTML = '<p>Unregistering service workers...</p>';
+      
+      try {
+        if ('serviceWorker' in navigator) {
+          const registrations = await navigator.serviceWorker.getRegistrations();
+          let unregistered = 0;
+          
+          for (const registration of registrations) {
+            await registration.unregister();
+            unregistered++;
+          }
+          
+          status.className = 'status success';
+          status.innerHTML = `<p>✅ Unregistered ${unregistered} service worker(s)</p>`;
+        } else {
+          status.className = 'status';
+          status.innerHTML = '<p>No service workers found</p>';
+        }
+      } catch (error) {
+        status.className = 'status error';
+        status.innerHTML = `<p>❌ Error: ${error.message}</p>`;
+      }
+    }
+
+    async function clearStorage() {
+      const status = document.getElementById('status');
+      status.innerHTML = '<p>Clearing storage...</p>';
+      
+      try {
+        // Clear IndexedDB
+        if ('indexedDB' in window) {
+          const databases = await indexedDB.databases();
+          for (const db of databases) {
+            indexedDB.deleteDatabase(db.name);
+          }
+        }
+        
+        // Clear localStorage
+        localStorage.clear();
+        
+        // Clear sessionStorage
+        sessionStorage.clear();
+        
+        // Clear caches
+        if ('caches' in window) {
+          const cacheNames = await caches.keys();
+          await Promise.all(cacheNames.map(name => caches.delete(name)));
+        }
+        
+        status.className = 'status success';
+        status.innerHTML = '<p>✅ Cleared all storage (IndexedDB, localStorage, sessionStorage, caches)</p>';
+      } catch (error) {
+        status.className = 'status error';
+        status.innerHTML = `<p>❌ Error: ${error.message}</p>`;
+      }
+    }
+
+    async function clearAll() {
+      await unregisterSW();
+      await clearStorage();
+      const status = document.getElementById('status');
+      status.innerHTML += '<p><strong>✅ All done! Please refresh the page.</strong></p>';
+    }
+  </script>
+</body>
+</html>
+

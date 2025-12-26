@@ -53,6 +53,19 @@ fs.copyFileSync(
   path.join(packageDir, 'INSTALLATION_GUIDE.md')
 );
 
+// Copy additional documentation
+console.log('📖 Copying additional documentation...');
+const additionalDocs = ['PREREQUISITES.md', 'README.md', 'USAGE_GUIDE.md'];
+additionalDocs.forEach(docName => {
+  const docPath = path.join(__dirname, '..', docName);
+  if (fs.existsSync(docPath)) {
+    fs.copyFileSync(docPath, path.join(packageDir, docName));
+    console.log(`   ✓ Copied ${docName}`);
+  } else {
+    console.log(`   ⚠️  ${docName} not found, skipping...`);
+  }
+});
+
 // Copy Node.js server script (preferred - includes COOP/COEP headers)
 console.log('📦 Copying server script...');
 const servePwaScript = path.join(__dirname, 'serve-pwa.js');

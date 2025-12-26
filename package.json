@@ -21,6 +21,7 @@
     "serve": "node scripts/serve-pwa.js",
     "start": "npm run build && npm run serve",
     "package": "node scripts/package.js",
+    "create-release": "node scripts/create-release.js",
     "tauri": "tauri"
   },
   "dependencies": {
