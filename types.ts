@@ -51,10 +51,13 @@ export interface AppReminder {
   lastNotifiedMonth?: string; // YYYY-MM-DD for monthly
 }
 
+export type AIModelType = 'distilbert' | 'tinyllama' | 'minicpm';
+
 export interface AppSettings {
   reminders: AppReminder;
   lcswConfig?: LCSWConfig;
   emailSchedule?: EmailSchedule;
+  aiModel?: AIModelType; // Selected AI model (default: 'tinyllama' for healthcare/psychology)
 }
 
 export interface EmailSchedule {
