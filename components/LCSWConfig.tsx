@@ -6,7 +6,8 @@ import { hapticFeedback } from '../utils/animations';
 import { sendNtfyNotification, generateRandomTopic, isValidTopic } from '../services/ntfyService';
 import { ALL_VALUES } from '../constants';
 import { requestPermission, hasPermission, sendNotification } from '../services/notifications';
-import { getModelStatus, areModelsLoaded } from '../services/aiService';
+import { getModelStatus, areModelsLoaded, getSelectedModel, setSelectedModel, getAllModelConfigs, initializeModels } from '../services/aiService';
+import { AIModelType } from '../types';
 
 interface LCSWConfigProps {
   config: LCSWConfig | undefined;
@@ -44,6 +45,15 @@ const LCSWConfigComponent: React.FC<LCSWConfigProps> = ({ config, onUpdate, onCl
   // AI Model status
   const [modelStatus, setModelStatus] = useState<{ loaded: boolean; loading: boolean; moodTracker: boolean; counselingCoach: boolean } | null>(null);
   const [updatingModel, setUpdatingModel] = useState(false);
+  const [selectedAIModel, setSelectedAIModel] = useState<AIModelType>(settings?.aiModel || 'tinyllama');
+  
+  // Sync selected model with settings when they change
+  useEffect(() => {
+    if (settings?.aiModel) {
+      setSelectedAIModel(settings.aiModel);
+      setSelectedModel(settings.aiModel);
+    }
+  }, [settings?.aiModel]);
 
   // Update permission state on mount
   useEffect(() => {
@@ -1015,6 +1025,59 @@ const LCSWConfigComponent: React.FC<LCSWConfigProps> = ({ config, onUpdate, onCl
                 
                 {/* AI Diagnostics Component */}
                 <AIDiagnostics />
+                
+                {/* Model Selection */}
+                <div className="space-y-2">
+                  <label className="text-xs font-bold text-text-primary dark:text-white">
+                    Select AI Model:
+                  </label>
+                  <select
+                    value={selectedAIModel}
+                    onChange={async (e) => {
+                      const newModel = e.target.value as AIModelType;
+                      setSelectedAIModel(newModel);
+                      
+                      // Update settings
+                      if (onUpdateSettings && settings) {
+                        onUpdateSettings({
+                          ...settings,
+                          aiModel: newModel
+                        });
+                      }
+                      
+                      // Reload models with new selection
+                      setUpdatingModel(true);
+                      try {
+                        setSelectedModel(newModel);
+                        const success = await initializeModels(true, newModel);
+                        
+                        setTimeout(() => {
+                          const status = getModelStatus();
+                          setModelStatus(status);
+                        }, 1000);
+                        
+                        if (success) {
+                          console.log(`✅ Switched to ${getAllModelConfigs()[newModel].name}`);
+                        }
+                      } catch (error) {
+                        console.error('Model switch error:', error);
+                      } finally {
+                        setUpdatingModel(false);
+                      }
+                    }}
+                    disabled={updatingModel || modelStatus?.loading}
+                    className="w-full px-4 py-3 rounded-xl text-xs font-medium bg-bg-secondary dark:bg-dark-bg-secondary text-text-primary dark:text-white border border-border-soft dark:border-dark-border focus:outline-none focus:ring-2 focus:ring-navy-primary disabled:opacity-50 disabled:cursor-not-allowed"
+                  >
+                    {Object.entries(getAllModelConfigs()).map(([key, config]) => (
+                      <option key={key} value={key}>
+                        {config.name} - {config.description} ({config.size})
+                      </option>
+                    ))}
+                  </select>
+                  <p className="text-[10px] text-text-tertiary dark:text-text-tertiary">
+                    {getAllModelConfigs()[selectedAIModel].description}. Models are cached in your browser for instant loading.
+                  </p>
+                </div>
                 
                 {/* Model Status Display */}
                 {modelStatus && (

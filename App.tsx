@@ -18,7 +18,7 @@ const Dashboard = lazy(() => import('./components/Dashboard'));
 const ReportView = lazy(() => import('./components/ReportView'));
 const VaultControl = lazy(() => import('./components/VaultControl'));
 const LCSWConfigComponent = lazy(() => import('./components/LCSWConfig'));
-import { preloadModels } from './services/aiService';
+import { preloadModels, initializeModels, setSelectedModel } from './services/aiService';
 import { dbService } from './services/database';
 import { isLoggedIn, getCurrentUser, acceptTerms, logoutUser } from './services/authService';
 import { getItemSync, setItemSync } from './services/storage';
@@ -111,7 +111,19 @@ const App: React.FC = () => {
               if (loadedSettings.reminders && !loadedSettings.reminders.frequency) {
                 loadedSettings.reminders.frequency = 'daily';
               }
+              // Set default AI model if not set (TinyLlama for healthcare/psychology)
+              if (!loadedSettings.aiModel) {
+                loadedSettings.aiModel = 'tinyllama';
+              }
               setSettings(loadedSettings);
+              
+              // Initialize models with the selected model from settings
+              if (loadedSettings.aiModel) {
+                setSelectedModel(loadedSettings.aiModel);
+                initializeModels(false, loadedSettings.aiModel).catch(() => {
+                  // Silently fail - models will retry later
+                });
+              }
             }
             
             // Check if terms are accepted
