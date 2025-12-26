@@ -149,9 +149,9 @@ function main() {
       log('   Android build requires Java JDK and Android SDK setup.\n', 'yellow');
     } else if (!checks.android) {
       log('   Android build requires Android SDK setup.\n', 'yellow');
-    } else {
-      log('   Android build requires Java JDK and Android SDK setup.\n', 'yellow');
     }
+    // Note: Both checks.java and checks.android cannot be true here,
+    // because that would make androidReady true and we'd be in the first branch
     return 0;
   } else if (allBasic) {
     log('\n⚠️  Basic prerequisites installed', 'yellow');
