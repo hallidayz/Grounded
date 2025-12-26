@@ -1,11 +1,14 @@
 
-import React from 'react';
+import React, { useState } from 'react';
+import DebugLogComponent from './DebugLog';
 
 interface HelpOverlayProps {
   onClose: () => void;
 }
 
 const HelpOverlay: React.FC<HelpOverlayProps> = ({ onClose }) => {
+  const [showDebugLog, setShowDebugLog] = useState(false);
+
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4 sm:p-6 bg-navy-dark/60 backdrop-blur-sm animate-fade-in">
       <div 
@@ -62,7 +65,33 @@ const HelpOverlay: React.FC<HelpOverlayProps> = ({ onClose }) => {
           </div>
 
           <div className="pt-4 border-t border-border-soft dark:border-dark-border space-y-4">
-            <h3 className="text-lg font-black text-text-primary dark:text-white">Support</h3>
+            <h3 className="text-lg font-black text-text-primary dark:text-white">Support & Troubleshooting</h3>
+            
+            {/* Debug Log - Prominent */}
+            <div className="bg-yellow-warm/10 dark:bg-yellow-warm/20 p-6 rounded-3xl border-2 border-yellow-warm/30 space-y-3">
+              <div className="flex items-start gap-3">
+                <div className="text-2xl">🔧</div>
+                <div className="flex-1">
+                  <p className="text-sm font-black text-text-primary dark:text-white mb-1">
+                    Experiencing Issues?
+                  </p>
+                  <p className="text-xs text-text-secondary dark:text-text-secondary leading-relaxed mb-3">
+                    Generate a debug log with diagnostic information. Debug logging starts automatically when the app launches.
+                  </p>
+                  <button
+                    onClick={() => setShowDebugLog(true)}
+                    className="w-full px-4 py-3 bg-navy-primary text-white rounded-xl text-xs font-black uppercase tracking-widest hover:opacity-90 flex items-center justify-center gap-2 shadow-lg"
+                  >
+                    <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+                    </svg>
+                    Generate Debug Log
+                  </button>
+                </div>
+              </div>
+            </div>
+
+            {/* Email Support */}
             <div className="bg-bg-secondary dark:bg-dark-bg-secondary p-6 rounded-3xl space-y-2">
               <p className="text-sm text-text-secondary dark:text-text-secondary leading-relaxed">
                 Need help or have questions? We're here to assist you.
@@ -118,6 +147,7 @@ const HelpOverlay: React.FC<HelpOverlayProps> = ({ onClose }) => {
         </div>
       </div>
       <div className="absolute inset-0 -z-10" onClick={onClose} />
+      {showDebugLog && <DebugLogComponent onClose={() => setShowDebugLog(false)} />}
     </div>
   );
 };

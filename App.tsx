@@ -22,6 +22,7 @@ import { dbService } from './services/database';
 import { isLoggedIn, getCurrentUser, acceptTerms, logoutUser } from './services/authService';
 import { getItemSync, setItemSync } from './services/storage';
 import { hasPermission, sendNotification } from './services/notifications';
+import { initializeDebugLogging } from './services/debugLog';
 
 // Simple persistence helper using storage abstraction
 const useLocalStorage = <T,>(key: string, initialValue: T): [T, React.Dispatch<React.SetStateAction<T>>] => {
@@ -66,6 +67,9 @@ const App: React.FC = () => {
     
     const initialize = async () => {
       try {
+        // Initialize debug logging first
+        initializeDebugLogging();
+        
         await dbService.init();
         
         // Cleanup expired tokens on startup

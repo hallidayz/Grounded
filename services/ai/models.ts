@@ -6,6 +6,7 @@
  */
 
 import { checkBrowserCompatibility, CompatibilityReport, getCompatibilitySummary } from './browserCompatibility';
+import { setModelLoadingProgress, setProgressSuccess, setProgressError } from '../progressTracker';
 
 // Model loading state
 let moodTrackerModel: any = null;
@@ -230,12 +231,35 @@ export async function initializeModels(forceReload: boolean = false): Promise<bo
       console.log('Loading psychology-centric AI model...');
       
       // Progress callback for model loading
+      let totalProgress = 0;
+      let modelsLoaded = 0;
+      const totalModels = 2; // moodTracker + counselingCoach
+      
       const progressCallback = (progress: any) => {
         if (progress.status === 'progress') {
           const percent = progress.progress ? Math.round(progress.progress * 100) : 0;
-          console.log(`Model loading: ${progress.name || 'model'} - ${percent}%`);
+          const modelProgress = Math.round((modelsLoaded / totalModels) * 100 + (percent / totalModels));
+          totalProgress = Math.min(100, modelProgress);
+          
+          const modelName = progress.name || 'model';
+          setModelLoadingProgress(
+            totalProgress,
+            `Loading AI models...`,
+            `${modelName}: ${percent}%`
+          );
+          console.log(`Model loading: ${modelName} - ${percent}%`);
         } else if (progress.status === 'done') {
-          console.log(`Model loaded: ${progress.name || 'model'}`);
+          modelsLoaded++;
+          const modelProgress = Math.round((modelsLoaded / totalModels) * 100);
+          totalProgress = Math.min(100, modelProgress);
+          
+          const modelName = progress.name || 'model';
+          setModelLoadingProgress(
+            totalProgress,
+            `Loading AI models...`,
+            `${modelName} loaded`
+          );
+          console.log(`Model loaded: ${modelName}`);
         }
       };
       
@@ -488,10 +512,12 @@ export async function initializeModels(forceReload: boolean = false): Promise<bo
       isModelLoading = false;
       
       if (modelsReady) {
+        setProgressSuccess('AI models loaded successfully!', 'All models are ready to use');
         console.log('✅ All AI models loaded and ready!');
         console.log(`  - Mood tracker: ${moodTrackerModel ? '✓' : '✗'}`);
         console.log(`  - Counseling coach: ${counselingCoachModel ? '✓' : '✗'}`);
       } else {
+        setProgressError('AI models unavailable', 'App will use rule-based responses');
         console.warn('⚠️ AI models not available. App will use rule-based responses.');
         console.warn(`  - Mood tracker: ${moodTrackerModel ? '✓ Loaded' : '✗ Failed'}`);
         console.warn(`  - Counseling coach: ${counselingCoachModel ? '✓ Loaded' : '✗ Failed'}`);
@@ -511,6 +537,7 @@ export async function initializeModels(forceReload: boolean = false): Promise<bo
       isModelLoading = false;
       moodTrackerModel = null;
       counselingCoachModel = null;
+      setProgressError('Model loading failed', 'App will use rule-based responses');
       
       // Provide more specific error message based on category
       const errorMessage = error instanceof Error ? error.message : String(error);
