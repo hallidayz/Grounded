@@ -19,6 +19,11 @@ export {
   areModelsLoaded,
   getModelStatus,
   getCompatibilityReport,
+  // Model selection functions
+  getSelectedModel,
+  setSelectedModel,
+  getModelConfig,
+  getAllModelConfigs,
   // Internal helper functions (for advanced use cases)
   getMoodTrackerModel,
   getCounselingCoachModel,

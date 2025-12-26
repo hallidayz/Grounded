@@ -156,6 +156,15 @@ export async function clearModels(): Promise<void> {
  * @returns true if models loaded successfully, false if fallback mode is used
  */
 export async function initializeModels(forceReload: boolean = false, modelType?: AIModelType): Promise<boolean> {
+  // If modelType provided, update selected model
+  if (modelType && modelType !== selectedModel) {
+    selectedModel = modelType;
+    // If switching models, force reload
+    if (moodTrackerModel || counselingCoachModel) {
+      forceReload = true;
+    }
+  }
+  
   const targetModel = modelType || selectedModel;
   
   if (forceReload) {
