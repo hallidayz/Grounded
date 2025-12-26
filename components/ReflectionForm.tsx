@@ -1,6 +1,7 @@
 import React from 'react';
 import { EmotionalState, EMOTIONAL_STATES, getEmotionalState } from '../services/emotionalStates';
 import { GoalFrequency, ValueItem, LCSWConfig } from '../types';
+import SkeletonLoader from './SkeletonLoader';
 
 interface ReflectionFormProps {
   value: ValueItem;

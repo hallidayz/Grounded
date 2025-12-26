@@ -1,4 +1,4 @@
-import React, { useMemo } from 'react';
+import React, { useMemo, useState } from 'react';
 import { ValueItem, LogEntry, Goal, LCSWConfig } from '../types';
 import { EMOTIONAL_STATES, getEmotionalState } from '../services/emotionalStates';
 import MoodTrendChart from './MoodTrendChart';
@@ -6,6 +6,7 @@ import EncourageSection from './EncourageSection';
 import ValueCard from './ValueCard';
 import GoalsSection from './GoalsSection';
 import SkeletonCard from './SkeletonCard';
+import CrisisResourcesModal from './CrisisResourcesModal';
 import { useDashboard } from '../hooks/useDashboard';
 
 interface DashboardProps {
@@ -20,6 +21,7 @@ interface DashboardProps {
 
 const Dashboard: React.FC<DashboardProps> = ({ values, onLog, goals, onUpdateGoals, logs, lcswConfig, onNavigate }) => {
   const dashboard = useDashboard(values, goals, logs, lcswConfig, onLog, onUpdateGoals);
+  const [showResourcesModal, setShowResourcesModal] = useState(false);
 
   // Get personalized greeting based on time of day
   const getGreeting = () => {
@@ -78,8 +80,7 @@ const Dashboard: React.FC<DashboardProps> = ({ values, onLog, goals, onUpdateGoa
         onNavigate('values');
       }
     } else if (action === 'resources') {
-      const resourcesMessage = `📞 Crisis Resources\n\n• 988 Suicide & Crisis Lifeline (24/7)\n• 911 for emergencies\n${lcswConfig?.emergencyContact?.phone ? `• Your therapist: ${lcswConfig.emergencyContact.phone}` : ''}\n\nYou're not alone. Reach out for support.`;
-      alert(resourcesMessage);
+      setShowResourcesModal(true);
     }
   };
 
@@ -254,6 +255,14 @@ const Dashboard: React.FC<DashboardProps> = ({ values, onLog, goals, onUpdateGoa
         onCompleteGoal={dashboard.handleCompleteGoal}
         onDeleteGoal={dashboard.handleDeleteGoal}
       />
+
+      {/* Crisis Resources Modal */}
+      {showResourcesModal && (
+        <CrisisResourcesModal
+          onClose={() => setShowResourcesModal(false)}
+          lcswConfig={lcswConfig}
+        />
+      )}
     </div>
   );
 };
