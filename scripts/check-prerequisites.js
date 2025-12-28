@@ -122,6 +122,52 @@ function checkAndroid() {
   }
 }
 
+function checkXcode() {
+  if (process.platform !== 'darwin') {
+    log(`  ⚠ Xcode: Not available (macOS required)`, 'yellow');
+    return false;
+  }
+  
+  const installed = checkCommand('xcodebuild -version', 'Xcode');
+  if (installed) {
+    try {
+      const version = execSync('xcodebuild -version', { encoding: 'utf-8' }).split('\n')[0].trim();
+      log(`  ✓ Xcode: ${version}`, 'green');
+      return true;
+    } catch {
+      log(`  ✓ Xcode: Installed`, 'green');
+      return true;
+    }
+  } else {
+    log(`  ✗ Xcode: Not installed`, 'red');
+    log(`     Install from App Store: https://apps.apple.com/us/app/xcode/id497799835`, 'yellow');
+    log(`     After installation, run: sudo xcode-select --switch /Applications/Xcode.app/Contents/Developer`, 'yellow');
+    return false;
+  }
+}
+
+function checkCocoaPods() {
+  if (process.platform !== 'darwin') {
+    return false; // Only check on macOS
+  }
+  
+  const installed = checkCommand('pod --version', 'CocoaPods');
+  if (installed) {
+    try {
+      const version = execSync('pod --version', { encoding: 'utf-8' }).trim();
+      log(`  ✓ CocoaPods: ${version}`, 'green');
+      return true;
+    } catch {
+      log(`  ✓ CocoaPods: Installed`, 'green');
+      return true;
+    }
+  } else {
+    log(`  ✗ CocoaPods: Not installed`, 'red');
+    log(`     Install: sudo gem install cocoapods`, 'yellow');
+    return false;
+  }
+}
+
 function main() {
   log('\n🔍 Checking Prerequisites...\n', 'bright');
   
@@ -131,6 +177,8 @@ function main() {
     rust: checkRust(),
     java: checkJava(),
     android: checkAndroid(),
+    xcode: checkXcode(),
+    cocoapods: checkCocoaPods(),
   };
   
   log('\n' + '='.repeat(50), 'bright');
@@ -138,10 +186,21 @@ function main() {
   const allBasic = checks.node && checks.npm;
   const desktopReady = allBasic && checks.rust;
   const androidReady = allBasic && checks.java && checks.android;
+  const iosReady = process.platform === 'darwin' && checks.xcode && checks.cocoapods;
   
-  if (desktopReady && androidReady) {
+  if (desktopReady && androidReady && iosReady) {
     log('\n✅ All prerequisites installed!', 'green');
-    log('   You can build desktop and Android installers.\n', 'green');
+    log('   You can build desktop, Android, and iOS installers.\n', 'green');
+    return 0;
+  } else if (desktopReady && androidReady) {
+    log('\n✅ Desktop and Android build ready!', 'green');
+    if (process.platform === 'darwin' && !iosReady) {
+      if (!checks.xcode) {
+        log('   iOS build requires Xcode.\n', 'yellow');
+      } else if (!checks.cocoapods) {
+        log('   iOS build requires CocoaPods.\n', 'yellow');
+      }
+    }
     return 0;
   } else if (desktopReady) {
     log('\n✅ Desktop build ready!', 'green');
@@ -150,8 +209,13 @@ function main() {
     } else if (!checks.android) {
       log('   Android build requires Android SDK setup.\n', 'yellow');
     }
-    // Note: Both checks.java and checks.android cannot be true here,
-    // because that would make androidReady true and we'd be in the first branch
+    if (process.platform === 'darwin' && !iosReady) {
+      if (!checks.xcode) {
+        log('   iOS build requires Xcode.\n', 'yellow');
+      } else if (!checks.cocoapods) {
+        log('   iOS build requires CocoaPods.\n', 'yellow');
+      }
+    }
     return 0;
   } else if (allBasic) {
     log('\n⚠️  Basic prerequisites installed', 'yellow');
