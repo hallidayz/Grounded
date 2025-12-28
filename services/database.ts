@@ -34,8 +34,16 @@ class DatabaseService {
   // Format: com.[company].[appname].[purpose].db ensures uniqueness
   // This ensures no conflicts with other apps like AiNotes or InnerCompass
   private dbName = 'com.acminds.grounded.therapy.db';
-  private dbVersion = 2; // Incremented to add feelingLogs store
+  private dbVersion = 2; // Increment this when adding new stores or indexes
   private db: IDBDatabase | null = null;
+  
+  /**
+   * Get the current database version
+   * This is used for migration tracking
+   */
+  getVersion(): number {
+    return this.dbVersion;
+  }
 
   async init(): Promise<void> {
     return new Promise((resolve, reject) => {

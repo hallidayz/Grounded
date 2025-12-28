@@ -5,10 +5,28 @@ interface BeforeInstallPromptEvent extends Event {
   userChoice: Promise<{ outcome: 'accepted' | 'dismissed' }>;
 }
 
+// Detect Safari browser (including macOS Safari)
+function isSafari(): boolean {
+  if (typeof window === 'undefined') return false;
+  const ua = window.navigator.userAgent;
+  const isSafariUA = /^((?!chrome|android).)*safari/i.test(ua);
+  const isMacOS = /Macintosh|MacIntel|MacPPC|Mac68K/i.test(ua);
+  const isIOS = /iPad|iPhone|iPod/.test(ua);
+  return isSafariUA && (isMacOS || isIOS);
+}
+
+// Detect if running on macOS
+function isMacOS(): boolean {
+  if (typeof window === 'undefined') return false;
+  return /Macintosh|MacIntel|MacPPC|Mac68K/i.test(window.navigator.userAgent);
+}
+
 const PWAInstallPrompt: React.FC = () => {
   const [deferredPrompt, setDeferredPrompt] = useState<BeforeInstallPromptEvent | null>(null);
   const [showPrompt, setShowPrompt] = useState(false);
   const [isInstalled, setIsInstalled] = useState(false);
+  const [isSafariBrowser, setIsSafariBrowser] = useState(false);
+  const [isMacOSDevice, setIsMacOSDevice] = useState(false);
 
   useEffect(() => {
     // Check if app is already installed
@@ -17,7 +35,11 @@ const PWAInstallPrompt: React.FC = () => {
       return;
     }
 
-    // Listen for beforeinstallprompt event
+    // Detect browser and OS
+    setIsSafariBrowser(isSafari());
+    setIsMacOSDevice(isMacOS());
+
+    // Listen for beforeinstallprompt event (Chrome/Edge only)
     const handleBeforeInstallPrompt = (e: Event) => {
       e.preventDefault();
       setDeferredPrompt(e as BeforeInstallPromptEvent);
@@ -27,9 +49,25 @@ const PWAInstallPrompt: React.FC = () => {
 
     window.addEventListener('beforeinstallprompt', handleBeforeInstallPrompt);
 
-    // Check if user dismissed the prompt before
+    // For Safari, show manual installation instructions after a delay
+    // Safari doesn't support beforeinstallprompt, so we show instructions directly
+    if (isSafari()) {
+      const dismissed = localStorage.getItem('pwa-install-dismissed');
+      if (dismissed) {
+        const dismissedTime = parseInt(dismissed, 10);
+        const daysSinceDismissed = (Date.now() - dismissedTime) / (1000 * 60 * 60 * 24);
+        // Show again after 7 days
+        if (daysSinceDismissed < 7) {
+          return;
+        }
+      }
+      // Show Safari instructions after 3 seconds
+      setTimeout(() => setShowPrompt(true), 3000);
+    }
+
+    // Check if user dismissed the prompt before (for non-Safari browsers)
     const dismissed = localStorage.getItem('pwa-install-dismissed');
-    if (dismissed) {
+    if (dismissed && !isSafari()) {
       const dismissedTime = parseInt(dismissed, 10);
       const daysSinceDismissed = (Date.now() - dismissedTime) / (1000 * 60 * 60 * 24);
       // Show again after 7 days
@@ -66,8 +104,114 @@ const PWAInstallPrompt: React.FC = () => {
     setShowPrompt(false);
   };
 
-  // Don't show if already installed or prompt not available
-  if (isInstalled || !showPrompt || !deferredPrompt) {
+  // Don't show if already installed
+  if (isInstalled || !showPrompt) {
+    return null;
+  }
+
+  // For Safari, show manual installation instructions
+  if (isSafariBrowser) {
+    return (
+      <div className="fixed bottom-20 left-0 right-0 z-50 px-4 sm:px-6 lg:bottom-4 lg:left-auto lg:right-4 lg:max-w-md">
+        <div className="bg-white dark:bg-dark-bg-primary border border-border-soft dark:border-dark-border rounded-xl shadow-2xl p-4 sm:p-6 space-y-4">
+          <div className="flex items-start gap-3">
+            <div className="flex-shrink-0 w-12 h-12 bg-navy-primary dark:bg-yellow-warm rounded-lg flex items-center justify-center">
+              <img 
+                src="/ac-minds-logo.png" 
+                alt="AC MINDS" 
+                className="w-8 h-8 object-contain"
+              />
+            </div>
+            <div className="flex-1">
+              <h3 className="text-sm font-black text-text-primary dark:text-white mb-1">
+                Install Grounded on Safari
+              </h3>
+              <p className="text-xs text-text-secondary dark:text-text-secondary mb-3">
+                Safari doesn't have an install button in the address bar. Follow these steps to add Grounded to your {isMacOSDevice ? 'Dock' : 'Home Screen'}:
+              </p>
+              <div className="bg-gradient-to-br from-blue-50 to-indigo-50 dark:from-blue-900/20 dark:to-indigo-900/20 border border-blue-200 dark:border-blue-800 rounded-lg p-4 space-y-3">
+                <div className="flex items-center gap-2 mb-2">
+                  <div className="w-6 h-6 bg-blue-500 rounded-full flex items-center justify-center flex-shrink-0">
+                    <span className="text-white text-xs font-bold">1</span>
+                  </div>
+                  <p className="text-xs font-semibold text-blue-900 dark:text-blue-200">
+                    {isMacOSDevice ? 'macOS Safari Instructions:' : 'iOS Safari Instructions:'}
+                  </p>
+                </div>
+                <ol className="text-xs text-blue-800 dark:text-blue-300 space-y-2.5 ml-8">
+                  {isMacOSDevice ? (
+                    <>
+                      <li className="flex items-start gap-2">
+                        <span className="font-bold text-blue-600 dark:text-blue-400">1.</span>
+                        <span>Click the <strong className="text-blue-900 dark:text-blue-100">Share button</strong> (square with arrow) in the Safari toolbar at the top</span>
+                      </li>
+                      <li className="flex items-start gap-2">
+                        <span className="font-bold text-blue-600 dark:text-blue-400">2.</span>
+                        <span>In the menu, select <strong className="text-blue-900 dark:text-blue-100">"Add to Dock"</strong> (recommended) or <strong className="text-blue-900 dark:text-blue-100">"Add to Home Screen"</strong></span>
+                      </li>
+                      <li className="flex items-start gap-2">
+                        <span className="font-bold text-blue-600 dark:text-blue-400">3.</span>
+                        <span>Click <strong className="text-blue-900 dark:text-blue-100">"Add"</strong> in the confirmation dialog</span>
+                      </li>
+                      <li className="flex items-start gap-2 pt-1 border-t border-blue-200 dark:border-blue-700">
+                        <span className="text-blue-600 dark:text-blue-400">✓</span>
+                        <span className="text-blue-700 dark:text-blue-300">The app icon will appear in your Dock and can be launched like any other app!</span>
+                      </li>
+                    </>
+                  ) : (
+                    <>
+                      <li className="flex items-start gap-2">
+                        <span className="font-bold text-blue-600 dark:text-blue-400">1.</span>
+                        <span>Tap the <strong className="text-blue-900 dark:text-blue-100">Share button</strong> (square with arrow pointing up) at the bottom of Safari</span>
+                      </li>
+                      <li className="flex items-start gap-2">
+                        <span className="font-bold text-blue-600 dark:text-blue-400">2.</span>
+                        <span>Scroll down in the Share menu and tap <strong className="text-blue-900 dark:text-blue-100">"Add to Home Screen"</strong></span>
+                      </li>
+                      <li className="flex items-start gap-2">
+                        <span className="font-bold text-blue-600 dark:text-blue-400">3.</span>
+                        <span>Tap <strong className="text-blue-900 dark:text-blue-100">"Add"</strong> in the top right corner to confirm</span>
+                      </li>
+                      <li className="flex items-start gap-2 pt-1 border-t border-blue-200 dark:border-blue-700">
+                        <span className="text-blue-600 dark:text-blue-400">✓</span>
+                        <span className="text-blue-700 dark:text-blue-300">The app icon will appear on your home screen and can be launched like any other app!</span>
+                      </li>
+                    </>
+                  )}
+                </ol>
+              </div>
+            </div>
+            <button
+              onClick={handleDismiss}
+              className="flex-shrink-0 w-6 h-6 flex items-center justify-center text-text-tertiary dark:text-text-tertiary hover:text-text-primary dark:hover:text-white"
+              aria-label="Dismiss"
+            >
+              <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+              </svg>
+            </button>
+          </div>
+          <div className="flex gap-2 pt-2 border-t border-border-soft dark:border-dark-border">
+            <button
+              onClick={handleDismiss}
+              className="flex-1 px-4 py-2.5 text-xs font-bold text-text-secondary dark:text-text-secondary hover:text-text-primary dark:hover:text-white border border-border-soft dark:border-dark-border rounded-lg transition-colors"
+            >
+              Not Now
+            </button>
+            <button
+              onClick={handleDismiss}
+              className="flex-1 px-4 py-2.5 bg-navy-primary text-white text-xs font-black uppercase tracking-widest rounded-lg hover:opacity-90 transition-opacity"
+            >
+              Got It
+            </button>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  // For Chrome/Edge (with beforeinstallprompt support)
+  if (!deferredPrompt) {
     return null;
   }
 

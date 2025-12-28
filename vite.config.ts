@@ -3,11 +3,20 @@ import { defineConfig } from 'vite';
 import react from '@vitejs/plugin-react';
 import { VitePWA } from 'vite-plugin-pwa';
 import Tauri from 'vite-plugin-tauri';
+import { readFileSync } from 'fs';
 
 // Only load Tauri plugin when building for Tauri (when TAURI_PLATFORM is set)
 const isTauriBuild = process.env.TAURI_PLATFORM !== undefined;
 
+// Read app version from package.json
+const packageJson = JSON.parse(readFileSync('./package.json', 'utf-8'));
+const appVersion = packageJson.version;
+
 export default defineConfig({
+  define: {
+    // Inject app version at build time
+    'import.meta.env.VITE_APP_VERSION': JSON.stringify(appVersion),
+  },
   server: {
     port: 3000,
     host: '0.0.0.0',
@@ -49,10 +58,12 @@ export default defineConfig({
     ...(isTauriBuild ? [Tauri()] : []),
     VitePWA({
       registerType: 'autoUpdate',
-      includeAssets: ['favicon.ico', 'apple-touch-icon.png', 'mask-icon.svg'],
+      includeAssets: ['favicon.ico', 'apple-touch-icon.png', 'mask-icon.svg', 'pwa-192x192.png', 'pwa-512x512.png'],
       filename: 'manifest.webmanifest', // Explicitly set manifest filename
       strategies: 'generateSW', // Use generateSW strategy (default)
       injectRegister: 'auto', // Auto-inject registration script
+      // Ensure PWA installability requirements are met
+      minifyManifest: true,
       manifest: {
         name: 'Grounded by AC MiNDS',
         short_name: 'Grounded',
