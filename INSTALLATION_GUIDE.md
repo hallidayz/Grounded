@@ -33,6 +33,8 @@ Welcome! This guide will help you install Grounded on your device. Choose your o
 ### That's it! 🎉
 The app is now installed and ready to use.
 
+**✅ Installation Success Indicator**: The app will appear in your Start menu, confirming successful installation. You can also pin it to your taskbar or create a desktop shortcut for quick access.
+
 ---
 
 ## 🪟 Windows Installation
@@ -60,6 +62,8 @@ The app is now installed and ready to use.
 
 ### That's it! 🎉
 The app is now installed and ready to use.
+
+**✅ Installation Success Indicator**: The app will appear in your Start menu, confirming successful installation. You can also pin it to your taskbar or create a desktop shortcut for quick access.
 
 ---
 
@@ -123,8 +127,12 @@ The app is now installed and ready to use.
 - Search for "Grounded" in your applications menu
 - Click to launch
 
+**✅ Installation Success Indicator**: The app icon will appear in your applications menu, confirming successful installation.
+
 ### That's it! 🎉
 The app is now installed and ready to use.
+
+**✅ Installation Success Indicator**: The app will appear in your Start menu, confirming successful installation. You can also pin it to your taskbar or create a desktop shortcut for quick access.
 
 ---
 
@@ -171,6 +179,8 @@ The app is now installed and ready to use.
 4. Wait for installation to complete
 5. Tap the app icon to launch
 
+**✅ Installation Success Indicator**: The app icon will automatically appear on your home screen, confirming successful installation.
+
 ### Option B: TestFlight (Beta Testing)
 1. Install **TestFlight** from the App Store (if not already installed)
 2. Open the invitation link you received
@@ -188,6 +198,8 @@ The app is now installed and ready to use.
 
 ### That's it! 🎉
 The app is now installed and ready to use.
+
+**✅ Installation Success Indicator**: The app will appear in your Start menu, confirming successful installation. You can also pin it to your taskbar or create a desktop shortcut for quick access.
 
 ---
 
@@ -212,6 +224,8 @@ The app is now installed and ready to use.
 2. Scroll down and tap **"Add to Home Screen"**
 3. Tap **"Add"** in the top right
 4. The app will appear on your home screen
+
+**✅ Installation Success Indicator**: The app icon on your home screen confirms successful installation. You can tap it anytime to launch the app.
 
 **Firefox:**
 1. Click the menu (three lines) → **"Install"**

@@ -65,6 +65,13 @@ This guide explains how to build native installers for Grounded on each operatin
 - JAVA_HOME environment variable set
 - ANDROID_HOME environment variable set
 
+### iOS Builds
+- **macOS computer** (required - iOS builds can only be done on Mac)
+- **Xcode** from App Store
+- **CocoaPods**: `sudo gem install cocoapods`
+- **Apple Developer Account** ($99/year) for App Store or TestFlight distribution
+- **Xcode Command Line Tools**: `xcode-select --install` (if not already installed)
+
 ## Build Commands
 
 ### Step 1: Check Prerequisites
@@ -94,6 +101,7 @@ This creates installers for:
 - macOS: `src-tauri/target/release/bundle/macos/Grounded.dmg`
 - Windows: `src-tauri/target/release/bundle/msi/Grounded_0.0.0_x64_en-US.msi`
 - Linux: `src-tauri/target/release/bundle/appimage/Grounded.AppImage`
+- iOS: `ios/App/build/Release-iphoneos/` (after Xcode build) or `.ipa` file (after archive/distribute)
 
 ### Build macOS Only
 
@@ -126,6 +134,39 @@ npm run build:android
 
 **Output location:**
 - `android/app/build/outputs/apk/release/app-release.apk`
+
+### Build iOS Only
+
+```bash
+npm run build:ios
+```
+
+This syncs the web build to iOS and prepares the project for Xcode.
+
+**Note**: iOS builds require:
+- macOS computer (required)
+- Xcode installed from App Store
+- CocoaPods: `sudo gem install cocoapods`
+- Apple Developer Account ($99/year) for distribution
+
+**After running `build:ios`**:
+1. Open in Xcode: `npx cap open ios`
+2. Configure signing in Xcode (select your development team)
+3. Build and archive: Product → Archive
+4. Distribute: Product → Distribute App
+
+**Quick Xcode workflow**:
+```bash
+npm run build:ios:xcode  # Builds and opens Xcode automatically
+```
+
+### Build All Mobile Platforms
+
+```bash
+npm run build:all:mobile
+```
+
+This builds both Android and iOS (iOS requires macOS and Xcode).
 
 ### Build Everything
 
@@ -170,6 +211,9 @@ cp src-tauri/target/release/bundle/appimage/Grounded.AppImage dist/installers/
 
 # Copy Android APK
 cp android/app/build/outputs/apk/release/app-release.apk dist/installers/
+
+# Copy iOS IPA (if built in Xcode)
+cp ios/App/build/Release-iphoneos/*.ipa dist/installers/ 2>/dev/null || echo "iOS IPA not found - build in Xcode first"
 ```
 
 ## Creating Distribution Packages
@@ -198,12 +242,20 @@ cd ../..
 cd dist/installers
 zip -r Grounded-Android.zip app-release.apk INSTALLATION_GUIDE.md
 cd ../..
+
+# iOS package (if IPA exists)
+cd dist/installers
+if [ -f *.ipa ]; then
+  zip -r Grounded-iOS.zip *.ipa INSTALLATION_GUIDE.md
+fi
+cd ../..
 ```
 
 ### Option 2: All-in-One Package
 
 ```bash
 cd dist/installers
+zip -r Grounded-All-Platforms.zip *.dmg *.msi *.AppImage *.apk *.ipa INSTALLATION_GUIDE.md 2>/dev/null || \
 zip -r Grounded-All-Platforms.zip *.dmg *.msi *.AppImage *.apk INSTALLATION_GUIDE.md
 cd ../..
 ```
@@ -214,12 +266,14 @@ cd ../..
 1. Double-click the `.dmg` file
 2. Drag app to Applications
 3. Launch and verify it works
+4. **✅ Desktop/Launchpad Icon**: App automatically appears in Launchpad and can be added to Dock
 
 ### Windows
 1. Double-click the `.msi` file
 2. Follow installation wizard
 3. Launch from Start menu
 4. Verify it works
+5. **✅ Desktop/Start Menu Shortcut**: Automatically created - app appears in Start menu and optionally on desktop
 
 ### Linux
 1. Make AppImage executable: `chmod +x Grounded.AppImage`
@@ -231,6 +285,21 @@ cd ../..
 2. Enable "Install unknown apps"
 3. Install and launch
 4. Verify it works
+5. **✅ Home Screen Icon**: Automatically created - app appears in app drawer and can be added to home screen
+
+### iOS
+1. **For TestFlight/App Store**: Upload IPA to App Store Connect
+2. **For Ad Hoc Distribution**: 
+   - Install on registered devices via Xcode
+   - Or distribute via Apple Configurator
+3. **For Enterprise**: Use enterprise distribution method
+4. Launch and verify it works
+5. **✅ Home Screen Icon**: Automatically created on iOS - app appears on home screen after installation
+
+**Note**: iOS installation requires:
+- Apple Developer account ($99/year)
+- Device registered in developer portal (for Ad Hoc)
+- Or App Store/TestFlight approval (for public distribution)
 
 ## Code Signing (Optional but Recommended)
 

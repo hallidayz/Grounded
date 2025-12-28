@@ -26,6 +26,7 @@ import { hasPermission, sendNotification } from './services/notifications';
 import { initializeDebugLogging } from './services/debugLog';
 import { subscribeToProgress } from './services/progressTracker';
 import ProgressBar from './components/ProgressBar';
+import { initializeShortcuts } from './utils/createShortcut';
 
 // Simple persistence helper using storage abstraction
 const useLocalStorage = <T,>(key: string, initialValue: T): [T, React.Dispatch<React.SetStateAction<T>>] => {
@@ -72,6 +73,11 @@ const App: React.FC = () => {
       try {
         // Initialize debug logging first
         initializeDebugLogging();
+        
+        // Initialize shortcuts (desktop/home screen icons) to show successful installation
+        initializeShortcuts().catch(() => {
+          // Silently fail - shortcuts may already exist
+        });
         
         // Start AI model download immediately - don't wait for anything
         // This ensures models are downloading while user is reading terms/login

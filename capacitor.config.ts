@@ -13,6 +13,10 @@ const config: CapacitorConfig = {
       keystorePath: undefined,
       keystoreAlias: undefined
     }
+  },
+  ios: {
+    scheme: 'tauri',
+    contentInset: 'automatic'
   }
 };
 

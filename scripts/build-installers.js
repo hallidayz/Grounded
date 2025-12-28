@@ -57,6 +57,8 @@ function checkPrerequisites() {
   let rustInstalled = false;
   let androidReady = false;
   let javaInstalled = false;
+  let iosReady = false;
+  let xcodeInstalled = false;
   
   try {
     execSync('cargo --version', { stdio: 'ignore' });
@@ -81,7 +83,21 @@ function checkPrerequisites() {
     androidReady = false;
   }
   
-  return { rustInstalled, androidReady, javaInstalled };
+  // Check for iOS/Xcode prerequisites
+  try {
+    execSync('xcodebuild -version', { stdio: 'ignore' });
+    xcodeInstalled = true;
+  } catch {
+    xcodeInstalled = false;
+  }
+  
+  // Check if iOS project exists
+  const iosDir = join(process.cwd(), 'ios');
+  if (existsSync(iosDir)) {
+    iosReady = true;
+  }
+  
+  return { rustInstalled, androidReady, javaInstalled, iosReady, xcodeInstalled };
 }
 
 function main() {
@@ -91,7 +107,7 @@ function main() {
   const buildAll = platforms.length === 0;
   
   // Check prerequisites
-  const { rustInstalled, androidReady, javaInstalled } = checkPrerequisites();
+  const { rustInstalled, androidReady, javaInstalled, iosReady, xcodeInstalled } = checkPrerequisites();
   
   // Create output directory
   const outputDir = join(process.cwd(), 'dist', 'installers');
@@ -185,6 +201,80 @@ function main() {
     }
   }
   
+  // Build iOS (requires manual Xcode steps for final distribution)
+  if (buildAll || platforms.includes('ios') || platforms.includes('all')) {
+    log('\n🍎 Building iOS App...', 'blue');
+    
+    if (process.platform !== 'darwin') {
+      log('\n❌ iOS builds require macOS. Skipping iOS build.', 'red');
+      log('   iOS builds can only be done on a Mac with Xcode installed.', 'yellow');
+    } else if (!xcodeInstalled) {
+      log('\n❌ Xcode not found. iOS builds require Xcode.', 'red');
+      log('   Install Xcode from the App Store:', 'yellow');
+      log('   https://apps.apple.com/us/app/xcode/id497799835', 'yellow');
+      log('   After installation, run: sudo xcode-select --switch /Applications/Xcode.app/Contents/Developer', 'yellow');
+      log('   Then run: sudo xcodebuild -license accept', 'yellow');
+    } else {
+      // Check if iOS project exists, if not, create it
+      const iosDir = join(process.cwd(), 'ios');
+      if (!existsSync(iosDir)) {
+        log('\n📱 Setting up iOS project (first time)...', 'blue');
+        log('   This will create the iOS project structure.', 'yellow');
+        
+        // Check if @capacitor/ios is installed
+        try {
+          require.resolve('@capacitor/ios');
+        } catch {
+          log('\n⚠️  @capacitor/ios not found. Installing...', 'yellow');
+          if (!exec('npm install @capacitor/ios')) {
+            log('\n❌ Failed to install @capacitor/ios', 'red');
+            log('   Install manually: npm install @capacitor/ios', 'yellow');
+          }
+        }
+        
+        if (exec('npx cap add ios')) {
+          log('✅ iOS project created!', 'green');
+        } else {
+          log('\n❌ Failed to create iOS project', 'red');
+          log('   Try manually: npx cap add ios', 'yellow');
+        }
+      }
+      
+      // Build and sync iOS
+      if (exec('npm run build:ios')) {
+        log('\n✅ iOS build sync complete!', 'green');
+        log('\n📝 Next Steps for iOS Distribution:', 'blue');
+        log('   1. Open Xcode: npx cap open ios', 'yellow');
+        log('   2. Select your development team in Xcode', 'yellow');
+        log('   3. Product → Archive', 'yellow');
+        log('   4. Distribute App → App Store Connect or Ad Hoc', 'yellow');
+        log('   5. Export IPA file for distribution', 'yellow');
+        log('\n   Note: iOS distribution requires Apple Developer account ($99/year)', 'yellow');
+        log('   For TestFlight: Upload to App Store Connect', 'yellow');
+        log('   For Enterprise: Use Ad Hoc or Enterprise distribution', 'yellow');
+        
+        // Check if there's an archive or IPA file
+        const iosArchiveDir = join(iosDir, 'App', 'build', 'Release-iphoneos');
+        const ipaFiles = findFiles(iosDir, /\.ipa$/);
+        
+        if (ipaFiles.length > 0) {
+          const ipaFile = ipaFiles[0];
+          const dest = join(outputDir, basename(ipaFile));
+          copyFileSync(ipaFile, dest);
+          log(`\n   📦 iOS IPA: ${basename(dest)}`, 'green');
+        } else {
+          log('\n   ⚠️  No IPA file found. Build IPA in Xcode (Product → Archive → Distribute)', 'yellow');
+        }
+      } else {
+        log('\n⚠️  iOS build sync failed. Check error messages above.', 'yellow');
+        log('   Common issues:', 'yellow');
+        log('   - CocoaPods not installed: sudo gem install cocoapods', 'yellow');
+        log('   - Xcode not properly configured', 'yellow');
+        log('   - Missing iOS dependencies', 'yellow');
+      }
+    }
+  }
+  
   // Copy installation guides
   const guides = [
     'INSTALLATION_GUIDE.md',
@@ -221,7 +311,7 @@ function main() {
   log(`   ${outputDir}\n`, 'blue');
   
   const files = readdirSync(outputDir).filter(f => 
-    f.endsWith('.dmg') || f.endsWith('.msi') || f.endsWith('.AppImage') || f.endsWith('.apk')
+    f.endsWith('.dmg') || f.endsWith('.msi') || f.endsWith('.AppImage') || f.endsWith('.apk') || f.endsWith('.ipa')
   );
   
   if (files.length > 0) {
