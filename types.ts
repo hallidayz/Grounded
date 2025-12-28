@@ -133,3 +133,28 @@ export interface FeelingLog {
   isAIResponse: boolean; // true if from AI, false if rule-based fallback
   lowStateCount: number; // Count of consecutive low states for pattern tracking
 }
+
+export interface UserInteraction {
+  id: string;
+  timestamp: string; // ISO string
+  type: 'feeling_selected' | 'sub_feeling_selected' | 'suggest_clicked' | 'reflection_started' | 'reflection_committed' | 'card_opened' | 'card_closed' | 'goal_created';
+  sessionId: string;
+  valueId?: string;
+  emotionalState?: string;
+  selectedFeeling?: string;
+  metadata?: Record<string, any>;
+}
+
+export interface Session {
+  id: string;
+  userId: string;
+  startTimestamp: string; // ISO string
+  endTimestamp?: string; // ISO string
+  valueId: string;
+  initialEmotionalState?: string;
+  finalEmotionalState?: string;
+  selectedFeeling?: string;
+  reflectionLength?: number; // Character count, not full text
+  goalCreated: boolean;
+  duration?: number; // in seconds
+}
