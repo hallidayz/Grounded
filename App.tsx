@@ -27,6 +27,7 @@ import { initializeDebugLogging } from './services/debugLog';
 import { subscribeToProgress } from './services/progressTracker';
 import ProgressBar from './components/ProgressBar';
 import { initializeShortcuts } from './utils/createShortcut';
+import { ensureServiceWorkerActive, listenForServiceWorkerUpdates } from './utils/serviceWorker';
 
 // Simple persistence helper using storage abstraction
 const useLocalStorage = <T,>(key: string, initialValue: T): [T, React.Dispatch<React.SetStateAction<T>>] => {
@@ -74,6 +75,20 @@ const App: React.FC = () => {
         // Initialize debug logging first
         initializeDebugLogging();
         
+        // Ensure service worker is active (critical for PWA, offline, and AI model caching)
+        ensureServiceWorkerActive().then((active) => {
+          if (active) {
+            console.log('✅ Service Worker verified active - PWA features enabled');
+          } else {
+            console.warn('⚠️ Service Worker not active - some features may be limited');
+          }
+        }).catch((error) => {
+          console.warn('⚠️ Service Worker check failed:', error);
+        });
+        
+        // Listen for service worker updates
+        listenForServiceWorkerUpdates();
+        
         // Initialize shortcuts (desktop/home screen icons) to show successful installation
         initializeShortcuts().catch(() => {
           // Silently fail - shortcuts may already exist
@@ -81,7 +96,14 @@ const App: React.FC = () => {
         
         // Start AI model download immediately - don't wait for anything
         // This ensures models are downloading while user is reading terms/login
-        preloadModels().catch(() => {
+        // Service worker will cache models for offline use
+        preloadModels().then((loaded) => {
+          if (loaded) {
+            console.log('✅ AI models loaded successfully - AI features enabled');
+          } else {
+            console.warn('⚠️ AI models not loaded - using rule-based responses');
+          }
+        }).catch(() => {
           // Silently fail - models will retry later
         });
         

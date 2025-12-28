@@ -4,7 +4,27 @@
 
 ---
 
-## 🍎 Mac (macOS)
+## 🌐 PWA (Progressive Web App) - Works on All Devices
+
+**Install directly from your web browser - no download needed!**
+
+### Chrome/Edge (Windows, Mac, Android)
+1. Open the Grounded app URL in your browser
+2. Look for the **install icon (➕)** in the address bar
+3. Click **"Install"** or **"Add to Home Screen"**
+4. Confirm installation
+
+### Safari (iPhone/iPad)
+1. Open the Grounded app URL in Safari
+2. Tap the **Share button** (square with arrow)
+3. Scroll down and tap **"Add to Home Screen"**
+4. Tap **"Add"**
+
+**Done!** ✅ The app icon will appear on your home screen/desktop.
+
+---
+
+## 🍎 Mac (macOS) - COMING SOON
 
 1. **Double-click** `Grounded.dmg`
 2. **Drag** the app to your Applications folder
@@ -15,7 +35,7 @@
 
 ---
 
-## 🪟 Windows
+## 🪟 Windows - COMING SOON
 
 1. **Double-click** `Grounded_0.0.0_x64_en-US.msi`
 2. If Windows warns you, click **"More info"** then **"Run anyway"**
@@ -26,7 +46,7 @@
 
 ---
 
-## 🐧 Linux
+## 🐧 Linux - COMING SOON
 
 1. Make file executable:
    ```bash
@@ -38,7 +58,7 @@
 
 ---
 
-## 📱 Android
+## 📱 Android - COMING SOON
 
 1. Open **Settings** → **Security** → Enable **"Install unknown apps"**
 2. **Tap** the `app-release.apk` file
@@ -49,7 +69,7 @@
 
 ---
 
-## 🍎 iPhone/iPad (iOS)
+## 🍎 iPhone/iPad (iOS) - COMING SOON
 
 1. Open the installation link you received
 2. Tap **"Install"**
