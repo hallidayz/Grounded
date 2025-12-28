@@ -185,7 +185,10 @@ Before building, generate PWA icons:
 npm run rebuild:icons
 ```
 
-This will generate all required icons from `public/ac-minds-logo.png`.
+This will generate all required icons from `public/ac-minds-logo.png`:
+- PWA icons (192x192, 512x512, apple-touch-icon)
+- Favicon
+- Tauri desktop icons (32x32, 128x128, icon.ico, icon.icns)
 
 Or use online tools:
 - https://realfavicongenerator.net/
