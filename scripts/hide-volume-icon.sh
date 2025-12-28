@@ -17,138 +17,111 @@ fi
 
 echo "🔧 Hiding system files in DMG..."
 
-# Mount the DMG
-TEMP_MOUNT=$(mktemp -d)
-hdiutil attach "$DMG_PATH" -mountpoint "$TEMP_MOUNT" -quiet
+# Method: Convert DMG to read-write, hide files, rebuild DMG
+# This is the most reliable way to ensure hidden attributes persist
 
-if [ $? -ne 0 ]; then
-  echo "Error: Failed to mount DMG"
-  exit 1
-fi
-
-# Function to hide a file if it exists
-hide_file() {
-  local file_path="$1"
-  local file_name="$2"
-  
-  if [ -f "$file_path" ] || [ -d "$file_path" ]; then
-    # Set the invisible flag using SetFile (part of Xcode Command Line Tools)
-    if command -v SetFile &> /dev/null; then
-      SetFile -a V "$file_path" 2>/dev/null
-      echo "✅ Hidden $file_name"
-    else
-      # Alternative: use chflags (built-in macOS command)
-      chflags hidden "$file_path" 2>/dev/null
-      echo "✅ Hidden $file_name (using chflags)"
-    fi
-    return 0
-  else
-    return 1
-  fi
-}
-
-# List of files/directories that should be hidden
-# These are standard macOS system files that shouldn't be visible to users
-FILES_TO_HIDE=(
-  ".VolumeIcon.icns:Volume icon (DMG volume icon)"
-  ".DS_Store:Finder metadata"
-  ".apdisk:Network folder information"
-  ".fseventsd:File system events"
-  ".Spotlight-V100:Spotlight index"
-  ".Trashes:Trash folder"
-  ".TemporaryItems:Temporary items"
-)
-
-HIDDEN_COUNT=0
-
-# Hide each file/directory if it exists
-for file_info in "${FILES_TO_HIDE[@]}"; do
-  IFS=':' read -r file_name file_desc <<< "$file_info"
-  file_path="$TEMP_MOUNT/$file_name"
-  
-  if hide_file "$file_path" "$file_name ($file_desc)"; then
-    ((HIDDEN_COUNT++))
-  fi
-done
-
-# Also hide any files starting with ._ (resource fork files created by macOS)
-# These are created when copying files between volumes
-find "$TEMP_MOUNT" -name "._*" -type f 2>/dev/null | while read -r file; do
-  if hide_file "$file" "$(basename "$file") (resource fork)"; then
-    ((HIDDEN_COUNT++))
-  fi
-done
-
-# Convert DMG to read-write format, hide files, then convert back
-# This ensures the hidden attribute is properly saved
-echo "📝 Converting DMG to read-write format to save hidden attributes..."
+echo "📝 Step 1: Converting DMG to read-write format..."
 
 # Create a temporary read-write DMG
 TEMP_DMG="${DMG_PATH}.rw.dmg"
-hdiutil convert "$DMG_PATH" -format UDRW -o "$TEMP_DMG" -quiet
-
-if [ $? -ne 0 ]; then
-  echo "⚠️  Could not convert DMG to read-write format, trying direct method..."
-  # Fallback: just unmount and hope the attributes stick
-  hdiutil detach "$TEMP_MOUNT" -quiet
-  if [ $HIDDEN_COUNT -gt 0 ]; then
-    echo "✅ Hidden $HIDDEN_COUNT system file(s) in DMG (may need rebuild)"
-  else
-    echo "ℹ️  No system files found to hide (this is normal)"
-  fi
-  exit 0
+if ! hdiutil convert "$DMG_PATH" -format UDRW -o "$TEMP_DMG" -quiet; then
+  echo "❌ Error: Could not convert DMG to read-write format"
+  exit 1
 fi
 
-# Unmount the original
-hdiutil detach "$TEMP_MOUNT" -quiet 2>/dev/null || true
-
 # Mount the read-write DMG
+echo "📝 Step 2: Mounting read-write DMG..."
 TEMP_MOUNT_RW=$(mktemp -d)
-hdiutil attach "$TEMP_DMG" -mountpoint "$TEMP_MOUNT_RW" -quiet -nobrowse
-
-if [ $? -ne 0 ]; then
-  echo "⚠️  Could not mount read-write DMG, using original"
+if ! hdiutil attach "$TEMP_DMG" -mountpoint "$TEMP_MOUNT_RW" -quiet -nobrowse -noautoopen; then
+  echo "❌ Error: Could not mount read-write DMG"
   rm -f "$TEMP_DMG"
   exit 1
 fi
 
-# Hide files in the read-write DMG
+# Wait a moment for mount to settle
+sleep 1
+
+# List of files/directories that should be hidden
+FILES_TO_HIDE=(
+  ".VolumeIcon.icns"
+  ".DS_Store"
+  ".apdisk"
+  ".fseventsd"
+  ".Spotlight-V100"
+  ".Trashes"
+  ".TemporaryItems"
+)
+
+# Hide or remove files in the read-write DMG
+echo "📝 Step 3: Removing/hiding system files..."
 HIDDEN_COUNT=0
-for file_info in "${FILES_TO_HIDE[@]}"; do
-  IFS=':' read -r file_name file_desc <<< "$file_info"
+REMOVED_COUNT=0
+
+for file_name in "${FILES_TO_HIDE[@]}"; do
   file_path="$TEMP_MOUNT_RW/$file_name"
   
-  if hide_file "$file_path" "$file_name ($file_desc)"; then
-    ((HIDDEN_COUNT++))
+  if [ -e "$file_path" ]; then
+    # For .VolumeIcon.icns, we can remove it entirely - it's only for the volume icon
+    # The DMG will work fine without it (just won't have a custom volume icon)
+    if [ "$file_name" = ".VolumeIcon.icns" ]; then
+      rm -f "$file_path"
+      echo "✅ Removed $file_name (not required for DMG functionality)"
+      ((REMOVED_COUNT++))
+    else
+      # For other system files, hide them (they may be needed)
+      # Use SetFile if available (most reliable)
+      if command -v SetFile &> /dev/null; then
+        SetFile -a V "$file_path" 2>/dev/null
+      fi
+      # Also use chflags as backup
+      chflags hidden "$file_path" 2>/dev/null
+      # Set extended attribute (FinderInfo) to mark as invisible
+      xattr -w com.apple.FinderInfo "0000000000000000040000000000000000000000000000000000000000000000" "$file_path" 2>/dev/null
+      
+      echo "✅ Hidden $file_name"
+      ((HIDDEN_COUNT++))
+    fi
   fi
 done
 
 # Hide resource fork files
 find "$TEMP_MOUNT_RW" -name "._*" -type f 2>/dev/null | while read -r file; do
-  if hide_file "$file" "$(basename "$file") (resource fork)"; then
-    ((HIDDEN_COUNT++))
+  if command -v SetFile &> /dev/null; then
+    SetFile -a V "$file" 2>/dev/null
   fi
+  chflags hidden "$file" 2>/dev/null
 done
 
+# Force sync to ensure changes are written to disk
+sync
+
 # Unmount the read-write DMG
-hdiutil detach "$TEMP_MOUNT_RW" -quiet
+echo "📝 Step 4: Unmounting read-write DMG..."
+hdiutil detach "$TEMP_MOUNT_RW" -force -quiet 2>/dev/null || hdiutil detach "$TEMP_MOUNT_RW" -quiet
+
+# Wait for unmount to complete
+sleep 1
 
 # Convert back to compressed read-only format
-echo "📦 Converting DMG back to compressed format..."
-hdiutil convert "$TEMP_DMG" -format UDZO -o "$DMG_PATH" -quiet
-
-if [ $? -eq 0 ]; then
+echo "📝 Step 5: Converting back to compressed format..."
+if hdiutil convert "$TEMP_DMG" -format UDZO -o "${DMG_PATH}.new" -quiet; then
+  # Replace original with new DMG
+  mv "${DMG_PATH}.new" "$DMG_PATH"
   rm -f "$TEMP_DMG"
-  if [ $HIDDEN_COUNT -gt 0 ]; then
-    echo "✅ Hidden $HIDDEN_COUNT system file(s) in DMG and rebuilt"
+  
+  if [ $REMOVED_COUNT -gt 0 ] || [ $HIDDEN_COUNT -gt 0 ]; then
+    if [ $REMOVED_COUNT -gt 0 ]; then
+      echo "✅ Removed $REMOVED_COUNT system file(s) from DMG (.VolumeIcon.icns removed)"
+    fi
+    if [ $HIDDEN_COUNT -gt 0 ]; then
+      echo "✅ Hidden $HIDDEN_COUNT system file(s) in DMG"
+    fi
+    echo "✅ DMG rebuilt - .VolumeIcon.icns removed (DMG will work fine without it)"
   else
-    echo "ℹ️  No system files found to hide (this is normal)"
+    echo "ℹ️  No system files found to remove/hide (this is normal)"
   fi
 else
-  echo "⚠️  Could not convert DMG back, keeping read-write version"
-  mv "$TEMP_DMG" "$DMG_PATH"
-  if [ $HIDDEN_COUNT -gt 0 ]; then
-    echo "✅ Hidden $HIDDEN_COUNT system file(s) in DMG"
-  fi
+  echo "❌ Error: Could not convert DMG back to compressed format"
+  echo "⚠️  Keeping read-write version at: $TEMP_DMG"
+  exit 1
 fi
-
