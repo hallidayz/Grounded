@@ -4,10 +4,12 @@ import { motion } from 'framer-motion';
 interface AIResponseBubbleProps {
   message: string;
   emotion?: string;
+  feeling?: string; // The selected feeling word (e.g., "tired", "anxious")
+  feelingEmoji?: string; // The emoji for the emotional state
   onActionClick?: (action: 'reflection' | 'values' | 'resources') => void;
 }
 
-const AIResponseBubble: React.FC<AIResponseBubbleProps> = ({ message, emotion, onActionClick }) => {
+const AIResponseBubble: React.FC<AIResponseBubbleProps> = ({ message, emotion, feeling, feelingEmoji, onActionClick }) => {
   const [isVisible, setIsVisible] = useState(false);
 
   useEffect(() => {
@@ -20,6 +22,10 @@ const AIResponseBubble: React.FC<AIResponseBubbleProps> = ({ message, emotion, o
     onActionClick?.(action);
   }, [onActionClick]);
 
+  // Use feeling if provided, otherwise fallback to emotion or default
+  const displayText = feeling || emotion || 'Reflection';
+  const displayEmoji = feelingEmoji || '💙';
+
   return (
     <motion.div
       initial={{ opacity: 0, y: 20 }}
@@ -29,10 +35,10 @@ const AIResponseBubble: React.FC<AIResponseBubbleProps> = ({ message, emotion, o
     >
       <div className="flex items-center space-x-2">
         <div className="w-8 h-8 bg-navy-primary dark:bg-yellow-warm rounded-full flex items-center justify-center flex-shrink-0">
-          <span className="text-white dark:text-navy-dark text-sm">💙</span>
+          <span className="text-white dark:text-navy-dark text-sm">{displayEmoji}</span>
         </div>
-        <span className="text-sm font-semibold text-navy-primary dark:text-yellow-warm">
-          AI Reflection
+        <span className="text-sm font-semibold text-navy-primary dark:text-yellow-warm capitalize">
+          {displayText}
         </span>
       </div>
       

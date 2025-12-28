@@ -33,6 +33,8 @@ export default defineConfig({
       registerType: 'autoUpdate',
       includeAssets: ['favicon.ico', 'apple-touch-icon.png', 'mask-icon.svg'],
       filename: 'manifest.webmanifest', // Explicitly set manifest filename
+      strategies: 'generateSW', // Use generateSW strategy (default)
+      injectRegister: 'auto', // Auto-inject registration script
       manifest: {
         name: 'Grounded by AC MiNDS',
         short_name: 'Grounded',
@@ -85,7 +87,11 @@ export default defineConfig({
         prefer_related_applications: false
       },
       workbox: {
-        globPatterns: ['**/*.{js,css,html,ico,png,svg,woff2}', '**/models/**/*'],
+        globPatterns: ['**/*.{js,css,html,ico,png,svg,woff2,json,webmanifest}', '**/models/**/*'],
+        maximumFileSizeToCacheInBytes: 10 * 1024 * 1024, // 10MB - for AI models
+        cleanupOutdatedCaches: true,
+        skipWaiting: true,
+        clientsClaim: true,
         runtimeCaching: [
           {
             urlPattern: /^https:\/\/fonts\.googleapis\.com\/.*/i,
@@ -109,6 +115,36 @@ export default defineConfig({
               expiration: {
                 maxEntries: 50,
                 maxAgeSeconds: 60 * 60 * 24 * 7 // 1 week
+              }
+            }
+          },
+          {
+            // Cache HuggingFace model downloads for offline AI processing
+            urlPattern: /^https:\/\/.*huggingface\.co\/.*/i,
+            handler: 'CacheFirst',
+            options: {
+              cacheName: 'huggingface-models-cache',
+              expiration: {
+                maxEntries: 100,
+                maxAgeSeconds: 60 * 60 * 24 * 365 // 1 year - models don't change often
+              },
+              cacheableResponse: {
+                statuses: [0, 200]
+              }
+            }
+          },
+          {
+            // Cache CDN model files (onnx, bin, json, etc.)
+            urlPattern: /\.(onnx|bin|safetensors|json|txt)$/i,
+            handler: 'CacheFirst',
+            options: {
+              cacheName: 'ai-models-cache',
+              expiration: {
+                maxEntries: 200,
+                maxAgeSeconds: 60 * 60 * 24 * 365 // 1 year
+              },
+              cacheableResponse: {
+                statuses: [0, 200]
               }
             }
           }

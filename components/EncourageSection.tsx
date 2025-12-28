@@ -1,5 +1,5 @@
 import React from 'react';
-import { EmotionalState } from '../services/emotionalStates';
+import { EmotionalState, getEmotionalState } from '../services/emotionalStates';
 import { LCSWConfig } from '../types';
 import EmotionSelector from './EmotionSelector';
 import AIResponseBubble from './AIResponseBubble';
@@ -9,6 +9,7 @@ interface EncourageSectionProps {
   encouragementText: string | null;
   encouragementLoading: boolean;
   lastEncouragedState: string | null;
+  selectedFeeling: string | null;
   lowStateCount: number;
   lcswConfig?: LCSWConfig;
   values: Array<{ id: string }>;
@@ -22,6 +23,7 @@ const EncourageSection: React.FC<EncourageSectionProps> = ({
   encouragementText,
   encouragementLoading,
   lastEncouragedState,
+  selectedFeeling,
   lowStateCount,
   lcswConfig,
   values,
@@ -30,6 +32,10 @@ const EncourageSection: React.FC<EncourageSectionProps> = ({
   onResetEncouragement,
   onOpenFirstValue,
 }) => {
+  // Get emoji from emotional state config
+  const stateConfig = lastEncouragedState ? getEmotionalState(lastEncouragedState as EmotionalState) : null;
+  const feelingEmoji = stateConfig?.emoji || '💙';
+
   return (
     <div className="bg-white dark:bg-dark-bg-secondary rounded-xl sm:rounded-2xl border border-border-soft dark:border-dark-border shadow-sm p-4 sm:p-5">
       {!encouragementText && (
@@ -46,6 +52,8 @@ const EncourageSection: React.FC<EncourageSectionProps> = ({
           <AIResponseBubble
             message={encouragementText}
             emotion={lastEncouragedState || undefined}
+            feeling={selectedFeeling || undefined}
+            feelingEmoji={feelingEmoji}
             onActionClick={(action) => {
               if (action === 'reflection') {
                 onOpenFirstValue();

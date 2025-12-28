@@ -26,7 +26,7 @@ interface ReflectionFormProps {
   onGoalFreqChange: (freq: GoalFrequency) => void;
   onSuggestGoal: () => void;
   onCommit: () => void;
-  getReflectionPlaceholder: (freq: GoalFrequency) => string;
+  getReflectionPlaceholder: (freq: GoalFrequency, subFeeling?: string | null) => string;
 }
 
 const ReflectionForm: React.FC<ReflectionFormProps> = ({
@@ -194,7 +194,7 @@ const ReflectionForm: React.FC<ReflectionFormProps> = ({
           <textarea 
             value={reflectionText}
             onChange={(e) => onReflectionTextChange(e.target.value)}
-            placeholder={getReflectionPlaceholder(goalFreq)}
+            placeholder={getReflectionPlaceholder(goalFreq, selectedFeeling)}
             className="w-full p-3 sm:p-4 rounded-xl sm:rounded-2xl bg-bg-secondary dark:bg-dark-bg-primary/50 border-none focus:ring-2 focus:ring-yellow-warm/30 outline-none text-text-primary dark:text-white min-h-[140px] sm:min-h-[160px] resize-none text-[10px] sm:text-[11px] leading-relaxed shadow-inner"
           />
           {analyzingReflection && (

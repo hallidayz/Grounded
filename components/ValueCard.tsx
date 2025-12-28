@@ -31,7 +31,7 @@ interface ValueCardProps {
   onSuggestGoal: () => void;
   onCompleteGoal: (goal: Goal) => void;
   onCommit: () => void;
-  getReflectionPlaceholder: (freq: GoalFrequency) => string;
+  getReflectionPlaceholder: (freq: GoalFrequency, subFeeling?: string | null) => string;
   lcswConfig?: any;
 }
 

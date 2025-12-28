@@ -118,6 +118,7 @@ const Dashboard: React.FC<DashboardProps> = ({ values, onLog, goals, onUpdateGoa
         encouragementText={dashboard.encouragementText}
         encouragementLoading={dashboard.encouragementLoading}
         lastEncouragedState={dashboard.lastEncouragedState}
+        selectedFeeling={dashboard.selectedFeeling}
         lowStateCount={dashboard.lowStateCount}
         lcswConfig={lcswConfig}
         values={values}

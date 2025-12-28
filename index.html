@@ -14,7 +14,7 @@
     
     <!-- Android/Chrome PWA Meta Tags -->
     <meta name="mobile-web-app-capable" content="yes" />
-    <link rel="manifest" href="/manifest.json" />
+    <link rel="manifest" href="/manifest.webmanifest" />
     
     <!-- Windows PWA Meta Tags -->
     <meta name="msapplication-TileColor" content="#02295b" />
@@ -49,35 +49,25 @@
   <body>
     <div id="root"></div>
     <script>
-      // Force unregister any existing service workers from other apps
-      // This MUST run before React loads to prevent conflicts
+      // Only unregister service workers from other origins/scopes
+      // Keep the current app's service worker to enable PWA installation
       (function() {
         if ('serviceWorker' in navigator) {
           navigator.serviceWorker.getRegistrations().then(function(registrations) {
+            const currentOrigin = window.location.origin;
             for(let registration of registrations) {
-              registration.unregister().then(function(success) {
-                console.log('Unregistered service worker:', registration.scope, success);
-              }).catch(function(err) {
-                console.error('Error unregistering service worker:', err);
-              });
+              // Only unregister if it's from a different origin
+              // This allows the current app's service worker to register properly
+              if (!registration.scope.startsWith(currentOrigin + '/')) {
+                registration.unregister().then(function(success) {
+                  console.log('Unregistered foreign service worker:', registration.scope, success);
+                }).catch(function(err) {
+                  console.error('Error unregistering service worker:', err);
+                });
+              }
             }
           }).catch(function(err) {
             console.error('Error getting service worker registrations:', err);
-          });
-        }
-        
-        // Clear all caches
-        if ('caches' in window) {
-          caches.keys().then(function(names) {
-            for (let name of names) {
-              caches.delete(name).then(function(success) {
-                console.log('Deleted cache:', name, success);
-              }).catch(function(err) {
-                console.error('Error deleting cache:', err);
-              });
-            }
-          }).catch(function(err) {
-            console.error('Error getting cache names:', err);
           });
         }
       })();
