@@ -121,21 +121,15 @@ export default defineConfig({
         cleanupOutdatedCaches: true,
         skipWaiting: true,
         clientsClaim: true,
+        // Add error handling for cache operations
+        navigateFallback: null, // Disable navigation fallback to prevent cache errors
+        navigateFallbackDenylist: [/^\/_/, /\/[^/?]+\.[^/]+$/], // Don't fallback for API routes or files
+        // Handle cache errors gracefully
+        mode: 'production',
+        sourcemap: false,
         runtimeCaching: [
-          {
-            urlPattern: /^https:\/\/fonts\.googleapis\.com\/.*/i,
-            handler: 'CacheFirst',
-            options: {
-              cacheName: 'google-fonts-cache',
-              expiration: {
-                maxEntries: 10,
-                maxAgeSeconds: 60 * 60 * 24 * 365 // 1 year
-              },
-              cacheableResponse: {
-                statuses: [0, 200]
-              }
-            }
-          },
+          // Note: Google Fonts are loaded directly in index.html and should not be cached by service worker
+          // to avoid CORS and cache storage errors. The browser will handle font caching naturally.
           {
             urlPattern: /^https:\/\/esm\.sh\/.*/i,
             handler: 'NetworkFirst',

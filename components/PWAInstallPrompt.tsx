@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import { updateManager } from '../services/updateManager';
 
 interface BeforeInstallPromptEvent extends Event {
   prompt: () => Promise<void>;
@@ -27,6 +28,7 @@ const PWAInstallPrompt: React.FC = () => {
   const [isInstalled, setIsInstalled] = useState(false);
   const [isSafariBrowser, setIsSafariBrowser] = useState(false);
   const [isMacOSDevice, setIsMacOSDevice] = useState(false);
+  const [updateInfo, setUpdateInfo] = useState<{ isNewInstall: boolean; isUpdate: boolean; currentVersion: string } | null>(null);
 
   useEffect(() => {
     // Check if app is already installed
@@ -35,15 +37,33 @@ const PWAInstallPrompt: React.FC = () => {
       return;
     }
 
+    // Get update info to show appropriate messaging
+    const info = updateManager.getUpdateInfo();
+    setUpdateInfo({
+      isNewInstall: info.isNewInstall,
+      isUpdate: info.isUpdate,
+      currentVersion: info.currentVersion,
+    });
+
     // Detect browser and OS
     setIsSafariBrowser(isSafari());
     setIsMacOSDevice(isMacOS());
 
     // Listen for beforeinstallprompt event (Chrome/Edge only)
+    // Note: For non-Safari browsers, installation is also available via address bar icon
     const handleBeforeInstallPrompt = (e: Event) => {
       e.preventDefault();
       setDeferredPrompt(e as BeforeInstallPromptEvent);
       // Show prompt after a short delay to avoid interrupting initial load
+      // Only show if user hasn't dismissed recently
+      const dismissed = localStorage.getItem('pwa-install-dismissed');
+      if (dismissed) {
+        const dismissedTime = parseInt(dismissed, 10);
+        const daysSinceDismissed = (Date.now() - dismissedTime) / (1000 * 60 * 60 * 24);
+        if (daysSinceDismissed < 7) {
+          return; // Don't show if dismissed within 7 days
+        }
+      }
       setTimeout(() => setShowPrompt(true), 3000);
     };
 
@@ -126,9 +146,29 @@ const PWAInstallPrompt: React.FC = () => {
               <h3 className="text-sm font-black text-text-primary dark:text-white mb-1">
                 Install Grounded on Safari
               </h3>
-              <p className="text-xs text-text-secondary dark:text-text-secondary mb-3">
-                Safari doesn't have an install button in the address bar. Follow these steps to add Grounded to your {isMacOSDevice ? 'Dock' : 'Home Screen'}:
+              <p className="text-xs text-text-secondary dark:text-text-secondary mb-2">
+                Safari doesn't show an install button in the address bar. Follow these steps to add Grounded to your {isMacOSDevice ? 'Dock' : 'Home Screen'} for future use:
               </p>
+              {updateInfo && updateInfo.isUpdate && (
+                <div className="mb-3 p-2 bg-yellow-warm/10 dark:bg-yellow-warm/20 border border-yellow-warm/30 rounded-lg">
+                  <p className="text-xs font-semibold text-yellow-warm dark:text-yellow-warm">
+                    🔄 Update Available: v{updateInfo.currentVersion}
+                  </p>
+                  <p className="text-xs text-text-primary/80 dark:text-white/80 mt-1">
+                    Installing updates preserves all your existing data. Your reflections, goals, and settings will remain intact.
+                  </p>
+                </div>
+              )}
+              {updateInfo && updateInfo.isNewInstall && (
+                <div className="mb-3 p-2 bg-calm-sage/10 dark:bg-calm-sage/20 border border-calm-sage/30 rounded-lg">
+                  <p className="text-xs font-semibold text-calm-sage dark:text-calm-sage">
+                    ✨ Fresh Install
+                  </p>
+                  <p className="text-xs text-text-primary/80 dark:text-white/80 mt-1">
+                    This is a new installation. The app will check for updates automatically and preserve your data when updates are available.
+                  </p>
+                </div>
+              )}
               <div className="bg-gradient-to-br from-blue-50 to-indigo-50 dark:from-blue-900/20 dark:to-indigo-900/20 border border-blue-200 dark:border-blue-800 rounded-lg p-4 space-y-3">
                 <div className="flex items-center gap-2 mb-2">
                   <div className="w-6 h-6 bg-blue-500 rounded-full flex items-center justify-center flex-shrink-0">
@@ -230,9 +270,32 @@ const PWAInstallPrompt: React.FC = () => {
             <h3 className="text-sm font-black text-text-primary dark:text-white mb-1">
               Install Grounded
             </h3>
-            <p className="text-xs text-text-secondary dark:text-text-secondary">
+            <p className="text-xs text-text-secondary dark:text-text-secondary mb-2">
               Install this app on your device for a better experience. Works offline and loads faster.
             </p>
+            <p className="text-xs text-text-tertiary dark:text-text-tertiary italic mb-2">
+              💡 Tip: You can also install via the install icon (➕) in your browser's address bar.
+            </p>
+            {updateInfo && updateInfo.isUpdate && (
+              <div className="mt-2 p-2 bg-yellow-warm/10 dark:bg-yellow-warm/20 border border-yellow-warm/30 rounded-lg">
+                <p className="text-xs font-semibold text-yellow-warm dark:text-yellow-warm">
+                  🔄 Update Available: v{updateInfo.currentVersion}
+                </p>
+                <p className="text-xs text-text-primary/80 dark:text-white/80 mt-1">
+                  Installing updates preserves all your existing data automatically.
+                </p>
+              </div>
+            )}
+            {updateInfo && updateInfo.isNewInstall && (
+              <div className="mt-2 p-2 bg-calm-sage/10 dark:bg-calm-sage/20 border border-calm-sage/30 rounded-lg">
+                <p className="text-xs font-semibold text-calm-sage dark:text-calm-sage">
+                  ✨ New Installation
+                </p>
+                <p className="text-xs text-text-primary/80 dark:text-white/80 mt-1">
+                  The app will automatically check for updates and preserve your data when updates are available.
+                </p>
+              </div>
+            )}
           </div>
           <button
             onClick={handleDismiss}

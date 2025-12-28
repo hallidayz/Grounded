@@ -24,7 +24,7 @@ import { isLoggedIn, getCurrentUser, acceptTerms, logoutUser } from './services/
 import { getItemSync, setItemSync } from './services/storage';
 import { hasPermission, sendNotification } from './services/notifications';
 import { initializeDebugLogging } from './services/debugLog';
-import { subscribeToProgress } from './services/progressTracker';
+import { subscribeToProgress, setModelLoadingProgress, setProgressSuccess, setProgressError } from './services/progressTracker';
 import ProgressBar from './components/ProgressBar';
 import { initializeShortcuts } from './utils/createShortcut';
 import { ensureServiceWorkerActive, listenForServiceWorkerUpdates } from './utils/serviceWorker';
@@ -69,11 +69,26 @@ const App: React.FC = () => {
   useEffect(() => {
     let isMounted = true; // Prevent state updates if component unmounts
     let cleanupInterval: NodeJS.Timeout | null = null;
+    let initializationTimeout: NodeJS.Timeout | null = null;
+    
+    // Set a timeout to prevent infinite hanging (30 seconds max)
+    initializationTimeout = setTimeout(() => {
+      if (isMounted && authState === 'checking') {
+        console.error('⚠️ Initialization timeout - proceeding to login screen');
+        setAuthState('login');
+      }
+    }, 30000);
     
     const initialize = async () => {
       try {
+        // Update progress: Starting initialization
+        setModelLoadingProgress(10, 'Initializing app...', 'Setting up core services');
+        
         // Initialize debug logging first
         initializeDebugLogging();
+        
+        // Update progress: Checking for updates
+        setModelLoadingProgress(20, 'Checking for updates...', '');
         
         // Initialize update manager to detect new install vs update
         const { updateManager } = await import('./services/updateManager');
@@ -85,6 +100,9 @@ const App: React.FC = () => {
           console.log(`🔄 App updated from v${updateInfo.previousVersion} to v${updateInfo.currentVersion}`);
           console.log('✅ User data preserved - database migrations applied');
         }
+        
+        // Update progress: Setting up service worker
+        setModelLoadingProgress(30, 'Setting up service worker...', '');
         
         // Ensure service worker is active (critical for PWA, offline, and AI model caching)
         ensureServiceWorkerActive().then((active) => {
@@ -106,8 +124,19 @@ const App: React.FC = () => {
           console.warn('Failed to initialize shortcuts:', error);
         });
         
+        // Update progress: Initializing database
+        setModelLoadingProgress(40, 'Initializing database...', 'Loading user data');
+        
         // Initialize database first (needed for user data)
-        await dbService.init();
+        // Add timeout wrapper to prevent hanging
+        const dbInitPromise = dbService.init();
+        const dbTimeoutPromise = new Promise((_, reject) => 
+          setTimeout(() => reject(new Error('Database initialization timeout')), 10000)
+        );
+        await Promise.race([dbInitPromise, dbTimeoutPromise]);
+        
+        // Update progress: Checking authentication
+        setModelLoadingProgress(60, 'Checking authentication...', '');
         
         // Start AI model download immediately - don't wait for anything
         // This ensures models are downloading while user is reading terms/login
@@ -146,6 +175,9 @@ const App: React.FC = () => {
         }
         
         if (isLoggedIn()) {
+          // Update progress: Loading user data
+          setModelLoadingProgress(70, 'Loading user data...', '');
+          
           const user = await getCurrentUser();
           if (!isMounted) return;
           
@@ -153,6 +185,7 @@ const App: React.FC = () => {
             setUserId(user.id);
             
             // Load app data from database
+            setModelLoadingProgress(80, 'Loading app data...', '');
             const appData = await dbService.getAppData(user.id);
             if (!isMounted) return;
             
@@ -180,6 +213,9 @@ const App: React.FC = () => {
               }
             }
             
+            // Update progress: Complete
+            setModelLoadingProgress(100, 'Ready!', '');
+            
             // Check if terms are accepted
             if (user.termsAccepted) {
               setAuthState('app');
@@ -190,17 +226,39 @@ const App: React.FC = () => {
             setAuthState('login');
           }
         } else {
+          setModelLoadingProgress(100, 'Ready!', '');
           setAuthState('login');
         }
       } catch (error) {
         console.error('Initialization error:', error);
+        setProgressError('Initialization failed', 'Please try refreshing the page');
         if (isMounted) {
-          setAuthState('login');
+          // Still proceed to login screen even on error
+          setTimeout(() => {
+            if (isMounted) {
+              setAuthState('login');
+            }
+          }, 2000); // Give user time to see the error message
+        }
+      } finally {
+        // Clear timeout if initialization completes
+        if (initializationTimeout) {
+          clearTimeout(initializationTimeout);
         }
       }
     };
     
     initialize();
+    
+    return () => {
+      isMounted = false;
+      if (cleanupInterval) {
+        clearInterval(cleanupInterval);
+      }
+      if (initializationTimeout) {
+        clearTimeout(initializationTimeout);
+      }
+    };
     
     // Listen for deep links in Tauri (when app is already running)
     if (typeof window !== 'undefined' && '__TAURI__' in window) {
@@ -581,7 +639,7 @@ const App: React.FC = () => {
           />
           <div className="space-y-4">
             <h2 className="text-xl font-black text-text-primary dark:text-white">
-              {progressState.label}
+              {progressState.label || 'Initializing...'}
             </h2>
             {progressState.details && (
               <p className="text-sm text-text-secondary dark:text-text-secondary">
@@ -595,6 +653,14 @@ const App: React.FC = () => {
               height="lg"
               className="mt-4"
             />
+            {progressState.status === 'error' && (
+              <button
+                onClick={() => setAuthState('login')}
+                className="mt-4 px-4 py-2 bg-yellow-warm text-text-primary rounded-lg font-black uppercase tracking-widest text-xs hover:opacity-90 transition-all"
+              >
+                Continue to Login
+              </button>
+            )}
           </div>
         </div>
       </div>
@@ -638,28 +704,28 @@ const App: React.FC = () => {
                     // Scroll to top when navigating to home
                     window.scrollTo({ top: 0, behavior: 'smooth' });
                   }}
-                  className={`px-2 sm:px-3 py-1.5 rounded-lg text-[10px] sm:text-xs font-bold transition-colors ${view === 'home' ? 'bg-yellow-warm/20 dark:bg-yellow-warm/30 text-yellow-warm dark:text-yellow-warm' : 'text-text-secondary dark:text-text-secondary hover:text-text-primary dark:hover:text-white hover:bg-bg-secondary dark:hover:bg-dark-bg-secondary'}`}
+                  className={`px-2 sm:px-3 py-1.5 rounded-lg text-xs sm:text-sm font-bold transition-colors ${view === 'home' ? 'bg-yellow-warm/20 dark:bg-yellow-warm/30 text-yellow-warm dark:text-yellow-warm' : 'text-text-secondary dark:text-text-secondary hover:text-text-primary dark:hover:text-white hover:bg-bg-secondary dark:hover:bg-dark-bg-secondary'}`}
                 >
                   <span className="hidden sm:inline">Home</span>
                   <span className="sm:hidden">H</span>
                 </button>
                 <button 
                   onClick={() => setView('values')}
-                  className={`px-2 sm:px-3 py-1.5 rounded-lg text-[10px] sm:text-xs font-bold transition-colors ${view === 'values' ? 'bg-yellow-warm/20 dark:bg-yellow-warm/30 text-yellow-warm dark:text-yellow-warm' : 'text-text-secondary dark:text-text-secondary hover:text-text-primary dark:hover:text-white hover:bg-bg-secondary dark:hover:bg-dark-bg-secondary'}`}
+                  className={`px-2 sm:px-3 py-1.5 rounded-lg text-xs sm:text-sm font-bold transition-colors ${view === 'values' ? 'bg-yellow-warm/20 dark:bg-yellow-warm/30 text-yellow-warm dark:text-yellow-warm' : 'text-text-secondary dark:text-text-secondary hover:text-text-primary dark:hover:text-white hover:bg-bg-secondary dark:hover:bg-dark-bg-secondary'}`}
                 >
                   <span className="hidden sm:inline">Values</span>
                   <span className="sm:hidden">V</span>
                 </button>
                 <button 
                   onClick={() => setView('report')}
-                  className={`px-2 sm:px-3 py-1.5 rounded-lg text-[10px] sm:text-xs font-bold transition-colors ${view === 'report' ? 'bg-yellow-warm/20 dark:bg-yellow-warm/30 text-yellow-warm dark:text-yellow-warm' : 'text-text-secondary dark:text-text-secondary hover:text-text-primary dark:hover:text-white hover:bg-bg-secondary dark:hover:bg-dark-bg-secondary'}`}
+                  className={`px-2 sm:px-3 py-1.5 rounded-lg text-xs sm:text-sm font-bold transition-colors ${view === 'report' ? 'bg-yellow-warm/20 dark:bg-yellow-warm/30 text-yellow-warm dark:text-yellow-warm' : 'text-text-secondary dark:text-text-secondary hover:text-text-primary dark:hover:text-white hover:bg-bg-secondary dark:hover:bg-dark-bg-secondary'}`}
                 >
                   <span className="hidden sm:inline">Reports</span>
                   <span className="sm:hidden">R</span>
                 </button>
                 <button 
                   onClick={() => setView('vault')}
-                  className={`px-2 sm:px-3 py-1.5 rounded-lg text-[10px] sm:text-xs font-bold transition-colors ${view === 'vault' ? 'bg-yellow-warm/20 dark:bg-yellow-warm/30 text-yellow-warm dark:text-yellow-warm' : 'text-text-secondary dark:text-text-secondary hover:text-text-primary dark:hover:text-white hover:bg-bg-secondary dark:hover:bg-dark-bg-secondary'}`}
+                  className={`px-2 sm:px-3 py-1.5 rounded-lg text-xs sm:text-sm font-bold transition-colors ${view === 'vault' ? 'bg-yellow-warm/20 dark:bg-yellow-warm/30 text-yellow-warm dark:text-yellow-warm' : 'text-text-secondary dark:text-text-secondary hover:text-text-primary dark:hover:text-white hover:bg-bg-secondary dark:hover:bg-dark-bg-secondary'}`}
                 >
                   <span className="hidden sm:inline">Vault</span>
                   <span className="sm:hidden">V</span>
@@ -776,7 +842,7 @@ const App: React.FC = () => {
         </Suspense>
       )}
 
-        <footer className="py-4 text-center text-text-tertiary dark:text-text-tertiary text-[10px] font-medium tracking-wide">
+        <footer className="py-4 text-center text-text-tertiary dark:text-text-tertiary text-xs sm:text-sm font-medium tracking-wide">
           <p>Private & Secure. All AI processing happens on your device.</p>
         </footer>
       </div>

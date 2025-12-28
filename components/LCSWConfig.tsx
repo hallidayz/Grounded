@@ -442,7 +442,7 @@ const LCSWConfigComponent: React.FC<LCSWConfigProps> = ({ config, onUpdate, onCl
                       {showTooltip && (
                         <div className="absolute bottom-full left-1/2 transform -translate-x-1/2 mb-2 z-50 w-64 sm:w-72">
                           <div className="bg-navy-dark dark:bg-dark-bg-tertiary text-white dark:text-white rounded-xl p-3 shadow-2xl border border-navy-light/30 dark:border-dark-border animate-fade-in">
-                            <p className="text-[10px] sm:text-xs leading-relaxed font-medium">
+                            <p className="text-xs sm:text-sm sm:text-xs leading-relaxed font-medium">
                               {protocolDescriptions[protocol]}
                             </p>
                             {/* Tooltip arrow */}
@@ -686,7 +686,7 @@ const LCSWConfigComponent: React.FC<LCSWConfigProps> = ({ config, onUpdate, onCl
                     </div>
                     <div className="flex items-center gap-2">
                       {settings.emailSchedule?.enabled && (
-                        <span className="px-2 py-1 bg-calm-sage/20 dark:bg-calm-sage/20 text-calm-sage dark:text-calm-sage rounded-lg text-[9px] font-black uppercase tracking-widest">
+                        <span className="px-2 py-1 bg-calm-sage/20 dark:bg-calm-sage/20 text-calm-sage dark:text-calm-sage rounded-lg text-xs sm:text-sm font-black uppercase tracking-widest">
                           Active
                         </span>
                       )}
@@ -759,7 +759,7 @@ const LCSWConfigComponent: React.FC<LCSWConfigProps> = ({ config, onUpdate, onCl
                 <div className={`space-y-6 transition-all duration-500 ${settings.reminders.enabled ? 'opacity-100 scale-100' : 'opacity-30 scale-95 pointer-events-none'}`}>
                   {/* Frequency Selector */}
                   <div className="space-y-3">
-                    <label className="text-[10px] font-black text-text-primary/60 dark:text-white/60 uppercase tracking-widest block">
+                    <label className="text-xs sm:text-sm font-black text-text-primary/60 dark:text-white/60 uppercase tracking-widest block">
                       {(settings.reminders.frequency || 'daily').charAt(0).toUpperCase() + (settings.reminders.frequency || 'daily').slice(1)} Reflection Reminder
                     </label>
                     <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
@@ -783,7 +783,7 @@ const LCSWConfigComponent: React.FC<LCSWConfigProps> = ({ config, onUpdate, onCl
                   <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                     {((settings.reminders.frequency || 'daily') === 'daily' || (settings.reminders.frequency || 'daily') === 'weekly' || (settings.reminders.frequency || 'daily') === 'monthly') && (
                       <div className="space-y-2">
-                        <label className="text-[10px] font-black text-text-primary/60 dark:text-white/60 uppercase tracking-widest block">
+                        <label className="text-xs sm:text-sm font-black text-text-primary/60 dark:text-white/60 uppercase tracking-widest block">
                           Time
                         </label>
                         <input 
@@ -797,7 +797,7 @@ const LCSWConfigComponent: React.FC<LCSWConfigProps> = ({ config, onUpdate, onCl
 
                     {(settings.reminders.frequency || 'daily') === 'weekly' && (
                       <div className="space-y-2">
-                        <label className="text-[10px] font-black text-text-primary/60 dark:text-white/60 uppercase tracking-widest block">
+                        <label className="text-xs sm:text-sm font-black text-text-primary/60 dark:text-white/60 uppercase tracking-widest block">
                           Day of Week
                         </label>
                         <select
@@ -818,7 +818,7 @@ const LCSWConfigComponent: React.FC<LCSWConfigProps> = ({ config, onUpdate, onCl
 
                     {(settings.reminders.frequency || 'daily') === 'monthly' && (
                       <div className="space-y-2">
-                        <label className="text-[10px] font-black text-text-primary/60 dark:text-white/60 uppercase tracking-widest block">
+                        <label className="text-xs sm:text-sm font-black text-text-primary/60 dark:text-white/60 uppercase tracking-widest block">
                           Day of Month (1-31)
                         </label>
                         <input
@@ -837,7 +837,7 @@ const LCSWConfigComponent: React.FC<LCSWConfigProps> = ({ config, onUpdate, onCl
                   <div className="bg-bg-secondary dark:bg-dark-bg-primary/50 rounded-xl p-4 border border-border-soft dark:border-dark-border/30">
                     <div className="flex items-center justify-between">
                       <div className="space-y-1">
-                        <p className="text-[10px] font-black text-text-primary dark:text-white uppercase tracking-widest">
+                        <p className="text-xs sm:text-sm font-black text-text-primary dark:text-white uppercase tracking-widest">
                           Device Calendar
                         </p>
                         <p className="text-xs text-text-primary/60 dark:text-white/60">
@@ -863,7 +863,7 @@ const LCSWConfigComponent: React.FC<LCSWConfigProps> = ({ config, onUpdate, onCl
                   <div className="bg-bg-secondary dark:bg-dark-bg-primary/50 rounded-xl p-4 border border-border-soft dark:border-dark-border/30 space-y-4">
                     <div className="flex items-center justify-between">
                       <div className="space-y-1">
-                        <p className="text-[10px] font-black text-text-primary dark:text-white uppercase tracking-widest">
+                        <p className="text-xs sm:text-sm font-black text-text-primary dark:text-white uppercase tracking-widest">
                           Push Notifications (ntfy.sh)
                         </p>
                         <p className="text-xs text-text-primary/60 dark:text-white/60">
@@ -883,12 +883,12 @@ const LCSWConfigComponent: React.FC<LCSWConfigProps> = ({ config, onUpdate, onCl
                         {/* Topic Display */}
                         <div className="bg-white dark:bg-dark-bg-primary rounded-xl p-4 border-2 border-yellow-warm/30 space-y-3">
                           <div className="flex items-center justify-between">
-                            <p className="text-[9px] font-black text-text-primary dark:text-white uppercase tracking-widest">
+                            <p className="text-xs sm:text-sm font-black text-text-primary dark:text-white uppercase tracking-widest">
                               Your Subscription Topic
                             </p>
                             <button
                               onClick={handleResetTopic}
-                              className="px-2 py-1 bg-border-soft dark:bg-dark-bg-secondary text-text-primary dark:text-white rounded-lg text-[8px] font-black uppercase tracking-widest hover:bg-yellow-warm/20 dark:hover:bg-yellow-warm/20 transition-all"
+                              className="px-2 py-1 bg-border-soft dark:bg-dark-bg-secondary text-text-primary dark:text-white rounded-lg text-xs font-black uppercase tracking-widest hover:bg-yellow-warm/20 dark:hover:bg-yellow-warm/20 transition-all"
                               title="Generate new topic"
                             >
                               🔄 Reset
@@ -899,7 +899,7 @@ const LCSWConfigComponent: React.FC<LCSWConfigProps> = ({ config, onUpdate, onCl
                               {settings.reminders.ntfyTopic || 'Loading...'}
                             </code>
                           </div>
-                          <p className="text-[9px] text-text-secondary dark:text-white/70 leading-relaxed">
+                          <p className="text-xs sm:text-sm text-text-secondary dark:text-white/70 leading-relaxed">
                             📱 <strong>Quick Setup:</strong> Open the ntfy app on your device and subscribe to this topic. That's it!
                           </p>
                         </div>
@@ -908,7 +908,7 @@ const LCSWConfigComponent: React.FC<LCSWConfigProps> = ({ config, onUpdate, onCl
                         <button
                           onClick={handleTestNtfy}
                           disabled={testStatus === 'sending'}
-                          className={`w-full px-4 py-3 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all shadow-md ${
+                          className={`w-full px-4 py-3 rounded-xl text-xs sm:text-sm font-black uppercase tracking-widest transition-all shadow-md ${
                             testStatus === 'success' 
                               ? 'bg-calm-sage text-white' 
                               : testStatus === 'error'
@@ -926,12 +926,12 @@ const LCSWConfigComponent: React.FC<LCSWConfigProps> = ({ config, onUpdate, onCl
 
                         {/* Advanced Options - Collapsible */}
                         <details className="group">
-                          <summary className="cursor-pointer text-[9px] font-black text-text-primary/60 dark:text-white/60 uppercase tracking-widest hover:text-text-primary dark:hover:text-white transition-colors">
+                          <summary className="cursor-pointer text-xs sm:text-sm font-black text-text-primary/60 dark:text-white/60 uppercase tracking-widest hover:text-text-primary dark:hover:text-white transition-colors">
                             ⚙️ Advanced Options
                           </summary>
                           <div className="mt-3 space-y-3 pt-3 border-t border-border-soft dark:border-dark-border/30">
                             <div className="space-y-2">
-                              <label className="text-[9px] font-black text-text-primary/60 dark:text-white/60 uppercase tracking-widest block">
+                              <label className="text-xs sm:text-sm font-black text-text-primary/60 dark:text-white/60 uppercase tracking-widest block">
                                 Custom Topic (Optional)
                               </label>
                               <input
@@ -941,13 +941,13 @@ const LCSWConfigComponent: React.FC<LCSWConfigProps> = ({ config, onUpdate, onCl
                                 placeholder="grounded-abc123xyz"
                                 className="w-full p-2 rounded-lg bg-white dark:bg-dark-bg-primary border border-border-soft dark:border-dark-border/30 text-xs font-medium text-text-primary dark:text-white focus:ring-2 focus:ring-yellow-warm transition-all outline-none"
                               />
-                              <p className="text-[8px] text-text-primary/50 dark:text-white/50">
+                              <p className="text-xs text-text-primary/50 dark:text-white/50">
                                 Use only letters, numbers, dashes, and underscores
                               </p>
                             </div>
                             
                             <div className="space-y-2">
-                              <label className="text-[9px] font-black text-text-primary/60 dark:text-white/60 uppercase tracking-widest block">
+                              <label className="text-xs sm:text-sm font-black text-text-primary/60 dark:text-white/60 uppercase tracking-widest block">
                                 Custom Server (Optional)
                               </label>
                               <input
@@ -960,7 +960,7 @@ const LCSWConfigComponent: React.FC<LCSWConfigProps> = ({ config, onUpdate, onCl
                                 placeholder="https://ntfy.sh (default)"
                                 className="w-full p-2 rounded-lg bg-white dark:bg-dark-bg-primary border border-border-soft dark:border-dark-border/30 text-xs font-medium text-text-primary dark:text-white focus:ring-2 focus:ring-yellow-warm transition-all outline-none"
                               />
-                              <p className="text-[8px] text-text-primary/50 dark:text-white/50">
+                              <p className="text-xs text-text-primary/50 dark:text-white/50">
                                 Leave empty to use the free public server
                               </p>
                             </div>
@@ -973,7 +973,7 @@ const LCSWConfigComponent: React.FC<LCSWConfigProps> = ({ config, onUpdate, onCl
                   {/* Next Reminder Preview */}
                   <div className="bg-yellow-warm/10 dark:bg-yellow-warm/20 rounded-xl p-4 border border-yellow-warm/30">
                     <div className="flex justify-between items-center">
-                      <span className="text-[10px] font-black text-text-primary dark:text-white uppercase tracking-widest">
+                      <span className="text-xs sm:text-sm font-black text-text-primary dark:text-white uppercase tracking-widest">
                         Next Reminder
                       </span>
                       <span className="text-sm font-black text-yellow-warm animate-pulse">
@@ -986,19 +986,19 @@ const LCSWConfigComponent: React.FC<LCSWConfigProps> = ({ config, onUpdate, onCl
                     {notifPermission !== 'granted' ? (
                       <button 
                         onClick={requestPermission}
-                        className="w-full px-6 py-4 bg-yellow-warm/20 dark:bg-yellow-warm/20 text-yellow-warm dark:text-yellow-warm rounded-2xl text-[10px] font-black uppercase tracking-widest hover:bg-yellow-warm/30 dark:hover:bg-yellow-warm/30 transition-colors flex items-center justify-center gap-2"
+                        className="w-full px-6 py-4 bg-yellow-warm/20 dark:bg-yellow-warm/20 text-yellow-warm dark:text-yellow-warm rounded-2xl text-xs sm:text-sm font-black uppercase tracking-widest hover:bg-yellow-warm/30 dark:hover:bg-yellow-warm/30 transition-colors flex items-center justify-center gap-2"
                       >
                         <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={3} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" /></svg>
                         Enable Browser Permissions
                       </button>
                     ) : (
-                      <div className="px-6 py-4 bg-calm-sage/20 dark:bg-calm-sage/20 text-calm-sage dark:text-calm-sage rounded-2xl text-[10px] font-black uppercase tracking-widest flex items-center justify-center gap-2">
+                      <div className="px-6 py-4 bg-calm-sage/20 dark:bg-calm-sage/20 text-calm-sage dark:text-calm-sage rounded-2xl text-xs sm:text-sm font-black uppercase tracking-widest flex items-center justify-center gap-2">
                         <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={3} d="M5 13l4 4L19 7" /></svg>
                         Nudge Engine Active
                       </div>
                     )}
                   </div>
-                  <p className="text-[10px] text-text-tertiary dark:text-text-tertiary font-medium italic text-center">
+                  <p className="text-xs sm:text-sm text-text-tertiary dark:text-text-tertiary font-medium italic text-center">
                     Reminders trigger via system notifications while this tab is open. Keep the app open for notifications to work.
                   </p>
                 </div>
@@ -1074,7 +1074,7 @@ const LCSWConfigComponent: React.FC<LCSWConfigProps> = ({ config, onUpdate, onCl
                       </option>
                     ))}
                   </select>
-                  <p className="text-[10px] text-text-tertiary dark:text-text-tertiary">
+                  <p className="text-xs sm:text-sm text-text-tertiary dark:text-text-tertiary">
                     {getAllModelConfigs()[selectedAIModel].description}. Models are cached in your browser for instant loading.
                   </p>
                 </div>
@@ -1088,7 +1088,7 @@ const LCSWConfigComponent: React.FC<LCSWConfigProps> = ({ config, onUpdate, onCl
                         {modelStatus.loaded ? '✓ Loaded' : modelStatus.loading ? '⏳ Loading...' : '✗ Not Available'}
                       </span>
                     </div>
-                    <div className="grid grid-cols-2 gap-2 text-[10px]">
+                    <div className="grid grid-cols-2 gap-2 text-xs sm:text-sm">
                       <div className="flex items-center justify-between">
                         <span className="text-text-tertiary dark:text-text-tertiary">Mood Tracker:</span>
                         <span className={modelStatus.moodTracker ? 'text-green-600 dark:text-green-400' : 'text-red-600 dark:text-red-400'}>
@@ -1103,7 +1103,7 @@ const LCSWConfigComponent: React.FC<LCSWConfigProps> = ({ config, onUpdate, onCl
                       </div>
                     </div>
                     {!modelStatus.loaded && !modelStatus.loading && (
-                      <p className="text-[10px] text-text-tertiary dark:text-text-tertiary mt-2">
+                      <p className="text-xs sm:text-sm text-text-tertiary dark:text-text-tertiary mt-2">
                         The app is using rule-based responses. This is normal if your browser doesn't support ONNX Runtime. All features remain fully functional.
                       </p>
                     )}
@@ -1160,11 +1160,11 @@ const LCSWConfigComponent: React.FC<LCSWConfigProps> = ({ config, onUpdate, onCl
                 >
                   {updatingModel ? '⏳ Updating...' : modelStatus?.loading ? '⏳ Loading...' : 'Update AI Model'}
                 </button>
-                <p className="text-[9px] text-text-tertiary dark:text-text-tertiary text-center">
+                <p className="text-xs sm:text-sm text-text-tertiary dark:text-text-tertiary text-center">
                   Recommended: MiniCPM-0.5B or TinyLlama-1.1B (quantized for mobile)
                 </p>
                 {!modelStatus?.loaded && !modelStatus?.loading && (
-                  <p className="text-[9px] text-text-tertiary dark:text-text-tertiary text-center italic">
+                  <p className="text-xs sm:text-sm text-text-tertiary dark:text-text-tertiary text-center italic">
                     Note: If models fail to load, this is typically a browser compatibility issue. The app remains fully functional with rule-based responses.
                   </p>
                 )}
