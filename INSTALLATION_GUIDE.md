@@ -1,6 +1,6 @@
 # Grounded Installation Guide
 
-**Grounded by AC MiNDS** - Version 1.12.25
+**Grounded by AC MiNDS** - Version 1.12.26
 
 Privacy-first therapy integration app for values-based reflection and mental health support.
 
@@ -40,7 +40,7 @@ The app is now installed and ready to use.
 ## 🪟 Windows Installation
 
 ### Step 1: Download the Installer
-- You should have received a file named `Grounded_1.12.25_x64_en-US.msi` or `Grounded.exe`
+- You should have received a file named `Grounded_1.12.26_x64_en-US.msi` or `Grounded.exe`
 - If not, contact your therapist or download from the provided link
 
 ### Step 2: Install the App
