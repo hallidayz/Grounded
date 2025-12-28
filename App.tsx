@@ -75,6 +75,17 @@ const App: React.FC = () => {
         // Initialize debug logging first
         initializeDebugLogging();
         
+        // Initialize update manager to detect new install vs update
+        const { updateManager } = await import('./services/updateManager');
+        const updateInfo = await updateManager.initialize();
+        
+        if (updateInfo.isNewInstall) {
+          console.log('🎉 New installation detected - setting up fresh app');
+        } else if (updateInfo.isUpdate) {
+          console.log(`🔄 App updated from v${updateInfo.previousVersion} to v${updateInfo.currentVersion}`);
+          console.log('✅ User data preserved - database migrations applied');
+        }
+        
         // Ensure service worker is active (critical for PWA, offline, and AI model caching)
         ensureServiceWorkerActive().then((active) => {
           if (active) {
@@ -94,9 +105,13 @@ const App: React.FC = () => {
           // Silently fail - shortcuts may already exist
         });
         
+        // Initialize database first (needed for user data)
+        await dbService.init();
+        
         // Start AI model download immediately - don't wait for anything
         // This ensures models are downloading while user is reading terms/login
         // Service worker will cache models for offline use
+        // On updates, models will be reloaded if needed (cached models are preserved)
         preloadModels().then((loaded) => {
           if (loaded) {
             console.log('✅ AI models loaded successfully - AI features enabled');
@@ -106,8 +121,6 @@ const App: React.FC = () => {
         }).catch(() => {
           // Silently fail - models will retry later
         });
-        
-        await dbService.init();
         
         // Cleanup expired tokens on startup
         dbService.cleanupExpiredTokens().catch(console.error);

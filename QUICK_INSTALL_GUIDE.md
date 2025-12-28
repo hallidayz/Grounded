@@ -14,13 +14,19 @@
 3. Click **"Install"** or **"Add to Home Screen"**
 4. Confirm installation
 
+### Safari (macOS - Mac)
+1. Open the Grounded app URL in Safari
+2. Click the **Share button** (square with arrow) in the Safari toolbar
+3. Select **"Add to Dock"** or **"Add to Home Screen"**
+4. Click **"Add"** to confirm
+
 ### Safari (iPhone/iPad)
 1. Open the Grounded app URL in Safari
 2. Tap the **Share button** (square with arrow)
 3. Scroll down and tap **"Add to Home Screen"**
 4. Tap **"Add"**
 
-**Done!** ✅ The app icon will appear on your home screen/desktop.
+**Done!** ✅ The app icon will appear on your home screen/desktop/Dock.
 
 ---
 
