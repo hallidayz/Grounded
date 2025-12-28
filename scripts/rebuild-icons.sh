@@ -51,12 +51,16 @@ import sys
 try:
     img = Image.open("$input")
     
+    # Convert to RGBA if not already (Tauri requires RGBA format)
+    if img.mode != 'RGBA':
+        img = img.convert('RGBA')
+    
     # Use high-quality resampling
     resized = img.resize(($width, $height), Image.Resampling.LANCZOS)
     
-    # Save with high quality
+    # Save with high quality, ensure RGBA format
     resized.save("$output", "PNG", optimize=True)
-    print(f"✅ Created $output ($width x $height)")
+    print(f"✅ Created $output ($width x $height, RGBA)")
 except Exception as e:
     print(f"❌ Error creating $output: {e}", file=sys.stderr)
     sys.exit(1)
@@ -111,6 +115,10 @@ import os
 
 img = Image.open("$input")
 
+# Convert to RGBA if not already
+if img.mode != 'RGBA':
+    img = img.convert('RGBA')
+
 # ICNS requires specific sizes
 sizes = [
     (16, 16, "icon_16x16.png"),
@@ -128,6 +136,9 @@ sizes = [
 iconset_path = "$iconset_dir"
 for width, height, filename in sizes:
     resized = img.resize((width, height), Image.Resampling.LANCZOS)
+    # Ensure RGBA format
+    if resized.mode != 'RGBA':
+        resized = resized.convert('RGBA')
     resized.save(os.path.join(iconset_path, filename), "PNG", optimize=True)
 
 print(f"✅ Created iconset in $iconset_dir")
