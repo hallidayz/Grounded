@@ -33,6 +33,7 @@ interface ValueCardProps {
   onCompleteGoal: (goal: Goal) => void;
   onCommit: () => void;
   getReflectionPlaceholder: (freq: GoalFrequency, subFeeling?: string | null) => string;
+  onTriggerReflectionAnalysis: () => void;
   lcswConfig?: any;
 }
 
@@ -66,6 +67,7 @@ const ValueCard: React.FC<ValueCardProps> = ({
   onCompleteGoal,
   onCommit,
   getReflectionPlaceholder,
+  onTriggerReflectionAnalysis,
   lcswConfig,
 }) => {
   return (
@@ -145,6 +147,7 @@ const ValueCard: React.FC<ValueCardProps> = ({
             onSuggestGoal={onSuggestGoal}
             onCommit={onCommit}
             getReflectionPlaceholder={getReflectionPlaceholder}
+            onTriggerReflectionAnalysis={onTriggerReflectionAnalysis}
           />
         )}
       </div>
