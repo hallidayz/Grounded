@@ -58,13 +58,7 @@
     "windows": {
       "certificateThumbprint": null,
       "digestAlgorithm": "sha256",
-      "timestampUrl": "",
-      "createDesktopShortcut": true,
-      "createStartMenuShortcut": true
-    },
-    "linux": {
-      "createDesktopShortcut": true,
-      "createStartMenuShortcut": true
+      "timestampUrl": ""
     }
   },
   "plugins": {
