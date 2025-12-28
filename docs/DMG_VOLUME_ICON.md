@@ -10,8 +10,9 @@ macOS DMG installers may contain several hidden system files that should be hidd
 
 **Purpose:**
 - **Volume Icon**: Sets the custom icon for the mounted DMG volume (the icon you see on the desktop)
-- **Professional Appearance**: Makes the DMG look polished and branded
-- **User Experience**: Helps users identify the installer visually
+- **Optional**: This file is NOT required for DMG functionality
+- **Removal**: We remove this file entirely - the DMG works perfectly without it
+- **Result**: The DMG will use the default disk icon instead of a custom icon
 
 ### .DS_Store
 
@@ -58,23 +59,24 @@ If you can see `.VolumeIcon.icns` in the DMG window, it means:
 
 ## Solution
 
-The `scripts/hide-volume-icon.sh` script automatically hides all system files after DMG creation:
+The `scripts/hide-volume-icon.sh` script automatically removes or hides system files after DMG creation:
 
 ```bash
 # The script:
-# 1. Mounts the DMG
-# 2. Sets the invisible flag on all system files (.VolumeIcon.icns, .DS_Store, etc.)
-# 3. Hides resource fork files (._*)
-# 4. Unmounts the DMG
-# 5. Files are now hidden but still function properly
+# 1. Converts DMG to read-write format
+# 2. Mounts the read-write DMG
+# 3. Removes .VolumeIcon.icns entirely (not needed for DMG functionality)
+# 4. Hides other system files (.DS_Store, etc.)
+# 5. Converts back to compressed format
+# 6. DMG works perfectly without .VolumeIcon.icns
 ```
 
-**Files Automatically Hidden:**
-- `.VolumeIcon.icns` - DMG volume icon
-- `.DS_Store` - Finder metadata
-- `.apdisk` - Network folder info
-- `._*` - Resource fork files
-- Other macOS system files
+**Files Automatically Handled:**
+- `.VolumeIcon.icns` - **REMOVED** (not required, DMG works fine without it)
+- `.DS_Store` - Hidden (Finder metadata)
+- `.apdisk` - Hidden (Network folder info)
+- `._*` - Hidden (Resource fork files)
+- Other macOS system files - Hidden
 
 ## Technical Details
 
@@ -92,9 +94,10 @@ macOS uses file attributes to hide files:
 
 ### Best Practices
 
-1. **Keep the file** - It's necessary for a professional DMG appearance
-2. **Hide it** - Users shouldn't see it in the DMG window
-3. **Use the script** - The `hide-volume-icon.sh` script ensures it's hidden
+1. **Remove the file** - It's not required for DMG functionality
+2. **Simpler solution** - Removing is more reliable than hiding
+3. **Use the script** - The `hide-volume-icon.sh` script automatically removes it
+4. **Result** - DMG works perfectly, just uses default disk icon instead
 
 ## Verification
 
@@ -114,10 +117,10 @@ To verify the file is hidden:
 
 **Important Notes:**
 
-1. **These files are necessary** - Don't delete them, just hide them
-2. **They're standard macOS features** - All professional DMG installers have them
-3. **Hiding is cosmetic** - Files still function properly when hidden
+1. **.VolumeIcon.icns is optional** - We remove it entirely (DMG works fine without it)
+2. **Other system files are hidden** - They may be needed, so we hide them instead of removing
+3. **Removal is simpler** - More reliable than trying to hide the file
 4. **Windows/Linux installers** - Don't have these files (macOS-specific)
 
-The files are **not a problem** - they're standard macOS features that make your DMG work properly and look professional!
+**Result:** The DMG installer window will be clean, showing only the app and Applications folder. The DMG will use the default disk icon instead of a custom icon, which is perfectly acceptable and doesn't affect functionality.
 
