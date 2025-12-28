@@ -1,0 +1,16 @@
+# Vite ignore file - prevents Vite from scanning these directories
+# This helps avoid "too many open files" errors when Rust docs are present
+
+# Rust build artifacts (contains thousands of documentation files)
+src-tauri/target/
+
+# Node modules (already handled, but explicit)
+node_modules/
+
+# Git directory
+.git/
+
+# Build outputs
+dist/
+build/
+

@@ -135,22 +135,44 @@ export function isLoggedIn(): boolean {
 // Request password reset
 export async function requestPasswordReset(email: string): Promise<{ success: boolean; resetLink?: string; error?: string }> {
   try {
+    // Ensure database is initialized
+    if (!dbService) {
+      throw new Error('Database service not initialized');
+    }
+
     const user = await dbService.getUserByEmail(email);
     if (!user) {
       // Don't reveal if email exists for security - return success but no link
       return { success: true };
     }
 
+    if (!user.id) {
+      throw new Error('User ID is missing');
+    }
+
     const token = await dbService.createResetToken(user.id, email);
+    
+    if (!token) {
+      throw new Error('Failed to create reset token');
+    }
     
     // Generate reset link (in a real app, this would be sent via email)
     // For local-only app, we'll generate a data URL that can be copied
-    const resetLink = `${window.location.origin}${window.location.pathname}#reset/${token}`;
+    // Use tauri://localhost for Tauri apps, regular origin for web
+    const isTauri = typeof window !== 'undefined' && window.location.protocol === 'tauri:';
+    const origin = isTauri ? 'tauri://localhost' : (typeof window !== 'undefined' ? window.location.origin : 'http://localhost');
+    const pathname = typeof window !== 'undefined' && window.location.pathname ? window.location.pathname : '/';
+    const resetLink = `${origin}${pathname}#reset/${token}`;
+    
+    if (!resetLink || !resetLink.includes('#reset/')) {
+      throw new Error(`Invalid reset link generated: ${resetLink}`);
+    }
     
     return { success: true, resetLink };
   } catch (error) {
     console.error('Password reset error:', error);
-    return { success: false, error: 'Failed to generate reset link' };
+    const errorMessage = error instanceof Error ? error.message : 'Unknown error';
+    return { success: false, error: `Failed to generate reset link: ${errorMessage}` };
   }
 }
 

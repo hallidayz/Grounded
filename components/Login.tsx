@@ -23,15 +23,28 @@ const Login: React.FC<LoginProps> = ({ onLogin }) => {
   const [showNewPassword, setShowNewPassword] = useState(false);
   const [showResetConfirmPassword, setShowResetConfirmPassword] = useState(false);
 
-  // Check for reset token in URL hash
+  // Check for reset token in URL hash (on mount and when hash changes)
   useEffect(() => {
-    const hash = window.location.hash;
-    const resetMatch = hash.match(/^#reset\/(.+)$/);
-    if (resetMatch) {
-      setResetToken(resetMatch[1]);
-      setMode('reset');
-      window.history.replaceState(null, '', window.location.pathname);
-    }
+    const checkHash = () => {
+      const hash = window.location.hash;
+      const resetMatch = hash.match(/^#reset\/(.+)$/);
+      if (resetMatch) {
+        setResetToken(resetMatch[1]);
+        setMode('reset');
+        // Clean up URL but keep hash for reference
+        window.history.replaceState(null, '', window.location.pathname + hash);
+      }
+    };
+
+    // Check immediately
+    checkHash();
+
+    // Listen for hash changes (for deep links when app is already open)
+    window.addEventListener('hashchange', checkHash);
+
+    return () => {
+      window.removeEventListener('hashchange', checkHash);
+    };
   }, []);
 
   const handleRegister = async (e: React.FormEvent) => {

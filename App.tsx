@@ -91,6 +91,17 @@ const App: React.FC = () => {
         
         if (!isMounted) return;
         
+        // Check for password reset link in URL hash
+        // If present, show login screen even if user is logged in
+        const hash = window.location.hash;
+        const hasResetToken = hash.match(/^#reset\/(.+)$/);
+        
+        if (hasResetToken) {
+          // Force login view for password reset
+          setAuthState('login');
+          return;
+        }
+        
         if (isLoggedIn()) {
           const user = await getCurrentUser();
           if (!isMounted) return;
@@ -147,6 +158,63 @@ const App: React.FC = () => {
     };
     
     initialize();
+    
+    // Listen for deep links in Tauri (when app is already running)
+    if (typeof window !== 'undefined' && '__TAURI__' in window) {
+      // Dynamically import Tauri deep-link plugin
+      import('@tauri-apps/plugin-deep-link').then(({ onOpenUrl, getCurrent }) => {
+        // Handle deep links when app is already running
+        onOpenUrl((urls) => {
+          for (const url of urls) {
+            try {
+              const urlObj = new URL(url);
+              if (urlObj.protocol === 'tauri:' && urlObj.hostname === 'localhost') {
+                // Extract hash from URL
+                const hash = urlObj.hash || '';
+                if (hash.startsWith('#reset/')) {
+                  // Update window hash and trigger hashchange
+                  if (window.location.hash !== hash) {
+                    window.location.hash = hash;
+                  }
+                  window.dispatchEvent(new Event('hashchange'));
+                }
+              }
+            } catch (e) {
+              console.error('Error parsing deep link URL:', e);
+            }
+          }
+        }).catch(console.error);
+        
+        // Handle deep links on initial app launch
+        getCurrent().then((urls) => {
+          if (urls && urls.length > 0) {
+            for (const url of urls) {
+              try {
+                const urlObj = new URL(url);
+                if (urlObj.protocol === 'tauri:' && urlObj.hostname === 'localhost') {
+                  // Extract hash from URL
+                  const hash = urlObj.hash || '';
+                  if (hash.startsWith('#reset/')) {
+                    // Update window hash and trigger hashchange
+                    if (window.location.hash !== hash) {
+                      window.location.hash = hash;
+                    }
+                    window.dispatchEvent(new Event('hashchange'));
+                  }
+                }
+              } catch (e) {
+                console.error('Error parsing deep link URL:', e);
+              }
+            }
+          }
+        }).catch(() => {
+          // No deep links on launch
+        });
+      }).catch(() => {
+        // Deep-link plugin not available, fallback to hash change listener
+        console.warn('Deep-link plugin not available');
+      });
+    }
     
     return () => {
       isMounted = false;
