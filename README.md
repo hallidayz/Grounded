@@ -1,6 +1,6 @@
 # Grounded - On-Device Therapy Integration App
 
-**Grounded by AC MiNDS** - Version 1.12.25
+**Grounded by AC MiNDS** - Version 1.12.26
 
 Privacy-first therapy integration app for values-based reflection and mental health support.
 
@@ -147,7 +147,7 @@ npm run build:all
 
 **Output:**
 - macOS: `src-tauri/target/release/bundle/macos/Grounded.dmg`
-- Windows: `src-tauri/target/release/bundle/msi/Grounded_1.12.25_x64_en-US.msi`
+- Windows: `src-tauri/target/release/bundle/msi/Grounded_1.12.26_x64_en-US.msi`
 - Android: `android/app/build/outputs/apk/release/app-release.apk`
 
 ### Option 2: PWA Package (Web Distribution)
@@ -200,7 +200,7 @@ Or use online tools:
 
 Choose your platform:
 - **macOS**: Download `Grounded.dmg` and drag to Applications
-- **Windows**: Download `Grounded_1.12.25_x64_en-US.msi` and run installer
+- **Windows**: Download `Grounded_1.12.26_x64_en-US.msi` and run installer
 - **Android**: Download `app-release.apk` and enable "Install unknown apps"
 - **iOS**: Install via App Store, TestFlight, or enterprise distribution
 - **PWA**: Install from web browser (Chrome, Edge, Safari) - works on all platforms
@@ -226,7 +226,7 @@ See the in-app Help screen (click the ? icon) for detailed navigation instructio
 
 - **Email**: ac.minds.ai@gmail.com
 - **Debug Log**: Available in Help screen for troubleshooting
-- **Version**: 1.12.25
+- **Version**: 1.12.26
 
 ## License
 
