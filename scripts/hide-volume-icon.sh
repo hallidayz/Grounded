@@ -79,12 +79,76 @@ find "$TEMP_MOUNT" -name "._*" -type f 2>/dev/null | while read -r file; do
   fi
 done
 
-# Unmount the DMG
-hdiutil detach "$TEMP_MOUNT" -quiet
+# Convert DMG to read-write format, hide files, then convert back
+# This ensures the hidden attribute is properly saved
+echo "📝 Converting DMG to read-write format to save hidden attributes..."
 
-if [ $HIDDEN_COUNT -gt 0 ]; then
-  echo "✅ Hidden $HIDDEN_COUNT system file(s) in DMG"
+# Create a temporary read-write DMG
+TEMP_DMG="${DMG_PATH}.rw.dmg"
+hdiutil convert "$DMG_PATH" -format UDRW -o "$TEMP_DMG" -quiet
+
+if [ $? -ne 0 ]; then
+  echo "⚠️  Could not convert DMG to read-write format, trying direct method..."
+  # Fallback: just unmount and hope the attributes stick
+  hdiutil detach "$TEMP_MOUNT" -quiet
+  if [ $HIDDEN_COUNT -gt 0 ]; then
+    echo "✅ Hidden $HIDDEN_COUNT system file(s) in DMG (may need rebuild)"
+  else
+    echo "ℹ️  No system files found to hide (this is normal)"
+  fi
+  exit 0
+fi
+
+# Unmount the original
+hdiutil detach "$TEMP_MOUNT" -quiet 2>/dev/null || true
+
+# Mount the read-write DMG
+TEMP_MOUNT_RW=$(mktemp -d)
+hdiutil attach "$TEMP_DMG" -mountpoint "$TEMP_MOUNT_RW" -quiet -nobrowse
+
+if [ $? -ne 0 ]; then
+  echo "⚠️  Could not mount read-write DMG, using original"
+  rm -f "$TEMP_DMG"
+  exit 1
+fi
+
+# Hide files in the read-write DMG
+HIDDEN_COUNT=0
+for file_info in "${FILES_TO_HIDE[@]}"; do
+  IFS=':' read -r file_name file_desc <<< "$file_info"
+  file_path="$TEMP_MOUNT_RW/$file_name"
+  
+  if hide_file "$file_path" "$file_name ($file_desc)"; then
+    ((HIDDEN_COUNT++))
+  fi
+done
+
+# Hide resource fork files
+find "$TEMP_MOUNT_RW" -name "._*" -type f 2>/dev/null | while read -r file; do
+  if hide_file "$file" "$(basename "$file") (resource fork)"; then
+    ((HIDDEN_COUNT++))
+  fi
+done
+
+# Unmount the read-write DMG
+hdiutil detach "$TEMP_MOUNT_RW" -quiet
+
+# Convert back to compressed read-only format
+echo "📦 Converting DMG back to compressed format..."
+hdiutil convert "$TEMP_DMG" -format UDZO -o "$DMG_PATH" -quiet
+
+if [ $? -eq 0 ]; then
+  rm -f "$TEMP_DMG"
+  if [ $HIDDEN_COUNT -gt 0 ]; then
+    echo "✅ Hidden $HIDDEN_COUNT system file(s) in DMG and rebuilt"
+  else
+    echo "ℹ️  No system files found to hide (this is normal)"
+  fi
 else
-  echo "ℹ️  No system files found to hide (this is normal)"
+  echo "⚠️  Could not convert DMG back, keeping read-write version"
+  mv "$TEMP_DMG" "$DMG_PATH"
+  if [ $HIDDEN_COUNT -gt 0 ]; then
+    echo "✅ Hidden $HIDDEN_COUNT system file(s) in DMG"
+  fi
 fi
 
