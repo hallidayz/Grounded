@@ -100,13 +100,36 @@ export function generateEmailReport(
       logs.slice(0, 10).forEach(log => {
         const value = values.find(v => v.id === log.valueId);
         let entry = `\n- ${new Date(log.date).toLocaleDateString()}: ${value?.name || 'General'}`;
+        
+        // Include deep reflection content
         if (log.deepReflection) {
-          entry += `\n  Deep Reflection: ${log.deepReflection.substring(0, 150)}${log.deepReflection.length > 150 ? '...' : ''}`;
+          entry += `\n  Deep Reflection: ${log.deepReflection}`;
         }
+        
+        // Include committed action (goalText)
+        if (log.goalText) {
+          entry += `\n  Committed Action/Goal: ${log.goalText}`;
+        }
+        
+        // Include suggested next steps (reflectionAnalysis)
         if (log.reflectionAnalysis) {
-          entry += `\n  Analysis: ${log.reflectionAnalysis.substring(0, 200)}${log.reflectionAnalysis.length > 200 ? '...' : ''}`;
+          entry += `\n  Suggested Next Steps: ${log.reflectionAnalysis}`;
         }
-        entry += `\n  Note: ${log.note.substring(0, 100)}${log.note.length > 100 ? '...' : ''}\n`;
+        
+        // Include emotional state and feeling if available
+        if (log.emotionalState) {
+          entry += `\n  Emotional State: ${log.emotionalState}`;
+          if (log.selectedFeeling) {
+            entry += ` (${log.selectedFeeling})`;
+          }
+        }
+        
+        // Include note as fallback if no deep reflection
+        if (log.note && !log.deepReflection) {
+          entry += `\n  Note: ${log.note}`;
+        }
+        
+        entry += '\n';
         body += entry;
       });
     }

@@ -157,11 +157,38 @@ export function generateFallbackReport(logs: LogEntry[], values: ValueItem[]): s
   const topValue = Object.entries(valueCounts).sort((a, b) => b[1] - a[1])[0]?.[0] || 'N/A';
   const topMood = Object.entries(moodCounts).sort((a, b) => b[1] - a[1])[0]?.[0] || 'N/A';
 
+  // Build detailed entry summaries including deep reflection, committed actions, and next steps
+  let detailedEntries = '';
+  logs.slice(0, 10).forEach(log => {
+    const value = values.find(v => v.id === log.valueId);
+    detailedEntries += `\n\n**${new Date(log.date).toLocaleDateString()} - ${value?.name || 'General'}**\n`;
+    
+    if (log.deepReflection) {
+      detailedEntries += `\nDeep Reflection:\n${log.deepReflection}\n`;
+    }
+    
+    if (log.goalText) {
+      detailedEntries += `\nCommitted Action/Goal:\n${log.goalText}\n`;
+    }
+    
+    if (log.reflectionAnalysis) {
+      detailedEntries += `\nSuggested Next Steps:\n${log.reflectionAnalysis}\n`;
+    }
+    
+    if (log.emotionalState) {
+      detailedEntries += `\nEmotional State: ${log.emotionalState}`;
+      if (log.selectedFeeling) {
+        detailedEntries += ` (${log.selectedFeeling})`;
+      }
+      detailedEntries += '\n';
+    }
+  });
+
   return `# Clinical Summary
 
 ## SOAP Format
 
-**Subjective**: Client has logged ${logs.length} reflection entries, with primary focus on ${topValue}. Most common mood indicator: ${topMood}.
+**Subjective**: Client has logged ${logs.length} reflection entries, with primary focus on ${topValue}. Most common mood indicator: ${topMood}.${detailedEntries}
 
 **Objective**: Patterns show engagement with value-based reflection practice. Entries span ${new Date(logs[logs.length - 1]?.date || Date.now()).toLocaleDateString()} to ${new Date(logs[0]?.date || Date.now()).toLocaleDateString()}.
 
@@ -173,7 +200,7 @@ export function generateFallbackReport(logs: LogEntry[], values: ValueItem[]): s
 
 ## DAP Format
 
-**Data**: ${logs.length} entries, ${Object.keys(valueCounts).length} values engaged, mood tracking active.
+**Data**: ${logs.length} entries, ${Object.keys(valueCounts).length} values engaged, mood tracking active.${detailedEntries}
 
 **Assessment**: Consistent engagement with reflection practice. Primary value focus: ${topValue}.
 
@@ -183,7 +210,7 @@ export function generateFallbackReport(logs: LogEntry[], values: ValueItem[]): s
 
 ## BIRP Format
 
-**Behavior**: Client consistently logs reflections and tracks mood states.
+**Behavior**: Client consistently logs reflections and tracks mood states.${detailedEntries}
 
 **Intervention**: Value-based reflection practice, self-monitoring.
 
@@ -236,8 +263,38 @@ export async function generateHumanReports(
 
     const summary = logs.map(l => {
       const vName = values.find(v => v.id === l.valueId)?.name || 'General';
-      return `[${l.date.split('T')[0]}] Value: ${vName}, Mood: ${l.mood || 'N/A'}, Note: ${l.note}`;
-    }).join('\n');
+      let entry = `[${l.date.split('T')[0]}] Value: ${vName}, Mood: ${l.mood || 'N/A'}`;
+      
+      // Include deep reflection content
+      if (l.deepReflection) {
+        entry += `\n  Deep Reflection: ${l.deepReflection}`;
+      }
+      
+      // Include committed action (goalText)
+      if (l.goalText) {
+        entry += `\n  Committed Action/Goal: ${l.goalText}`;
+      }
+      
+      // Include suggested next steps (reflectionAnalysis)
+      if (l.reflectionAnalysis) {
+        entry += `\n  Suggested Next Steps: ${l.reflectionAnalysis}`;
+      }
+      
+      // Include emotional state and feeling if available
+      if (l.emotionalState) {
+        entry += `\n  Emotional State: ${l.emotionalState}`;
+      }
+      if (l.selectedFeeling) {
+        entry += `\n  Selected Feeling: ${l.selectedFeeling}`;
+      }
+      
+      // Include note as fallback
+      if (l.note && !l.deepReflection) {
+        entry += `\n  Note: ${l.note}`;
+      }
+      
+      return entry;
+    }).join('\n\n');
 
     const prompt = `You are a therapy integration assistant helping synthesize a client's reflection logs for review with their LCSW.
 
@@ -246,6 +303,11 @@ Generate a comprehensive report in SOAP, DAP, and BIRP formats.
 Logs:
       ${summary}
       
+IMPORTANT: For each log entry, include:
+1. Deep Reflection: The user's written reflection content
+2. Committed Action: Any goals or actions the user committed to
+3. Suggested Next Steps: AI-generated recommendations or analysis
+
 Format your response with clear sections for each format. Keep the tone supportive, clinical yet human, and focused on patterns and themes that would be useful for therapy integration.`;
 
     let report = generateFallbackReport(logs, values);

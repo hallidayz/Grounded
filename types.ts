@@ -123,3 +123,13 @@ export interface CrisisDetection {
   recommendedAction: 'continue' | 'show_crisis_info' | 'contact_lcsw' | 'emergency';
   categories?: string[]; // Crisis categories detected
 }
+
+export interface FeelingLog {
+  id: string;
+  timestamp: string; // ISO string
+  emotionalState: 'drained' | 'heavy' | 'overwhelmed' | 'mixed' | 'calm' | 'hopeful' | 'positive' | 'energized';
+  selectedFeeling: string | null;
+  aiResponse: string; // The AI-generated encouragement or rule-based fallback
+  isAIResponse: boolean; // true if from AI, false if rule-based fallback
+  lowStateCount: number; // Count of consecutive low states for pattern tracking
+}

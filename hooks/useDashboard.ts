@@ -1,10 +1,12 @@
 import { useState, useEffect, useRef, useCallback } from 'react';
-import { ValueItem, LogEntry, Goal, GoalFrequency, LCSWConfig } from '../types';
+import { ValueItem, LogEntry, Goal, GoalFrequency, LCSWConfig, FeelingLog } from '../types';
 import { EmotionalState } from '../services/emotionalStates';
 import { generateEncouragement, generateEmotionalEncouragement, generateValueMantra, suggestGoal, detectCrisis, analyzeReflection } from '../services/aiService';
 import { shareViaEmail, generateGoalsEmail } from '../services/emailService';
 import { useDebounce } from './useDebounce';
 import { getItem, setItem, removeItem } from '../services/storage';
+import { dbService } from '../services/database';
+import { dbService } from '../services/database';
 
 export function useDashboard(
   values: ValueItem[],
@@ -248,6 +250,25 @@ export function useDashboard(
       .substring(0, 500);
     
     try {
+      // Get historical feeling logs for pattern analysis
+      const historicalLogs = await dbService.getFeelingLogs(30); // Last 30 feeling selections
+      const frequentStates = historicalLogs
+        .map(log => log.emotionalState)
+        .reduce((acc, state) => {
+          acc[state] = (acc[state] || 0) + 1;
+          return acc;
+        }, {} as Record<string, number>);
+      const frequentStatesList = Object.entries(frequentStates)
+        .sort((a, b) => b[1] - a[1])
+        .slice(0, 3)
+        .map(([state]) => state);
+
+      // Calculate progress (percentage of positive states in last 10 logs)
+      const recentLogs = historicalLogs.slice(0, 10);
+      const positiveStates = ['calm', 'hopeful', 'positive', 'energized'];
+      const positiveCount = recentLogs.filter(log => positiveStates.includes(log.emotionalState)).length;
+      const progress = recentLogs.length > 0 ? (positiveCount / recentLogs.length) * 100 : 0;
+
       const encouragement = await generateEmotionalEncouragement(
         state,
         selectedFeeling,
@@ -257,15 +278,52 @@ export function useDashboard(
           recentJournalText: recentJournalText || undefined,
           timeOfDay,
           userPatterns: {
-            frequentStates: [],
-            progress: 0
+            frequentStates: frequentStatesList,
+            progress: Math.round(progress)
           }
         }
       );
       setEncouragementText(encouragement);
+
+      // Log the feeling selection with timestamp and AI response
+      const feelingLog: FeelingLog = {
+        id: Date.now().toString() + '-feeling',
+        timestamp: new Date().toISOString(),
+        emotionalState: state,
+        selectedFeeling: selectedFeeling,
+        aiResponse: encouragement,
+        isAIResponse: true, // Will be updated if fallback is used
+        lowStateCount: newLowStateCount
+      };
+
+      // Save to database for historical tracking
+      try {
+        await dbService.saveFeelingLog(feelingLog);
+      } catch (dbError) {
+        console.error('Failed to save feeling log:', dbError);
+        // Continue even if logging fails
+      }
     } catch (error) {
       console.error('Encouragement generation error:', error);
-      setEncouragementText("You're doing important work. Keep going, one step at a time.");
+      const fallbackResponse = "You're doing important work. Keep going, one step at a time.";
+      setEncouragementText(fallbackResponse);
+
+      // Log the fallback response
+      const feelingLog: FeelingLog = {
+        id: Date.now().toString() + '-feeling',
+        timestamp: new Date().toISOString(),
+        emotionalState: state,
+        selectedFeeling: selectedFeeling,
+        aiResponse: fallbackResponse,
+        isAIResponse: false, // Rule-based fallback
+        lowStateCount: newLowStateCount
+      };
+
+      try {
+        await dbService.saveFeelingLog(feelingLog);
+      } catch (dbError) {
+        console.error('Failed to save feeling log:', dbError);
+      }
     } finally {
       setEncouragementLoading(false);
     }
