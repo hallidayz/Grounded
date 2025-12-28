@@ -27,6 +27,7 @@ interface ReflectionFormProps {
   onSuggestGoal: () => void;
   onCommit: () => void;
   getReflectionPlaceholder: (freq: GoalFrequency, subFeeling?: string | null) => string;
+  onTriggerReflectionAnalysis: () => void;
 }
 
 const ReflectionForm: React.FC<ReflectionFormProps> = ({
@@ -53,6 +54,7 @@ const ReflectionForm: React.FC<ReflectionFormProps> = ({
   onSuggestGoal,
   onCommit,
   getReflectionPlaceholder,
+  onTriggerReflectionAnalysis,
 }) => {
   return (
     <div className="mt-4 sm:mt-6 space-y-4 sm:space-y-6 animate-pop border-t border-border-soft dark:border-dark-border/30 pt-4 sm:pt-5">
@@ -213,6 +215,13 @@ const ReflectionForm: React.FC<ReflectionFormProps> = ({
             placeholder={getReflectionPlaceholder(goalFreq, selectedFeeling)}
             className="w-full p-3 sm:p-4 rounded-xl sm:rounded-2xl bg-bg-secondary dark:bg-dark-bg-primary/50 border-none focus:ring-2 focus:ring-yellow-warm/30 outline-none text-text-primary dark:text-white min-h-[140px] sm:min-h-[160px] resize-none text-[10px] sm:text-[11px] leading-relaxed shadow-inner"
           />
+          <button
+            onClick={onTriggerReflectionAnalysis}
+            disabled={analyzingReflection || !reflectionText.trim() || !emotionalState || emotionalState === 'mixed' || !selectedFeeling}
+            className="w-full py-2 sm:py-2.5 bg-yellow-warm text-text-primary rounded-lg sm:rounded-xl font-black uppercase tracking-widest text-[8px] sm:text-[9px] shadow-sm hover:opacity-90 transition-all active:scale-[0.98] disabled:opacity-30 disabled:cursor-not-allowed"
+          >
+            {analyzingReflection ? 'Analyzing...' : '💾 Save & Analyze'}
+          </button>
           {analyzingReflection && (
             <div className="text-[8px] text-yellow-warm font-bold uppercase tracking-widest animate-pulse">
               Analyzing reflection...
@@ -220,7 +229,17 @@ const ReflectionForm: React.FC<ReflectionFormProps> = ({
           )}
           {reflectionAnalysis && !analyzingReflection && (
             <div className="mt-3 p-3 sm:p-4 bg-yellow-warm/10 dark:bg-yellow-warm/20 rounded-xl border border-yellow-warm/30 space-y-3">
-              <div className="text-[8px] font-black text-yellow-warm uppercase tracking-widest">Reflection Analysis</div>
+              <div className="flex items-center justify-between">
+                <div className="text-[8px] font-black text-yellow-warm uppercase tracking-widest">Reflection Analysis</div>
+                <button
+                  onClick={onTriggerReflectionAnalysis}
+                  disabled={analyzingReflection || !reflectionText.trim() || !emotionalState || emotionalState === 'mixed' || !selectedFeeling}
+                  className="text-[7px] sm:text-[8px] font-black text-yellow-warm uppercase tracking-widest hover:underline disabled:opacity-30 disabled:cursor-not-allowed"
+                  title="Refresh analysis"
+                >
+                  🔄 Refresh
+                </button>
+              </div>
               <div className="text-[9px] sm:text-[10px] text-text-primary dark:text-white whitespace-pre-line leading-relaxed space-y-2">
                 {reflectionAnalysis.split('\n').map((line, idx) => {
                   if (line.startsWith('##')) {

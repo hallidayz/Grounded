@@ -255,6 +255,7 @@ const Dashboard: React.FC<DashboardProps> = ({ values, onLog, goals, onUpdateGoa
               onCompleteGoal={dashboard.handleCompleteGoal}
               onCommit={() => dashboard.handleCommit(value.id)}
               getReflectionPlaceholder={dashboard.getReflectionPlaceholder}
+              onTriggerReflectionAnalysis={dashboard.triggerReflectionAnalysis}
               lcswConfig={lcswConfig}
             />
           );

@@ -1,6 +1,6 @@
 import { useState, useEffect, useRef, useCallback } from 'react';
 import { ValueItem, LogEntry, Goal, GoalFrequency, LCSWConfig, FeelingLog, UserInteraction, Session } from '../types';
-import { EmotionalState } from '../services/emotionalStates';
+import { EmotionalState, getEmotionalState } from '../services/emotionalStates';
 import { generateEncouragement, generateEmotionalEncouragement, generateValueMantra, suggestGoal, detectCrisis, analyzeReflection } from '../services/aiService';
 import { shareViaEmail, generateGoalsEmail } from '../services/emailService';
 import { useDebounce } from './useDebounce';
@@ -199,30 +199,44 @@ export function useDashboard(
     }
   }, [reflectionText, goalText, activeValueId, saveInteraction]);
 
-  // Analyze reflection when user stops typing
-  // Reflection Analysis - only run when user has entered deep reflection + feeling + sub-feeling
-  useEffect(() => {
-    const hasReflection = debouncedReflectionText.trim().length > 20; // Minimum 20 characters
+  // Manual reflection analysis trigger
+  // Builds enhanced reflection context with feeling + sub-feeling + deep reflection
+  const triggerReflectionAnalysis = useCallback(async () => {
+    const hasReflection = reflectionText.trim().length > 20; // Minimum 20 characters
     const hasFeeling = emotionalState && emotionalState !== 'mixed';
     const hasSubFeeling = selectedFeeling !== null;
     
-    if (hasReflection && hasFeeling && hasSubFeeling && activeValueId) {
-      setAnalyzingReflection(true);
-      analyzeReflection(debouncedReflectionText, goalFreq, lcswConfig)
-        .then(analysis => {
-          setReflectionAnalysis(analysis);
-          setAnalyzingReflection(false);
-        })
-        .catch(error => {
-          console.error('Reflection analysis error:', error);
-          setReflectionAnalysis(null);
-          setAnalyzingReflection(false);
-        });
-    } else {
+    if (!hasReflection) {
+      console.warn('Reflection text is too short for analysis');
+      return;
+    }
+    
+    if (!hasFeeling || !hasSubFeeling) {
+      console.warn('Please select both feeling and sub-feeling before analyzing');
+      return;
+    }
+    
+    // Build enhanced reflection context with feeling information
+    const stateConfig = getEmotionalState(emotionalState);
+    const feelingContext = stateConfig && selectedFeeling
+      ? `Emotional State: ${stateConfig.label} (${selectedFeeling})\n\n`
+      : '';
+    
+    const enhancedReflection = feelingContext 
+      ? `${feelingContext}Deep Reflection:\n${reflectionText}`
+      : reflectionText;
+    
+    setAnalyzingReflection(true);
+    try {
+      const analysis = await analyzeReflection(enhancedReflection, goalFreq, lcswConfig);
+      setReflectionAnalysis(analysis);
+    } catch (error) {
+      console.error('Reflection analysis error:', error);
       setReflectionAnalysis(null);
+    } finally {
       setAnalyzingReflection(false);
     }
-  }, [debouncedReflectionText, goalFreq, activeValueId, lcswConfig, emotionalState, selectedFeeling]);
+  }, [reflectionText, emotionalState, selectedFeeling, goalFreq, lcswConfig]);
 
   // AI Motivation Refresh - Focus Lens based on selected feeling
   useEffect(() => {
@@ -598,6 +612,7 @@ export function useDashboard(
     handleEmotionalEncourage,
     handleCommit,
     getReflectionPlaceholder,
+    triggerReflectionAnalysis,
     
     // Reset encouragement
     resetEncouragement: useCallback(() => {
