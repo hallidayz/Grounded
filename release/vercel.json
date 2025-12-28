@@ -1,4 +1,6 @@
 {
+  "buildCommand": "echo \"Using pre-built files\"",
+  "outputDirectory": "dist-for-hosting",
   "headers": [
     {
       "source": "/(.*)",

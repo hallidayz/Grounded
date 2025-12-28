@@ -248,6 +248,8 @@ function main() {
   
   // Vercel config
   const vercelConfig = {
+    buildCommand: 'echo "Using pre-built files"',
+    outputDirectory: 'dist-for-hosting',
     headers: [
       {
         source: '/(.*)',
