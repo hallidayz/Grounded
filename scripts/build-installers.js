@@ -140,16 +140,26 @@ function main() {
         const dest = join(outputDir, basename(dmgFile));
         copyFileSync(dmgFile, dest);
         
-        // Hide .VolumeIcon.icns file in DMG (it's used for the volume icon but should be hidden)
+        // Hide .VolumeIcon.icns and other system files in DMG
+        // These files are used by macOS but should be hidden from users
         if (process.platform === 'darwin') {
           try {
             const hideScript = join(process.cwd(), 'scripts', 'hide-volume-icon.sh');
             if (existsSync(hideScript)) {
+              log(`   🔧 Hiding system files in DMG...`, 'blue');
               execSync(`chmod +x "${hideScript}"`, { stdio: 'ignore' });
-              execSync(`"${hideScript}" "${dest}"`, { stdio: 'inherit' });
+              execSync(`bash "${hideScript}" "${dest}"`, { 
+                stdio: 'inherit',
+                cwd: process.cwd(),
+                env: { ...process.env, PATH: process.env.PATH }
+              });
+              log(`   ✅ System files hidden in DMG`, 'green');
+            } else {
+              log(`   ⚠️  hide-volume-icon.sh script not found`, 'yellow');
             }
           } catch (error) {
-            log(`   ⚠️  Could not hide .VolumeIcon.icns (non-critical): ${error.message}`, 'yellow');
+            log(`   ⚠️  Could not hide system files in DMG: ${error.message}`, 'yellow');
+            log(`   💡 You may need to manually hide .VolumeIcon.icns after opening the DMG`, 'yellow');
           }
         }
         
