@@ -34,7 +34,7 @@ class DatabaseService {
   // Format: com.[company].[appname].[purpose].db ensures uniqueness
   // This ensures no conflicts with other apps like AiNotes or InnerCompass
   private dbName = 'com.acminds.grounded.therapy.db';
-  private dbVersion = 1;
+  private dbVersion = 2; // Incremented to add feelingLogs store
   private db: IDBDatabase | null = null;
 
   async init(): Promise<void> {
@@ -71,6 +71,13 @@ class DatabaseService {
           const resetStore = db.createObjectStore('resetTokens', { keyPath: 'token' });
           resetStore.createIndex('userId', 'userId', { unique: false });
           resetStore.createIndex('expires', 'expires', { unique: false });
+        }
+
+        // Feeling logs store - stores historical feeling selections and AI responses for behavioral tracking
+        if (!db.objectStoreNames.contains('feelingLogs')) {
+          const feelingLogStore = db.createObjectStore('feelingLogs', { keyPath: 'id' });
+          feelingLogStore.createIndex('timestamp', 'timestamp', { unique: false });
+          feelingLogStore.createIndex('emotionalState', 'emotionalState', { unique: false });
         }
       };
     });
@@ -285,6 +292,63 @@ class DatabaseService {
           cursor.continue();
         } else {
           resolve();
+        }
+      };
+      request.onerror = () => reject(request.error);
+    });
+  }
+
+  // Feeling logs operations - for behavioral tracking and AI context
+  async saveFeelingLog(feelingLog: { id: string; timestamp: string; emotionalState: string; selectedFeeling: string | null; aiResponse: string; isAIResponse: boolean; lowStateCount: number }): Promise<void> {
+    const db = await this.ensureDB();
+    return new Promise((resolve, reject) => {
+      const transaction = db.transaction(['feelingLogs'], 'readwrite');
+      const store = transaction.objectStore('feelingLogs');
+      const request = store.add(feelingLog);
+
+      request.onsuccess = () => resolve();
+      request.onerror = () => reject(request.error);
+    });
+  }
+
+  async getFeelingLogs(limit?: number): Promise<any[]> {
+    const db = await this.ensureDB();
+    return new Promise((resolve, reject) => {
+      const transaction = db.transaction(['feelingLogs'], 'readonly');
+      const store = transaction.objectStore('feelingLogs');
+      const index = store.index('timestamp');
+      const request = index.openCursor(null, 'prev'); // Get most recent first
+
+      const logs: any[] = [];
+      request.onsuccess = (event) => {
+        const cursor = (event.target as IDBRequest<IDBCursorWithValue>).result;
+        if (cursor && (!limit || logs.length < limit)) {
+          logs.push(cursor.value);
+          cursor.continue();
+        } else {
+          resolve(logs);
+        }
+      };
+      request.onerror = () => reject(request.error);
+    });
+  }
+
+  async getFeelingLogsByState(emotionalState: string, limit?: number): Promise<any[]> {
+    const db = await this.ensureDB();
+    return new Promise((resolve, reject) => {
+      const transaction = db.transaction(['feelingLogs'], 'readonly');
+      const store = transaction.objectStore('feelingLogs');
+      const index = store.index('emotionalState');
+      const request = index.openCursor(IDBKeyRange.only(emotionalState));
+
+      const logs: any[] = [];
+      request.onsuccess = (event) => {
+        const cursor = (event.target as IDBRequest<IDBCursorWithValue>).result;
+        if (cursor && (!limit || logs.length < limit)) {
+          logs.push(cursor.value);
+          cursor.continue();
+        } else {
+          resolve(logs);
         }
       };
       request.onerror = () => reject(request.error);

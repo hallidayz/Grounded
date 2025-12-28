@@ -349,8 +349,21 @@ export async function generateEmotionalEncouragement(
   // Low states tracking (drained, heavy, overwhelmed)
   const isLowState = emotionalState === 'drained' || emotionalState === 'heavy' || emotionalState === 'overwhelmed';
   const isRepeated = isLowState && lowStateCount >= 3;
+  
+  // Build evidence-based recommendation context using historical patterns
+  let evidenceContext = '';
+  if (isRepeated && context?.userPatterns) {
+    const { frequentStates, progress } = context.userPatterns;
+    if (frequentStates.length > 0) {
+      evidenceContext = ` Based on recent patterns, the user has been feeling ${frequentStates.join(', ')} frequently (${lowStateCount} consecutive times).`;
+    }
+    if (progress !== undefined && progress < 30) {
+      evidenceContext += ` Recent progress shows ${progress}% positive states, indicating ongoing challenges.`;
+    }
+  }
+  
   const connectionPrompt = isRepeated 
-    ? ' Strongly encourage them to reach out to a trusted person, their therapist, or a support line (988). Emphasize that they don\'t have to go through this alone.'
+    ? ` Strongly encourage them to reach out to a trusted person, their therapist, or a support line (988). Emphasize that they don't have to go through this alone.${evidenceContext}`
     : isLowState
     ? ' Gently suggest that connecting with someone they trust might be helpful.'
     : '';
