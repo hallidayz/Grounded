@@ -12,7 +12,7 @@ const INSTALL_DATE_KEY = 'install_date';
 const LAST_UPDATE_KEY = 'last_update';
 
 // Get app version from package.json (injected at build time)
-const CURRENT_APP_VERSION = import.meta.env.VITE_APP_VERSION || '1.12.26';
+const CURRENT_APP_VERSION = import.meta.env.VITE_APP_VERSION || '1.12.27';
 
 interface UpdateInfo {
   isNewInstall: boolean;

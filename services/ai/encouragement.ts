@@ -5,7 +5,7 @@
  * Supports therapy integration with value-based reflection and emotional support.
  */
 
-import { ValueItem, GoalFrequency, LCSWConfig } from "../types";
+import { ValueItem, GoalFrequency, LCSWConfig } from "../../types";
 import { initializeModels, getCounselingCoachModel, getIsModelLoading } from "./models";
 import { detectCrisis, getCrisisResponse } from "./crisis";
 

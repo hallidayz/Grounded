@@ -1,7 +1,7 @@
 {
   "name": "grounded",
   "private": true,
-  "version": "1.12.26",
+  "version": "1.12.27",
   "type": "module",
   "scripts": {
     "dev": "vite --open",

@@ -101,8 +101,9 @@ const App: React.FC = () => {
         listenForServiceWorkerUpdates();
         
         // Initialize shortcuts (desktop/home screen icons) to show successful installation
-        initializeShortcuts().catch(() => {
-          // Silently fail - shortcuts may already exist
+        initializeShortcuts().catch((error) => {
+          // Shortcuts may already exist, log but don't block app initialization
+          console.warn('Failed to initialize shortcuts:', error);
         });
         
         // Initialize database first (needed for user data)
@@ -118,8 +119,9 @@ const App: React.FC = () => {
           } else {
             console.warn('⚠️ AI models not loaded - using rule-based responses');
           }
-        }).catch(() => {
-          // Silently fail - models will retry later
+        }).catch((error) => {
+          // Models will retry later, but log the error for debugging
+          console.warn('AI model preload failed, will retry later:', error);
         });
         
         // Cleanup expired tokens on startup
@@ -492,8 +494,9 @@ const App: React.FC = () => {
       
       // User has committed to using the app - ensure models are loading
       // This is a good time to start/retry model loading if not already started
-      preloadModels().catch(() => {
-        // Silently fail - models may already be loading or will retry
+      preloadModels().catch((error) => {
+        // Models may already be loading or will retry, but log for debugging
+        console.warn('AI model preload retry failed:', error);
       });
     }
   };
@@ -547,27 +550,15 @@ const App: React.FC = () => {
 
   // Subscribe to progress updates
   useEffect(() => {
-    // #region agent log
-    fetch('http://127.0.0.1:7245/ingest/7d9ee931-8dee-46f8-918b-e417134eb58f',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'App.tsx:454',message:'Progress subscription setup',data:{initialState:progressState},timestamp:Date.now(),sessionId:'debug-session',runId:'post-fix',hypothesisId:'A'})}).catch(()=>{});
-    // #endregion
     let isFirstCallback = true;
     const unsubscribe = subscribeToProgress((state) => {
-      // #region agent log
-      fetch('http://127.0.0.1:7245/ingest/7d9ee931-8dee-46f8-918b-e417134eb58f',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'App.tsx:457',message:'Progress callback invoked',data:{receivedStatus:state.status,receivedLabel:state.label,receivedProgress:state.progress,isFirstCallback,willTransform:state.status==='idle'},timestamp:Date.now(),sessionId:'debug-session',runId:'post-fix',hypothesisId:'A'})}).catch(()=>{});
-      // #endregion
       // Skip transformation on first callback if it's idle with empty label (preserve initial "Initializing..." state)
       if (isFirstCallback && state.status === 'idle' && !state.label) {
-        // #region agent log
-        fetch('http://127.0.0.1:7245/ingest/7d9ee931-8dee-46f8-918b-e417134eb58f',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'App.tsx:461',message:'Skipping first idle callback to preserve initial state',data:{preservedLabel:'Initializing...'},timestamp:Date.now(),sessionId:'debug-session',runId:'post-fix',hypothesisId:'A'})}).catch(()=>{});
-        // #endregion
         isFirstCallback = false;
         return; // Preserve initial state
       }
       isFirstCallback = false;
       const transformedStatus = state.status === 'idle' ? 'loading' : state.status;
-      // #region agent log
-      fetch('http://127.0.0.1:7245/ingest/7d9ee931-8dee-46f8-918b-e417134eb58f',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'App.tsx:468',message:'State transformation result',data:{originalStatus:state.status,transformedStatus,newLabel:state.label||'Loading...'},timestamp:Date.now(),sessionId:'debug-session',runId:'post-fix',hypothesisId:'A'})}).catch(()=>{});
-      // #endregion
       setProgressState({
         progress: state.progress,
         status: transformedStatus,

@@ -9,6 +9,8 @@
  * - Object stores are scoped to this database, so they don't need global uniqueness
  */
 
+import { AppSettings, LogEntry, Goal, LCSWConfig } from '../types';
+
 interface UserData {
   id: string;
   username: string;
@@ -22,11 +24,11 @@ interface UserData {
 }
 
 interface AppData {
-  settings: any;
-  logs: any[];
-  goals: any[];
+  settings: AppSettings;
+  logs: LogEntry[];
+  goals: Goal[];
   values: string[];
-  lcswConfig?: any;
+  lcswConfig?: LCSWConfig;
 }
 
 class DatabaseService {

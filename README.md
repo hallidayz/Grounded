@@ -1,6 +1,6 @@
 # Grounded - On-Device Therapy Integration App
 
-**Grounded by AC MiNDS** - Version 1.12.26
+**Grounded by AC MiNDS** - Version 1.12.27
 
 Privacy-first therapy integration app for values-based reflection and mental health support.
 

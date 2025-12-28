@@ -13,22 +13,13 @@ const DebugLogComponent: React.FC<DebugLogProps> = ({ onClose }) => {
   const [expandedSections, setExpandedSections] = useState<Set<string>>(new Set(['errors', 'warnings']));
 
   useEffect(() => {
-    // #region agent log
-    fetch('http://127.0.0.1:7245/ingest/7d9ee931-8dee-46f8-918b-e417134eb58f',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'DebugLog.tsx:15',message:'Starting generateDebugLog',data:{loadingState:loading},timestamp:Date.now(),sessionId:'debug-session',runId:'post-fix',hypothesisId:'C'})}).catch(()=>{});
-    // #endregion
     // Generate debug log (debug logging is already initialized in App.tsx)
     generateDebugLog()
       .then((debugLog) => {
-        // #region agent log
-        fetch('http://127.0.0.1:7245/ingest/7d9ee931-8dee-46f8-918b-e417134eb58f',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'DebugLog.tsx:21',message:'generateDebugLog resolved',data:{hasLog:!!debugLog},timestamp:Date.now(),sessionId:'debug-session',runId:'post-fix',hypothesisId:'C'})}).catch(()=>{});
-        // #endregion
         setLog(debugLog);
         setLoading(false);
       })
       .catch((error) => {
-        // #region agent log
-        fetch('http://127.0.0.1:7245/ingest/7d9ee931-8dee-46f8-918b-e417134eb58f',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'DebugLog.tsx:27',message:'generateDebugLog rejected - error handler invoked',data:{error:error?.message||String(error),errorType:error?.constructor?.name,willSetLoadingFalse:true},timestamp:Date.now(),sessionId:'debug-session',runId:'post-fix',hypothesisId:'C'})}).catch(()=>{});
-        // #endregion
         console.error('Failed to generate debug log:', error);
         setLoading(false);
         setLog(null);

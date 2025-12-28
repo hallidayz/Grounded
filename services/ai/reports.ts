@@ -43,7 +43,7 @@ export async function assessMentalState(
     }
 
     // Combine recent logs and current reflection for context
-    const recentLogs = logs.slice(0, 10).map(l => l.note).join(' ');
+    const recentLogs = logs.slice(0, 10).map(l => l.note).filter(Boolean).join(' ');
     const combinedText = `${recentLogs} ${currentReflection}`.trim();
 
     if (!combinedText) {
@@ -237,7 +237,7 @@ export async function generateHumanReports(
     }
 
     // Check all logs for crisis indicators
-    const allText = logs.map(l => l.note).join(' ');
+    const allText = logs.map(l => l.note).filter(Boolean).join(' ');
     const crisisCheck = detectCrisis(allText, lcswConfig);
     
     if (crisisCheck.isCrisis && crisisCheck.severity === 'critical') {
