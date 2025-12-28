@@ -1,6 +1,6 @@
 import React from 'react';
 
-type View = 'home' | 'values' | 'report' | 'vault' | 'onboarding';
+type View = 'home' | 'values' | 'report' | 'vault' | 'goals' | 'onboarding';
 
 interface BottomNavigationProps {
   currentView: View;
@@ -11,6 +11,7 @@ const BottomNavigation: React.FC<BottomNavigationProps> = ({ currentView, onView
   const tabs = [
     { id: 'home' as View, label: 'Home', icon: '🏠' },
     { id: 'values' as View, label: 'Values', icon: '💛' },
+    { id: 'goals' as View, label: 'Goals', icon: '🎯' },
     { id: 'report' as View, label: 'Reports', icon: '📊' },
     { id: 'vault' as View, label: 'Vault', icon: '🔒' }
   ];

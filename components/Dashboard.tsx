@@ -99,6 +99,12 @@ const Dashboard: React.FC<DashboardProps> = ({ values, onLog, goals, onUpdateGoa
 
   const handleOpenFirstValue = () => {
     if (values.length > 0) {
+      // Preserve the selected feeling and emotional state when opening reflection
+      if (dashboard.lastEncouragedState) {
+        dashboard.setEmotionalState(dashboard.lastEncouragedState as any);
+      }
+      // selectedFeeling is already preserved from the encourage section state
+      // Open the first value card for reflection
       dashboard.setActiveValueId(values[0].id);
     }
   };
@@ -114,6 +120,30 @@ const Dashboard: React.FC<DashboardProps> = ({ values, onLog, goals, onUpdateGoa
           How are you feeling today?
         </p>
       </div>
+
+      {/* Today's Focus Section - Moved to top and made compact */}
+      {topValue && (
+        <div className="bg-gradient-to-br from-yellow-warm/20 to-yellow-light/20 dark:from-yellow-warm/10 dark:to-yellow-light/10 rounded-xl sm:rounded-2xl p-3 sm:p-4">
+          <div className="flex items-center justify-between gap-2 sm:gap-3">
+            <div className="flex items-center gap-2 sm:gap-3 flex-1 min-w-0">
+              <span className="text-xl sm:text-2xl flex-shrink-0">🎯</span>
+              <div className="min-w-0 flex-1">
+                <div className="flex items-center gap-2 mb-0.5">
+                  <h3 className="text-sm sm:text-base font-semibold text-text-primary dark:text-white truncate">
+                    Today's Focus
+                  </h3>
+                  <span className="text-xs sm:text-sm font-medium text-text-primary dark:text-white truncate">
+                    {topValue.name}
+                  </span>
+                </div>
+                <p className="text-xs sm:text-sm text-text-secondary dark:text-white/70 italic truncate">
+                  "{displayMantra}"
+                </p>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
 
       <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3 sm:gap-0">
         <div>
@@ -147,24 +177,6 @@ const Dashboard: React.FC<DashboardProps> = ({ values, onLog, goals, onUpdateGoa
             📊 Your Week at a Glance
           </h3>
           <MoodTrendChart data={moodData} />
-        </div>
-      )}
-
-      {/* Today's Focus Section */}
-      {topValue && (
-        <div className="bg-gradient-to-br from-yellow-warm/20 to-yellow-light/20 dark:from-yellow-warm/10 dark:to-yellow-light/10 rounded-2xl p-6 space-y-2">
-          <div className="flex items-center space-x-2">
-            <span className="text-2xl">🎯</span>
-            <h3 className="text-lg font-semibold text-text-primary dark:text-white">
-              Today's Focus
-            </h3>
-          </div>
-          <p className="text-text-primary dark:text-white font-medium">
-            {topValue.name}
-          </p>
-          <p className="text-text-secondary dark:text-white/70 italic">
-            "{displayMantra}"
-          </p>
         </div>
       )}
 

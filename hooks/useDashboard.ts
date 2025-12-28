@@ -228,7 +228,7 @@ export function useDashboard(
     
     setAnalyzingReflection(true);
     try {
-      const analysis = await analyzeReflection(enhancedReflection, goalFreq, lcswConfig);
+      const analysis = await analyzeReflection(enhancedReflection, goalFreq, lcswConfig, emotionalState, selectedFeeling);
       setReflectionAnalysis(analysis);
     } catch (error) {
       console.error('Reflection analysis error:', error);
@@ -388,9 +388,10 @@ export function useDashboard(
     });
     onUpdateGoals(goals.map(g => g.id === goal.id ? completedGoal : g));
 
-    if (lcswConfig?.emergencyContact?.phone || lcswConfig?.emergencyContact) {
-      const emailData = generateGoalsEmail([], values, [completedGoal]);
-      const therapistEmails = lcswConfig?.emergencyContact ? [] : [];
+    // Send email to therapist when goal is completed
+    if (lcswConfig?.emergencyContact?.email) {
+      const therapistEmails = [lcswConfig.emergencyContact.email];
+      const emailData = generateGoalsEmail(goals.map(g => g.id === goal.id ? completedGoal : g), values, [completedGoal], true);
       await shareViaEmail(emailData, therapistEmails);
     }
   }, [goals, values, lcswConfig, onLog, onUpdateGoals]);

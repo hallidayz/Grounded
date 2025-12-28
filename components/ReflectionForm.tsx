@@ -2,6 +2,7 @@ import React from 'react';
 import { EmotionalState, EMOTIONAL_STATES, getEmotionalState } from '../services/emotionalStates';
 import { GoalFrequency, ValueItem, LCSWConfig } from '../types';
 import SkeletonLoader from './SkeletonLoader';
+import StatusIndicator, { StatusType } from './StatusIndicator';
 
 interface ReflectionFormProps {
   value: ValueItem;
@@ -230,7 +231,19 @@ const ReflectionForm: React.FC<ReflectionFormProps> = ({
           {reflectionAnalysis && !analyzingReflection && (
             <div className="mt-3 p-3 sm:p-4 bg-yellow-warm/10 dark:bg-yellow-warm/20 rounded-xl border border-yellow-warm/30 space-y-3">
               <div className="flex items-center justify-between">
-                <div className="text-xs sm:text-sm font-black text-yellow-warm uppercase tracking-widest">Reflection Analysis</div>
+                <div className="flex items-center gap-2">
+                  <div className="text-xs sm:text-sm font-black text-yellow-warm uppercase tracking-widest">Reflection Analysis</div>
+                  <StatusIndicator
+                    status={
+                      analyzingReflection
+                        ? 'processing'
+                        : reflectionAnalysis
+                        ? 'complete'
+                        : 'not-done'
+                    }
+                    size="sm"
+                  />
+                </div>
                 <button
                   onClick={onTriggerReflectionAnalysis}
                   disabled={analyzingReflection || !reflectionText.trim() || !emotionalState || emotionalState === 'mixed' || !selectedFeeling}
@@ -258,9 +271,21 @@ const ReflectionForm: React.FC<ReflectionFormProps> = ({
         <div className="space-y-2">
           <div className="flex justify-between items-center px-1">
             <label className="text-xs sm:text-sm font-black text-text-primary/50 dark:text-white/50 uppercase tracking-widest">2. Self-Advocacy Aim</label>
-            <button onClick={onSuggestGoal} disabled={aiGoalLoading} className="text-xs sm:text-sm font-black text-yellow-warm uppercase tracking-widest hover:underline disabled:opacity-50">
-              {aiGoalLoading ? 'Suggesting...' : '✨ Suggest'}
-            </button>
+            <div className="flex items-center gap-2">
+              <button onClick={onSuggestGoal} disabled={aiGoalLoading} className="text-xs sm:text-sm font-black text-yellow-warm uppercase tracking-widest hover:underline disabled:opacity-50">
+                {aiGoalLoading ? 'Suggesting...' : '✨ Suggest'}
+              </button>
+              <StatusIndicator
+                status={
+                  aiGoalLoading
+                    ? 'processing'
+                    : goalText
+                    ? 'complete'
+                    : 'not-done'
+                }
+                size="sm"
+              />
+            </div>
           </div>
           <div className="space-y-1.5">
             <div className="flex gap-1">

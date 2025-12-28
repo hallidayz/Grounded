@@ -70,6 +70,32 @@ export interface EmailSchedule {
   sendReports: boolean;
 }
 
+// AI Response Types (JSON format for optimized on-device LLM)
+export interface ReflectionAnalysisResponse {
+  coreThemes: string[]; // 2-3 themes
+  lcswLens: string; // Environment/internal state connections
+  reflectiveInquiry: string[]; // 2 growth-oriented questions
+  sessionPrep: string; // Key takeaway/priority topic
+}
+
+export interface GoalSuggestionResponse {
+  description: string; // What they'll do
+  whatThisHelpsWith: string; // Why it matters
+  howToMeasureProgress: string[]; // 3 concrete steps
+}
+
+export interface EmotionalEncouragementResponse {
+  message: string; // 30-60 words, 2-3 sentences
+  acknowledgeFeeling?: string; // Specific feeling acknowledgment
+  actionableStep?: string; // Optional small step
+}
+
+export interface CounselingGuidanceResponse {
+  validation: string; // Validates their experience
+  valueConnection: string; // Connects to their value
+  actionableStep: string; // Small step before next session
+}
+
 export interface LCSWConfig {
   // Treatment protocols the LCSW uses
   protocols: ('CBT' | 'DBT' | 'ACT' | 'EMDR' | 'Other')[];
