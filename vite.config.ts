@@ -17,6 +17,24 @@ export default defineConfig({
       'Cross-Origin-Opener-Policy': 'same-origin',
       'Cross-Origin-Embedder-Policy': 'require-corp',
     },
+    watch: {
+      // Ignore Rust build artifacts to prevent "too many open files" error
+      ignored: [
+        '**/src-tauri/target/**',
+        '**/node_modules/**',
+        '**/.git/**'
+      ]
+    },
+    fs: {
+      // Restrict file system access to prevent scanning Rust docs (53k+ files)
+      strict: false,
+      allow: [
+        path.resolve(__dirname)
+      ],
+      deny: [
+        path.resolve(__dirname, 'src-tauri/target')
+      ]
+    }
   },
   preview: {
     port: 8000,

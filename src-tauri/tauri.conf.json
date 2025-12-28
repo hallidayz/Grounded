@@ -61,6 +61,10 @@
       "timestampUrl": ""
     }
   },
-  "plugins": {}
+  "plugins": {
+    "deep-link": {
+      "schemes": ["tauri"]
+    }
+  }
 }
 
