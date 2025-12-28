@@ -4,6 +4,7 @@ import { LCSWConfig } from '../types';
 import EmotionSelector from './EmotionSelector';
 import AIResponseBubble from './AIResponseBubble';
 import SkeletonCard from './SkeletonCard';
+import StatusIndicator from './StatusIndicator';
 
 interface EncourageSectionProps {
   encouragementText: string | null;
@@ -49,6 +50,19 @@ const EncourageSection: React.FC<EncourageSectionProps> = ({
       {/* Display AI encouragement message */}
       {encouragementText && (
         <div className="space-y-4">
+          <div className="flex items-center gap-2 mb-2">
+            <span className="text-xs sm:text-sm font-black text-text-primary/50 dark:text-white/50 uppercase tracking-widest">Encouragement</span>
+            <StatusIndicator
+              status={
+                encouragementLoading
+                  ? 'processing'
+                  : encouragementText
+                  ? 'complete'
+                  : 'not-done'
+              }
+              size="sm"
+            />
+          </div>
           <AIResponseBubble
             message={encouragementText}
             emotion={lastEncouragedState || undefined}

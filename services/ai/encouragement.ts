@@ -5,9 +5,10 @@
  * Supports therapy integration with value-based reflection and emotional support.
  */
 
-import { ValueItem, GoalFrequency, LCSWConfig } from "../../types";
+import { ValueItem, GoalFrequency, LCSWConfig, ReflectionAnalysisResponse, GoalSuggestionResponse, EmotionalEncouragementResponse, CounselingGuidanceResponse } from "../../types";
 import { initializeModels, getCounselingCoachModel, getIsModelLoading } from "./models";
 import { detectCrisis, getCrisisResponse } from "./crisis";
+import { generateCacheKey, getCachedResponse, setCachedResponse, shouldInvalidateCache } from "./cache";
 
 /**
  * Fallback guidance generator (used when models aren't available)
@@ -21,6 +22,34 @@ function generateFallbackGuidance(value: ValueItem, mood: string, reflection: st
   }[mood] || 'your journey';
 
   return `Your focus on ${value.name} during this time of ${moodContext} shows self-awareness. Consider how this reflection connects to what you've discussed with your LCSW. What small step can you take today that aligns with your treatment plan?`;
+}
+
+/**
+ * Format JSON reflection analysis to markdown (temporary for backward compatibility)
+ */
+function formatReflectionAnalysisJSON(json: ReflectionAnalysisResponse): string {
+  return `## Core Themes
+${json.coreThemes.map(t => `- ${t}`).join('\n')}
+
+## The 'LCSW Lens'
+${json.lcswLens}
+
+## Reflective Inquiry
+${json.reflectiveInquiry.map((q, i) => `${i + 1}. ${q}`).join('\n')}
+
+## Session Prep
+${json.sessionPrep}`;
+}
+
+/**
+ * Format JSON goal suggestion to markdown (temporary for backward compatibility)
+ */
+function formatGoalSuggestionJSON(json: GoalSuggestionResponse): string {
+  return `### Structured Aim
+- **Description**: ${json.description}
+- **What this helps with**: ${json.whatThisHelpsWith}
+- **How do I measure progress**:
+${json.howToMeasureProgress.map((step, i) => `  ${i + 1}. ${step}`).join('\n')}`;
 }
 
 /**
@@ -96,7 +125,9 @@ ${sessionPrep}`;
 export async function analyzeReflection(
   reflection: string,
   frequency: GoalFrequency,
-  lcswConfig?: LCSWConfig
+  lcswConfig?: LCSWConfig,
+  emotionalState?: string | null,
+  selectedFeeling?: string | null
 ): Promise<string> {
   try {
     // Check for crisis first
@@ -110,31 +141,96 @@ export async function analyzeReflection(
     }
 
     const protocols = lcswConfig?.protocols || [];
+    
+    // Check cache first
+    const cacheKey = generateCacheKey(
+      reflection,
+      emotionalState || null,
+      selectedFeeling || null,
+      frequency,
+      protocols
+    );
+    
+    const cached = await getCachedResponse(cacheKey);
+    if (cached?.reflectionAnalysis) {
+      console.log('✅ Using cached reflection analysis');
+      return cached.reflectionAnalysis;
+    }
+
     const protocolContext = protocols.length > 0 
       ? `The user is working with an LCSW using ${protocols.join(', ')} protocols.`
       : 'The user is working with a licensed clinical social worker.';
 
     const frequencyLabel = frequency === 'quarterly' ? 'monthly' : frequency;
-    const prompt = `I am providing a deep reflection of my ${frequencyLabel} below under the heading [Observation].
+    
+    // Optimized JSON prompt for on-device LLM
+    const prompt = `Analyze this ${frequencyLabel} reflection and return ONLY valid JSON (no markdown, no extra text):
 
-Acting as a supportive and insightful reflective partner, please analyze my notes and provide the following:
+{
+  "coreThemes": ["theme1", "theme2", "theme3"],
+  "lcswLens": "environment/internal state connections text",
+  "reflectiveInquiry": ["question1", "question2"],
+  "sessionPrep": "key takeaway text"
+}
 
-**Core Themes**: Identify 2–3 recurring emotional or situational themes you notice in my reflection.
+Context: ${protocolContext}
 
-**The 'LCSW Lens'**: Note any connections between my environment (work, relationships, physical space) and my internal mental state. Focus on social work pillars: environment, coping mechanisms, and self-advocacy.
-
-**Reflective Inquiry**: Ask me 2 'growth-oriented' questions that challenge me to look deeper into a specific part of my observation.
-
-**Session Prep**: Summarize one key takeaway or 'priority topic' I should consider bringing to my next therapy session to ensure I'm making the most of my time.
-
-${protocolContext}
-
-[Observation]
+Reflection:
 ${reflection}
 
-Format your response clearly with these four sections. Be supportive, insightful, and focused on helping me prepare for meaningful work in my next therapy session.`;
+Return valid JSON only.`;
 
-    // Use rule-based analysis since text-generation models are disabled
+    // Try to get AI model for JSON response
+    let counselingCoachModel = getCounselingCoachModel();
+    if (!counselingCoachModel) {
+      const isModelLoading = getIsModelLoading();
+      if (isModelLoading) {
+        const maxWaitTime = 10000; // Shorter timeout for analysis
+        const startTime = Date.now();
+        while (!counselingCoachModel && (Date.now() - startTime) < maxWaitTime) {
+          await new Promise(resolve => setTimeout(resolve, 500));
+          counselingCoachModel = getCounselingCoachModel();
+        }
+      } else {
+        try {
+          await initializeModels();
+          counselingCoachModel = getCounselingCoachModel();
+        } catch (error) {
+          console.warn('Model initialization failed for reflection analysis');
+        }
+      }
+    }
+
+    if (counselingCoachModel) {
+      try {
+        console.log('🤖 Calling AI model for reflection analysis (JSON)...');
+        const result = await counselingCoachModel(prompt, {
+          max_new_tokens: 300,
+          temperature: 0.7,
+          do_sample: true
+        });
+
+        const generatedText = result[0]?.generated_text || '';
+        const extracted = generatedText.replace(prompt, '').trim();
+        
+        // Try to parse JSON from response
+        const jsonMatch = extracted.match(/\{[\s\S]*\}/);
+        if (jsonMatch) {
+          try {
+            const jsonResponse: ReflectionAnalysisResponse = JSON.parse(jsonMatch[0]);
+            console.log('✅ AI-generated JSON reflection analysis received');
+            // Format JSON to markdown for backward compatibility (React will handle formatting later)
+            return formatReflectionAnalysisJSON(jsonResponse);
+          } catch (parseError) {
+            console.warn('Failed to parse JSON response, using fallback');
+          }
+        }
+      } catch (error) {
+        console.warn('AI reflection analysis failed:', error);
+      }
+    }
+    
+    // Fallback to rule-based
     return generateFallbackReflectionAnalysis(reflection, frequency, lcswConfig);
   } catch (error) {
     console.error('Reflection analysis error:', error);
@@ -318,6 +414,22 @@ export async function generateEmotionalEncouragement(
   }
 
   const protocols = lcswConfig?.protocols || [];
+  
+  // Check cache first
+  const cacheKey = generateCacheKey(
+    `${emotionalState}|${selectedFeeling}|${lowStateCount}|${context?.timeOfDay || ''}|${context?.recentJournalText?.substring(0, 50) || ''}`,
+    emotionalState,
+    selectedFeeling,
+    'daily', // Encouragement doesn't use frequency, but cache key needs it
+    protocols
+  );
+  
+  const cached = await getCachedResponse(cacheKey);
+  if (cached?.encouragement) {
+    console.log('✅ Using cached encouragement');
+    return cached.encouragement;
+  }
+
   const protocolContext = protocols.length > 0 
     ? `The user is working with an LCSW using ${protocols.join(', ')} protocols.`
     : 'The user is working with a licensed clinical social worker.';
@@ -371,22 +483,27 @@ export async function generateEmotionalEncouragement(
   // Use encouragement instruction from state config
   const baseInstruction = stateConfig.encouragementPrompt.instruction;
   
-  // Build dynamic prompt - optimized for feeling-focused response
-  const prompt = `You are a supportive therapy integration assistant.${timeContext}${journalContext}${patternContext}
+  // Optimized JSON prompt for on-device LLM
+  const prompt = `Provide encouragement and return ONLY valid JSON (no markdown, no extra text):
 
-**Context**: The user is feeling ${stateConfig.label.toLowerCase()}.${feelingContext}
+{
+  "message": "30-60 words, 2-3 sentences of support",
+  "acknowledgeFeeling": "specific feeling acknowledgment",
+  "actionableStep": "optional small step"
+}
 
+Context: User is feeling ${stateConfig.label.toLowerCase()}.${feelingContext}${timeContext}${journalContext}${patternContext}
 ${protocolContext}
 
-**Your Role**: ${baseInstruction}${connectionPrompt}
+Role: ${baseInstruction}${connectionPrompt}
 
-**Response Requirements**:
-- Acknowledge their specific feeling: "${selectedFeeling || stateConfig.shortLabel}"
-- Provide honest, realistic support (30-60 words, 2-3 sentences)
-- Help them see possibilities without toxic positivity
-- Be genuine, warm, and supportive${isRepeated ? '\n- Strongly encourage reaching out for support' : ''}
+Requirements:
+- Acknowledge: "${selectedFeeling || stateConfig.shortLabel}"
+- Honest, realistic support (30-60 words)
+- See possibilities without toxic positivity
+- Genuine, warm, supportive${isRepeated ? '\n- Strongly encourage reaching out for support' : ''}
 
-Focus on the feeling they selected and provide personalized, actionable encouragement.`;
+Return valid JSON only.`;
 
   // Build fallback response based on state
   let fallbackResponse = '';
@@ -456,7 +573,27 @@ Focus on the feeling they selected and provide personalized, actionable encourag
 
       const generatedText = result[0]?.generated_text || '';
       const extracted = generatedText.replace(prompt, '').trim();
+      
+      // Try to parse JSON from response
+      const jsonMatch = extracted.match(/\{[\s\S]*\}/);
+      if (jsonMatch) {
+        try {
+          const jsonResponse: EmotionalEncouragementResponse = JSON.parse(jsonMatch[0]);
+          console.log('✅ AI-generated JSON encouragement received');
+          // Return formatted message (React will handle full formatting later)
+          const result = jsonResponse.message || fallbackResponse;
+          // Cache the result
+          await setCachedResponse(cacheKey, { encouragement: result });
+          return result;
+        } catch (parseError) {
+          console.warn('Failed to parse JSON encouragement, using raw response');
+        }
+      }
+      
+      // If JSON parsing failed, use raw response if reasonable
       if (extracted && extracted.length > 20) {
+        // Cache the raw response
+        await setCachedResponse(cacheKey, { encouragement: extracted });
         return extracted;
       }
     } catch (error) {
@@ -481,6 +618,22 @@ Focus on the feeling they selected and provide personalized, actionable encourag
             });
             const retryText = retryResult[0]?.generated_text || '';
             const retryExtracted = retryText.replace(prompt, '').trim();
+            
+            // Try to parse JSON from retry
+            const retryJsonMatch = retryExtracted.match(/\{[\s\S]*\}/);
+            if (retryJsonMatch) {
+              try {
+                const retryJsonResponse: EmotionalEncouragementResponse = JSON.parse(retryJsonMatch[0]);
+                console.log('✅ AI-generated JSON encouragement received after reload');
+                const result = retryJsonResponse.message || fallbackResponse;
+                // Cache the result
+                await setCachedResponse(cacheKey, { encouragement: result });
+                return result;
+              } catch (parseError) {
+                console.warn('Failed to parse retry JSON encouragement');
+              }
+            }
+            
             if (retryExtracted && retryExtracted.length > 20) {
               return retryExtracted;
             }
@@ -558,21 +711,58 @@ export async function suggestGoal(
       return `### Safety First\n- **Description**: Contact your therapist or emergency services if you're in crisis\n- **What this helps with**: Immediate support and safety\n- **How do I measure progress**:\n  1. Reached out to a professional\n  2. Followed your safety plan\n  3. Engaged with your support network`;
     }
 
+    const protocols = lcswConfig?.protocols || [];
+    
+    // Check cache first
+    const cacheKey = generateCacheKey(
+      `${value.id}|${reflection}`,
+      emotionalState || null,
+      selectedFeeling || null,
+      frequency,
+      protocols
+    );
+    
+    const cached = await getCachedResponse(cacheKey);
+    if (cached?.goalSuggestion) {
+      console.log('✅ Using cached goal suggestion');
+      return cached.goalSuggestion;
+    }
+
     let counselingCoachModel = getCounselingCoachModel();
     if (!counselingCoachModel) {
+      console.log('🔄 AI model not loaded, initializing...');
       const isModelLoading = getIsModelLoading();
       if (isModelLoading) {
         // Wait for current load (up to 30 seconds)
+        console.log('⏳ Waiting for model to finish loading...');
         const maxWaitTime = 30000;
         const startTime = Date.now();
         while (!counselingCoachModel && (Date.now() - startTime) < maxWaitTime) {
           await new Promise(resolve => setTimeout(resolve, 500));
           counselingCoachModel = getCounselingCoachModel();
         }
+        if (counselingCoachModel) {
+          console.log('✅ Model loaded successfully after wait');
+        } else {
+          console.warn('⚠️ Model loading timeout - will use fallback response');
+        }
       } else {
-        await initializeModels();
-        counselingCoachModel = getCounselingCoachModel();
+        console.log('🚀 Starting model initialization...');
+        try {
+          const initialized = await initializeModels();
+          counselingCoachModel = getCounselingCoachModel();
+          if (counselingCoachModel) {
+            console.log('✅ Model initialized successfully');
+          } else {
+            console.warn('⚠️ Model initialization completed but model is not available');
+          }
+        } catch (initError) {
+          console.error('❌ Model initialization failed:', initError);
+          counselingCoachModel = null;
+        }
       }
+    } else {
+      console.log('✅ AI model already loaded and ready');
     }
 
     // Check if reflection contains deep reflection and/or analysis
@@ -588,92 +778,132 @@ export async function suggestGoal(
       ? `The user's specific feeling is: ${selectedFeeling}\n\n`
       : '';
     
-    const prompt = (hasDeepReflection || hasAnalysis)
-      ? `**Goal Suggestion Based on Deep Reflection**
+    // Optimized JSON prompt for on-device LLM
+    const prompt = `Suggest a goal and return ONLY valid JSON (no markdown, no extra text):
 
-**Value Context**: The user is focusing on "${value.name}" (${value.description})
-**Frequency**: ${frequency}
-${feelingContext}
-**Deep Reflection**:
-${reflection}
+{
+  "description": "what they'll do",
+  "whatThisHelpsWith": "why it matters",
+  "howToMeasureProgress": ["step1", "step2", "step3"]
+}
 
-**Your Task**: Based on the deep reflection above, suggest a specific, achievable "commit to do" next step that:
-1. Directly addresses what they wrote in their reflection
-2. Helps them see they have options and different approaches
-3. Is aligned with their value "${value.name}"
-4. Is realistic and achievable for a ${frequency} goal
-5. Supports their growth and success
-
-**Format**: Provide a structured goal with:
-- Description (what they'll do)
-- What this helps with (why it matters)
-- How to measure progress (3 concrete steps)
-
-Make it specific, actionable, and directly tied to their reflection content.`
-      : `Suggest a specific, achievable micro-goal for someone focusing on the value "${value.name}" (${value.description}).
-
+Value: "${value.name}" (${value.description})
 Frequency: ${frequency}
-Recent reflection: "${reflection}"
+${feelingContext}${hasDeepReflection || hasAnalysis ? `Reflection:\n${reflection}` : `Recent reflection: "${reflection}"`}
 
-Format the response as:
-### Structured Aim
-- **Description**: [One specific action they can take]
-- **What this helps with**: [Brief benefit related to their value]
-- **How do I measure progress**:
-  1. [First milestone]
-  2. [Second milestone]
-  3. [Third milestone]
+Requirements:
+- Specific and achievable for ${frequency}
+- Aligned with value "${value.name}"
+${hasDeepReflection || hasAnalysis ? '- Directly addresses the reflection content' : ''}
+- Supports growth and success
 
-Keep it small, specific, and aligned with therapy integration.`;
+Return valid JSON only.`;
 
-    let response = `### Structured Aim\n- **Description**: Take one small action today that aligns with ${value.name}\n- **What this helps with**: Building consistency and self-efficacy\n- **How do I measure progress**:\n  1. Identified the action\n  2. Completed the action\n  3. Reflected on the experience`;
+    // Default fallback response (only used if AI model is unavailable)
+    const fallbackResponse = `### Structured Aim\n- **Description**: Take one small action today that aligns with ${value.name}\n- **What this helps with**: Building consistency and self-efficacy\n- **How do I measure progress**:\n  1. Identified the action\n  2. Completed the action\n  3. Reflected on the experience`;
     
-    if (counselingCoachModel) {
-      try {
-        const result = await counselingCoachModel(prompt, {
-          max_new_tokens: 200,
-          temperature: 0.8,
-          do_sample: true
-        });
+    if (!counselingCoachModel) {
+      console.warn('⚠️ AI model not available for goal suggestion - using fallback response');
+      console.warn('Model status:', {
+        modelAvailable: !!counselingCoachModel,
+        isModelLoading: getIsModelLoading(),
+        hasReflection: reflection.trim().length > 0,
+        hasAnalysis: reflection.includes('Reflection Analysis:')
+      });
+      // Cache fallback
+      await setCachedResponse(cacheKey, { goalSuggestion: fallbackResponse });
+      return fallbackResponse;
+    }
+    
+    // AI model is available - use it to generate JSON suggestion
+    try {
+      console.log('🤖 Calling AI model for goal suggestion (JSON)...');
+      const result = await counselingCoachModel(prompt, {
+        max_new_tokens: 200,
+        temperature: 0.8,
+        do_sample: true
+      });
 
-        const generatedText = result[0]?.generated_text || '';
-        const extracted = generatedText.replace(prompt, '').trim();
-        if (extracted) {
-          response = extracted;
+      const generatedText = result[0]?.generated_text || '';
+      const extracted = generatedText.replace(prompt, '').trim();
+      
+      // Try to parse JSON from response
+      const jsonMatch = extracted.match(/\{[\s\S]*\}/);
+      if (jsonMatch) {
+        try {
+          const jsonResponse: GoalSuggestionResponse = JSON.parse(jsonMatch[0]);
+          console.log('✅ AI-generated JSON goal suggestion received');
+          // Format JSON to markdown for backward compatibility (React will handle formatting later)
+          return formatGoalSuggestionJSON(jsonResponse);
+        } catch (parseError) {
+          console.warn('Failed to parse JSON response, using fallback');
         }
-      } catch (error) {
-        console.warn('Goal suggestion inference failed:', error);
-        // Try reload if model type mismatch
-        if (error instanceof Error && (
-          error.message.includes('not a function') ||
-          error.message.includes('Cannot read')
-        )) {
+      }
+      
+      // If JSON parsing failed, try to use raw response if it looks reasonable
+      if (extracted && extracted.length > 20) {
+        console.warn('⚠️ AI returned non-JSON response, using as-is');
+        return extracted;
+      } else {
+        console.warn('⚠️ AI model returned empty or invalid response, using fallback');
+        return fallbackResponse;
+      }
+    } catch (error) {
+      console.error('❌ Goal suggestion inference failed:', error);
+      
+      // Try reload if model type mismatch
+      if (error instanceof Error && (
+        error.message.includes('not a function') ||
+        error.message.includes('Cannot read')
+      )) {
+        console.log('🔄 Attempting to reload AI model...');
+        try {
           await initializeModels(true);
           const reloadedModel = getCounselingCoachModel();
           if (reloadedModel) {
-            try {
-              const retryResult = await reloadedModel(prompt, {
-                max_new_tokens: 200,
-                temperature: 0.8,
-                do_sample: true
-              });
+            console.log('✅ Model reloaded, retrying goal suggestion...');
+            const retryResult = await reloadedModel(prompt, {
+              max_new_tokens: 200,
+              temperature: 0.8,
+              do_sample: true
+            });
               const retryText = retryResult[0]?.generated_text || '';
               const retryExtracted = retryText.replace(prompt, '').trim();
-              if (retryExtracted) {
-                response = retryExtracted;
+              
+              // Try to parse JSON from retry
+              const retryJsonMatch = retryExtracted.match(/\{[\s\S]*\}/);
+              if (retryJsonMatch) {
+                try {
+                  const retryJsonResponse: GoalSuggestionResponse = JSON.parse(retryJsonMatch[0]);
+                  console.log('✅ AI-generated JSON goal suggestion received after reload');
+                  return formatGoalSuggestionJSON(retryJsonResponse);
+                } catch (parseError) {
+                  console.warn('Failed to parse retry JSON response');
+                }
               }
-            } catch (retryError) {
-              console.warn('Retry goal suggestion failed:', retryError);
-            }
+              
+              if (retryExtracted && retryExtracted.length > 20) {
+                console.log('✅ AI-generated goal suggestion received after reload (non-JSON)');
+                return retryExtracted;
+              }
           }
+        } catch (retryError) {
+          console.error('❌ Retry goal suggestion failed:', retryError);
         }
       }
+      
+      // If all AI attempts fail, return fallback
+      console.warn('⚠️ Using fallback goal suggestion due to AI model errors');
+      // Cache fallback
+      await setCachedResponse(cacheKey, { goalSuggestion: fallbackResponse });
+      return fallbackResponse;
     }
-    
-    return response;
   } catch (error) {
     console.error('Goal suggestion error:', error);
-    return `### Structured Aim\n- **Description**: Practice ${value.name} in one specific way today\n- **What this helps with**: Building value-aligned habits\n- **How do I measure progress**:\n  1. Planned the action\n  2. Took the action\n  3. Noted the outcome`;
+    const fallback = `### Structured Aim\n- **Description**: Practice ${value.name} in one specific way today\n- **What this helps with**: Building value-aligned habits\n- **How do I measure progress**:\n  1. Planned the action\n  2. Took the action\n  3. Noted the outcome`;
+    // Cache fallback
+    await setCachedResponse(cacheKey, { goalSuggestion: fallback }).catch(console.warn);
+    return fallback;
   }
 }
 

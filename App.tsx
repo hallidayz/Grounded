@@ -18,6 +18,7 @@ const Dashboard = lazy(() => import('./components/Dashboard'));
 const ReportView = lazy(() => import('./components/ReportView'));
 const VaultControl = lazy(() => import('./components/VaultControl'));
 const LCSWConfigComponent = lazy(() => import('./components/LCSWConfig'));
+const GoalsUpdateView = lazy(() => import('./components/GoalsUpdateView'));
 import { preloadModels, initializeModels, setSelectedModel } from './services/aiService';
 import { dbService } from './services/database';
 import { isLoggedIn, getCurrentUser, acceptTerms, logoutUser } from './services/authService';
@@ -61,7 +62,7 @@ const App: React.FC = () => {
   const [settings, setSettings] = useState<AppSettings>({
     reminders: { enabled: false, frequency: 'daily', time: '09:00' }
   });
-  const [view, setView] = useState<'onboarding' | 'home' | 'report' | 'values' | 'vault'>('onboarding');
+  const [view, setView] = useState<'onboarding' | 'home' | 'report' | 'values' | 'vault' | 'goals'>('onboarding');
   const [showHelp, setShowHelp] = useState(false);
   const [showLCSWConfig, setShowLCSWConfig] = useState(false);
 
@@ -589,6 +590,16 @@ const App: React.FC = () => {
     setGoals(updatedGoals);
   };
 
+  const handleUpdateGoalProgress = (goalId: string, update: GoalUpdate) => {
+    setGoals(prevGoals => 
+      prevGoals.map(goal => 
+        goal.id === goalId 
+          ? { ...goal, updates: [...goal.updates, update] }
+          : goal
+      )
+    );
+  };
+
   const handleClearData = () => {
     setLogs([]);
     setSelectedValueIds([]);
@@ -717,6 +728,13 @@ const App: React.FC = () => {
                   <span className="sm:hidden">V</span>
                 </button>
                 <button 
+                  onClick={() => setView('goals')}
+                  className={`px-2 sm:px-3 py-1.5 rounded-lg text-xs sm:text-sm font-bold transition-colors ${view === 'goals' ? 'bg-yellow-warm/20 dark:bg-yellow-warm/30 text-yellow-warm dark:text-yellow-warm' : 'text-text-secondary dark:text-text-secondary hover:text-text-primary dark:hover:text-white hover:bg-bg-secondary dark:hover:bg-dark-bg-secondary'}`}
+                >
+                  <span className="hidden sm:inline">Goals</span>
+                  <span className="sm:hidden">G</span>
+                </button>
+                <button 
                   onClick={() => setView('report')}
                   className={`px-2 sm:px-3 py-1.5 rounded-lg text-xs sm:text-sm font-bold transition-colors ${view === 'report' ? 'bg-yellow-warm/20 dark:bg-yellow-warm/30 text-yellow-warm dark:text-yellow-warm' : 'text-text-secondary dark:text-text-secondary hover:text-text-primary dark:hover:text-white hover:bg-bg-secondary dark:hover:bg-dark-bg-secondary'}`}
                 >
@@ -810,6 +828,31 @@ const App: React.FC = () => {
               onUpdateSettings={setSettings}
               onClearData={handleClearData}
               selectedValueIds={selectedValueIds}
+            />
+          </Suspense>
+        )}
+
+        {view === 'goals' && (
+          <Suspense fallback={<SkeletonCard lines={5} showHeader={true} />}>
+            <GoalsUpdateView
+              goals={goals}
+              values={selectedValues}
+              lcswConfig={settings.lcswConfig}
+              onUpdateGoal={handleUpdateGoalProgress}
+              onCompleteGoal={(goal) => {
+                const completedGoal = { ...goal, completed: true };
+                handleLogEntry({
+                  id: Date.now().toString() + "-done",
+                  date: new Date().toISOString(),
+                  valueId: goal.valueId,
+                  livedIt: true,
+                  note: `Achieved Commitment: ${goal.text.substring(0, 40)}...`,
+                  type: 'goal-completion',
+                  goalText: goal.text
+                });
+                handleUpdateGoals(goals.map(g => g.id === goal.id ? completedGoal : g));
+              }}
+              onDeleteGoal={(goalId) => handleUpdateGoals(goals.filter(g => g.id !== goalId))}
             />
           </Suspense>
         )}
