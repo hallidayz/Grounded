@@ -133,33 +133,49 @@ function main() {
       // Find and copy installers
       const tauriDir = join(process.cwd(), 'src-tauri', 'target', 'release', 'bundle');
       
-      // macOS DMG
+      // macOS DMG - check both macos and dmg directories
       const macFiles = findFiles(join(tauriDir, 'macos'), /\.dmg$/);
-      if (macFiles.length > 0) {
-        const dmgFile = macFiles[0];
+      const dmgFiles = findFiles(join(tauriDir, 'dmg'), /\.dmg$/);
+      const allDmgFiles = [...macFiles, ...dmgFiles].filter(f => !f.includes('rw.') && !f.includes('.rw.dmg'));
+      
+      if (allDmgFiles.length > 0) {
+        const dmgFile = allDmgFiles[0];
         const dest = join(outputDir, basename(dmgFile));
         copyFileSync(dmgFile, dest);
         
-        // Hide .VolumeIcon.icns and other system files in DMG
-        // These files are used by macOS but should be hidden from users
+        // Process DMG to remove .VolumeIcon.icns BEFORE copying to output
+        // This ensures the file is removed from the source DMG
         if (process.platform === 'darwin') {
           try {
             const hideScript = join(process.cwd(), 'scripts', 'hide-volume-icon.sh');
             if (existsSync(hideScript)) {
-              log(`   🔧 Hiding system files in DMG...`, 'blue');
+              log(`   🔧 Removing .VolumeIcon.icns from DMG...`, 'blue');
               execSync(`chmod +x "${hideScript}"`, { stdio: 'ignore' });
+              
+              // Process the original DMG first
+              execSync(`bash "${hideScript}" "${dmgFile}"`, { 
+                stdio: 'inherit',
+                cwd: process.cwd(),
+                env: { ...process.env, PATH: process.env.PATH }
+              });
+              
+              // Copy the processed DMG to output
+              copyFileSync(dmgFile, dest);
+              
+              // Also process the copied DMG to be safe
               execSync(`bash "${hideScript}" "${dest}"`, { 
                 stdio: 'inherit',
                 cwd: process.cwd(),
                 env: { ...process.env, PATH: process.env.PATH }
               });
-              log(`   ✅ System files hidden in DMG`, 'green');
+              
+              log(`   ✅ .VolumeIcon.icns removed from DMG`, 'green');
             } else {
               log(`   ⚠️  hide-volume-icon.sh script not found`, 'yellow');
             }
           } catch (error) {
-            log(`   ⚠️  Could not hide system files in DMG: ${error.message}`, 'yellow');
-            log(`   💡 You may need to manually hide .VolumeIcon.icns after opening the DMG`, 'yellow');
+            log(`   ⚠️  Could not remove .VolumeIcon.icns from DMG: ${error.message}`, 'yellow');
+            log(`   💡 Error details: ${error.stack || error}`, 'yellow');
           }
         }
         
