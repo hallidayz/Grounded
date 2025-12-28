@@ -43,6 +43,14 @@ ios/
 package/
 *.zip
 
+# Release build artifacts
+release/dist-for-hosting/
+release/package/
+
+# Temporary DMG files
+rw.*.dmg
+*.rw.dmg
+
 # OS
 .DS_Store
 Thumbs.db

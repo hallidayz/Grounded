@@ -10,8 +10,12 @@ npm install
 
 ## Step 2: Generate Icons (One-time setup)
 
-1. Open `public/create-icons.html` in your browser
-2. Click "Generate Icons"
+Run:
+```bash
+npm run rebuild:icons
+```
+
+This will generate all required icons from `public/ac-minds-logo.png`.
 3. Icons will download automatically
 4. They're already in the right place - no need to move them
 

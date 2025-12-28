@@ -52,8 +52,10 @@ Make sure these icon files exist in the `public/` folder:
 
 **Note**: Some icon files may be placeholders. Generate proper icons using:
 ```bash
-open public/create-icons.html
+npm run rebuild:icons
 ```
+
+This will rebuild all icons from `public/ac-minds-logo.png`.
 
 ## 🚀 Building for Production
 

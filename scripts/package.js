@@ -42,7 +42,7 @@ const missingIcons = requiredIcons.filter(icon => !fs.existsSync(path.join(publi
 
 if (missingIcons.length > 0) {
   console.log('\n⚠️  Warning: Missing icons:', missingIcons.join(', '));
-  console.log('💡 Generate icons by opening public/create-icons.html in a browser');
+  console.log('💡 Generate icons by running: npm run rebuild:icons');
   console.log('   Or run: npm run build again after generating icons\n');
 }
 

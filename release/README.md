@@ -181,10 +181,11 @@ This creates a complete package with native installers for easy distribution.
 ### Generating Icons
 
 Before building, generate PWA icons:
-1. Open `public/create-icons.html` in a browser
-2. Click "Generate Icons"
-3. Icons will be downloaded automatically
-4. Place them in the `public/` folder
+```bash
+npm run rebuild:icons
+```
+
+This will generate all required icons from `public/ac-minds-logo.png`.
 
 Or use online tools:
 - https://realfavicongenerator.net/
