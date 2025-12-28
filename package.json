@@ -19,6 +19,7 @@
     "build:all": "npm run build:desktop && npm run build:android",
     "build:all:mobile": "npm run build:android && npm run build:ios",
     "build:installers": "node scripts/build-installers.js",
+    "rebuild:icons": "bash scripts/rebuild-icons.sh",
     "check:prerequisites": "node scripts/check-prerequisites.js",
     "test:deep-link": "./scripts/test-password-reset-link.sh",
     "preview": "vite preview",
