@@ -8,7 +8,8 @@
 
 import { execSync } from 'child_process';
 import { existsSync, mkdirSync, copyFileSync, readdirSync, statSync } from 'fs';
-import { join, basename } from 'path';
+import { join, basename, dirname } from 'path';
+import { fileURLToPath } from 'url';
 
 const colors = {
   reset: '\x1b[0m',
@@ -138,6 +139,20 @@ function main() {
         const dmgFile = macFiles[0];
         const dest = join(outputDir, basename(dmgFile));
         copyFileSync(dmgFile, dest);
+        
+        // Hide .VolumeIcon.icns file in DMG (it's used for the volume icon but should be hidden)
+        if (process.platform === 'darwin') {
+          try {
+            const hideScript = join(process.cwd(), 'scripts', 'hide-volume-icon.sh');
+            if (existsSync(hideScript)) {
+              execSync(`chmod +x "${hideScript}"`, { stdio: 'ignore' });
+              execSync(`"${hideScript}" "${dest}"`, { stdio: 'inherit' });
+            }
+          } catch (error) {
+            log(`   ⚠️  Could not hide .VolumeIcon.icns (non-critical): ${error.message}`, 'yellow');
+          }
+        }
+        
         log(`   📦 macOS: ${basename(dest)}`, 'green');
       }
       
