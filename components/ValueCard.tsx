@@ -78,7 +78,7 @@ const ValueCard: React.FC<ValueCardProps> = ({
       <div className="p-3 sm:p-4 md:p-5">
         <div className="flex items-center justify-between gap-2 sm:gap-3">
           <div className="flex items-center gap-2 sm:gap-3 flex-grow min-w-0">
-            <div className={`w-7 h-7 sm:w-8 sm:h-8 rounded-lg flex items-center justify-center text-[10px] sm:text-xs font-black shadow-sm flex-shrink-0 ${index === 0 ? 'bg-yellow-warm text-text-primary' : 'bg-bg-secondary dark:bg-dark-bg-primary/50 text-text-primary/40 dark:text-white/40'}`}>
+            <div className={`w-7 h-7 sm:w-8 sm:h-8 rounded-lg flex items-center justify-center text-xs sm:text-sm font-black shadow-sm flex-shrink-0 ${index === 0 ? 'bg-yellow-warm text-text-primary' : 'bg-bg-secondary dark:bg-dark-bg-primary/50 text-text-primary/40 dark:text-white/40'}`}>
               {index + 1}
             </div>
             <div className="min-w-0 flex-1">
@@ -94,13 +94,13 @@ const ValueCard: React.FC<ValueCardProps> = ({
                   );
                 })()}
               </h3>
-              <p className="text-[7px] font-bold text-text-primary/50 dark:text-white/50 uppercase tracking-widest">{value.category}</p>
+              <p className="text-xs font-bold text-text-primary/50 dark:text-white/50 uppercase tracking-widest">{value.category}</p>
             </div>
           </div>
 
           <button 
             onClick={onToggleActive}
-            className={`px-3 sm:px-4 py-1.5 sm:py-2 rounded-lg sm:rounded-xl font-black text-[8px] sm:text-[9px] uppercase tracking-widest transition-all shadow-sm active:scale-95 flex-shrink-0 ${isActive ? 'bg-navy-primary dark:bg-navy-primary text-white' : 'bg-yellow-warm text-text-primary hover:opacity-90'}`}
+            className={`px-3 sm:px-4 py-1.5 sm:py-2 rounded-lg sm:rounded-xl font-black text-xs sm:text-sm uppercase tracking-widest transition-all shadow-sm active:scale-95 flex-shrink-0 ${isActive ? 'bg-navy-primary dark:bg-navy-primary text-white' : 'bg-yellow-warm text-text-primary hover:opacity-90'}`}
           >
             {isActive ? 'Close' : 'Check-in'}
           </button>
@@ -110,7 +110,7 @@ const ValueCard: React.FC<ValueCardProps> = ({
           <div className="mt-3 pt-3 border-t border-border-soft dark:border-dark-border/30 flex gap-2 overflow-x-auto no-scrollbar pb-1">
             {valueGoals.map(goal => (
               <div key={goal.id} className="flex-shrink-0 flex items-center gap-2 bg-bg-secondary dark:bg-dark-bg-primary/50 px-2 sm:px-3 py-1.5 rounded-lg sm:rounded-xl border border-border-soft dark:border-dark-border/30">
-                <p className="text-[9px] sm:text-[10px] font-bold text-text-primary dark:text-white max-w-[100px] sm:max-w-[120px] truncate">{goal.text}</p>
+                <p className="text-xs sm:text-sm font-bold text-text-primary dark:text-white max-w-[100px] sm:max-w-[120px] truncate">{goal.text}</p>
                 <button 
                   onClick={() => onCompleteGoal(goal)}
                   className="w-5 h-5 bg-calm-sage dark:bg-calm-sage text-white rounded-md flex items-center justify-center shadow-sm active:scale-90 flex-shrink-0"

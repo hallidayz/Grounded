@@ -94,13 +94,13 @@ export const StyleGuide = {
     body: 'text-sm sm:text-base text-text-primary dark:text-white leading-relaxed',
     bodySecondary: 'text-sm sm:text-base text-text-secondary dark:text-text-secondary leading-relaxed',
     bodySmall: 'text-xs sm:text-sm text-text-primary dark:text-white',
-    bodyTiny: 'text-[10px] sm:text-[11px] text-text-primary dark:text-white',
+    bodyTiny: 'text-xs sm:text-sm text-text-primary dark:text-white',
     
     // Labels & Captions
-    label: 'text-[10px] font-black text-text-primary/60 dark:text-white/60 uppercase tracking-widest',
-    labelSmall: 'text-[8px] font-black text-text-primary/50 dark:text-white/50 uppercase tracking-widest',
+    label: 'text-xs sm:text-sm font-black text-text-primary/60 dark:text-white/60 uppercase tracking-widest',
+    labelSmall: 'text-xs font-black text-text-primary/50 dark:text-white/50 uppercase tracking-widest',
     caption: 'text-xs text-text-secondary dark:text-text-secondary',
-    captionSmall: 'text-[9px] text-text-secondary dark:text-text-secondary'
+    captionSmall: 'text-xs text-text-secondary dark:text-text-secondary'
   },
 
   // ============================================

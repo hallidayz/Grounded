@@ -128,7 +128,7 @@ const FeedbackButton: React.FC<FeedbackButtonProps> = ({ className = '' }) => {
                           aria-label={item.label}
                         >
                           <span className="text-3xl sm:text-4xl mb-1">{item.emoji}</span>
-                          <span className={`text-[9px] font-semibold ${
+                          <span className={`text-xs sm:text-sm font-semibold ${
                             selectedEmoji === item.emoji
                               ? 'text-text-primary dark:text-text-primary'
                               : 'text-text-secondary dark:text-text-secondary'

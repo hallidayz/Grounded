@@ -120,7 +120,7 @@ const Dashboard: React.FC<DashboardProps> = ({ values, onLog, goals, onUpdateGoa
           {/* Removed "Compass Engine" heading and "Observe & Document" subtitle */}
         </div>
         <div className="text-left sm:text-right">
-          <p className="text-[9px] font-black text-yellow-warm uppercase tracking-widest">Active Focus</p>
+          <p className="text-xs sm:text-sm font-black text-yellow-warm uppercase tracking-widest">Active Focus</p>
           <p className="text-sm sm:text-base font-black text-text-primary dark:text-white leading-tight">{values.length} Core Values</p>
         </div>
       </div>

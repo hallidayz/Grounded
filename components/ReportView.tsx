@@ -68,7 +68,7 @@ const ReportView: React.FC<ReportViewProps> = ({ logs, values, lcswConfig }) => 
           <p className="text-text-secondary dark:text-text-secondary text-sm sm:text-lg mt-1">Human-first insights for professional sharing.</p>
         </div>
         {mode === 'generate' && (
-          <button onClick={() => setMode('review')} className="text-yellow-warm dark:text-yellow-warm font-black uppercase text-[10px] tracking-widest hover:underline">
+          <button onClick={() => setMode('review')} className="text-yellow-warm dark:text-yellow-warm font-black uppercase text-xs sm:text-sm tracking-widest hover:underline">
             ← Edit Selection
           </button>
         )}
@@ -78,8 +78,8 @@ const ReportView: React.FC<ReportViewProps> = ({ logs, values, lcswConfig }) => 
         <div className="grid lg:grid-cols-3 gap-4 sm:gap-6 lg:gap-8">
           <div className="lg:col-span-2 space-y-3 sm:space-y-4">
             <div className="flex items-center justify-between px-2 mb-2">
-              <h3 className="text-[10px] font-black text-text-secondary dark:text-text-secondary uppercase tracking-widest">Select your records</h3>
-              <span className="text-[10px] font-bold text-yellow-warm bg-yellow-warm/20 dark:bg-yellow-warm/30 px-2 sm:px-3 py-1 rounded-full uppercase">{selectedLogIds.size} Ready</span>
+              <h3 className="text-xs sm:text-sm font-black text-text-secondary dark:text-text-secondary uppercase tracking-widest">Select your records</h3>
+              <span className="text-xs sm:text-sm font-bold text-yellow-warm bg-yellow-warm/20 dark:bg-yellow-warm/30 px-2 sm:px-3 py-1 rounded-full uppercase">{selectedLogIds.size} Ready</span>
             </div>
             {sortedLogs.length === 0 ? (
               <div className="text-center py-16 sm:py-24 bg-white dark:bg-dark-bg-primary rounded-2xl sm:rounded-[40px] border border-dashed border-border-soft dark:border-dark-border text-text-tertiary dark:text-text-tertiary">
@@ -107,7 +107,7 @@ const ReportView: React.FC<ReportViewProps> = ({ logs, values, lcswConfig }) => 
                       </div>
                       <div className="flex-grow min-w-0">
                         <div className="flex justify-between mb-2">
-                          <span className="text-[9px] sm:text-[10px] font-black text-text-secondary dark:text-text-secondary uppercase tracking-widest">{new Date(log.date).toLocaleDateString()}</span>
+                          <span className="text-xs sm:text-sm font-black text-text-secondary dark:text-text-secondary uppercase tracking-widest">{new Date(log.date).toLocaleDateString()}</span>
                           <span className="text-xl sm:text-2xl">{log.mood}</span>
                         </div>
                         <p className="text-base sm:text-lg font-black text-text-primary dark:text-white truncate">{val?.name}</p>
@@ -134,7 +134,7 @@ const ReportView: React.FC<ReportViewProps> = ({ logs, values, lcswConfig }) => 
               <button
                 onClick={handleGenerate}
                 disabled={loading || selectedLogIds.size === 0}
-                className="w-full py-4 sm:py-5 bg-navy-primary dark:bg-navy-primary text-white dark:text-white rounded-2xl sm:rounded-3xl font-black uppercase tracking-[0.2em] shadow-xl hover:opacity-90 transition-all active:scale-95 disabled:opacity-20 text-[9px] sm:text-[10px]"
+                className="w-full py-4 sm:py-5 bg-navy-primary dark:bg-navy-primary text-white dark:text-white rounded-2xl sm:rounded-3xl font-black uppercase tracking-[0.2em] shadow-xl hover:opacity-90 transition-all active:scale-95 disabled:opacity-20 text-xs sm:text-sm"
               >
                 {loading ? 'Synthesizing...' : 'Generate All'}
               </button>
@@ -145,14 +145,14 @@ const ReportView: React.FC<ReportViewProps> = ({ logs, values, lcswConfig }) => 
         <div className="space-y-6 sm:space-y-8 animate-pop">
            <div className="bg-white dark:bg-dark-bg-primary p-6 sm:p-8 lg:p-12 rounded-2xl sm:rounded-[56px] shadow-2xl border border-yellow-warm/20 dark:border-yellow-warm/30 max-w-4xl mx-auto prose prose-slate dark:prose-invert">
               <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3 sm:gap-0 mb-6 sm:mb-10 pb-4 sm:pb-6 border-b border-border-soft dark:border-dark-border">
-                <p className="text-[10px] font-black text-yellow-warm uppercase tracking-[0.3em]">Confidential Clinical Summary</p>
+                <p className="text-xs sm:text-sm font-black text-yellow-warm uppercase tracking-[0.3em]">Confidential Clinical Summary</p>
                 <div className="flex flex-wrap gap-2">
                 <button 
                   onClick={() => {
                     navigator.clipboard.writeText(generatedReport);
                     alert("All formats copied to clipboard!");
                   }}
-                    className="px-4 sm:px-6 py-2 bg-yellow-warm/20 dark:bg-yellow-warm/30 text-yellow-warm rounded-full text-[9px] sm:text-[10px] font-black uppercase tracking-widest hover:bg-yellow-warm/30 dark:hover:bg-yellow-warm/40"
+                    className="px-4 sm:px-6 py-2 bg-yellow-warm/20 dark:bg-yellow-warm/30 text-yellow-warm rounded-full text-xs sm:text-sm font-black uppercase tracking-widest hover:bg-yellow-warm/30 dark:hover:bg-yellow-warm/40"
                 >
                     Copy
                   </button>
@@ -167,7 +167,7 @@ const ReportView: React.FC<ReportViewProps> = ({ logs, values, lcswConfig }) => 
                         alert("Could not open email. Please copy the report and send manually.");
                       }
                     }}
-                    className="px-4 sm:px-6 py-2 bg-yellow-warm text-navy-primary rounded-full text-[9px] sm:text-[10px] font-black uppercase tracking-widest hover:opacity-90"
+                    className="px-4 sm:px-6 py-2 bg-yellow-warm text-navy-primary rounded-full text-xs sm:text-sm font-black uppercase tracking-widest hover:opacity-90"
                   >
                     {isWebShareAvailable() ? '📧 Share' : '📧 Email'}
                 </button>

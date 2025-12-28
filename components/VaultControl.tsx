@@ -82,19 +82,19 @@ const VaultControl: React.FC<VaultControlProps> = ({ logs, goals, settings, onUp
             <div className="flex flex-wrap gap-3">
               <button 
                 onClick={() => setShowDateRangePicker(!showDateRangePicker)}
-                className="flex-1 sm:flex-none px-4 sm:px-6 py-3 bg-bg-secondary dark:bg-dark-bg-primary/50 text-text-primary dark:text-white rounded-xl sm:rounded-2xl text-[9px] sm:text-[10px] font-black uppercase tracking-widest hover:opacity-80 transition-colors"
+                className="flex-1 sm:flex-none px-4 sm:px-6 py-3 bg-bg-secondary dark:bg-dark-bg-primary/50 text-text-primary dark:text-white rounded-xl sm:rounded-2xl text-xs sm:text-sm font-black uppercase tracking-widest hover:opacity-80 transition-colors"
               >
                 {selectedStartDate || selectedEndDate ? '📅 Date Range' : '📅 Select Dates'}
               </button>
               <button 
                 onClick={handleEmailExport} 
-                className="flex-1 sm:flex-none px-4 sm:px-6 py-3 bg-yellow-warm text-text-primary rounded-xl sm:rounded-2xl text-[9px] sm:text-[10px] font-black uppercase tracking-widest hover:opacity-90 transition-colors"
+                className="flex-1 sm:flex-none px-4 sm:px-6 py-3 bg-yellow-warm text-text-primary rounded-xl sm:rounded-2xl text-xs sm:text-sm font-black uppercase tracking-widest hover:opacity-90 transition-colors"
               >
                 {isWebShareAvailable() ? '📧 Share' : '📧 Email'}
               </button>
               <button 
                 onClick={onClearData} 
-                className="flex-1 sm:flex-none px-4 sm:px-6 py-3 bg-red-50 dark:bg-red-900/20 text-red-600 dark:text-red-400 rounded-xl sm:rounded-2xl text-[9px] sm:text-[10px] font-black uppercase tracking-widest hover:bg-red-100 dark:hover:bg-red-900/30 transition-colors"
+                className="flex-1 sm:flex-none px-4 sm:px-6 py-3 bg-red-50 dark:bg-red-900/20 text-red-600 dark:text-red-400 rounded-xl sm:rounded-2xl text-xs sm:text-sm font-black uppercase tracking-widest hover:bg-red-100 dark:hover:bg-red-900/30 transition-colors"
               >
                 Wipe Data
               </button>
@@ -103,7 +103,7 @@ const VaultControl: React.FC<VaultControlProps> = ({ logs, goals, settings, onUp
               <div className="bg-bg-secondary dark:bg-dark-bg-primary/50 rounded-xl p-4 space-y-3">
                 <div className="grid grid-cols-2 gap-3">
                   <div>
-                    <label className="text-[9px] font-black text-text-primary/60 dark:text-white/60 uppercase tracking-widest block mb-1">
+                    <label className="text-xs sm:text-sm font-black text-text-primary/60 dark:text-white/60 uppercase tracking-widest block mb-1">
                       Start Date
                     </label>
                     <input
@@ -114,7 +114,7 @@ const VaultControl: React.FC<VaultControlProps> = ({ logs, goals, settings, onUp
                     />
                   </div>
                   <div>
-                    <label className="text-[9px] font-black text-text-primary/60 dark:text-white/60 uppercase tracking-widest block mb-1">
+                    <label className="text-xs sm:text-sm font-black text-text-primary/60 dark:text-white/60 uppercase tracking-widest block mb-1">
                       End Date
                     </label>
                     <input
@@ -131,13 +131,13 @@ const VaultControl: React.FC<VaultControlProps> = ({ logs, goals, settings, onUp
                       setSelectedStartDate('');
                       setSelectedEndDate('');
                     }}
-                    className="flex-1 px-3 py-2 bg-border-soft dark:bg-dark-bg-primary text-text-primary dark:text-white rounded-lg text-[9px] font-black uppercase tracking-widest"
+                    className="flex-1 px-3 py-2 bg-border-soft dark:bg-dark-bg-primary text-text-primary dark:text-white rounded-lg text-xs sm:text-sm font-black uppercase tracking-widest"
                   >
                     Clear
                   </button>
                   <button
                     onClick={() => setShowDateRangePicker(false)}
-                    className="flex-1 px-3 py-2 bg-yellow-warm text-text-primary rounded-lg text-[9px] font-black uppercase tracking-widest"
+                    className="flex-1 px-3 py-2 bg-yellow-warm text-text-primary rounded-lg text-xs sm:text-sm font-black uppercase tracking-widest"
                   >
                     Done
                   </button>
@@ -224,7 +224,7 @@ const VaultControl: React.FC<VaultControlProps> = ({ logs, goals, settings, onUp
                       {/* Note */}
                       {log.note && (
                         <div>
-                          <p className="text-[9px] font-black text-text-primary/60 dark:text-white/60 uppercase tracking-widest mb-2">Reflection</p>
+                          <p className="text-xs sm:text-sm font-black text-text-primary/60 dark:text-white/60 uppercase tracking-widest mb-2">Reflection</p>
                           <p className="text-sm sm:text-base text-text-primary dark:text-white leading-relaxed italic">"{log.note}"</p>
                         </div>
                       )}
@@ -232,7 +232,7 @@ const VaultControl: React.FC<VaultControlProps> = ({ logs, goals, settings, onUp
                       {/* Deep Reflection */}
                       {log.deepReflection && (
                         <div className="p-3 sm:p-4 bg-yellow-warm/10 dark:bg-yellow-warm/20 rounded-lg border border-yellow-warm/30">
-                          <p className="text-[9px] font-black text-yellow-warm uppercase tracking-widest mb-2">Deep Reflection</p>
+                          <p className="text-xs sm:text-sm font-black text-yellow-warm uppercase tracking-widest mb-2">Deep Reflection</p>
                           <p className="text-xs sm:text-sm text-text-primary/80 dark:text-white/80 leading-relaxed">{log.deepReflection}</p>
                         </div>
                       )}
@@ -240,7 +240,7 @@ const VaultControl: React.FC<VaultControlProps> = ({ logs, goals, settings, onUp
                       {/* Reflection Analysis */}
                       {log.reflectionAnalysis && (
                         <div className="p-3 sm:p-4 bg-bg-secondary dark:bg-dark-bg-primary/50 rounded-lg border border-border-soft dark:border-dark-border/30">
-                          <p className="text-[9px] font-black text-text-primary/60 dark:text-white/60 uppercase tracking-widest mb-2">Reflection Analysis</p>
+                          <p className="text-xs sm:text-sm font-black text-text-primary/60 dark:text-white/60 uppercase tracking-widest mb-2">Reflection Analysis</p>
                           <div className="text-xs sm:text-sm text-text-primary/70 dark:text-white/70 leading-relaxed whitespace-pre-line">
                             {log.reflectionAnalysis}
                           </div>
@@ -254,7 +254,7 @@ const VaultControl: React.FC<VaultControlProps> = ({ logs, goals, settings, onUp
                             ? 'bg-calm-sage/10 dark:bg-calm-sage/20 border-calm-sage/30' 
                             : 'bg-yellow-warm/10 dark:bg-yellow-warm/20 border-yellow-warm/30'
                         }`}>
-                          <p className={`text-[9px] font-black uppercase tracking-widest mb-2 ${
+                          <p className={`text-xs sm:text-sm font-black uppercase tracking-widest mb-2 ${
                             isGoalAchieved ? 'text-calm-sage' : 'text-yellow-warm'
                           }`}>
                             {isGoalAchieved ? 'Accomplished Target' : 'Commitment Target'}

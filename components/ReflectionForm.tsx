@@ -60,7 +60,7 @@ const ReflectionForm: React.FC<ReflectionFormProps> = ({
     <div className="mt-4 sm:mt-6 space-y-4 sm:space-y-6 animate-pop border-t border-border-soft dark:border-dark-border/30 pt-4 sm:pt-5">
       {/* Emotional State Bar - 8 States */}
       <div className="space-y-3">
-        <label className="text-[8px] font-black text-text-primary/50 dark:text-white/50 uppercase tracking-widest block px-1">
+        <label className="text-xs sm:text-sm font-black text-text-primary/50 dark:text-white/50 uppercase tracking-widest block px-1">
           How are you feeling right now?
         </label>
         <div className="grid grid-cols-4 sm:grid-cols-4 lg:grid-cols-8 gap-1.5 sm:gap-2">
@@ -86,7 +86,7 @@ const ReflectionForm: React.FC<ReflectionFormProps> = ({
                     boxShadow: isSelected ? `0 0 0 2px ${stateConfig.color}, 0 2px 4px rgba(0,0,0,0.1)` : 'none'
                   }}
                 />
-                <span className={`text-[7px] sm:text-[8px] font-black uppercase tracking-tight text-center leading-tight ${
+                <span className={`text-xs sm:text-sm font-black uppercase tracking-tight text-center leading-tight ${
                   isSelected
                     ? 'text-text-primary dark:text-white'
                     : 'text-text-primary/60 dark:text-white/60'
@@ -166,7 +166,7 @@ const ReflectionForm: React.FC<ReflectionFormProps> = ({
           if (!currentStateConfig) return null;
           return (
             <div className="mt-2 p-2 sm:p-3 bg-yellow-warm/10 dark:bg-yellow-warm/20 rounded-lg border border-yellow-warm/30">
-              <p className="text-[9px] sm:text-[10px] text-text-primary dark:text-white">
+              <p className="text-xs sm:text-sm text-text-primary dark:text-white">
                 <span className="font-bold">Feeling:</span> {selectedFeeling} ({currentStateConfig.shortLabel})
               </p>
             </div>
@@ -175,16 +175,16 @@ const ReflectionForm: React.FC<ReflectionFormProps> = ({
       </div>
 
       <div className="bg-navy-primary dark:bg-navy-primary rounded-xl sm:rounded-2xl p-3 sm:p-4 shadow-md border border-navy-primary/20 dark:border-dark-border/50 relative overflow-hidden group">
-        <p className="text-[7px] font-black text-yellow-warm/80 uppercase tracking-widest mb-1.5">Focus Lens</p>
+        <p className="text-xs sm:text-sm font-black text-yellow-warm/80 uppercase tracking-widest mb-1.5">Focus Lens</p>
         {loading ? (
           <div className="space-y-1.5">
             <SkeletonLoader width="75%" height="0.625rem" className="bg-yellow-warm/30" />
             <SkeletonLoader width="50%" height="0.625rem" className="bg-yellow-warm/30" />
           </div>
         ) : (
-          <p className="text-white dark:text-white font-medium italic text-[11px] sm:text-xs leading-relaxed relative z-10">"{coachInsight}"</p>
+          <p className="text-white dark:text-white font-medium italic text-xs sm:text-sm leading-relaxed relative z-10">"{coachInsight}"</p>
         )}
-        <div className="absolute bottom-2 right-3 sm:right-4 text-[7px] sm:text-[8px] font-black text-yellow-warm/60 uppercase opacity-60">{valueMantra}</div>
+        <div className="absolute bottom-2 right-3 sm:right-4 text-xs sm:text-sm font-black text-yellow-warm/60 uppercase opacity-60">{valueMantra}</div>
       </div>
 
       {/* Selected Feeling Heading */}
@@ -206,41 +206,41 @@ const ReflectionForm: React.FC<ReflectionFormProps> = ({
       <div className="grid grid-cols-1 md:grid-cols-2 gap-3 sm:gap-4">
         <div className="space-y-2">
           <div className="flex items-center justify-between px-1">
-            <label className="text-[8px] font-black text-text-primary/50 dark:text-white/50 uppercase tracking-widest">1. Deep Reflection</label>
-            <span className="text-[8px] font-bold text-yellow-warm uppercase tracking-widest">Systemic Focus</span>
+            <label className="text-xs sm:text-sm font-black text-text-primary/50 dark:text-white/50 uppercase tracking-widest">1. Deep Reflection</label>
+            <span className="text-xs sm:text-sm font-bold text-yellow-warm uppercase tracking-widest">Systemic Focus</span>
           </div>
           <textarea 
             value={reflectionText}
             onChange={(e) => onReflectionTextChange(e.target.value)}
             placeholder={getReflectionPlaceholder(goalFreq, selectedFeeling)}
-            className="w-full p-3 sm:p-4 rounded-xl sm:rounded-2xl bg-bg-secondary dark:bg-dark-bg-primary/50 border-none focus:ring-2 focus:ring-yellow-warm/30 outline-none text-text-primary dark:text-white min-h-[140px] sm:min-h-[160px] resize-none text-[10px] sm:text-[11px] leading-relaxed shadow-inner"
+            className="w-full p-3 sm:p-4 rounded-xl sm:rounded-2xl bg-bg-secondary dark:bg-dark-bg-primary/50 border-none focus:ring-2 focus:ring-yellow-warm/30 outline-none text-text-primary dark:text-white min-h-[140px] sm:min-h-[160px] resize-none text-sm sm:text-base leading-relaxed shadow-inner"
           />
           <button
             onClick={onTriggerReflectionAnalysis}
             disabled={analyzingReflection || !reflectionText.trim() || !emotionalState || emotionalState === 'mixed' || !selectedFeeling}
-            className="w-full py-2 sm:py-2.5 bg-yellow-warm text-text-primary rounded-lg sm:rounded-xl font-black uppercase tracking-widest text-[8px] sm:text-[9px] shadow-sm hover:opacity-90 transition-all active:scale-[0.98] disabled:opacity-30 disabled:cursor-not-allowed"
+            className="w-full py-2 sm:py-2.5 bg-yellow-warm text-text-primary rounded-lg sm:rounded-xl font-black uppercase tracking-widest text-xs sm:text-sm shadow-sm hover:opacity-90 transition-all active:scale-[0.98] disabled:opacity-30 disabled:cursor-not-allowed"
           >
             {analyzingReflection ? 'Analyzing...' : '💾 Save & Analyze'}
           </button>
           {analyzingReflection && (
-            <div className="text-[8px] text-yellow-warm font-bold uppercase tracking-widest animate-pulse">
+            <div className="text-xs sm:text-sm text-yellow-warm font-bold uppercase tracking-widest animate-pulse">
               Analyzing reflection...
             </div>
           )}
           {reflectionAnalysis && !analyzingReflection && (
             <div className="mt-3 p-3 sm:p-4 bg-yellow-warm/10 dark:bg-yellow-warm/20 rounded-xl border border-yellow-warm/30 space-y-3">
               <div className="flex items-center justify-between">
-                <div className="text-[8px] font-black text-yellow-warm uppercase tracking-widest">Reflection Analysis</div>
+                <div className="text-xs sm:text-sm font-black text-yellow-warm uppercase tracking-widest">Reflection Analysis</div>
                 <button
                   onClick={onTriggerReflectionAnalysis}
                   disabled={analyzingReflection || !reflectionText.trim() || !emotionalState || emotionalState === 'mixed' || !selectedFeeling}
-                  className="text-[7px] sm:text-[8px] font-black text-yellow-warm uppercase tracking-widest hover:underline disabled:opacity-30 disabled:cursor-not-allowed"
+                  className="text-xs sm:text-sm font-black text-yellow-warm uppercase tracking-widest hover:underline disabled:opacity-30 disabled:cursor-not-allowed"
                   title="Refresh analysis"
                 >
                   🔄 Refresh
                 </button>
               </div>
-              <div className="text-[9px] sm:text-[10px] text-text-primary dark:text-white whitespace-pre-line leading-relaxed space-y-2">
+              <div className="text-sm sm:text-base text-text-primary dark:text-white whitespace-pre-line leading-relaxed space-y-2">
                 {reflectionAnalysis.split('\n').map((line, idx) => {
                   if (line.startsWith('##')) {
                     return <div key={idx} className="font-black text-yellow-warm mt-3 first:mt-0">{line.replace('##', '').trim()}</div>;
@@ -257,22 +257,22 @@ const ReflectionForm: React.FC<ReflectionFormProps> = ({
         </div>
         <div className="space-y-2">
           <div className="flex justify-between items-center px-1">
-            <label className="text-[8px] font-black text-text-primary/50 dark:text-white/50 uppercase tracking-widest">2. Self-Advocacy Aim</label>
-            <button onClick={onSuggestGoal} disabled={aiGoalLoading} className="text-[8px] font-black text-yellow-warm uppercase tracking-widest hover:underline disabled:opacity-50">
+            <label className="text-xs sm:text-sm font-black text-text-primary/50 dark:text-white/50 uppercase tracking-widest">2. Self-Advocacy Aim</label>
+            <button onClick={onSuggestGoal} disabled={aiGoalLoading} className="text-xs sm:text-sm font-black text-yellow-warm uppercase tracking-widest hover:underline disabled:opacity-50">
               {aiGoalLoading ? 'Suggesting...' : '✨ Suggest'}
             </button>
           </div>
           <div className="space-y-1.5">
             <div className="flex gap-1">
               {(['daily', 'weekly', 'monthly'] as GoalFrequency[]).map(f => (
-                <button key={f} onClick={() => onGoalFreqChange(f)} className={`flex-1 py-1 rounded-lg text-[7px] font-black uppercase tracking-widest transition-all ${goalFreq === f ? 'bg-yellow-warm text-text-primary shadow-sm' : 'bg-bg-secondary dark:bg-dark-bg-primary/50 text-text-primary/40 dark:text-white/40'}`}>{f}</button>
+                <button key={f} onClick={() => onGoalFreqChange(f)} className={`flex-1 py-1 rounded-lg text-xs sm:text-sm font-black uppercase tracking-widest transition-all ${goalFreq === f ? 'bg-yellow-warm text-text-primary shadow-sm' : 'bg-bg-secondary dark:bg-dark-bg-primary/50 text-text-primary/40 dark:text-white/40'}`}>{f}</button>
               ))}
             </div>
             <textarea 
               value={goalText}
               onChange={(e) => onGoalTextChange(e.target.value)}
               placeholder="Define one tool or boundary to implement next."
-              className="w-full p-3 sm:p-4 rounded-xl sm:rounded-2xl bg-bg-secondary dark:bg-dark-bg-primary/50 border-none focus:ring-2 focus:ring-yellow-warm/30 outline-none text-text-primary dark:text-white min-h-[100px] sm:min-h-[120px] resize-none text-[10px] sm:text-[11px] leading-relaxed shadow-inner"
+              className="w-full p-3 sm:p-4 rounded-xl sm:rounded-2xl bg-bg-secondary dark:bg-dark-bg-primary/50 border-none focus:ring-2 focus:ring-yellow-warm/30 outline-none text-text-primary dark:text-white min-h-[100px] sm:min-h-[120px] resize-none text-sm sm:text-base leading-relaxed shadow-inner"
             />
           </div>
         </div>
@@ -281,7 +281,7 @@ const ReflectionForm: React.FC<ReflectionFormProps> = ({
       <button
         onClick={onCommit}
         disabled={!reflectionText.trim() && !goalText.trim()}
-        className="w-full py-3 sm:py-4 bg-yellow-warm text-text-primary rounded-xl sm:rounded-2xl font-black uppercase tracking-[0.2em] shadow-lg hover:opacity-90 transition-all active:scale-[0.98] disabled:opacity-20 text-[9px] sm:text-[10px]"
+        className="w-full py-3 sm:py-4 bg-yellow-warm text-text-primary rounded-xl sm:rounded-2xl font-black uppercase tracking-[0.2em] shadow-lg hover:opacity-90 transition-all active:scale-[0.98] disabled:opacity-20 text-xs sm:text-sm"
       >
         Archive & Commit
       </button>
