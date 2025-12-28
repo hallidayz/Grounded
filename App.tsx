@@ -638,7 +638,15 @@ const App: React.FC = () => {
             {showNav && (
               <nav className="hidden lg:flex items-center space-x-0.5 sm:space-x-1">
                 <button 
-                  onClick={() => setView('home')}
+                  onClick={() => {
+                    setView('home');
+                    // Reset dashboard state when navigating to home
+                    if ((window as any).__dashboardReset) {
+                      (window as any).__dashboardReset();
+                    }
+                    // Scroll to top when navigating to home
+                    window.scrollTo({ top: 0, behavior: 'smooth' });
+                  }}
                   className={`px-2 sm:px-3 py-1.5 rounded-lg text-[10px] sm:text-xs font-bold transition-colors ${view === 'home' ? 'bg-yellow-warm/20 dark:bg-yellow-warm/30 text-yellow-warm dark:text-yellow-warm' : 'text-text-secondary dark:text-text-secondary hover:text-text-primary dark:hover:text-white hover:bg-bg-secondary dark:hover:bg-dark-bg-secondary'}`}
                 >
                   <span className="hidden sm:inline">Home</span>

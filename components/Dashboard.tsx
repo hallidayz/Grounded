@@ -1,4 +1,4 @@
-import React, { useMemo, useState } from 'react';
+import React, { useMemo, useState, useEffect } from 'react';
 import { ValueItem, LogEntry, Goal, LCSWConfig } from '../types';
 import { EMOTIONAL_STATES, getEmotionalState } from '../services/emotionalStates';
 import MoodTrendChart from './MoodTrendChart';
@@ -17,11 +17,24 @@ interface DashboardProps {
   logs: LogEntry[];
   lcswConfig?: LCSWConfig;
   onNavigate?: (view: 'values' | 'report' | 'vault') => void;
+  onReset?: () => void;
 }
 
-const Dashboard: React.FC<DashboardProps> = ({ values, onLog, goals, onUpdateGoals, logs, lcswConfig, onNavigate }) => {
+const Dashboard: React.FC<DashboardProps> = ({ values, onLog, goals, onUpdateGoals, logs, lcswConfig, onNavigate, onReset }) => {
   const dashboard = useDashboard(values, goals, logs, lcswConfig, onLog, onUpdateGoals);
   const [showResourcesModal, setShowResourcesModal] = useState(false);
+
+  // Reset active value card when navigating to home
+  useEffect(() => {
+    const handleReset = () => {
+      dashboard.setActiveValueId(null);
+    };
+    // Store reset handler for App.tsx to call
+    (window as any).__dashboardReset = handleReset;
+    return () => {
+      delete (window as any).__dashboardReset;
+    };
+  }, [dashboard]);
 
   // Get personalized greeting based on time of day
   const getGreeting = () => {
@@ -104,8 +117,7 @@ const Dashboard: React.FC<DashboardProps> = ({ values, onLog, goals, onUpdateGoa
 
       <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3 sm:gap-0">
         <div>
-          <h2 className="text-lg sm:text-xl font-black text-text-primary dark:text-white tracking-tight">Compass Engine</h2>
-          <p className="text-[9px] font-black text-text-primary/50 dark:text-white/50 uppercase tracking-widest">Observe & Document</p>
+          {/* Removed "Compass Engine" heading and "Observe & Document" subtitle */}
         </div>
         <div className="text-left sm:text-right">
           <p className="text-[9px] font-black text-yellow-warm uppercase tracking-widest">Active Focus</p>

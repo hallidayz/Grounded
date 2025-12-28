@@ -1,12 +1,12 @@
 import { useState, useEffect, useRef, useCallback } from 'react';
-import { ValueItem, LogEntry, Goal, GoalFrequency, LCSWConfig, FeelingLog } from '../types';
+import { ValueItem, LogEntry, Goal, GoalFrequency, LCSWConfig, FeelingLog, UserInteraction, Session } from '../types';
 import { EmotionalState } from '../services/emotionalStates';
 import { generateEncouragement, generateEmotionalEncouragement, generateValueMantra, suggestGoal, detectCrisis, analyzeReflection } from '../services/aiService';
 import { shareViaEmail, generateGoalsEmail } from '../services/emailService';
 import { useDebounce } from './useDebounce';
 import { getItem, setItem, removeItem } from '../services/storage';
 import { dbService } from '../services/database';
-import { dbService } from '../services/database';
+import { getCurrentUser } from '../services/authService';
 
 export function useDashboard(
   values: ValueItem[],
@@ -21,8 +21,8 @@ export function useDashboard(
   const [lastLoggedId, setLastLoggedId] = useState<string | null>(null);
   
   const [guideMood, setGuideMood] = useState<'🌱' | '🔥' | '✨' | '🧗'>('✨');
-  const [emotionalState, setEmotionalState] = useState<EmotionalState>('mixed');
-  const [selectedFeeling, setSelectedFeeling] = useState<string | null>(null);
+  const [emotionalState, _setEmotionalState] = useState<EmotionalState>('mixed');
+  const [selectedFeeling, _setSelectedFeeling] = useState<string | null>(null);
   const [showFeelingsList, setShowFeelingsList] = useState(false);
   const debouncedGuideMood = useDebounce(guideMood, 500);
   const [reflectionText, setReflectionText] = useState('');
@@ -45,7 +45,134 @@ export function useDashboard(
   
   // Refs for scrolling to value cards
   const valueCardRefs = useRef<Record<string, HTMLDivElement | null>>({});
+  
+  // Session tracking
+  const [currentSessionId, setCurrentSessionId] = useState<string | null>(null);
+  const [sessionStartTime, setSessionStartTime] = useState<number | null>(null);
+  const [initialEmotionalState, setInitialEmotionalState] = useState<EmotionalState | null>(null);
+  const [sessionValueId, setSessionValueId] = useState<string | null>(null);
+  const reflectionStartedRef = useRef(false);
+  
+  // Generate UUID helper
+  const generateUUID = useCallback(() => {
+    if (typeof crypto !== 'undefined' && crypto.randomUUID) {
+      return crypto.randomUUID();
+    }
+    return 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, (c) => {
+      const r = Math.random() * 16 | 0;
+      const v = c === 'x' ? r : (r & 0x3 | 0x8);
+      return v.toString(16);
+    });
+  }, []);
+  
+  // Save user interaction helper
+  const saveInteraction = useCallback(async (type: UserInteraction['type'], metadata?: Record<string, any>) => {
+    try {
+      const userId = sessionStorage.getItem('userId') || 'anonymous';
+      const interaction: UserInteraction = {
+        id: generateUUID(),
+        timestamp: new Date().toISOString(),
+        type,
+        sessionId: currentSessionId || 'no-session',
+        valueId: activeValueId || undefined,
+        emotionalState: emotionalState || undefined,
+        selectedFeeling: selectedFeeling || undefined,
+        metadata
+      };
+      await dbService.saveUserInteraction(interaction);
+    } catch (error) {
+      console.error('Failed to save interaction:', error);
+      // Continue silently - don't break user flow
+    }
+  }, [currentSessionId, activeValueId, emotionalState, selectedFeeling, generateUUID]);
+  
+  // Wrapped setters with interaction tracking
+  const setEmotionalState = useCallback((state: EmotionalState) => {
+    _setEmotionalState(state);
+    if (activeValueId && state !== 'mixed') {
+      saveInteraction('feeling_selected', { emotionalState: state });
+    }
+  }, [activeValueId, saveInteraction]);
+  
+  const setSelectedFeeling = useCallback((feeling: string | null) => {
+    _setSelectedFeeling(feeling);
+    if (activeValueId && feeling) {
+      saveInteraction('sub_feeling_selected', { selectedFeeling: feeling });
+    }
+  }, [activeValueId, saveInteraction]);
+  
+  // Start session when card opens
+  const startSession = useCallback(async (valueId: string) => {
+    try {
+      const userId = sessionStorage.getItem('userId') || 'anonymous';
+      const sessionId = generateUUID();
+      const startTime = Date.now();
+      
+      setCurrentSessionId(sessionId);
+      setSessionStartTime(startTime);
+      setSessionValueId(valueId);
+      setInitialEmotionalState(emotionalState);
+      reflectionStartedRef.current = false;
+      
+      const session: Session = {
+        id: sessionId,
+        userId,
+        startTimestamp: new Date().toISOString(),
+        valueId,
+        initialEmotionalState: emotionalState || undefined,
+        goalCreated: false
+      };
+      
+      await dbService.saveSession(session);
+      await saveInteraction('card_opened');
+    } catch (error) {
+      console.error('Failed to start session:', error);
+    }
+  }, [emotionalState, generateUUID, saveInteraction]);
+  
+  // End session when card closes or commits
+  const endSession = useCallback(async (valueId: string, goalCreated: boolean = false) => {
+    if (!currentSessionId || !sessionStartTime) return;
+    
+    try {
+      const userId = sessionStorage.getItem('userId') || 'anonymous';
+      const endTime = Date.now();
+      const duration = Math.floor((endTime - sessionStartTime) / 1000);
+      
+      await dbService.updateSession(currentSessionId, {
+        endTimestamp: new Date().toISOString(),
+        finalEmotionalState: emotionalState || undefined,
+        reflectionLength: reflectionText.trim().length || undefined,
+        goalCreated,
+        duration
+      });
+      
+      await saveInteraction('card_closed', { duration, goalCreated });
+      
+      setCurrentSessionId(null);
+      setSessionStartTime(null);
+      setSessionValueId(null);
+      setInitialEmotionalState(null);
+      reflectionStartedRef.current = false;
+    } catch (error) {
+      console.error('Failed to end session:', error);
+    }
+  }, [currentSessionId, sessionStartTime, emotionalState, reflectionText, saveInteraction]);
 
+  // Track session start/end when activeValueId changes
+  useEffect(() => {
+    if (activeValueId) {
+      // Card opened - start session
+      startSession(activeValueId);
+    } else if (currentSessionId) {
+      // Card closed - end session
+      const valueId = values.find(v => v.id === activeValueId)?.id || '';
+      if (valueId) {
+        endSession(valueId, false);
+      }
+    }
+  }, [activeValueId, currentSessionId, startSession, endSession, values]);
+  
   // Load/save drafts
   useEffect(() => {
     if (activeValueId) {
@@ -63,12 +190,23 @@ export function useDashboard(
     if (activeValueId) {
       setItem(`draft_reflection_${activeValueId}`, reflectionText).catch(console.error);
       setItem(`draft_goal_${activeValueId}`, goalText).catch(console.error);
+      
+      // Track when user starts typing reflection
+      if (reflectionText.trim().length > 0 && !reflectionStartedRef.current) {
+        reflectionStartedRef.current = true;
+        saveInteraction('reflection_started');
+      }
     }
-  }, [reflectionText, goalText, activeValueId]);
+  }, [reflectionText, goalText, activeValueId, saveInteraction]);
 
   // Analyze reflection when user stops typing
+  // Reflection Analysis - only run when user has entered deep reflection + feeling + sub-feeling
   useEffect(() => {
-    if (debouncedReflectionText.trim() && activeValueId) {
+    const hasReflection = debouncedReflectionText.trim().length > 20; // Minimum 20 characters
+    const hasFeeling = emotionalState && emotionalState !== 'mixed';
+    const hasSubFeeling = selectedFeeling !== null;
+    
+    if (hasReflection && hasFeeling && hasSubFeeling && activeValueId) {
       setAnalyzingReflection(true);
       analyzeReflection(debouncedReflectionText, goalFreq, lcswConfig)
         .then(analysis => {
@@ -82,17 +220,36 @@ export function useDashboard(
         });
     } else {
       setReflectionAnalysis(null);
+      setAnalyzingReflection(false);
     }
-  }, [debouncedReflectionText, goalFreq, activeValueId, lcswConfig]);
+  }, [debouncedReflectionText, goalFreq, activeValueId, lcswConfig, emotionalState, selectedFeeling]);
 
-  // AI Motivation Refresh
+  // AI Motivation Refresh - Focus Lens based on selected feeling
   useEffect(() => {
     if (activeValueId) {
       const activeValue = values.find(v => v.id === activeValueId);
       if (activeValue) {
         setLoading(true);
+        // Use generateEmotionalEncouragement if feeling is selected, otherwise use generateEncouragement
+        const encouragementPromise = (emotionalState && selectedFeeling)
+          ? generateEmotionalEncouragement(emotionalState, selectedFeeling, lowStateCount, lcswConfig, {
+              recentJournalText: logs.slice(0, 3).map(l => l.note || l.deepReflection || '').join(' ').substring(0, 500),
+              timeOfDay: (() => {
+                const hour = new Date().getHours();
+                if (hour < 12) return 'morning';
+                if (hour < 18) return 'afternoon';
+                if (hour < 22) return 'evening';
+                return 'night';
+              })(),
+              userPatterns: {
+                frequentStates: [],
+                progress: 0
+              }
+            })
+          : generateEncouragement(activeValue, debouncedGuideMood, lcswConfig);
+        
         Promise.all([
-          generateEncouragement(activeValue, debouncedGuideMood, lcswConfig),
+          encouragementPromise,
           generateValueMantra(activeValue)
         ]).then(([insight, mantra]) => {
           setCoachInsight(insight);
@@ -108,7 +265,7 @@ export function useDashboard(
     } else {
       setCoachInsight(null);
     }
-  }, [debouncedGuideMood, activeValueId, values, lcswConfig]);
+  }, [debouncedGuideMood, activeValueId, values, lcswConfig, emotionalState, selectedFeeling, lowStateCount, logs]);
 
   // Generate mantra for top value on mount
   const [topValueMantra, setTopValueMantra] = useState<string | null>(null);
@@ -172,6 +329,9 @@ export function useDashboard(
 
   const handleSuggestGoal = useCallback(async (value: ValueItem) => {
     setAiGoalLoading(true);
+    // Track SUGGEST button click
+    await saveInteraction('suggest_clicked', { hasReflection: reflectionText.trim().length > 0 });
+    
     try {
       const crisisCheck = detectCrisis(reflectionText, lcswConfig);
       if (crisisCheck.isCrisis && crisisCheck.recommendedAction !== 'continue') {
@@ -179,13 +339,14 @@ export function useDashboard(
         setAiGoalLoading(false);
         return;
       }
-      // Build context including feeling and sub-feeling
+      // Build context including feeling and sub-feeling - ensure deep reflection is always included
       const feelingContext = emotionalState && selectedFeeling
         ? `Emotional State: ${emotionalState}\nSelected Feeling: ${selectedFeeling}\n\n`
         : emotionalState
         ? `Emotional State: ${emotionalState}\n\n`
         : '';
       
+      // Always include deep reflection if it exists
       const deepReflectionContext = reflectionText.trim() 
         ? `${feelingContext}Deep Reflection:\n${reflectionText}\n\n${reflectionAnalysis ? `Reflection Analysis:\n${reflectionAnalysis}` : ''}`
         : feelingContext + (reflectionAnalysis || '');
@@ -198,7 +359,7 @@ export function useDashboard(
     } finally {
       setAiGoalLoading(false);
     }
-  }, [reflectionText, reflectionAnalysis, goalFreq, emotionalState, selectedFeeling, lcswConfig]);
+  }, [reflectionText, reflectionAnalysis, goalFreq, emotionalState, selectedFeeling, lcswConfig, saveInteraction]);
 
   const handleCompleteGoal = useCallback(async (goal: Goal) => {
     const completedGoal = { ...goal, completed: true };
@@ -259,7 +420,7 @@ export function useDashboard(
           return acc;
         }, {} as Record<string, number>);
       const frequentStatesList = Object.entries(frequentStates)
-        .sort((a, b) => b[1] - a[1])
+        .sort((a, b) => (b[1] as number) - (a[1] as number))
         .slice(0, 3)
         .map(([state]) => state);
 
@@ -329,7 +490,7 @@ export function useDashboard(
     }
   }, [logs, selectedFeeling, lowStateCount, lcswConfig]);
 
-  const handleCommit = useCallback((valueId: string) => {
+  const handleCommit = useCallback(async (valueId: string) => {
     if (!reflectionText.trim() && !goalText.trim()) return;
 
     const combinedText = `${reflectionText} ${goalText}`.trim();
@@ -341,8 +502,9 @@ export function useDashboard(
     }
 
     const timestamp = new Date().toISOString();
+    const goalCreated = goalText.trim().length > 0;
 
-    if (goalText.trim()) {
+    if (goalCreated) {
       const newGoal: Goal = {
         id: Date.now().toString() + "-goal",
         valueId,
@@ -353,7 +515,15 @@ export function useDashboard(
         updates: []
       };
       onUpdateGoals([newGoal, ...goals]);
+      // Track goal creation
+      await saveInteraction('goal_created', { goalText: goalText.substring(0, 50) });
     }
+
+    // Track reflection committed
+    await saveInteraction('reflection_committed', { 
+      reflectionLength: reflectionText.trim().length,
+      goalCreated 
+    });
 
     onLog({
       id: Date.now().toString() + "-log",
@@ -370,8 +540,11 @@ export function useDashboard(
       selectedFeeling: selectedFeeling || undefined
     });
     
-    setEmotionalState('mixed');
-    setSelectedFeeling(null);
+    // End session
+    await endSession(valueId, goalCreated);
+    
+    _setEmotionalState('mixed');
+    _setSelectedFeeling(null);
 
     removeItem(`draft_reflection_${valueId}`).catch(console.error);
     removeItem(`draft_goal_${valueId}`).catch(console.error);
@@ -384,7 +557,7 @@ export function useDashboard(
     setCoachInsight(null);
     setValueMantra(null);
     setActiveValueId(null);
-  }, [reflectionText, goalText, goalFreq, emotionalState, selectedFeeling, guideMood, reflectionAnalysis, lcswConfig, goals, onLog, onUpdateGoals]);
+  }, [reflectionText, goalText, goalFreq, emotionalState, selectedFeeling, guideMood, reflectionAnalysis, lcswConfig, goals, onLog, onUpdateGoals, saveInteraction, endSession]);
 
   return {
     // State

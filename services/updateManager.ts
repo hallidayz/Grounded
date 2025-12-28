@@ -96,6 +96,20 @@ class UpdateManager {
             // This is for any app-level data migrations
           },
         },
+        {
+          version: '1.12.27',
+          migrate: async () => {
+            console.log('  → Migration 1.12.27: Adding userInteractions and sessions stores');
+            // Database migration is handled by IndexedDB onupgradeneeded (dbVersion 3)
+            // This ensures the stores are created for interaction and session tracking
+            // Force database re-initialization to trigger onupgradeneeded
+            try {
+              await dbService.init();
+            } catch (error) {
+              console.warn('Database re-initialization warning:', error);
+            }
+          },
+        },
         // Add more migrations here as needed
         // Example:
         // {

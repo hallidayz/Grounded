@@ -185,6 +185,22 @@ const ReflectionForm: React.FC<ReflectionFormProps> = ({
         <div className="absolute bottom-2 right-3 sm:right-4 text-[7px] sm:text-[8px] font-black text-yellow-warm/60 uppercase opacity-60">{valueMantra}</div>
       </div>
 
+      {/* Selected Feeling Heading */}
+      {selectedFeeling && (() => {
+        const stateConfig = getEmotionalState(emotionalState);
+        if (!stateConfig) return null;
+        return (
+          <div className="bg-yellow-warm/10 dark:bg-yellow-warm/20 rounded-xl sm:rounded-2xl p-3 sm:p-4 border-2 border-yellow-warm/30">
+            <h3 className="text-base sm:text-lg font-black text-text-primary dark:text-white flex items-center gap-2">
+              <span className="text-xl sm:text-2xl">{stateConfig.emoji}</span>
+              <span className="capitalize">{selectedFeeling}</span>
+              <span className="text-yellow-warm">—</span>
+              <span className="text-text-primary/70 dark:text-white/70">{stateConfig.shortLabel}</span>
+            </h3>
+          </div>
+        );
+      })()}
+
       <div className="grid grid-cols-1 md:grid-cols-2 gap-3 sm:gap-4">
         <div className="space-y-2">
           <div className="flex items-center justify-between px-1">

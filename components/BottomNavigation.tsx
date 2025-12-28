@@ -24,7 +24,17 @@ const BottomNavigation: React.FC<BottomNavigationProps> = ({ currentView, onView
             return (
               <button
                 key={tab.id}
-                onClick={() => onViewChange(tab.id)}
+                onClick={() => {
+                  onViewChange(tab.id);
+                  // Reset dashboard state when navigating to home
+                  if (tab.id === 'home' && (window as any).__dashboardReset) {
+                    (window as any).__dashboardReset();
+                  }
+                  // Scroll to top when navigating to home
+                  if (tab.id === 'home') {
+                    window.scrollTo({ top: 0, behavior: 'smooth' });
+                  }
+                }}
                 className={`
                   flex flex-col items-center justify-center py-3 px-4 min-w-[60px] min-h-[60px]
                   transition-all duration-200
@@ -43,9 +53,6 @@ const BottomNavigation: React.FC<BottomNavigationProps> = ({ currentView, onView
                 `}>
                   {tab.label}
                 </span>
-                {isActive && (
-                  <div className="absolute bottom-0 left-1/2 transform -translate-x-1/2 w-8 h-1 bg-navy-primary dark:bg-yellow-warm rounded-t-full" />
-                )}
               </button>
             );
           })}

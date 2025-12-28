@@ -34,16 +34,8 @@ class DatabaseService {
   // Format: com.[company].[appname].[purpose].db ensures uniqueness
   // This ensures no conflicts with other apps like AiNotes or InnerCompass
   private dbName = 'com.acminds.grounded.therapy.db';
-  private dbVersion = 2; // Increment this when adding new stores or indexes
+  private dbVersion = 3; // Incremented to add userInteractions and sessions stores
   private db: IDBDatabase | null = null;
-  
-  /**
-   * Get the current database version
-   * This is used for migration tracking
-   */
-  getVersion(): number {
-    return this.dbVersion;
-  }
 
   async init(): Promise<void> {
     return new Promise((resolve, reject) => {
@@ -86,6 +78,22 @@ class DatabaseService {
           const feelingLogStore = db.createObjectStore('feelingLogs', { keyPath: 'id' });
           feelingLogStore.createIndex('timestamp', 'timestamp', { unique: false });
           feelingLogStore.createIndex('emotionalState', 'emotionalState', { unique: false });
+        }
+
+        // User interactions store - tracks all user interactions for analytics
+        if (!db.objectStoreNames.contains('userInteractions')) {
+          const interactionStore = db.createObjectStore('userInteractions', { keyPath: 'id' });
+          interactionStore.createIndex('timestamp', 'timestamp', { unique: false });
+          interactionStore.createIndex('sessionId', 'sessionId', { unique: false });
+          interactionStore.createIndex('type', 'type', { unique: false });
+        }
+
+        // Sessions store - tracks check-in sessions for analytics
+        if (!db.objectStoreNames.contains('sessions')) {
+          const sessionStore = db.createObjectStore('sessions', { keyPath: 'id' });
+          sessionStore.createIndex('startTimestamp', 'startTimestamp', { unique: false });
+          sessionStore.createIndex('valueId', 'valueId', { unique: false });
+          sessionStore.createIndex('userId', 'userId', { unique: false });
         }
       };
     });
@@ -357,6 +365,201 @@ class DatabaseService {
           cursor.continue();
         } else {
           resolve(logs);
+        }
+      };
+      request.onerror = () => reject(request.error);
+    });
+  }
+
+  // User interactions operations - for tracking user behavior
+  async saveUserInteraction(interaction: { id: string; timestamp: string; type: string; sessionId: string; valueId?: string; emotionalState?: string; selectedFeeling?: string; metadata?: Record<string, any> }): Promise<void> {
+    const db = await this.ensureDB();
+    return new Promise((resolve, reject) => {
+      const transaction = db.transaction(['userInteractions'], 'readwrite');
+      const store = transaction.objectStore('userInteractions');
+      const request = store.add(interaction);
+
+      request.onsuccess = () => resolve();
+      request.onerror = () => reject(request.error);
+    });
+  }
+
+  async getUserInteractions(sessionId?: string, limit?: number): Promise<any[]> {
+    const db = await this.ensureDB();
+    return new Promise((resolve, reject) => {
+      const transaction = db.transaction(['userInteractions'], 'readonly');
+      const store = transaction.objectStore('userInteractions');
+      const index = sessionId ? store.index('sessionId') : store.index('timestamp');
+      const request = sessionId 
+        ? index.openCursor(IDBKeyRange.only(sessionId))
+        : index.openCursor(null, 'prev'); // Get most recent first
+
+      const interactions: any[] = [];
+      request.onsuccess = (event) => {
+        const cursor = (event.target as IDBRequest<IDBCursorWithValue>).result;
+        if (cursor && (!limit || interactions.length < limit)) {
+          interactions.push(cursor.value);
+          cursor.continue();
+        } else {
+          resolve(interactions);
+        }
+      };
+      request.onerror = () => reject(request.error);
+    });
+  }
+
+  // Sessions operations - for tracking check-in sessions
+  async saveSession(session: { id: string; userId: string; startTimestamp: string; endTimestamp?: string; valueId: string; initialEmotionalState?: string; finalEmotionalState?: string; selectedFeeling?: string; reflectionLength?: number; goalCreated: boolean; duration?: number }): Promise<void> {
+    const db = await this.ensureDB();
+    return new Promise((resolve, reject) => {
+      const transaction = db.transaction(['sessions'], 'readwrite');
+      const store = transaction.objectStore('sessions');
+      const request = store.add(session);
+
+      request.onsuccess = () => resolve();
+      request.onerror = () => reject(request.error);
+    });
+  }
+
+  async updateSession(sessionId: string, updates: Partial<{ endTimestamp: string; finalEmotionalState: string; reflectionLength: number; goalCreated: boolean; duration: number }>): Promise<void> {
+    const db = await this.ensureDB();
+    return new Promise((resolve, reject) => {
+      const transaction = db.transaction(['sessions'], 'readwrite');
+      const store = transaction.objectStore('sessions');
+      const request = store.get(sessionId);
+
+      request.onsuccess = () => {
+        const session = request.result;
+        if (session) {
+          Object.assign(session, updates);
+          const updateRequest = store.put(session);
+          updateRequest.onsuccess = () => resolve();
+          updateRequest.onerror = () => reject(updateRequest.error);
+        } else {
+          reject(new Error('Session not found'));
+        }
+      };
+      request.onerror = () => reject(request.error);
+    });
+  }
+
+  async getSessions(userId: string, limit?: number): Promise<any[]> {
+    const db = await this.ensureDB();
+    return new Promise((resolve, reject) => {
+      const transaction = db.transaction(['sessions'], 'readonly');
+      const store = transaction.objectStore('sessions');
+      const index = store.index('userId');
+      const request = index.openCursor(IDBKeyRange.only(userId), 'prev'); // Get most recent first
+
+      const sessions: any[] = [];
+      request.onsuccess = (event) => {
+        const cursor = (event.target as IDBRequest<IDBCursorWithValue>).result;
+        if (cursor && (!limit || sessions.length < limit)) {
+          sessions.push(cursor.value);
+          cursor.continue();
+        } else {
+          resolve(sessions);
+        }
+      };
+      request.onerror = () => reject(request.error);
+    });
+  }
+
+  async getSessionsByValue(valueId: string, limit?: number): Promise<any[]> {
+    const db = await this.ensureDB();
+    return new Promise((resolve, reject) => {
+      const transaction = db.transaction(['sessions'], 'readonly');
+      const store = transaction.objectStore('sessions');
+      const index = store.index('valueId');
+      const request = index.openCursor(IDBKeyRange.only(valueId), 'prev'); // Get most recent first
+
+      const sessions: any[] = [];
+      request.onsuccess = (event) => {
+        const cursor = (event.target as IDBRequest<IDBCursorWithValue>).result;
+        if (cursor && (!limit || sessions.length < limit)) {
+          sessions.push(cursor.value);
+          cursor.continue();
+        } else {
+          resolve(sessions);
+        }
+      };
+      request.onerror = () => reject(request.error);
+    });
+  }
+
+  // Analytics helper methods for charts/graphs
+  async getFeelingPatterns(startDate: string, endDate: string): Promise<{ state: string; count: number }[]> {
+    const db = await this.ensureDB();
+    return new Promise((resolve, reject) => {
+      const transaction = db.transaction(['feelingLogs'], 'readonly');
+      const store = transaction.objectStore('feelingLogs');
+      const index = store.index('timestamp');
+      const request = index.openCursor(IDBKeyRange.bound(startDate, endDate));
+
+      const patterns: Record<string, number> = {};
+      request.onsuccess = (event) => {
+        const cursor = (event.target as IDBRequest<IDBCursorWithValue>).result;
+        if (cursor) {
+          const state = cursor.value.emotionalState;
+          patterns[state] = (patterns[state] || 0) + 1;
+          cursor.continue();
+        } else {
+          resolve(Object.entries(patterns).map(([state, count]) => ({ state, count })));
+        }
+      };
+      request.onerror = () => reject(request.error);
+    });
+  }
+
+  async getProgressMetrics(startDate: string, endDate: string): Promise<{ totalSessions: number; averageDuration: number; valuesEngaged: string[] }> {
+    const db = await this.ensureDB();
+    return new Promise((resolve, reject) => {
+      const transaction = db.transaction(['sessions'], 'readonly');
+      const store = transaction.objectStore('sessions');
+      const index = store.index('startTimestamp');
+      const request = index.openCursor(IDBKeyRange.bound(startDate, endDate));
+
+      const sessions: any[] = [];
+      request.onsuccess = (event) => {
+        const cursor = (event.target as IDBRequest<IDBCursorWithValue>).result;
+        if (cursor) {
+          sessions.push(cursor.value);
+          cursor.continue();
+        } else {
+          const totalSessions = sessions.length;
+          const completedSessions = sessions.filter(s => s.duration !== undefined);
+          const averageDuration = completedSessions.length > 0
+            ? completedSessions.reduce((sum, s) => sum + (s.duration || 0), 0) / completedSessions.length
+            : 0;
+          const valuesEngaged = [...new Set(sessions.map(s => s.valueId))];
+          
+          resolve({ totalSessions, averageDuration, valuesEngaged });
+        }
+      };
+      request.onerror = () => reject(request.error);
+    });
+  }
+
+  async getFeelingFrequency(limit?: number): Promise<{ feeling: string; count: number }[]> {
+    const db = await this.ensureDB();
+    return new Promise((resolve, reject) => {
+      const transaction = db.transaction(['feelingLogs'], 'readonly');
+      const store = transaction.objectStore('feelingLogs');
+      const request = store.openCursor(null, 'prev'); // Get most recent first
+
+      const frequency: Record<string, number> = {};
+      let count = 0;
+      request.onsuccess = (event) => {
+        const cursor = (event.target as IDBRequest<IDBCursorWithValue>).result;
+        if (cursor && (!limit || count < limit)) {
+          const feeling = cursor.value.selectedFeeling;
+          if (feeling) {
+            frequency[feeling] = (frequency[feeling] || 0) + 1;
+          }
+          count++;
+          cursor.continue();
+        } else {
+          resolve(Object.entries(frequency).map(([feeling, count]) => ({ feeling, count })).sort((a, b) => b.count - a.count));
         }
       };
       request.onerror = () => reject(request.error);

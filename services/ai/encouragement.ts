@@ -371,22 +371,22 @@ export async function generateEmotionalEncouragement(
   // Use encouragement instruction from state config
   const baseInstruction = stateConfig.encouragementPrompt.instruction;
   
-  // Build dynamic prompt - make feeling prominent
-  const prompt = `You are a supportive therapy integration assistant providing honest, realistic, and supportive responses.${timeContext}${journalContext}${patternContext}
+  // Build dynamic prompt - optimized for feeling-focused response
+  const prompt = `You are a supportive therapy integration assistant.${timeContext}${journalContext}${patternContext}
 
-The user is feeling ${stateConfig.label.toLowerCase()}.${feelingContext}
+**Context**: The user is feeling ${stateConfig.label.toLowerCase()}.${feelingContext}
 
 ${protocolContext}
 
-${baseInstruction}${connectionPrompt}
+**Your Role**: ${baseInstruction}${connectionPrompt}
 
-Provide warm, compassionate, honest, and realistic encouragement (30-60 words, 2-3 sentences) that:
-1. Acknowledges what they're experiencing (especially the specific feeling: ${selectedFeeling || stateConfig.shortLabel})
-2. Provides honest, realistic support without being overly optimistic or dismissive
-3. Helps them see possibilities and opportunities ahead
-3. Offers gentle support and next steps${isRepeated ? '\n4. Strongly encourages reaching out to someone for support' : ''}
+**Response Requirements**:
+- Acknowledge their specific feeling: "${selectedFeeling || stateConfig.shortLabel}"
+- Provide honest, realistic support (30-60 words, 2-3 sentences)
+- Help them see possibilities without toxic positivity
+- Be genuine, warm, and supportive${isRepeated ? '\n- Strongly encourage reaching out for support' : ''}
 
-Be genuine, hopeful, and supportive. Avoid platitudes or toxic positivity.`;
+Focus on the feeling they selected and provide personalized, actionable encouragement.`;
 
   // Build fallback response based on state
   let fallbackResponse = '';
@@ -589,32 +589,27 @@ export async function suggestGoal(
       : '';
     
     const prompt = (hasDeepReflection || hasAnalysis)
-      ? `Based on the following deep reflection and analysis, suggest a specific, achievable "commit to do" next step that helps the user see they have options and different approaches to their growth and success.
+      ? `**Goal Suggestion Based on Deep Reflection**
 
-The user is focusing on the value: "${value.name}" (${value.description})
-Frequency: ${frequency}
-${feelingContext}${reflection}
+**Value Context**: The user is focusing on "${value.name}" (${value.description})
+**Frequency**: ${frequency}
+${feelingContext}
+**Deep Reflection**:
+${reflection}
 
-Acting as a supportive and insightful reflective partner, generate a "commit to do" next guidance that:
-1. Directly addresses the specific themes, insights, and observations from their DEEP REFLECTION
-2. Takes into account their current feeling (${selectedFeeling || emotionalState || 'their emotional state'}) and how it relates to their reflection
-3. Shows them they have OPTIONS and different approaches (not just one path forward)
-4. Connects to their value: ${value.name}
-5. Is actionable and achievable within the ${frequency} timeframe
-6. Supports their therapy work and personal growth
+**Your Task**: Based on the deep reflection above, suggest a specific, achievable "commit to do" next step that:
+1. Directly addresses what they wrote in their reflection
+2. Helps them see they have options and different approaches
+3. Is aligned with their value "${value.name}"
+4. Is realistic and achievable for a ${frequency} goal
+5. Supports their growth and success
 
-The goal is to help them see multiple pathways and approaches, not just one solution. Show them options.
+**Format**: Provide a structured goal with:
+- Description (what they'll do)
+- What this helps with (why it matters)
+- How to measure progress (3 concrete steps)
 
-Format the response as:
-### Structured Aim
-- **Description**: [One specific action they can commit to do - show them this is ONE option among many]
-- **What this helps with**: [Brief benefit related to their value and the reflection themes - emphasize this is one approach]
-- **How do I measure progress**:
-  1. [First milestone]
-  2. [Second milestone]
-  3. [Third milestone]
-
-Keep it small, specific, and aligned with the insights from their deep reflection. Help them see they have choices.`
+Make it specific, actionable, and directly tied to their reflection content.`
       : `Suggest a specific, achievable micro-goal for someone focusing on the value "${value.name}" (${value.description}).
 
 Frequency: ${frequency}

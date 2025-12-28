@@ -1,6 +1,7 @@
 import React, { useCallback } from 'react';
 import { ValueItem, Goal, GoalFrequency } from '../types';
 import ReflectionForm from './ReflectionForm';
+import { getEmotionalState } from '../services/emotionalStates';
 
 interface ValueCardProps {
   value: ValueItem;
@@ -79,7 +80,18 @@ const ValueCard: React.FC<ValueCardProps> = ({
               {index + 1}
             </div>
             <div className="min-w-0 flex-1">
-              <h3 className="text-sm sm:text-base font-black text-text-primary dark:text-white tracking-tight truncate">{value.name}</h3>
+              <h3 className="text-sm sm:text-base font-black text-text-primary dark:text-white tracking-tight truncate">
+                {value.name}
+                {selectedFeeling && emotionalState && (() => {
+                  const stateConfig = getEmotionalState(emotionalState as any);
+                  const emoji = stateConfig?.emoji || '';
+                  return (
+                    <span className="ml-2 text-yellow-warm font-bold">
+                      — {emoji} {selectedFeeling}
+                    </span>
+                  );
+                })()}
+              </h3>
               <p className="text-[7px] font-bold text-text-primary/50 dark:text-white/50 uppercase tracking-widest">{value.category}</p>
             </div>
           </div>
@@ -88,8 +100,7 @@ const ValueCard: React.FC<ValueCardProps> = ({
             onClick={onToggleActive}
             className={`px-3 sm:px-4 py-1.5 sm:py-2 rounded-lg sm:rounded-xl font-black text-[8px] sm:text-[9px] uppercase tracking-widest transition-all shadow-sm active:scale-95 flex-shrink-0 ${isActive ? 'bg-navy-primary dark:bg-navy-primary text-white' : 'bg-yellow-warm text-text-primary hover:opacity-90'}`}
           >
-            <span className="hidden sm:inline">{isActive ? 'Close' : 'Check-in'}</span>
-            <span className="sm:hidden">{isActive ? '✕' : '✓'}</span>
+            {isActive ? 'Close' : 'Check-in'}
           </button>
         </div>
 
