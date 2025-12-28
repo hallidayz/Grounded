@@ -1,6 +1,6 @@
 # Grounded Usage Guide
 
-**Grounded by AC MiNDS** - Version 1.12.25
+**Grounded by AC MiNDS** - Version 1.12.26
 
 Complete guide to using Grounded for values-based reflection and therapy integration.
 
@@ -332,7 +332,7 @@ Complete guide to using Grounded for values-based reflection and therapy integra
 
 ## Version Information
 
-**Current Version**: 1.12.25
+**Current Version**: 1.12.26
 
 **Features in This Version**:
 - Optimized AI model loading
