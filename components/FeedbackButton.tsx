@@ -30,7 +30,7 @@ const FeedbackButton: React.FC<FeedbackButtonProps> = ({ className = '' }) => {
       `Rating: ${selectedEmoji || 'None'} (${emojiLabel})\n\n` +
       `Feedback:\n${feedback.trim() || '(No additional feedback provided)'}\n\n` +
       `---\n` +
-      `App Version: 1.12.26\n` +
+      `App Version: 1.12.27\n` +
       `Timestamp: ${new Date().toISOString()}`
     );
 

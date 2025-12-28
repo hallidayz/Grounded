@@ -310,7 +310,7 @@ export async function generateDebugLog(): Promise<DebugLog> {
   }
 
   return {
-    appVersion: '1.12.26', // Should match package.json version
+    appVersion: '1.12.27', // Should match package.json version
     timestamp: new Date().toISOString(),
     userAgent: navigator.userAgent,
     platform: getPlatformInfo(),
