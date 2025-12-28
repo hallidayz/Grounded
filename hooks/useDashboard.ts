@@ -131,7 +131,17 @@ export function useDashboard(
     }
   }, [activeValueId]);
 
-  const getReflectionPlaceholder = useCallback((freq: GoalFrequency) => {
+  const getReflectionPlaceholder = useCallback((freq: GoalFrequency, subFeeling?: string | null) => {
+    // Build template based on sub-feeling if provided
+    const feelingTemplate = subFeeling 
+      ? `I feel ${subFeeling} because...\n\nWhat specific situation, thought, or experience is connected to feeling ${subFeeling}?\n\nHow does feeling ${subFeeling} show up in my body, thoughts, or behaviors?\n\nWhat would help me navigate feeling ${subFeeling} in a way that aligns with my values?`
+      : null;
+
+    if (feelingTemplate) {
+      return feelingTemplate;
+    }
+
+    // Fallback to frequency-based templates
     const daily = [
       "The Hour: Dominant mood 'flavor'? Thought, person, or sensation triggered it?",
       "The Day: When did I feel 'connected' vs 'checked out'?",
@@ -167,10 +177,18 @@ export function useDashboard(
         setAiGoalLoading(false);
         return;
       }
+      // Build context including feeling and sub-feeling
+      const feelingContext = emotionalState && selectedFeeling
+        ? `Emotional State: ${emotionalState}\nSelected Feeling: ${selectedFeeling}\n\n`
+        : emotionalState
+        ? `Emotional State: ${emotionalState}\n\n`
+        : '';
+      
       const deepReflectionContext = reflectionText.trim() 
-        ? `Deep Reflection:\n${reflectionText}\n\n${reflectionAnalysis ? `Reflection Analysis:\n${reflectionAnalysis}` : ''}`
-        : (reflectionAnalysis || '');
-      const suggestion = await suggestGoal(value, goalFreq, deepReflectionContext, lcswConfig);
+        ? `${feelingContext}Deep Reflection:\n${reflectionText}\n\n${reflectionAnalysis ? `Reflection Analysis:\n${reflectionAnalysis}` : ''}`
+        : feelingContext + (reflectionAnalysis || '');
+      
+      const suggestion = await suggestGoal(value, goalFreq, deepReflectionContext, lcswConfig, emotionalState, selectedFeeling);
       setGoalText(suggestion);
     } catch (error) {
       console.error("AI Goal Error:", error);
@@ -178,7 +196,7 @@ export function useDashboard(
     } finally {
       setAiGoalLoading(false);
     }
-  }, [reflectionText, reflectionAnalysis, goalFreq, lcswConfig]);
+  }, [reflectionText, reflectionAnalysis, goalFreq, emotionalState, selectedFeeling, lcswConfig]);
 
   const handleCompleteGoal = useCallback(async (goal: Goal) => {
     const completedGoal = { ...goal, completed: true };

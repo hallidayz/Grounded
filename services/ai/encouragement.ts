@@ -209,24 +209,32 @@ Remember: You are supporting therapy integration, not providing therapy. Keep re
 
     // Generate response using the counseling coach model
     let response = "Your commitment to reflecting on your values is a meaningful step in your journey.";
+    let usedAI = false;
     
     if (counselingCoachModel) {
       try {
+        console.log('🤖 Using on-device AI model for counseling guidance...');
+        const startTime = performance.now();
         const result = await counselingCoachModel(prompt, {
           max_new_tokens: 150,
           temperature: 0.7,
           do_sample: true,
           top_p: 0.9
         });
+        const endTime = performance.now();
 
         const generatedText = result[0]?.generated_text || '';
         // Extract just the assistant's response (remove the prompt)
         const extracted = generatedText.replace(prompt, '').trim();
-        if (extracted) {
+        if (extracted && extracted.length > 20) {
           response = extracted;
+          usedAI = true;
+          console.log(`✅ On-device AI generated response (${Math.round(endTime - startTime)}ms)`);
+        } else {
+          console.warn('⚠️ AI model returned empty or too short response, using fallback');
         }
       } catch (error) {
-        console.warn('Counseling coach inference failed:', error);
+        console.error('❌ On-device AI inference failed:', error);
         // If error suggests model type mismatch, try to reload
         if (error instanceof Error && (
           error.message.includes('not a function') ||
@@ -260,7 +268,10 @@ Remember: You are supporting therapy integration, not providing therapy. Keep re
     
     // Fallback: Generate rule-based response if model unavailable
     if (response === "Your commitment to reflecting on your values is a meaningful step in your journey.") {
+      console.log('ℹ️ Using rule-based fallback (AI model not available or failed)');
       response = generateFallbackGuidance(value, mood, reflection);
+    } else if (usedAI) {
+      console.log('✅ Successfully used on-device AI for counseling guidance');
     }
     
     return response;
@@ -311,7 +322,10 @@ export async function generateEmotionalEncouragement(
     ? `The user is working with an LCSW using ${protocols.join(', ')} protocols.`
     : 'The user is working with a licensed clinical social worker.';
 
-  const feelingContext = selectedFeeling ? ` They're specifically feeling ${selectedFeeling}.` : '';
+  // Make the selected feeling prominent in the prompt
+  const feelingContext = selectedFeeling 
+    ? ` The user has specifically selected the feeling: "${selectedFeeling}". This is the primary feeling they want support with.` 
+    : '';
   
   // Build time-of-day context
   const timeContext = context?.timeOfDay 
@@ -344,8 +358,8 @@ export async function generateEmotionalEncouragement(
   // Use encouragement instruction from state config
   const baseInstruction = stateConfig.encouragementPrompt.instruction;
   
-  // Build dynamic prompt
-  const prompt = `You are a supportive therapy integration assistant.${timeContext}${journalContext}${patternContext}
+  // Build dynamic prompt - make feeling prominent
+  const prompt = `You are a supportive therapy integration assistant providing honest, realistic, and supportive responses.${timeContext}${journalContext}${patternContext}
 
 The user is feeling ${stateConfig.label.toLowerCase()}.${feelingContext}
 
@@ -353,9 +367,10 @@ ${protocolContext}
 
 ${baseInstruction}${connectionPrompt}
 
-Provide warm, compassionate encouragement (30-60 words, 2-3 sentences) that:
-1. Acknowledges what they're experiencing
-2. Helps them see possibilities and opportunities ahead
+Provide warm, compassionate, honest, and realistic encouragement (30-60 words, 2-3 sentences) that:
+1. Acknowledges what they're experiencing (especially the specific feeling: ${selectedFeeling || stateConfig.shortLabel})
+2. Provides honest, realistic support without being overly optimistic or dismissive
+3. Helps them see possibilities and opportunities ahead
 3. Offers gentle support and next steps${isRepeated ? '\n4. Strongly encourages reaching out to someone for support' : ''}
 
 Be genuine, hopeful, and supportive. Avoid platitudes or toxic positivity.`;
@@ -519,7 +534,9 @@ export async function suggestGoal(
   value: ValueItem,
   frequency: GoalFrequency,
   reflection: string = '',
-  lcswConfig?: LCSWConfig
+  lcswConfig?: LCSWConfig,
+  emotionalState?: string | null,
+  selectedFeeling?: string | null
 ): Promise<string> {
   try {
     // Check for crisis
@@ -549,20 +566,29 @@ export async function suggestGoal(
     const hasDeepReflection = reflection.includes('Deep Reflection:') || reflection.trim().length > 50;
     const hasAnalysis = reflection.includes('## Core Themes') || reflection.includes('## The \'LCSW Lens\'') || reflection.includes('Reflection Analysis:');
     
+    // Build feeling context for the prompt
+    const feelingContext = emotionalState && selectedFeeling
+      ? `The user's current emotional state is: ${emotionalState}\nTheir specific feeling is: ${selectedFeeling}\n\n`
+      : emotionalState
+      ? `The user's current emotional state is: ${emotionalState}\n\n`
+      : selectedFeeling
+      ? `The user's specific feeling is: ${selectedFeeling}\n\n`
+      : '';
+    
     const prompt = (hasDeepReflection || hasAnalysis)
       ? `Based on the following deep reflection and analysis, suggest a specific, achievable "commit to do" next step that helps the user see they have options and different approaches to their growth and success.
 
 The user is focusing on the value: "${value.name}" (${value.description})
 Frequency: ${frequency}
-
-${reflection}
+${feelingContext}${reflection}
 
 Acting as a supportive and insightful reflective partner, generate a "commit to do" next guidance that:
 1. Directly addresses the specific themes, insights, and observations from their DEEP REFLECTION
-2. Shows them they have OPTIONS and different approaches (not just one path forward)
-3. Connects to their value: ${value.name}
-4. Is actionable and achievable within the ${frequency} timeframe
-5. Supports their therapy work and personal growth
+2. Takes into account their current feeling (${selectedFeeling || emotionalState || 'their emotional state'}) and how it relates to their reflection
+3. Shows them they have OPTIONS and different approaches (not just one path forward)
+4. Connects to their value: ${value.name}
+5. Is actionable and achievable within the ${frequency} timeframe
+6. Supports their therapy work and personal growth
 
 The goal is to help them see multiple pathways and approaches, not just one solution. Show them options.
 

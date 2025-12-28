@@ -57,17 +57,21 @@ export async function assessMentalState(
     }
 
     // Use the mood tracker model to analyze sentiment and emotional state
-    // In a full implementation, this would use a fine-tuned mental health model
     let result;
     const currentMoodTrackerModel = getMoodTrackerModel();
     if (currentMoodTrackerModel) {
       try {
+        console.log('🤖 Using on-device AI model for mood assessment...');
+        const startTime = performance.now();
         result = await currentMoodTrackerModel(combinedText);
+        const endTime = performance.now();
+        console.log(`✅ On-device AI mood assessment complete (${Math.round(endTime - startTime)}ms)`, result);
       } catch (error) {
-        console.warn('Mood tracker inference failed:', error);
+        console.error('❌ On-device AI mood tracker inference failed:', error);
         result = null;
       }
     } else {
+      console.log('ℹ️ Mood tracker model not available, using keyword-based fallback');
       result = null;
     }
 
@@ -268,19 +272,25 @@ Format your response with clear sections for each format. Keep the tone supporti
     
     if (currentCounselingCoachModel) {
       try {
+        console.log('🤖 Using on-device AI model for report generation...');
+        const startTime = performance.now();
         const result = await currentCounselingCoachModel(prompt, {
           max_new_tokens: 1000,
           temperature: 0.7,
           do_sample: true
         });
+        const endTime = performance.now();
 
         const generatedText = result[0]?.generated_text || '';
         const extracted = generatedText.replace(prompt, '').trim();
-        if (extracted) {
+        if (extracted && extracted.length > 50) {
           report = extracted;
+          console.log(`✅ On-device AI generated report (${Math.round(endTime - startTime)}ms)`);
+        } else {
+          console.warn('⚠️ AI model returned empty or too short report, using fallback');
         }
       } catch (error) {
-        console.warn('Report generation inference failed:', error);
+        console.error('❌ On-device AI report generation failed:', error);
         // Try reload if model type mismatch
         if (error instanceof Error && (
           error.message.includes('not a function') ||
