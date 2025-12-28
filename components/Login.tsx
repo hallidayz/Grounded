@@ -31,8 +31,8 @@ const Login: React.FC<LoginProps> = ({ onLogin }) => {
       if (resetMatch) {
         setResetToken(resetMatch[1]);
         setMode('reset');
-        // Clean up URL but keep hash for reference
-        window.history.replaceState(null, '', window.location.pathname + hash);
+        // Remove reset token from URL for security (prevent exposure in history/screenshots)
+        window.history.replaceState(null, '', window.location.pathname);
       }
     };
 

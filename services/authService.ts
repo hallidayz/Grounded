@@ -4,6 +4,7 @@
  */
 
 import { dbService } from './database';
+import { isTauri } from './platform';
 
 // Hash password using Web Crypto API
 async function hashPassword(password: string): Promise<string> {
@@ -159,8 +160,9 @@ export async function requestPasswordReset(email: string): Promise<{ success: bo
     // Generate reset link (in a real app, this would be sent via email)
     // For local-only app, we'll generate a data URL that can be copied
     // Use tauri://localhost for Tauri apps, regular origin for web
-    const isTauri = typeof window !== 'undefined' && window.location.protocol === 'tauri:';
-    const origin = isTauri ? 'tauri://localhost' : (typeof window !== 'undefined' ? window.location.origin : 'http://localhost');
+    // Use proper Tauri detection method consistent with rest of codebase
+    const isTauriEnv = isTauri();
+    const origin = isTauriEnv ? 'tauri://localhost' : (typeof window !== 'undefined' ? window.location.origin : 'http://localhost');
     const pathname = typeof window !== 'undefined' && window.location.pathname ? window.location.pathname : '/';
     const resetLink = `${origin}${pathname}#reset/${token}`;
     
