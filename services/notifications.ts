@@ -65,8 +65,10 @@ export async function sendNotification(
     if (isTauri()) {
       // Use Tauri notification plugin if available
       try {
-        // Use function to prevent bundler from trying to resolve this at build time
+        // Dynamic import for Tauri plugin (only available in Tauri builds)
+        // Using function wrapper prevents Vite from statically analyzing the import path
         const getTauriNotifyImport = () => '@tauri-apps/plugin-notification';
+        // @ts-expect-error - Tauri plugin not available in web builds, will be caught by try-catch
         const tauriNotifyModule = await import(getTauriNotifyImport());
         const { sendNotification: tauriNotify } = tauriNotifyModule;
         await tauriNotify({

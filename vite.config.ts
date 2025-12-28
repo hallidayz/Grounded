@@ -166,7 +166,11 @@ export default defineConfig({
   },
   // Optimize for on-device AI model loading
   optimizeDeps: {
-    exclude: ['@xenova/transformers'],
+    exclude: [
+      '@xenova/transformers',
+      '@tauri-apps/plugin-store',
+      '@tauri-apps/plugin-notification'
+    ],
     include: ['react', 'react-dom'],
     esbuildOptions: {
       // Ensure React is treated as external during optimization
@@ -189,10 +193,21 @@ export default defineConfig({
       }
     },
     rollupOptions: {
+      // Externalize Tauri plugins for web builds (they're only available in Tauri)
+      external: isTauriBuild ? [] : [
+        '@tauri-apps/plugin-store',
+        '@tauri-apps/plugin-notification'
+      ],
       onwarn(warning, warn) {
         // Suppress eval warnings from third-party libraries (onnxruntime-web)
         // These are safe as they're from trusted dependencies
         if (warning.code === 'EVAL' && warning.id?.includes('onnxruntime-web')) {
+          return;
+        }
+        // Suppress warnings about Tauri plugins in web builds
+        if (warning.code === 'UNRESOLVED_IMPORT' && 
+            (warning.source?.includes('@tauri-apps/plugin-store') || 
+             warning.source?.includes('@tauri-apps/plugin-notification'))) {
           return;
         }
         warn(warning);
