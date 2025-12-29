@@ -41,17 +41,43 @@ export interface AuthResult {
 // Register new user
 export async function registerUser(data: RegisterData): Promise<AuthResult> {
   try {
-    // Ensure database is initialized first
+    // Ensure database is available - use ensureDB which handles already-initialized case
     try {
-      await dbService.init();
-    } catch (dbInitError) {
-      console.error('Database initialization error during registration:', dbInitError);
-      // Try one more time
+      // Check if database is already initialized by trying to access it
+      // ensureDB will initialize if needed, or use existing connection
+      await dbService.getUserByUsername('__check__').catch(() => {
+        // Expected to fail for non-existent user, but ensures DB is accessible
+      });
+    } catch (dbError) {
+      // If database access fails, try to initialize
+      const errorMessage = dbError instanceof Error ? dbError.message : String(dbError);
+      console.error('Database access error during registration:', dbError);
+      
+      // Check for specific IndexedDB errors
+      if (errorMessage.includes('IndexedDB is not available')) {
+        return { success: false, error: 'Your browser does not support local storage. Please use a modern browser like Chrome, Firefox, or Safari.' };
+      }
+      
+      if (errorMessage.includes('quota') || errorMessage.includes('QuotaExceeded')) {
+        return { success: false, error: 'Storage quota exceeded. Please clear some browser data and try again.' };
+      }
+      
+      // Try to initialize database
       try {
         await dbService.init();
-      } catch (retryError) {
-        console.error('Database retry failed:', retryError);
-        return { success: false, error: 'Database not available. Please refresh the page and try again.' };
+      } catch (initError) {
+        console.error('Database initialization failed:', initError);
+        const initErrorMessage = initError instanceof Error ? initError.message : String(initError);
+        
+        if (initErrorMessage.includes('IndexedDB is not available')) {
+          return { success: false, error: 'Your browser does not support local storage. Please use a modern browser.' };
+        }
+        
+        if (initErrorMessage.includes('blocked') || initErrorMessage.includes('Blocked')) {
+          return { success: false, error: 'Database access is blocked. Please check your browser settings and allow local storage for this site.' };
+        }
+        
+        return { success: false, error: 'Unable to access local storage. Please refresh the page and try again.' };
       }
     }
 
@@ -132,6 +158,35 @@ export async function loginUser(data: LoginData): Promise<AuthResult> {
       return { success: false, error: 'Please enter username and password' };
     }
 
+    // Ensure database is available before attempting login
+    try {
+      // Try to access database - this will initialize if needed
+      await dbService.getUserByUsername('__check__').catch(() => {
+        // Expected to fail for non-existent user, but ensures DB is accessible
+      });
+    } catch (dbError) {
+      const errorMessage = dbError instanceof Error ? dbError.message : String(dbError);
+      console.error('Database access error during login:', dbError);
+      
+      // Try to initialize database
+      try {
+        await dbService.init();
+      } catch (initError) {
+        console.error('Database initialization failed during login:', initError);
+        const initErrorMessage = initError instanceof Error ? initError.message : String(initError);
+        
+        if (initErrorMessage.includes('IndexedDB is not available')) {
+          return { success: false, error: 'Your browser does not support local storage. Please use a modern browser.' };
+        }
+        
+        if (initErrorMessage.includes('blocked') || initErrorMessage.includes('Blocked')) {
+          return { success: false, error: 'Database access is blocked. Please check your browser settings.' };
+        }
+        
+        return { success: false, error: 'Unable to access local storage. Please refresh the page and try again.' };
+      }
+    }
+
     const user = await dbService.getUserByUsername(data.username);
     if (!user) {
       return { success: false, error: 'Invalid username or password' };
@@ -179,9 +234,64 @@ export function isLoggedIn(): boolean {
 // Request password reset
 export async function requestPasswordReset(email: string): Promise<{ success: boolean; resetLink?: string; error?: string }> {
   try {
-    // Ensure database is initialized
-    if (!dbService) {
-      throw new Error('Database service not initialized');
+    // Ensure database is initialized and accessible
+    try {
+      // Test database access first
+      await dbService.getUserByEmail('__test__').catch(() => {
+        // Expected to fail for non-existent email, but ensures DB is accessible
+      });
+    } catch (dbError) {
+      const errorMessage = dbError instanceof Error ? dbError.message : String(dbError);
+      console.error('Database access error during password reset:', dbError);
+      
+      // Check for specific errors
+      if (errorMessage.includes('backing store') || errorMessage.includes('Internal error')) {
+        return { 
+          success: false, 
+          error: 'Database storage error. Please refresh the page and try again. If the problem persists, try clearing your browser data.' 
+        };
+      }
+      
+      if (errorMessage.includes('IndexedDB is not available')) {
+        return { 
+          success: false, 
+          error: 'Your browser does not support local storage. Please use a modern browser.' 
+        };
+      }
+      
+      if (errorMessage.includes('quota') || errorMessage.includes('QuotaExceeded')) {
+        return { 
+          success: false, 
+          error: 'Storage quota exceeded. Please clear some browser data and try again.' 
+        };
+      }
+      
+      // Try to initialize database
+      try {
+        await dbService.init();
+      } catch (initError) {
+        console.error('Database initialization failed during password reset:', initError);
+        const initErrorMessage = initError instanceof Error ? initError.message : String(initError);
+        
+        if (initErrorMessage.includes('backing store') || initErrorMessage.includes('Internal error')) {
+          return { 
+            success: false, 
+            error: 'Database storage error. Please refresh the page. If the problem persists, try clearing your browser data or using a different browser.' 
+          };
+        }
+        
+        if (initErrorMessage.includes('IndexedDB is not available')) {
+          return { 
+            success: false, 
+            error: 'Your browser does not support local storage. Please use a modern browser.' 
+          };
+        }
+        
+        return { 
+          success: false, 
+          error: 'Unable to access local storage. Please refresh the page and try again.' 
+        };
+      }
     }
 
     const user = await dbService.getUserByEmail(email);

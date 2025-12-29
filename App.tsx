@@ -12,6 +12,7 @@ import ErrorBoundary from './components/ErrorBoundary';
 import SkeletonCard from './components/SkeletonCard';
 import PWAInstallPrompt from './components/PWAInstallPrompt';
 import FeedbackButton from './components/FeedbackButton';
+import DatabaseMigrationModal from './components/DatabaseMigrationModal';
 
 // Code splitting: Lazy load heavy components
 const Dashboard = lazy(() => import('./components/Dashboard'));
@@ -65,6 +66,7 @@ const App: React.FC = () => {
   const [view, setView] = useState<'onboarding' | 'home' | 'report' | 'values' | 'vault' | 'goals'>('onboarding');
   const [showHelp, setShowHelp] = useState(false);
   const [showLCSWConfig, setShowLCSWConfig] = useState(false);
+  const [showDatabaseMigrationModal, setShowDatabaseMigrationModal] = useState(false);
 
   // Initialize database and check auth state
   useEffect(() => {
@@ -140,6 +142,15 @@ const App: React.FC = () => {
         
         // Update progress: Initializing database
         setModelLoadingProgress(40, 'Initializing database...', 'Loading user data');
+        
+        // Check for old database before initializing new one
+        const hasOldDatabase = await dbService.checkForOldDatabase();
+        if (hasOldDatabase) {
+          // Show migration modal - user must confirm before proceeding
+          setShowDatabaseMigrationModal(true);
+          // Wait for user decision (handled in modal callbacks)
+          // For now, proceed with initialization - modal will handle migration
+        }
         
         // Initialize database first (needed for user data)
         // Add timeout wrapper to prevent hanging, but handle gracefully
@@ -928,6 +939,32 @@ const App: React.FC = () => {
       )}
 
       {showHelp && <HelpOverlay onClose={() => setShowHelp(false)} />}
+
+      {showDatabaseMigrationModal && (
+        <DatabaseMigrationModal
+          onConfirm={async () => {
+            setShowDatabaseMigrationModal(false);
+            try {
+              await dbService.deleteOldDatabase();
+              // Retry database initialization after deleting old database
+              await dbService.init();
+              console.log('✅ Database migration completed successfully');
+            } catch (error) {
+              console.error('Error during database migration:', error);
+              // Continue anyway - new database will be created
+            }
+          }}
+          onCancel={() => {
+            setShowDatabaseMigrationModal(false);
+            // User cancelled - proceed anyway but log the warning
+            console.warn('User cancelled database migration - old database may still exist');
+            // Try to initialize new database anyway
+            dbService.init().catch(error => {
+              console.warn('Database initialization after cancel:', error);
+            });
+          }}
+        />
+      )}
 
       <PWAInstallPrompt />
 

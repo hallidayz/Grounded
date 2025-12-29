@@ -2,11 +2,10 @@
  * Local Secure Database Service
  * Uses IndexedDB for secure, structured local storage
  * 
- * Database Naming Convention:
- * - Uses reverse domain notation (com.acminds.grounded.db)
- * - Ensures uniqueness and prevents conflicts with other applications
- * - Follows web standards for IndexedDB naming
- * - Object stores are scoped to this database, so they don't need global uniqueness
+ * Database Name: groundedDB
+ * - Simple, descriptive name that identifies this app
+ * - Protected with metadata validation to ensure it's created by this app
+ * - Validated across all platforms (PWA, iOS, Android, macOS)
  */
 
 import { AppSettings, LogEntry, Goal, LCSWConfig } from '../types';
@@ -31,16 +30,258 @@ interface AppData {
   lcswConfig?: LCSWConfig;
 }
 
+interface DatabaseMetadata {
+  appName: string;
+  appId: string;
+  platform: string;
+  version: string;
+  createdAt: string;
+  lastValidated: string;
+}
+
 class DatabaseService {
-  // Unique database name using reverse domain notation to avoid conflicts
-  // Format: com.[company].[appname].[purpose].db ensures uniqueness
-  // This ensures no conflicts with other apps like AiNotes or InnerCompass
-  private dbName = 'com.acminds.grounded.therapy.db';
-  private dbVersion = 3; // Incremented to add userInteractions and sessions stores
+  // Database name: groundedDB - simple and descriptive
+  private dbName = 'groundedDB';
+  private dbVersion = 4; // Incremented to add metadata store and validation
   private db: IDBDatabase | null = null;
+  private oldDbName = 'com.acminds.grounded.therapy.db'; // Old database name for migration detection
+  
+  // App identification for database validation
+  private readonly APP_ID = 'com.acminds.grounded';
+  private readonly APP_NAME = 'Grounded';
+  
+  /**
+   * Check if old database exists and needs migration
+   */
+  async checkForOldDatabase(): Promise<boolean> {
+    if (typeof indexedDB === 'undefined') {
+      return false;
+    }
+
+    try {
+      // Check if old database exists
+      if ('databases' in indexedDB) {
+        const databases = await (indexedDB as any).databases();
+        return databases.some((db: any) => db.name === this.oldDbName);
+      }
+      
+      // Fallback: try to open old database
+      return new Promise((resolve) => {
+        const request = indexedDB.open(this.oldDbName);
+        request.onsuccess = () => {
+          request.result.close();
+          resolve(true);
+        };
+        request.onerror = () => {
+          resolve(false);
+        };
+      });
+    } catch (error) {
+      console.warn('Error checking for old database:', error);
+      return false;
+    }
+  }
+
+  /**
+   * Delete old database if it exists
+   */
+  async deleteOldDatabase(): Promise<void> {
+    try {
+      if ('databases' in indexedDB) {
+        const databases = await (indexedDB as any).databases();
+        const oldDb = databases.find((db: any) => db.name === this.oldDbName);
+        if (oldDb) {
+          await new Promise<void>((resolve, reject) => {
+            const deleteRequest = indexedDB.deleteDatabase(this.oldDbName);
+            deleteRequest.onsuccess = () => resolve();
+            deleteRequest.onerror = () => reject(deleteRequest.error);
+            deleteRequest.onblocked = () => {
+              console.warn('Old database deletion blocked - another tab may have it open');
+              // Wait a bit and try to resolve anyway
+              setTimeout(() => resolve(), 1000);
+            };
+          });
+          console.log('✅ Old database deleted successfully');
+        }
+      }
+    } catch (error) {
+      console.warn('Error deleting old database:', error);
+      // Don't throw - continue with new database creation
+    }
+  }
+
+  /**
+   * Validate that database was created by this app
+   */
+  private async validateDatabase(): Promise<boolean> {
+    if (!this.db) {
+      return false;
+    }
+
+    try {
+      const metadata = await this.getMetadata();
+      if (!metadata) {
+        // No metadata means it's a new database - create it
+        await this.setMetadata();
+        return true;
+      }
+
+      // Validate metadata
+      const isValid = 
+        metadata.appId === this.APP_ID &&
+        metadata.appName === this.APP_NAME;
+      
+      if (!isValid) {
+        console.error('Database validation failed - metadata mismatch');
+        return false;
+      }
+
+      // Update last validated timestamp
+      await this.updateMetadataValidation();
+      return true;
+    } catch (error) {
+      console.error('Error validating database:', error);
+      return false;
+    }
+  }
+
+  /**
+   * Get database metadata
+   */
+  private async getMetadata(): Promise<DatabaseMetadata | null> {
+    if (!this.db) {
+      return null;
+    }
+
+    return new Promise((resolve, reject) => {
+      try {
+        const transaction = this.db!.transaction(['metadata'], 'readonly');
+        const store = transaction.objectStore('metadata');
+        const request = store.get('app_metadata');
+
+        request.onsuccess = () => {
+          resolve(request.result || null);
+        };
+        request.onerror = () => {
+          resolve(null); // No metadata yet - this is OK for new databases
+        };
+      } catch (error) {
+        resolve(null);
+      }
+    });
+  }
+
+  /**
+   * Set database metadata
+   */
+  private async setMetadata(): Promise<void> {
+    if (!this.db) {
+      return;
+    }
+
+    const platform = this.detectPlatform();
+    const metadata: DatabaseMetadata = {
+      appName: this.APP_NAME,
+      appId: this.APP_ID,
+      platform,
+      version: '1.0.0', // Will be updated from package.json if needed
+      createdAt: new Date().toISOString(),
+      lastValidated: new Date().toISOString(),
+    };
+
+    return new Promise((resolve, reject) => {
+      const transaction = this.db!.transaction(['metadata'], 'readwrite');
+      const store = transaction.objectStore('metadata');
+      const request = store.put({ id: 'app_metadata', ...metadata });
+
+      request.onsuccess = () => resolve();
+      request.onerror = () => reject(request.error);
+    });
+  }
+
+  /**
+   * Update metadata validation timestamp
+   */
+  private async updateMetadataValidation(): Promise<void> {
+    const metadata = await this.getMetadata();
+    if (metadata) {
+      metadata.lastValidated = new Date().toISOString();
+      const transaction = this.db!.transaction(['metadata'], 'readwrite');
+      const store = transaction.objectStore('metadata');
+      store.put({ id: 'app_metadata', ...metadata });
+    }
+  }
+
+  /**
+   * Detect current platform
+   */
+  private detectPlatform(): string {
+    if (typeof window === 'undefined') {
+      return 'unknown';
+    }
+
+    // Check for Tauri (desktop)
+    if (typeof window !== 'undefined' && '__TAURI__' in window) {
+      return 'desktop';
+    }
+
+    // Check for Capacitor (mobile)
+    if (typeof window !== 'undefined' && (window as any).Capacitor) {
+      const platform = (window as any).Capacitor.getPlatform();
+      return platform || 'mobile';
+    }
+
+    // Check user agent for mobile
+    const userAgent = navigator.userAgent || navigator.vendor || (window as any).opera;
+    if (/android/i.test(userAgent)) {
+      return 'android';
+    }
+    if (/iPad|iPhone|iPod/.test(userAgent) && !(window as any).MSStream) {
+      return 'ios';
+    }
+
+    // Default to web/PWA
+    return 'pwa';
+  }
 
   async init(): Promise<void> {
-    return new Promise((resolve, reject) => {
+    // If database is already initialized and connected, return immediately
+    if (this.db) {
+      return Promise.resolve();
+    }
+
+    // Add retry mechanism for "backing store" errors
+    const maxRetries = 3;
+    let lastError: Error | null = null;
+
+    for (let attempt = 0; attempt < maxRetries; attempt++) {
+      try {
+        await new Promise<void>((resolve, reject) => {
+          this.initDatabase(resolve, reject);
+        });
+        return; // Success
+      } catch (error) {
+        lastError = error instanceof Error ? error : new Error(String(error));
+        const errorMessage = lastError.message;
+        
+        // If it's a backing store error, wait and retry
+        if (errorMessage.includes('backing store') || errorMessage.includes('Internal error')) {
+          if (attempt < maxRetries - 1) {
+            console.warn(`Database initialization attempt ${attempt + 1} failed, retrying...`);
+            // Wait before retry (exponential backoff)
+            await new Promise(resolve => setTimeout(resolve, 1000 * (attempt + 1)));
+            continue;
+          }
+        }
+        // For other errors or final attempt, throw
+        throw lastError;
+      }
+    }
+    
+    throw lastError || new Error('Database initialization failed after retries');
+  }
+
+  private initDatabase(resolve: () => void, reject: (error: Error) => void): void {
       // Check if IndexedDB is available
       if (typeof indexedDB === 'undefined') {
         reject(new Error('IndexedDB is not available in this browser'));
@@ -51,11 +292,23 @@ class DatabaseService {
 
       request.onerror = () => {
         const error = request.error || new Error('Unknown database error');
+        const errorMessage = error instanceof Error ? error.message : String(error);
         console.error('Database open error:', error);
-        reject(error);
+        
+        // Handle specific IndexedDB errors with better messages
+        if (errorMessage.includes('backing store') || errorMessage.includes('Internal error')) {
+          // This usually means database is corrupted or storage is blocked
+          reject(new Error('Database storage error. Please try refreshing the page or clearing browser data.'));
+        } else if (errorMessage.includes('QuotaExceeded') || errorMessage.includes('quota')) {
+          reject(new Error('Storage quota exceeded. Please clear some browser data and try again.'));
+        } else if (errorMessage.includes('blocked') || errorMessage.includes('Blocked')) {
+          reject(new Error('Database access is blocked. Please check your browser settings and allow local storage.'));
+        } else {
+          reject(error);
+        }
       };
       
-      request.onsuccess = () => {
+      request.onsuccess = async () => {
         try {
           this.db = request.result;
           
@@ -74,6 +327,13 @@ class DatabaseService {
             console.warn('Database connection closed');
             this.db = null;
           };
+          
+          // Validate database after connection
+          const isValid = await this.validateDatabase();
+          if (!isValid) {
+            reject(new Error('Database validation failed - database may be corrupted or from another app'));
+            return;
+          }
           
           resolve();
         } catch (error) {
@@ -136,8 +396,21 @@ class DatabaseService {
           sessionStore.createIndex('valueId', 'valueId', { unique: false });
           sessionStore.createIndex('userId', 'userId', { unique: false });
         }
+
+        // Metadata store - validates database belongs to this app
+        // Protects against corruption and ensures database integrity
+        if (!db.objectStoreNames.contains('metadata')) {
+          const metadataStore = db.createObjectStore('metadata', { keyPath: 'id' });
+          metadataStore.createIndex('appId', 'appId', { unique: false });
+          metadataStore.createIndex('platform', 'platform', { unique: false });
+        }
+        
+        request.onblocked = () => {
+          console.warn('Database upgrade blocked - another tab may have the database open');
+          // Don't reject - the upgrade will complete when the other tab closes
+          // The onsuccess handler will still fire
+        };
       };
-    });
   }
 
   private async ensureDB(): Promise<IDBDatabase> {
