@@ -68,3 +68,8 @@ android/local.properties
 # Debug logs and temporary files
 .cursor/
 *.log
+
+# AI Models (downloaded during build, too large for GitHub)
+# Models are downloaded via npm run download:models and bundled during build
+public/models/
+dist/models/
