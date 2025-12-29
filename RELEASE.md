@@ -17,6 +17,9 @@ npm run release:minor
 
 # Major release (breaking changes) - 1.12.27 → 2.0.0
 npm run release:major
+
+# Create release without version bump (rebuild/repackage only)
+npm run create-release -- --skip-version
 ```
 
 ### Available Commands
@@ -87,6 +90,9 @@ When you run a release command, the following happens automatically:
 ## Command Line Options
 
 ```bash
+# Skip version bumping (use current version)
+npm run create-release -- --skip-version
+
 # Skip validation
 npm run create-release patch --skip-validation
 
@@ -98,6 +104,9 @@ npm run create-release patch --skip-tag
 
 # Combine options
 npm run create-release minor --skip-validation --skip-build
+
+# Rebuild release without version change
+npm run create-release -- --skip-version --skip-validation
 ```
 
 ## Version Types

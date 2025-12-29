@@ -161,7 +161,8 @@ function main() {
   
   // Parse command line arguments
   const args = process.argv.slice(2);
-  const versionType = args.find(arg => ['patch', 'minor', 'major'].includes(arg)) || 'patch';
+  const skipVersion = args.includes('--skip-version') || args.includes('--no-version-bump');
+  const versionType = args.find(arg => ['patch', 'minor', 'major'].includes(arg)) || (skipVersion ? null : 'patch');
   const skipValidation = args.includes('--skip-validation');
   const skipBuild = args.includes('--skip-build');
   const skipTag = args.includes('--skip-tag');
@@ -175,36 +176,47 @@ function main() {
     }
   }
   
-  // Step 1: Version bumping
-  log('\n📝 Step 1: Version Bumping...', 'blue');
+  // Step 1: Version bumping (optional)
   const oldVersion = getCurrentVersion();
-  const newVersion = bumpVersion(oldVersion, versionType);
+  let newVersion = oldVersion;
   
-  log(`   Current version: ${oldVersion}`, 'cyan');
-  log(`   Version type: ${versionType}`, 'cyan');
-  log(`   New version: ${newVersion}`, 'cyan');
+  if (skipVersion) {
+    log('\n📝 Step 1: Version Bumping (skipped)', 'yellow');
+    log(`   Using current version: ${oldVersion}`, 'cyan');
+  } else {
+    log('\n📝 Step 1: Version Bumping...', 'blue');
+    newVersion = bumpVersion(oldVersion, versionType);
+    
+    log(`   Current version: ${oldVersion}`, 'cyan');
+    log(`   Version type: ${versionType}`, 'cyan');
+    log(`   New version: ${newVersion}`, 'cyan');
+    
+    const versionUpdate = updateAllVersions(oldVersion, newVersion);
+    if (!versionUpdate.success) {
+      log('\n⚠️  Some files failed to update, but continuing...', 'yellow');
+      if (versionUpdate.failed.length > 0) {
+        log(`   Failed files: ${versionUpdate.failed.map(f => basename(f)).join(', ')}`, 'yellow');
+      }
+    } else {
+      log(`\n✅ Version updated successfully: ${oldVersion} → ${newVersion}`, 'green');
+    }
+  }
   
-  const versionUpdate = updateAllVersions(oldVersion, newVersion);
-  if (!versionUpdate.success) {
-    log('\n⚠️  Some files failed to update, but continuing...', 'yellow');
-    if (versionUpdate.failed.length > 0) {
-      log(`   Failed files: ${versionUpdate.failed.map(f => basename(f)).join(', ')}`, 'yellow');
+  // Step 2: Generate CHANGELOG (only if version changed)
+  if (!skipVersion) {
+    log('\n📋 Step 2: Generating CHANGELOG...', 'blue');
+    try {
+      const changelogResult = generateChangelog(newVersion, oldVersion);
+      log(`   ✓ CHANGELOG.md updated (${changelogResult.commitsCount} commits)`, 'green');
+    } catch (error) {
+      log(`   ⚠️  CHANGELOG generation failed: ${error.message}`, 'yellow');
+      log('   Continuing without CHANGELOG update...', 'yellow');
     }
   } else {
-    log(`\n✅ Version updated successfully: ${oldVersion} → ${newVersion}`, 'green');
+    log('\n📋 Step 2: Generating CHANGELOG (skipped - no version change)', 'yellow');
   }
   
-  // Step 2: Generate CHANGELOG
-  log('\n📋 Step 2: Generating CHANGELOG...', 'blue');
-  try {
-    const changelogResult = generateChangelog(newVersion, oldVersion);
-    log(`   ✓ CHANGELOG.md updated (${changelogResult.commitsCount} commits)`, 'green');
-  } catch (error) {
-    log(`   ⚠️  CHANGELOG generation failed: ${error.message}`, 'yellow');
-    log('   Continuing without CHANGELOG update...', 'yellow');
-  }
-  
-  const version = newVersion; // Use new version for rest of script
+  const version = newVersion; // Use current or new version for rest of script
   const releaseDir = join(rootDir, 'release');
   const distDir = join(rootDir, 'dist');
   const packageDir = join(rootDir, 'package');
@@ -433,16 +445,24 @@ After hosting, verify:
   });
   
   log('\n📋 Next Steps:', 'bright');
-  if (!skipTag) {
-    log('   1. Commit version changes: git add . && git commit -m "chore: bump version to ' + version + '"', 'yellow');
-    log('   2. Push tag: git push origin v' + version, 'yellow');
-    log('   3. Push commits: git push', 'yellow');
+  let stepNum = 1;
+  
+  if (!skipVersion && !skipTag) {
+    log(`   ${stepNum++}. Commit version changes: git add . && git commit -m "chore: bump version to ${version}"`, 'yellow');
+    log(`   ${stepNum++}. Push tag: git push origin v${version}`, 'yellow');
+    log(`   ${stepNum++}. Push commits: git push`, 'yellow');
+  } else if (!skipTag) {
+    log(`   ${stepNum++}. Push tag: git push origin v${version}`, 'yellow');
+    log(`   ${stepNum++}. Push commits: git push`, 'yellow');
   }
-  log('   4. Review RELEASE_NOTES.md', 'yellow');
-  log('   5. Review CHANGELOG.md', 'yellow');
-  log('   6. Follow HOSTING_INSTRUCTIONS.md to host the PWA', 'yellow');
-  log('   7. Create GitHub release with Grounded-PWA-v' + version + '.zip', 'yellow');
-  log('   8. Share the hosted URL with users\n', 'yellow');
+  
+  log(`   ${stepNum++}. Review RELEASE_NOTES.md`, 'yellow');
+  if (!skipVersion) {
+    log(`   ${stepNum++}. Review CHANGELOG.md`, 'yellow');
+  }
+  log(`   ${stepNum++}. Follow HOSTING_INSTRUCTIONS.md to host the PWA`, 'yellow');
+  log(`   ${stepNum++}. Create GitHub release with Grounded-PWA-v${version}.zip`, 'yellow');
+  log(`   ${stepNum++}. Share the hosted URL with users\n`, 'yellow');
   
   log('💡 Quick Hosting:', 'bright');
   log('   • Netlify: Drag "dist-for-hosting" folder to netlify.com', 'cyan');

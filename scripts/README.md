@@ -73,7 +73,7 @@ node scripts/changelog-generator.js [version] [previousVersion]
 node scripts/release-validator.js [--skip-build]
 
 # Create release
-node scripts/create-release.js [patch|minor|major] [--skip-validation] [--skip-build] [--skip-tag]
+node scripts/create-release.js [patch|minor|major] [--skip-version] [--skip-validation] [--skip-build] [--skip-tag]
 ```
 
 ## File Updates

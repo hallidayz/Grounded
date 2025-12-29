@@ -41,16 +41,55 @@ class DatabaseService {
 
   async init(): Promise<void> {
     return new Promise((resolve, reject) => {
+      // Check if IndexedDB is available
+      if (typeof indexedDB === 'undefined') {
+        reject(new Error('IndexedDB is not available in this browser'));
+        return;
+      }
+
       const request = indexedDB.open(this.dbName, this.dbVersion);
 
-      request.onerror = () => reject(request.error);
+      request.onerror = () => {
+        const error = request.error || new Error('Unknown database error');
+        console.error('Database open error:', error);
+        reject(error);
+      };
+      
       request.onsuccess = () => {
-        this.db = request.result;
-        resolve();
+        try {
+          this.db = request.result;
+          
+          // Verify database is actually accessible
+          if (!this.db) {
+            reject(new Error('Database connection is null'));
+            return;
+          }
+          
+          // Set up error handlers for the database connection
+          this.db.onerror = (event) => {
+            console.error('Database error:', event);
+          };
+          
+          this.db.onclose = () => {
+            console.warn('Database connection closed');
+            this.db = null;
+          };
+          
+          resolve();
+        } catch (error) {
+          console.error('Error setting up database:', error);
+          reject(error);
+        }
       };
 
       request.onupgradeneeded = (event) => {
         const db = (event.target as IDBOpenDBRequest).result;
+        
+        // Handle upgrade errors
+        if (!db) {
+          reject(new Error('Database upgrade failed - database is null'));
+          return;
+        }
 
         // Object stores are scoped to this database, so names don't need global uniqueness
         // They only need to be unique within this database instance

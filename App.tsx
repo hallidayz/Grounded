@@ -1,7 +1,7 @@
 
 import React, { useState, useEffect, Suspense, lazy } from 'react';
 import { ALL_VALUES } from './constants';
-import { ValueItem, LogEntry, Goal, AppSettings, LCSWConfig } from './types';
+import { ValueItem, LogEntry, Goal, GoalUpdate, AppSettings, LCSWConfig } from './types';
 import ValueSelection from './components/ValueSelection';
 import HelpOverlay from './components/HelpOverlay';
 import ThemeToggle from './components/ThemeToggle';
@@ -129,21 +129,39 @@ const App: React.FC = () => {
         setModelLoadingProgress(40, 'Initializing database...', 'Loading user data');
         
         // Initialize database first (needed for user data)
-        // Add timeout wrapper to prevent hanging
-        const dbInitPromise = dbService.init();
-        const dbTimeoutPromise = new Promise((_, reject) => 
-          setTimeout(() => reject(new Error('Database initialization timeout')), 10000)
-        );
-        await Promise.race([dbInitPromise, dbTimeoutPromise]);
+        // Add timeout wrapper to prevent hanging, but handle gracefully
+        try {
+          const dbInitPromise = dbService.init();
+          const dbTimeoutPromise = new Promise((_, reject) => 
+            setTimeout(() => reject(new Error('Database initialization timeout')), 15000)
+          );
+          await Promise.race([dbInitPromise, dbTimeoutPromise]);
+        } catch (dbError) {
+          // Database initialization failed - log but don't block app
+          console.warn('Database initialization warning:', dbError);
+          // Try to continue - database may still be accessible
+          // If it's truly broken, subsequent operations will fail gracefully
+          try {
+            // Quick retry with shorter timeout
+            await Promise.race([
+              dbService.init(),
+              new Promise((_, reject) => setTimeout(() => reject(new Error('Retry timeout')), 5000))
+            ]);
+          } catch (retryError) {
+            console.warn('Database retry also failed, continuing anyway:', retryError);
+            // Continue - user can still try to use the app
+            // Database operations will fail gracefully later if needed
+          }
+        }
         
         // Update progress: Checking authentication
         setModelLoadingProgress(60, 'Checking authentication...', '');
         
-        // Start AI model download immediately - don't wait for anything
+        // Start AI model download immediately in background - don't wait for anything
         // This ensures models are downloading while user is reading terms/login
         // Service worker will cache models for offline use
         // On updates, models will be reloaded if needed (cached models are preserved)
-        preloadModels().then((loaded) => {
+        const modelLoadPromise = preloadModels().then((loaded) => {
           if (loaded) {
             console.log('✅ AI models loaded successfully - AI features enabled');
           } else {
@@ -176,48 +194,62 @@ const App: React.FC = () => {
         }
         
         if (isLoggedIn()) {
-          // Update progress: Loading user data
-          setModelLoadingProgress(70, 'Loading user data...', '');
+          // Update progress: Loading user data (in parallel with AI models)
+          setModelLoadingProgress(70, 'Loading user data...', 'AI models loading in background');
           
-          const user = await getCurrentUser();
-          if (!isMounted) return;
-          
-          if (user) {
-            setUserId(user.id);
-            
-            // Load app data from database
-            setModelLoadingProgress(80, 'Loading app data...', '');
-            const appData = await dbService.getAppData(user.id);
-            if (!isMounted) return;
-            
-            if (appData) {
-              setSelectedValueIds(appData.values || []);
-              setLogs(appData.logs || []);
-              setGoals(appData.goals || []);
-              // Ensure settings.reminders.frequency exists (migration for old data)
-              const loadedSettings = appData.settings || { reminders: { enabled: false, frequency: 'daily', time: '09:00' } };
-              if (loadedSettings.reminders && !loadedSettings.reminders.frequency) {
-                loadedSettings.reminders.frequency = 'daily';
-              }
-              // Set default AI model if not set (TinyLlama for healthcare/psychology)
-              if (!loadedSettings.aiModel) {
-                loadedSettings.aiModel = 'tinyllama';
-              }
-              setSettings(loadedSettings);
+          // Load user data in parallel with AI model loading
+          const userDataPromise = (async () => {
+            try {
+              const user = await getCurrentUser();
+              if (!isMounted || !user) return null;
               
-              // Initialize models with the selected model from settings
-              if (loadedSettings.aiModel) {
-                setSelectedModel(loadedSettings.aiModel);
-                initializeModels(false, loadedSettings.aiModel).catch(() => {
-                  // Silently fail - models will retry later
-                });
+              setUserId(user.id);
+              
+              // Update progress: Loading app data
+              setModelLoadingProgress(80, 'Loading app data...', 'AI models loading in background');
+              
+              const appData = await dbService.getAppData(user.id);
+              if (!isMounted) return null;
+              
+              if (appData) {
+                setSelectedValueIds(appData.values || []);
+                setLogs(appData.logs || []);
+                setGoals(appData.goals || []);
+                // Ensure settings.reminders.frequency exists (migration for old data)
+                const loadedSettings = appData.settings || { reminders: { enabled: false, frequency: 'daily', time: '09:00' } };
+                if (loadedSettings.reminders && !loadedSettings.reminders.frequency) {
+                  loadedSettings.reminders.frequency = 'daily';
+                }
+                // Set default AI model if not set (TinyLlama for healthcare/psychology)
+                if (!loadedSettings.aiModel) {
+                  loadedSettings.aiModel = 'tinyllama';
+                }
+                setSettings(loadedSettings);
+                
+                // Initialize models with the selected model from settings (in background)
+                if (loadedSettings.aiModel) {
+                  setSelectedModel(loadedSettings.aiModel);
+                  initializeModels(false, loadedSettings.aiModel).catch(() => {
+                    // Silently fail - models will retry later
+                  });
+                }
               }
+              
+              return user;
+            } catch (error) {
+              console.error('Error loading user data:', error);
+              return null;
             }
-            
-            // Update progress: Complete
-            setModelLoadingProgress(100, 'Ready!', '');
-            
-            // Check if terms are accepted
+          })();
+          
+          // Wait for user data to load (but don't block on AI models)
+          const user = await userDataPromise;
+          
+          // Update progress: Complete (AI models may still be loading in background)
+          setModelLoadingProgress(100, 'Ready!', 'AI models continue loading in background');
+          
+          // Check if terms are accepted
+          if (user) {
             if (user.termsAccepted) {
               setAuthState('app');
             } else {
@@ -227,19 +259,35 @@ const App: React.FC = () => {
             setAuthState('login');
           }
         } else {
-          setModelLoadingProgress(100, 'Ready!', '');
+          setModelLoadingProgress(100, 'Ready!', 'AI models loading in background');
           setAuthState('login');
         }
+        
+        // Don't await model loading - let it continue in background
+        // Models will be ready when user needs them
       } catch (error) {
         console.error('Initialization error:', error);
-        setProgressError('Initialization failed', 'Please try refreshing the page');
+        // Only show error for critical failures, not recoverable ones
+        const errorMessage = error instanceof Error ? error.message : String(error);
+        const isCriticalError = errorMessage.includes('Database initialization') && 
+                                errorMessage.includes('timeout');
+        
+        if (isCriticalError) {
+          // For critical errors, show warning but still proceed
+          console.warn('⚠️ Non-critical initialization issue - proceeding to login');
+          setModelLoadingProgress(100, 'Ready!', 'Some features may be limited');
+        } else {
+          // For other errors, show error briefly
+          setProgressError('Initialization issue', 'Some features may be limited');
+        }
+        
         if (isMounted) {
-          // Still proceed to login screen even on error
+          // Always proceed to login screen - let user try to use the app
           setTimeout(() => {
             if (isMounted) {
               setAuthState('login');
             }
-          }, 2000); // Give user time to see the error message
+          }, isCriticalError ? 500 : 2000); // Shorter delay for non-critical errors
         }
       } finally {
         // Clear timeout if initialization completes

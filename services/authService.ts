@@ -41,6 +41,20 @@ export interface AuthResult {
 // Register new user
 export async function registerUser(data: RegisterData): Promise<AuthResult> {
   try {
+    // Ensure database is initialized first
+    try {
+      await dbService.init();
+    } catch (dbInitError) {
+      console.error('Database initialization error during registration:', dbInitError);
+      // Try one more time
+      try {
+        await dbService.init();
+      } catch (retryError) {
+        console.error('Database retry failed:', retryError);
+        return { success: false, error: 'Database not available. Please refresh the page and try again.' };
+      }
+    }
+
     // Validate inputs
     if (!data.username || data.username.length < 3) {
       return { success: false, error: 'Username must be at least 3 characters' };
@@ -53,32 +67,61 @@ export async function registerUser(data: RegisterData): Promise<AuthResult> {
     }
 
     // Check if username already exists
-    const existingUser = await dbService.getUserByUsername(data.username);
+    let existingUser;
+    try {
+      existingUser = await dbService.getUserByUsername(data.username);
+    } catch (error) {
+      console.error('Error checking username:', error);
+      return { success: false, error: 'Database error. Please try again.' };
+    }
     if (existingUser) {
       return { success: false, error: 'Username already exists' };
     }
 
     // Check if email already exists
-    const existingEmail = await dbService.getUserByEmail(data.email);
+    let existingEmail;
+    try {
+      existingEmail = await dbService.getUserByEmail(data.email);
+    } catch (error) {
+      console.error('Error checking email:', error);
+      return { success: false, error: 'Database error. Please try again.' };
+    }
     if (existingEmail) {
       return { success: false, error: 'Email already registered' };
     }
 
     // Hash password
-    const passwordHash = await hashPassword(data.password);
+    let passwordHash;
+    try {
+      passwordHash = await hashPassword(data.password);
+    } catch (error) {
+      console.error('Error hashing password:', error);
+      return { success: false, error: 'Password encryption failed. Please try again.' };
+    }
 
     // Create user
-    const userId = await dbService.createUser({
-      username: data.username,
-      passwordHash,
-      email: data.email,
-      termsAccepted: false,
-    });
+    let userId;
+    try {
+      userId = await dbService.createUser({
+        username: data.username,
+        passwordHash,
+        email: data.email,
+        termsAccepted: false,
+      });
+    } catch (error) {
+      console.error('Error creating user:', error);
+      const errorMessage = error instanceof Error ? error.message : String(error);
+      if (errorMessage.includes('ConstraintError') || errorMessage.includes('already exists')) {
+        return { success: false, error: 'Username or email already exists' };
+      }
+      return { success: false, error: 'Failed to create account. Please try again.' };
+    }
 
     return { success: true, userId };
   } catch (error) {
     console.error('Registration error:', error);
-    return { success: false, error: 'Registration failed. Please try again.' };
+    const errorMessage = error instanceof Error ? error.message : String(error);
+    return { success: false, error: `Registration failed: ${errorMessage}. Please try again.` };
   }
 }
 
