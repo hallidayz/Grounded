@@ -10,6 +10,15 @@ import { execSync } from 'child_process';
 import { existsSync, readFileSync, writeFileSync, mkdirSync, copyFileSync, statSync, readdirSync } from 'fs';
 import { join, dirname, basename } from 'path';
 import { fileURLToPath } from 'url';
+import { 
+  getCurrentVersion, 
+  bumpVersion, 
+  updateAllVersions, 
+  createGitTag,
+  getLastTag 
+} from './release-manager.js';
+import { generateChangelog } from './changelog-generator.js';
+import { validateRelease } from './release-validator.js';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = dirname(__filename);
@@ -47,15 +56,6 @@ function formatSize(bytes) {
   if (bytes < 1024) return `${bytes} B`;
   if (bytes < 1024 * 1024) return `${(bytes / 1024).toFixed(2)} KB`;
   return `${(bytes / 1024 / 1024).toFixed(2)} MB`;
-}
-
-function getVersion() {
-  const packageJsonPath = join(__dirname, '..', 'package.json');
-  if (existsSync(packageJsonPath)) {
-    const packageJson = JSON.parse(readFileSync(packageJsonPath, 'utf-8'));
-    return packageJson.version || '1.0.0';
-  }
-  return '1.0.0';
 }
 
 function generateReleaseNotes(version) {
@@ -157,14 +157,60 @@ None at this time. If you encounter issues, please check the debug log in the ap
 function main() {
   log('\n🚀 Creating Grounded PWA Release\n', 'bright');
   
-  const version = getVersion();
   const rootDir = join(__dirname, '..');
+  
+  // Parse command line arguments
+  const args = process.argv.slice(2);
+  const versionType = args.find(arg => ['patch', 'minor', 'major'].includes(arg)) || 'patch';
+  const skipValidation = args.includes('--skip-validation');
+  const skipBuild = args.includes('--skip-build');
+  const skipTag = args.includes('--skip-tag');
+  
+  // Step 0: Pre-release validation
+  if (!skipValidation) {
+    const validation = validateRelease({ skipBuild });
+    if (!validation.success) {
+      log('\n❌ Pre-release validation failed. Use --skip-validation to bypass.', 'red');
+      process.exit(1);
+    }
+  }
+  
+  // Step 1: Version bumping
+  log('\n📝 Step 1: Version Bumping...', 'blue');
+  const oldVersion = getCurrentVersion();
+  const newVersion = bumpVersion(oldVersion, versionType);
+  
+  log(`   Current version: ${oldVersion}`, 'cyan');
+  log(`   Version type: ${versionType}`, 'cyan');
+  log(`   New version: ${newVersion}`, 'cyan');
+  
+  const versionUpdate = updateAllVersions(oldVersion, newVersion);
+  if (!versionUpdate.success) {
+    log('\n⚠️  Some files failed to update, but continuing...', 'yellow');
+    if (versionUpdate.failed.length > 0) {
+      log(`   Failed files: ${versionUpdate.failed.map(f => basename(f)).join(', ')}`, 'yellow');
+    }
+  } else {
+    log(`\n✅ Version updated successfully: ${oldVersion} → ${newVersion}`, 'green');
+  }
+  
+  // Step 2: Generate CHANGELOG
+  log('\n📋 Step 2: Generating CHANGELOG...', 'blue');
+  try {
+    const changelogResult = generateChangelog(newVersion, oldVersion);
+    log(`   ✓ CHANGELOG.md updated (${changelogResult.commitsCount} commits)`, 'green');
+  } catch (error) {
+    log(`   ⚠️  CHANGELOG generation failed: ${error.message}`, 'yellow');
+    log('   Continuing without CHANGELOG update...', 'yellow');
+  }
+  
+  const version = newVersion; // Use new version for rest of script
   const releaseDir = join(rootDir, 'release');
   const distDir = join(rootDir, 'dist');
   const packageDir = join(rootDir, 'package');
   
-  // Step 1: Build the PWA
-  log('\n📦 Step 1: Building PWA...', 'blue');
+  // Step 3: Build the PWA
+  log('\n📦 Step 3: Building PWA...', 'blue');
   log('This may take a few minutes...\n', 'yellow');
   
   if (!exec('npm run build:pwa')) {
@@ -174,8 +220,8 @@ function main() {
   
   log('\n✅ Build complete!', 'green');
   
-  // Step 2: Create release directory
-  log('\n📁 Step 2: Preparing release directory...', 'blue');
+  // Step 4: Create release directory
+  log('\n📁 Step 4: Preparing release directory...', 'blue');
   
   if (existsSync(releaseDir)) {
     log('Cleaning existing release directory...', 'yellow');
@@ -183,8 +229,8 @@ function main() {
   }
   mkdirSync(releaseDir, { recursive: true });
   
-  // Step 3: Copy files for release
-  log('\n📋 Step 3: Copying release files...', 'blue');
+  // Step 5: Copy files for release
+  log('\n📋 Step 5: Copying release files...', 'blue');
   
   // Copy the zip file if it exists
   const zipFile = join(rootDir, 'Grounded-PWA.zip');
@@ -225,16 +271,16 @@ function main() {
     }
   });
   
-  // Step 4: Generate release notes
-  log('\n📝 Step 4: Generating release notes...', 'blue');
+  // Step 6: Generate release notes
+  log('\n📝 Step 6: Generating release notes...', 'blue');
   
   const releaseNotes = generateReleaseNotes(version);
   const releaseNotesPath = join(releaseDir, 'RELEASE_NOTES.md');
   writeFileSync(releaseNotesPath, releaseNotes);
   log(`   ✓ Created RELEASE_NOTES.md`, 'green');
   
-  // Step 5: Create hosting configuration files
-  log('\n⚙️  Step 5: Creating hosting configuration...', 'blue');
+  // Step 7: Create hosting configuration files
+  log('\n⚙️  Step 7: Creating hosting configuration...', 'blue');
   
   // Netlify config
   const netlifyConfig = `[[headers]]
@@ -278,8 +324,8 @@ function main() {
   writeFileSync(join(releaseDir, '.htaccess'), htaccess);
   log('   ✓ Created .htaccess', 'green');
   
-  // Step 6: Create hosting instructions
-  log('\n📖 Step 6: Creating hosting instructions...', 'blue');
+  // Step 8: Create hosting instructions
+  log('\n📖 Step 8: Creating hosting instructions...', 'blue');
   
   const hostingInstructions = `# Hosting Instructions for Grounded PWA v${version}
 
@@ -387,10 +433,16 @@ After hosting, verify:
   });
   
   log('\n📋 Next Steps:', 'bright');
-  log('   1. Review RELEASE_NOTES.md', 'yellow');
-  log('   2. Follow HOSTING_INSTRUCTIONS.md to host the PWA', 'yellow');
-  log('   3. Create GitHub release with Grounded-PWA-v' + version + '.zip', 'yellow');
-  log('   4. Share the hosted URL with users\n', 'yellow');
+  if (!skipTag) {
+    log('   1. Commit version changes: git add . && git commit -m "chore: bump version to ' + version + '"', 'yellow');
+    log('   2. Push tag: git push origin v' + version, 'yellow');
+    log('   3. Push commits: git push', 'yellow');
+  }
+  log('   4. Review RELEASE_NOTES.md', 'yellow');
+  log('   5. Review CHANGELOG.md', 'yellow');
+  log('   6. Follow HOSTING_INSTRUCTIONS.md to host the PWA', 'yellow');
+  log('   7. Create GitHub release with Grounded-PWA-v' + version + '.zip', 'yellow');
+  log('   8. Share the hosted URL with users\n', 'yellow');
   
   log('💡 Quick Hosting:', 'bright');
   log('   • Netlify: Drag "dist-for-hosting" folder to netlify.com', 'cyan');

@@ -26,7 +26,15 @@
     "serve": "node scripts/serve-pwa.js",
     "start": "npm run build && npm run serve",
     "package": "node scripts/package.js",
-    "create-release": "node scripts/create-release.js",
+    "version:patch": "node scripts/create-release.js patch --skip-build --skip-validation",
+    "version:minor": "node scripts/create-release.js minor --skip-build --skip-validation",
+    "version:major": "node scripts/create-release.js major --skip-build --skip-validation",
+    "release:patch": "node scripts/create-release.js patch",
+    "release:minor": "node scripts/create-release.js minor",
+    "release:major": "node scripts/create-release.js major",
+    "create-release": "node scripts/create-release.js patch",
+    "changelog": "node scripts/changelog-generator.js",
+    "validate:release": "node scripts/release-validator.js",
     "tauri": "tauri"
   },
   "dependencies": {
