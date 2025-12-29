@@ -260,6 +260,8 @@ export default defineConfig({
     chunkSizeWarningLimit: 1000,
     // Tauri-specific build optimizations
     target: 'esnext',
-    sourcemap: isTauriBuild ? false : true // Disable sourcemaps for Tauri builds
+    // Disable sourcemaps for all production builds to prevent 404 errors and reduce bundle size
+    // Source maps are only useful for debugging and shouldn't be in production
+    sourcemap: false
   }
 });
