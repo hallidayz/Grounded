@@ -1,11 +1,13 @@
 import React, { useState, useEffect } from 'react';
 import { registerUser, loginUser, requestPasswordReset, resetPasswordWithToken } from '../services/authService';
+import { useAuth } from '../hooks/useAuth';
 
 interface LoginProps {
   onLogin: (userId: string) => void;
 }
 
 const Login: React.FC<LoginProps> = ({ onLogin }) => {
+  const auth = useAuth();
   const [mode, setMode] = useState<'login' | 'register' | 'forgot' | 'reset'>('login');
   const [username, setUsername] = useState('');
   const [password, setPassword] = useState('');
@@ -77,13 +79,40 @@ const Login: React.FC<LoginProps> = ({ onLogin }) => {
     setError('');
     setLoading(true);
 
-    const result = await loginUser({ username, password });
-    setLoading(false);
+    try {
+      // Step 1: Login with username/password (validates credentials)
+      const result = await loginUser({ username, password });
+      
+      if (!result.success || !result.userId) {
+        setError(result.error || 'Login failed');
+        setLoading(false);
+        return;
+      }
 
-    if (result.success && result.userId) {
+      const userId = parseInt(result.userId, 10);
+
+      // Step 2: If encryption is enabled, unlock the database with the same password
+      if (auth.isEncryptionEnabled) {
+        const unlockSuccess = await auth.login(password, userId);
+        if (!unlockSuccess) {
+          setError(auth.error || 'Failed to unlock encrypted database');
+          setLoading(false);
+          return;
+        }
+      }
+
+      // Step 3: Both login and unlock succeeded - call onLogin to proceed to app
+      setLoading(false);
+      // Clear initialization flags so app can continue after login
+      if (typeof sessionStorage !== 'undefined') {
+        sessionStorage.removeItem('app_init_started');
+        sessionStorage.removeItem('app_init_complete');
+      }
+      // Call onLogin to trigger handleLogin in App.tsx, which will load user data and set authState to 'app'
       onLogin(result.userId);
-    } else {
-      setError(result.error || 'Login failed');
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Login failed');
+      setLoading(false);
     }
   };
 

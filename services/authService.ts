@@ -1,9 +1,13 @@
 /**
  * Authentication Service
  * Handles user authentication, password hashing, and session management
+ * Uses separate authStore for credentials (always unencrypted, accessible before database unlock)
  */
 
+import { authStore } from './authStore';
 import { dbService } from './database';
+import { getDatabaseAdapter } from './databaseAdapter';
+import { EncryptedPWA } from './encryptedPWA';
 import { isTauri } from './platform';
 
 // Hash password using Web Crypto API
@@ -41,19 +45,13 @@ export interface AuthResult {
 // Register new user
 export async function registerUser(data: RegisterData): Promise<AuthResult> {
   try {
-    // Ensure database is available - use ensureDB which handles already-initialized case
+    // Initialize auth store (separate, always unencrypted)
     try {
-      // Check if database is already initialized by trying to access it
-      // ensureDB will initialize if needed, or use existing connection
-      await dbService.getUserByUsername('__check__').catch(() => {
-        // Expected to fail for non-existent user, but ensures DB is accessible
-      });
-    } catch (dbError) {
-      // If database access fails, try to initialize
-      const errorMessage = dbError instanceof Error ? dbError.message : String(dbError);
-      console.error('Database access error during registration:', dbError);
+      await authStore.init();
+    } catch (error) {
+      const errorMessage = error instanceof Error ? error.message : String(error);
+      console.error('Auth store initialization error:', error);
       
-      // Check for specific IndexedDB errors
       if (errorMessage.includes('IndexedDB is not available')) {
         return { success: false, error: 'Your browser does not support local storage. Please use a modern browser like Chrome, Firefox, or Safari.' };
       }
@@ -62,23 +60,11 @@ export async function registerUser(data: RegisterData): Promise<AuthResult> {
         return { success: false, error: 'Storage quota exceeded. Please clear some browser data and try again.' };
       }
       
-      // Try to initialize database
-      try {
-        await dbService.init();
-      } catch (initError) {
-        console.error('Database initialization failed:', initError);
-        const initErrorMessage = initError instanceof Error ? initError.message : String(initError);
-        
-        if (initErrorMessage.includes('IndexedDB is not available')) {
-          return { success: false, error: 'Your browser does not support local storage. Please use a modern browser.' };
-        }
-        
-        if (initErrorMessage.includes('blocked') || initErrorMessage.includes('Blocked')) {
-          return { success: false, error: 'Database access is blocked. Please check your browser settings and allow local storage for this site.' };
-        }
-        
-        return { success: false, error: 'Unable to access local storage. Please refresh the page and try again.' };
+      if (errorMessage.includes('blocked') || errorMessage.includes('Blocked')) {
+        return { success: false, error: 'Database access is blocked. Please check your browser settings and allow local storage for this site.' };
       }
+      
+      return { success: false, error: 'Unable to access local storage. Please refresh the page and try again.' };
     }
 
     // Validate inputs
@@ -92,10 +78,10 @@ export async function registerUser(data: RegisterData): Promise<AuthResult> {
       return { success: false, error: 'Please enter a valid email address' };
     }
 
-    // Check if username already exists
+    // Check if username already exists (in auth store)
     let existingUser;
     try {
-      existingUser = await dbService.getUserByUsername(data.username);
+      existingUser = await authStore.getUserByUsername(data.username);
     } catch (error) {
       console.error('Error checking username:', error);
       return { success: false, error: 'Database error. Please try again.' };
@@ -104,10 +90,10 @@ export async function registerUser(data: RegisterData): Promise<AuthResult> {
       return { success: false, error: 'Username already exists' };
     }
 
-    // Check if email already exists
+    // Check if email already exists (in auth store)
     let existingEmail;
     try {
-      existingEmail = await dbService.getUserByEmail(data.email);
+      existingEmail = await authStore.getUserByEmail(data.email);
     } catch (error) {
       console.error('Error checking email:', error);
       return { success: false, error: 'Database error. Please try again.' };
@@ -125,10 +111,10 @@ export async function registerUser(data: RegisterData): Promise<AuthResult> {
       return { success: false, error: 'Password encryption failed. Please try again.' };
     }
 
-    // Create user
+    // Create user in auth store (separate, unencrypted)
     let userId;
     try {
-      userId = await dbService.createUser({
+      userId = await authStore.createUser({
         username: data.username,
         passwordHash,
         email: data.email,
@@ -143,6 +129,10 @@ export async function registerUser(data: RegisterData): Promise<AuthResult> {
       return { success: false, error: 'Failed to create account. Please try again.' };
     }
 
+    // If encryption is enabled, also create user in encrypted database
+    // This will happen after first login when database is unlocked
+    // For now, just store in auth store
+
     return { success: true, userId };
   } catch (error) {
     console.error('Registration error:', error);
@@ -152,42 +142,34 @@ export async function registerUser(data: RegisterData): Promise<AuthResult> {
 }
 
 // Login user
+// This authenticates against the separate auth store (always accessible)
+// After successful authentication, the same password is used to unlock the encrypted database
 export async function loginUser(data: LoginData): Promise<AuthResult> {
   try {
     if (!data.username || !data.password) {
       return { success: false, error: 'Please enter username and password' };
     }
 
-    // Ensure database is available before attempting login
+    // Initialize auth store (separate, always unencrypted)
     try {
-      // Try to access database - this will initialize if needed
-      await dbService.getUserByUsername('__check__').catch(() => {
-        // Expected to fail for non-existent user, but ensures DB is accessible
-      });
-    } catch (dbError) {
-      const errorMessage = dbError instanceof Error ? dbError.message : String(dbError);
-      console.error('Database access error during login:', dbError);
+      await authStore.init();
+    } catch (error) {
+      const errorMessage = error instanceof Error ? error.message : String(error);
+      console.error('Auth store initialization error during login:', error);
       
-      // Try to initialize database
-      try {
-        await dbService.init();
-      } catch (initError) {
-        console.error('Database initialization failed during login:', initError);
-        const initErrorMessage = initError instanceof Error ? initError.message : String(initError);
-        
-        if (initErrorMessage.includes('IndexedDB is not available')) {
-          return { success: false, error: 'Your browser does not support local storage. Please use a modern browser.' };
-        }
-        
-        if (initErrorMessage.includes('blocked') || initErrorMessage.includes('Blocked')) {
-          return { success: false, error: 'Database access is blocked. Please check your browser settings.' };
-        }
-        
-        return { success: false, error: 'Unable to access local storage. Please refresh the page and try again.' };
+      if (errorMessage.includes('IndexedDB is not available')) {
+        return { success: false, error: 'Your browser does not support local storage. Please use a modern browser.' };
       }
+      
+      if (errorMessage.includes('blocked') || errorMessage.includes('Blocked')) {
+        return { success: false, error: 'Database access is blocked. Please check your browser settings.' };
+      }
+      
+      return { success: false, error: 'Unable to access local storage. Please refresh the page and try again.' };
     }
 
-    const user = await dbService.getUserByUsername(data.username);
+    // Authenticate against auth store (separate, unencrypted)
+    const user = await authStore.getUserByUsername(data.username);
     if (!user) {
       return { success: false, error: 'Invalid username or password' };
     }
@@ -197,14 +179,17 @@ export async function loginUser(data: LoginData): Promise<AuthResult> {
       return { success: false, error: 'Invalid username or password' };
     }
 
-    // Update last login
-    await dbService.updateUser(user.id, {
+    // Update last login in auth store
+    await authStore.updateUser(user.id, {
       lastLogin: new Date().toISOString(),
     });
 
     // Store session
     sessionStorage.setItem('userId', user.id);
     sessionStorage.setItem('username', user.username);
+
+    // Note: Database unlock happens separately in useAuth.login() using the same password
+    // This ensures authentication happens first, then database unlock
 
     return { success: true, userId: user.id };
   } catch (error) {
@@ -220,10 +205,11 @@ export function logoutUser(): void {
 }
 
 // Get current user
+// Always uses auth store (separate, unencrypted) for user data
 export async function getCurrentUser() {
   const userId = sessionStorage.getItem('userId');
   if (!userId) return null;
-  return await dbService.getUserById(userId);
+  return await authStore.getUserById(userId);
 }
 
 // Check if user is logged in
@@ -232,25 +218,15 @@ export function isLoggedIn(): boolean {
 }
 
 // Request password reset
+// Uses auth store (separate, unencrypted) for password reset
 export async function requestPasswordReset(email: string): Promise<{ success: boolean; resetLink?: string; error?: string }> {
   try {
-    // Ensure database is initialized and accessible
+    // Initialize auth store
     try {
-      // Test database access first
-      await dbService.getUserByEmail('__test__').catch(() => {
-        // Expected to fail for non-existent email, but ensures DB is accessible
-      });
-    } catch (dbError) {
-      const errorMessage = dbError instanceof Error ? dbError.message : String(dbError);
-      console.error('Database access error during password reset:', dbError);
-      
-      // Check for specific errors
-      if (errorMessage.includes('backing store') || errorMessage.includes('Internal error')) {
-        return { 
-          success: false, 
-          error: 'Database storage error. Please refresh the page and try again. If the problem persists, try clearing your browser data.' 
-        };
-      }
+      await authStore.init();
+    } catch (error) {
+      const errorMessage = error instanceof Error ? error.message : String(error);
+      console.error('Auth store initialization error during password reset:', error);
       
       if (errorMessage.includes('IndexedDB is not available')) {
         return { 
@@ -266,35 +242,13 @@ export async function requestPasswordReset(email: string): Promise<{ success: bo
         };
       }
       
-      // Try to initialize database
-      try {
-        await dbService.init();
-      } catch (initError) {
-        console.error('Database initialization failed during password reset:', initError);
-        const initErrorMessage = initError instanceof Error ? initError.message : String(initError);
-        
-        if (initErrorMessage.includes('backing store') || initErrorMessage.includes('Internal error')) {
-          return { 
-            success: false, 
-            error: 'Database storage error. Please refresh the page. If the problem persists, try clearing your browser data or using a different browser.' 
-          };
-        }
-        
-        if (initErrorMessage.includes('IndexedDB is not available')) {
-          return { 
-            success: false, 
-            error: 'Your browser does not support local storage. Please use a modern browser.' 
-          };
-        }
-        
-        return { 
-          success: false, 
-          error: 'Unable to access local storage. Please refresh the page and try again.' 
-        };
-      }
+      return { 
+        success: false, 
+        error: 'Unable to access local storage. Please refresh the page and try again.' 
+      };
     }
 
-    const user = await dbService.getUserByEmail(email);
+    const user = await authStore.getUserByEmail(email);
     if (!user) {
       // Don't reveal if email exists for security - return success but no link
       return { success: true };
@@ -304,7 +258,7 @@ export async function requestPasswordReset(email: string): Promise<{ success: bo
       throw new Error('User ID is missing');
     }
 
-    const token = await dbService.createResetToken(user.id, email);
+    const token = await authStore.createResetToken(user.id, email);
     
     if (!token) {
       throw new Error('Failed to create reset token');
@@ -332,20 +286,39 @@ export async function requestPasswordReset(email: string): Promise<{ success: bo
 }
 
 // Reset password with token
+// Updates password in auth store, and if encryption is enabled, re-encrypts database with new password
 export async function resetPasswordWithToken(token: string, newPassword: string): Promise<AuthResult> {
   try {
     if (!newPassword || newPassword.length < 6) {
       return { success: false, error: 'Password must be at least 6 characters' };
     }
 
-    const tokenData = await dbService.getResetToken(token);
+    // Initialize auth store
+    await authStore.init();
+
+    const tokenData = await authStore.getResetToken(token);
     if (!tokenData) {
       return { success: false, error: 'Invalid or expired reset token' };
     }
 
     const passwordHash = await hashPassword(newPassword);
-    await dbService.updateUser(tokenData.userId, { passwordHash });
-    await dbService.deleteResetToken(token);
+    
+    // Update password in auth store
+    await authStore.updateUser(tokenData.userId, { passwordHash });
+    await authStore.deleteResetToken(token);
+
+    // If encryption is enabled, we need to re-encrypt the database with the new password
+    // This requires the old password, which we don't have in a reset flow
+    // So we'll need to handle this differently - for now, just update auth store
+    // The user will need to unlock the database with the new password on next login
+    const encryptionEnabled = localStorage.getItem('encryption_enabled') === 'true';
+    if (encryptionEnabled) {
+      // Note: Database re-encryption with new password requires the old password
+      // In a password reset scenario, we can't re-encrypt automatically
+      // The database will need to be unlocked with the new password on next login
+      // If the old password is lost, the encrypted data cannot be recovered
+      console.warn('Password reset with encryption enabled - database will need to be unlocked with new password');
+    }
 
     return { success: true, userId: tokenData.userId };
   } catch (error) {
@@ -354,9 +327,65 @@ export async function resetPasswordWithToken(token: string, newPassword: string)
   }
 }
 
+// Change password (when user is logged in and knows current password)
+// Updates both auth store and re-encrypts database with new password
+export async function changePassword(userId: string, currentPassword: string, newPassword: string): Promise<AuthResult> {
+  try {
+    if (!newPassword || newPassword.length < 6) {
+      return { success: false, error: 'Password must be at least 6 characters' };
+    }
+
+    // Initialize auth store
+    await authStore.init();
+
+    // Verify current password
+    const user = await authStore.getUserById(userId);
+    if (!user) {
+      return { success: false, error: 'User not found' };
+    }
+
+    const isValid = await verifyPassword(currentPassword, user.passwordHash);
+    if (!isValid) {
+      return { success: false, error: 'Current password is incorrect' };
+    }
+
+    // Hash new password
+    const newPasswordHash = await hashPassword(newPassword);
+
+    // Update password in auth store
+    await authStore.updateUser(userId, { passwordHash: newPasswordHash });
+
+    // If encryption is enabled, re-encrypt database with new password
+    const encryptionEnabled = localStorage.getItem('encryption_enabled') === 'true';
+    if (encryptionEnabled) {
+      try {
+        // Get encrypted database instance
+        const encryptedDb = EncryptedPWA.getInstance();
+        if (encryptedDb) {
+          // Re-encrypt database with new password
+          // This requires the current password to decrypt, then new password to encrypt
+          await encryptedDb.changePassword(currentPassword, newPassword);
+        }
+      } catch (error) {
+        console.error('Error re-encrypting database with new password:', error);
+        // Password is updated in auth store, but database re-encryption failed
+        // User will need to unlock with new password on next login
+        return { success: false, error: 'Password updated, but failed to update database encryption. Please unlock with new password on next login.' };
+      }
+    }
+
+    return { success: true, userId };
+  } catch (error) {
+    console.error('Password change error:', error);
+    return { success: false, error: 'Failed to change password' };
+  }
+}
+
 // Accept terms
+// Updates auth store (separate, unencrypted)
 export async function acceptTerms(userId: string): Promise<void> {
-  await dbService.updateUser(userId, {
+  await authStore.init();
+  await authStore.updateUser(userId, {
     termsAccepted: true,
     termsAcceptedDate: new Date().toISOString(),
   });

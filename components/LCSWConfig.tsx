@@ -1104,7 +1104,13 @@ const LCSWConfigComponent: React.FC<LCSWConfigProps> = ({ config, onUpdate, onCl
                     </div>
                     {!modelStatus.loaded && !modelStatus.loading && (
                       <p className="text-xs sm:text-sm text-text-tertiary dark:text-text-tertiary mt-2">
-                        The app is using rule-based responses. This is normal if your browser doesn't support ONNX Runtime. All features remain fully functional.
+                        {modelStatus.errorCategory === 'network' 
+                          ? 'AI models unavailable: Check your internet connection. The app will use rule-based responses until models can be downloaded.'
+                          : modelStatus.errorCategory === 'memory'
+                          ? 'AI models unavailable: Insufficient device memory. The app will use rule-based responses. All features remain fully functional.'
+                          : modelStatus.errorCategory === 'wasm'
+                          ? 'AI models unavailable: WebAssembly not supported. Please use a modern browser. The app will use rule-based responses.'
+                          : 'AI models are loading or unavailable. The app will use rule-based responses. All features remain fully functional.'}
                       </p>
                     )}
                   </div>

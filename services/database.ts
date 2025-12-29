@@ -50,34 +50,50 @@ class DatabaseService {
   private readonly APP_ID = 'com.acminds.grounded';
   private readonly APP_NAME = 'Grounded';
   
+  // Performance optimization: Cache validation and old database check results
+  private metadataValidated: boolean = false;
+  private oldDatabaseCheckCache: boolean | null = null;
+  private metadataCache: DatabaseMetadata | null = null;
+  
   /**
    * Check if old database exists and needs migration
+   * Optimized: Uses cached result and faster detection method
    */
   async checkForOldDatabase(): Promise<boolean> {
+    // Return cached result if available
+    if (this.oldDatabaseCheckCache !== null) {
+      return this.oldDatabaseCheckCache;
+    }
+
     if (typeof indexedDB === 'undefined') {
+      this.oldDatabaseCheckCache = false;
       return false;
     }
 
     try {
-      // Check if old database exists
-      if ('databases' in indexedDB) {
-        const databases = await (indexedDB as any).databases();
-        return databases.some((db: any) => db.name === this.oldDbName);
-      }
-      
-      // Fallback: try to open old database
-      return new Promise((resolve) => {
+      // Fast path: Try to open old database directly (faster than listing all databases)
+      const result = await new Promise<boolean>((resolve) => {
         const request = indexedDB.open(this.oldDbName);
+        const timeout = setTimeout(() => {
+          resolve(false); // Timeout after 100ms - assume no old database
+        }, 100);
+        
         request.onsuccess = () => {
+          clearTimeout(timeout);
           request.result.close();
           resolve(true);
         };
         request.onerror = () => {
+          clearTimeout(timeout);
           resolve(false);
         };
       });
+      
+      this.oldDatabaseCheckCache = result;
+      return result;
     } catch (error) {
       console.warn('Error checking for old database:', error);
+      this.oldDatabaseCheckCache = false;
       return false;
     }
   }
@@ -112,17 +128,33 @@ class DatabaseService {
 
   /**
    * Validate that database was created by this app
+   * Optimized: Only validates once per session, uses cached metadata
    */
   private async validateDatabase(): Promise<boolean> {
+    // Skip validation if already validated in this session
+    if (this.metadataValidated) {
+      return true;
+    }
+
     if (!this.db) {
       return false;
     }
 
     try {
-      const metadata = await this.getMetadata();
+      // Use cached metadata if available
+      let metadata = this.metadataCache;
       if (!metadata) {
-        // No metadata means it's a new database - create it
-        await this.setMetadata();
+        metadata = await this.getMetadata();
+        this.metadataCache = metadata;
+      }
+
+      if (!metadata) {
+        // No metadata means it's a new database - create it lazily (don't block)
+        // Defer metadata creation to avoid blocking initialization
+        this.setMetadata().catch(err => {
+          console.warn('Failed to set metadata (non-critical):', err);
+        });
+        this.metadataValidated = true; // Trust new database
         return true;
       }
 
@@ -136,8 +168,14 @@ class DatabaseService {
         return false;
       }
 
-      // Update last validated timestamp
-      await this.updateMetadataValidation();
+      // Mark as validated - skip future validations this session
+      this.metadataValidated = true;
+      
+      // Update last validated timestamp (non-blocking)
+      this.updateMetadataValidation().catch(err => {
+        console.warn('Failed to update metadata validation timestamp (non-critical):', err);
+      });
+      
       return true;
     } catch (error) {
       console.error('Error validating database:', error);
@@ -147,8 +185,14 @@ class DatabaseService {
 
   /**
    * Get database metadata
+   * Optimized: Returns cached metadata if available
    */
   private async getMetadata(): Promise<DatabaseMetadata | null> {
+    // Return cached metadata if available
+    if (this.metadataCache !== null) {
+      return this.metadataCache;
+    }
+
     if (!this.db) {
       return null;
     }
@@ -160,7 +204,9 @@ class DatabaseService {
         const request = store.get('app_metadata');
 
         request.onsuccess = () => {
-          resolve(request.result || null);
+          const result = request.result || null;
+          this.metadataCache = result; // Cache the result
+          resolve(result);
         };
         request.onerror = () => {
           resolve(null); // No metadata yet - this is OK for new databases
@@ -250,8 +296,9 @@ class DatabaseService {
       return Promise.resolve();
     }
 
-    // Add retry mechanism for "backing store" errors
-    const maxRetries = 3;
+    // Optimized: Only retry on actual "backing store" errors, not on first attempt
+    // Most databases will open successfully on first try
+    const maxRetries = 2; // Reduced from 3 to 2 for faster failure
     let lastError: Error | null = null;
 
     for (let attempt = 0; attempt < maxRetries; attempt++) {
@@ -268,12 +315,12 @@ class DatabaseService {
         if (errorMessage.includes('backing store') || errorMessage.includes('Internal error')) {
           if (attempt < maxRetries - 1) {
             console.warn(`Database initialization attempt ${attempt + 1} failed, retrying...`);
-            // Wait before retry (exponential backoff)
-            await new Promise(resolve => setTimeout(resolve, 1000 * (attempt + 1)));
+            // Reduced wait time: 500ms, 1000ms instead of 1000ms, 2000ms, 3000ms
+            await new Promise(resolve => setTimeout(resolve, 500 * (attempt + 1)));
             continue;
           }
         }
-        // For other errors or final attempt, throw
+        // For other errors or final attempt, throw immediately (no retry)
         throw lastError;
       }
     }
@@ -326,13 +373,19 @@ class DatabaseService {
           this.db.onclose = () => {
             console.warn('Database connection closed');
             this.db = null;
+            // Clear caches when connection closes
+            this.metadataValidated = false;
+            this.metadataCache = null;
           };
           
-          // Validate database after connection
-          const isValid = await this.validateDatabase();
-          if (!isValid) {
-            reject(new Error('Database validation failed - database may be corrupted or from another app'));
-            return;
+          // Validate database after connection (non-blocking for subsequent calls)
+          // Only validate if not already validated this session
+          if (!this.metadataValidated) {
+            const isValid = await this.validateDatabase();
+            if (!isValid) {
+              reject(new Error('Database validation failed - database may be corrupted or from another app'));
+              return;
+            }
           }
           
           resolve();

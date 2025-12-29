@@ -12,10 +12,16 @@ const isTauriBuild = process.env.TAURI_PLATFORM !== undefined;
 const packageJson = JSON.parse(readFileSync('./package.json', 'utf-8'));
 const appVersion = packageJson.version;
 
+// Note: ONNX Runtime is now required and should load normally
+// The stub plugin is removed - ONNX Runtime will use WASM backend automatically
+
 export default defineConfig({
   define: {
     // Inject app version at build time
     'import.meta.env.VITE_APP_VERSION': JSON.stringify(appVersion),
+    // Configure ONNX Runtime to use WASM backend (better browser compatibility)
+    'process.env.USE_WEBGPU': 'false',
+    'process.env.USE_WASM': 'true',
   },
   server: {
     port: 3000,
@@ -195,6 +201,11 @@ export default defineConfig({
       '@tauri-apps/plugin-notification'
     ],
     include: ['react', 'react-dom'],
+    // Limit dependency scanning to specific entry points to avoid scanning Rust target
+    entries: [
+      'index.html',
+      'src/**/*.{ts,tsx,js,jsx}'
+    ],
     esbuildOptions: {
       // Ensure React is treated as external during optimization
       jsx: 'automatic'

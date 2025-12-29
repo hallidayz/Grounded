@@ -16,6 +16,7 @@ export {
   clearModels,
   initializeModels,
   preloadModels,
+  preloadModelsContinuously,
   areModelsLoaded,
   getModelStatus,
   getCompatibilityReport,

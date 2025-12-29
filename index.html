@@ -14,7 +14,7 @@
     
     <!-- Android/Chrome PWA Meta Tags -->
     <meta name="mobile-web-app-capable" content="yes" />
-    <link rel="manifest" href="/manifest.webmanifest" />
+    <link rel="manifest" href="/manifest.json" />
     
     <!-- Windows PWA Meta Tags -->
     <meta name="msapplication-TileColor" content="#02295b" />
@@ -51,6 +51,29 @@
   <body>
     <div id="root"></div>
     <script>
+      // CRITICAL: Initialize ONNX Runtime global object BEFORE any modules load
+      // This prevents "Cannot read properties of undefined (reading 'registerBackend')" errors
+      // ONNX Runtime requires the global 'ort' object to be initialized before it loads
+      (function() {
+        if (typeof globalThis !== 'undefined') {
+          const globalOrt = globalThis.ort = globalThis.ort || {};
+          globalOrt.env = globalOrt.env || {};
+          globalOrt.env.wasm = globalOrt.env.wasm || {};
+          
+          // Configure WASM backend settings
+          if (!globalOrt.env.wasm.numThreads) {
+            globalOrt.env.wasm.numThreads = typeof SharedArrayBuffer !== 'undefined' ? 4 : 1;
+          }
+          
+          // Ensure registerBackend exists (ONNX Runtime will override this, but it needs to exist)
+          if (!globalOrt.registerBackend) {
+            globalOrt.registerBackend = function() {
+              // ONNX Runtime will replace this with its own implementation
+            };
+          }
+        }
+      })();
+      
       // Only unregister service workers from other origins/scopes
       // Keep the current app's service worker to enable PWA installation
       (function() {
