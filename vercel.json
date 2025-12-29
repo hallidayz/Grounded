@@ -41,6 +41,10 @@
       "source": "/manifest.js",
       "headers": [
         {
+          "key": "Cache-Control",
+          "value": "no-store, must-revalidate"
+        },
+        {
           "key": "Content-Type",
           "value": "application/javascript"
         }
@@ -49,6 +53,10 @@
     {
       "source": "/registerSW.js",
       "headers": [
+        {
+          "key": "Cache-Control",
+          "value": "no-store, must-revalidate"
+        },
         {
           "key": "Content-Type",
           "value": "application/javascript"

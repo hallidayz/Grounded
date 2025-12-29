@@ -119,6 +119,19 @@ const App: React.FC = () => {
         // Listen for service worker updates
         listenForServiceWorkerUpdates();
         
+        // Check for service worker updates immediately on app load
+        if (typeof window !== 'undefined' && 'serviceWorker' in navigator) {
+          navigator.serviceWorker.getRegistration().then(registration => {
+            if (registration) {
+              registration.update().catch(error => {
+                console.warn('Service worker update check failed:', error);
+              });
+            }
+          }).catch(error => {
+            console.warn('Service worker registration check failed:', error);
+          });
+        }
+        
         // Initialize shortcuts (desktop/home screen icons) to show successful installation
         initializeShortcuts().catch((error) => {
           // Shortcuts may already exist, log but don't block app initialization

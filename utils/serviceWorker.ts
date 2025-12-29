@@ -153,6 +153,7 @@ export function listenForServiceWorkerUpdates(callback?: (registration: ServiceW
     return;
   }
 
+  // Auto-reload when new service worker takes control
   navigator.serviceWorker.addEventListener('controllerchange', () => {
     console.log('✅ Service Worker controller changed - new version activated');
     if (callback) {
@@ -160,18 +161,26 @@ export function listenForServiceWorkerUpdates(callback?: (registration: ServiceW
         if (registration) callback(registration);
       });
     }
+    // Reload to get new assets immediately
+    window.location.reload();
   });
 
-  // Check for updates periodically
+  // Check for updates more frequently (every 5 minutes instead of hourly)
   setInterval(async () => {
     try {
       const registration = await navigator.serviceWorker.getRegistration();
       if (registration) {
         await registration.update();
+        
+        // If there's a waiting worker, prompt to update
+        if (registration.waiting) {
+          // Post SKIP_WAITING message to activate immediately
+          registration.waiting.postMessage({ type: 'SKIP_WAITING' });
+        }
       }
     } catch (error) {
       // Silently fail - updates are not critical
     }
-  }, 60 * 60 * 1000); // Check every hour
+  }, 5 * 60 * 1000); // Check every 5 minutes
 }
 
