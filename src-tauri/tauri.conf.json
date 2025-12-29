@@ -1,6 +1,6 @@
 {
   "productName": "Grounded",
-  "version": "1.12.27",
+  "version": "1.12.28",
   "identifier": "com.acminds.grounded",
   "build": {
     "beforeDevCommand": "npm run dev",
@@ -63,8 +63,9 @@
   },
   "plugins": {
     "deep-link": {
-      "schemes": ["tauri"]
+      "schemes": [
+        "tauri"
+      ]
     }
   }
 }
-
