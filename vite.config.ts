@@ -122,8 +122,11 @@ export default defineConfig({
         prefer_related_applications: false
       },
       workbox: {
-        globPatterns: ['**/*.{js,css,html,ico,png,svg,woff2,json,webmanifest}', '**/models/**/*'],
-        maximumFileSizeToCacheInBytes: 1200 * 1024 * 1024, // 1.2GB - accommodates large AI model files (TinyLlama is 1.1GB)
+        // Remove models from precaching - they'll use runtime caching instead
+        // This prevents quota errors during service worker installation
+        globPatterns: ['**/*.{js,css,html,ico,png,svg,woff2,json,webmanifest}'],
+        // Reduce to safe limit - models use runtime caching, not precaching
+        maximumFileSizeToCacheInBytes: 5 * 1024 * 1024, // 5MB - safe for all browsers
         cleanupOutdatedCaches: true,
         skipWaiting: true,
         clientsClaim: true,
@@ -143,7 +146,8 @@ export default defineConfig({
               cacheName: 'esm-cache',
               expiration: {
                 maxEntries: 50,
-                maxAgeSeconds: 60 * 60 * 24 * 7 // 1 week
+                maxAgeSeconds: 60 * 60 * 24 * 7, // 1 week
+                purgeOnQuotaError: true // Auto-purge on quota exceeded
               }
             }
           },
@@ -155,7 +159,8 @@ export default defineConfig({
               cacheName: 'huggingface-models-cache',
               expiration: {
                 maxEntries: 100,
-                maxAgeSeconds: 60 * 60 * 24 * 365 // 1 year - models don't change often
+                maxAgeSeconds: 60 * 60 * 24 * 365, // 1 year - models don't change often
+                purgeOnQuotaError: true // Auto-purge oldest entries on quota exceeded
               },
               cacheableResponse: {
                 statuses: [0, 200]
@@ -164,13 +169,15 @@ export default defineConfig({
           },
           {
             // Cache CDN model files (onnx, bin, json, etc.)
+            // Models download in background after login - not precached to avoid quota issues
             urlPattern: /\.(onnx|bin|safetensors|json|txt)$/i,
             handler: 'CacheFirst',
             options: {
               cacheName: 'ai-models-cache',
               expiration: {
                 maxEntries: 200,
-                maxAgeSeconds: 60 * 60 * 24 * 365 // 1 year
+                maxAgeSeconds: 60 * 60 * 24 * 365, // 1 year
+                purgeOnQuotaError: true // Auto-purge oldest entries on quota exceeded
               },
               cacheableResponse: {
                 statuses: [0, 200]

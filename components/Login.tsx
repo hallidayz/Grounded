@@ -1,6 +1,7 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { registerUser, loginUser, requestPasswordReset, resetPasswordWithToken } from '../services/authService';
 import { useAuth } from '../hooks/useAuth';
+import { subscribeToProgress, getCurrentProgress } from '../services/progressTracker';
 
 interface LoginProps {
   onLogin: (userId: string) => void;
@@ -25,6 +26,11 @@ const Login: React.FC<LoginProps> = ({ onLogin }) => {
   const [showNewPassword, setShowNewPassword] = useState(false);
   const [showResetConfirmPassword, setShowResetConfirmPassword] = useState(false);
 
+  // Model download progress state
+  const [modelProgress, setModelProgress] = useState(getCurrentProgress());
+  // Ref to store timeout ID for cleanup
+  const progressTimeoutRef = useRef<NodeJS.Timeout | null>(null);
+
   // Check for reset token in URL hash (on mount and when hash changes)
   useEffect(() => {
     const checkHash = () => {
@@ -46,6 +52,41 @@ const Login: React.FC<LoginProps> = ({ onLogin }) => {
 
     return () => {
       window.removeEventListener('hashchange', checkHash);
+    };
+  }, []);
+
+  // Subscribe to model download progress
+  useEffect(() => {
+    const unsubscribe = subscribeToProgress((state) => {
+      // Clear any existing timeout before setting a new one
+      if (progressTimeoutRef.current) {
+        clearTimeout(progressTimeoutRef.current);
+        progressTimeoutRef.current = null;
+      }
+
+      // Only show progress if it's actively loading or just completed
+      if (state.status === 'loading' && state.progress > 0) {
+        setModelProgress(state);
+      } else if (state.status === 'success' && state.progress === 100) {
+        // Show "complete" briefly, then hide
+        setModelProgress({ ...state, label: 'AI models ready' });
+        progressTimeoutRef.current = setTimeout(() => {
+          setModelProgress(prev => ({ ...prev, status: 'idle', progress: 0 }));
+          progressTimeoutRef.current = null;
+        }, 1500);
+      } else if (state.status === 'idle') {
+        // Hide when idle
+        setModelProgress(prev => ({ ...prev, status: 'idle', progress: 0 }));
+      }
+    });
+
+    // Cleanup function: clear timeout and unsubscribe
+    return () => {
+      if (progressTimeoutRef.current) {
+        clearTimeout(progressTimeoutRef.current);
+        progressTimeoutRef.current = null;
+      }
+      unsubscribe();
     };
   }, []);
 
@@ -521,6 +562,31 @@ const Login: React.FC<LoginProps> = ({ onLogin }) => {
             </form>
           )}
         </div>
+        
+        {/* Subtle model download progress footer */}
+        {(modelProgress.status === 'loading' || (modelProgress.status === 'success' && modelProgress.progress === 100)) && modelProgress.progress > 0 && (
+          <div className="border-t border-border-soft dark:border-dark-border/30 pt-3 mt-4">
+            <div className="flex items-center justify-between mb-1">
+              <span className="text-xs text-gray-500 dark:text-gray-400">
+                {modelProgress.label || 'Initializing...'}
+              </span>
+              <span className="text-xs text-gray-500 dark:text-gray-400">
+                {Math.round(modelProgress.progress)}%
+              </span>
+            </div>
+            <div className="w-full h-0.5 bg-gray-200 dark:bg-gray-700/50 rounded-full overflow-hidden">
+              <div
+                className="h-full bg-navy-primary/50 dark:bg-navy-primary/40 rounded-full transition-all duration-300 ease-out"
+                style={{ width: `${Math.max(0, Math.min(100, modelProgress.progress))}%` }}
+              />
+            </div>
+            {modelProgress.details && modelProgress.status === 'loading' && (
+              <p className="text-xs text-gray-400 dark:text-gray-500 mt-1">
+                {modelProgress.details}
+              </p>
+            )}
+          </div>
+        )}
       </div>
     </div>
   );
