@@ -1,12 +1,35 @@
 import path from 'path';
-import { defineConfig } from 'vite';
+import { defineConfig, Plugin } from 'vite';
 import react from '@vitejs/plugin-react';
 import { VitePWA } from 'vite-plugin-pwa';
 import Tauri from 'vite-plugin-tauri';
 import { readFileSync } from 'fs';
+import { rmSync } from 'fs';
 
 // Only load Tauri plugin when building for Tauri (when TAURI_PLATFORM is set)
 const isTauriBuild = process.env.TAURI_PLATFORM !== undefined;
+
+// Plugin to exclude model files from web builds (models download at runtime)
+const excludeModelsPlugin = (): Plugin => {
+  return {
+    name: 'exclude-models',
+    closeBundle() {
+      // Only exclude models for web builds, not Tauri builds (Tauri needs bundled models)
+      if (!isTauriBuild) {
+        const modelsPath = path.resolve(__dirname, 'dist/models');
+        try {
+          rmSync(modelsPath, { recursive: true, force: true });
+          console.log('✅ Excluded model files from build output (models download at runtime)');
+        } catch (error) {
+          // Models directory might not exist, which is fine
+          if ((error as NodeJS.ErrnoException).code !== 'ENOENT') {
+            console.warn('⚠️ Could not remove models directory:', error);
+          }
+        }
+      }
+    }
+  };
+};
 
 // Read app version from package.json
 const packageJson = JSON.parse(readFileSync('./package.json', 'utf-8'));
@@ -62,6 +85,8 @@ export default defineConfig({
   plugins: [
     react(),
     ...(isTauriBuild ? [Tauri()] : []),
+    // Exclude models from web builds (they download at runtime)
+    excludeModelsPlugin(),
     VitePWA({
       registerType: 'autoUpdate',
       includeAssets: ['favicon.ico', 'apple-touch-icon.png', 'mask-icon.svg', 'pwa-192x192.png', 'pwa-512x512.png'],
