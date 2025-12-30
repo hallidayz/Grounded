@@ -123,7 +123,7 @@ export default defineConfig({
       },
       workbox: {
         globPatterns: ['**/*.{js,css,html,ico,png,svg,woff2,json,webmanifest}', '**/models/**/*'],
-        maximumFileSizeToCacheInBytes: 10 * 1024 * 1024, // 10MB - for AI models
+        maximumFileSizeToCacheInBytes: 1200 * 1024 * 1024, // 1.2GB - accommodates large AI model files (TinyLlama is 1.1GB)
         cleanupOutdatedCaches: true,
         skipWaiting: true,
         clientsClaim: true,
