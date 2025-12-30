@@ -228,7 +228,7 @@ export default defineConfig({
   // Optimize for on-device AI model loading
   optimizeDeps: {
     exclude: [
-      '@xenova/transformers',
+      '@xenova/transformers', // Exclude from pre-bundling - it's loaded dynamically
       '@tauri-apps/plugin-store',
       '@tauri-apps/plugin-notification'
     ],
@@ -244,10 +244,13 @@ export default defineConfig({
     }
   },
   // Configure how modules are resolved and loaded
-  ssr: {
-    noExternal: ['@xenova/transformers']
-  },
+  // Note: ssr.noExternal is not needed for client-side apps
   build: {
+    commonjsOptions: {
+      // Transformers uses CommonJS internally - ensure proper transformation
+      include: [/node_modules/],
+      transformMixedEsModules: true
+    },
     minify: 'terser',
     terserOptions: {
       compress: {
@@ -276,6 +279,10 @@ export default defineConfig({
              warning.source?.includes('@tauri-apps/plugin-notification'))) {
           return;
         }
+        // Suppress circular dependency warnings for transformers (it has internal circular deps)
+        if (warning.code === 'CIRCULAR_DEPENDENCY' && warning.id?.includes('@xenova/transformers')) {
+          return;
+        }
         warn(warning);
       },
       output: {
@@ -285,9 +292,8 @@ export default defineConfig({
             if (id.includes('react') || id.includes('react-dom')) {
               return 'react-vendor';
             }
-            if (id.includes('@xenova/transformers')) {
-              return 'transformers';
-            }
+            // Don't split transformers into separate chunk - let it bundle with the code that uses it
+            // This avoids circular dependency issues
             if (id.includes('framer-motion')) {
               return 'animations';
             }
