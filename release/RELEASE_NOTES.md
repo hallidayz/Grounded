@@ -1,6 +1,6 @@
 # Grounded PWA v1.12.28
 
-**Release Date**: 2025-12-29
+**Release Date**: 2025-12-30
 
 ## 🎉 What's New
 
@@ -60,7 +60,7 @@ None at this time. If you encounter issues, please check the debug log in the ap
 
 - **Email**: ac.minds.ai@gmail.com
 - **Version**: 1.12.28
-- **Build Date**: 2025-12-29
+- **Build Date**: 2025-12-30
 
 ---
 

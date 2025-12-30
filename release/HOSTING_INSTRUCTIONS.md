@@ -75,4 +75,4 @@ After hosting, verify:
 ---
 
 **Version**: 1.12.28
-**Release Date**: 2025-12-29
+**Release Date**: 2025-12-30

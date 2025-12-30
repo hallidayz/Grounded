@@ -37,7 +37,13 @@ This app implements a **MoPHES-style dual-model architecture**:
    npm install
    ```
 
-2. Run the app:
+2. Download AI models (first time only, or when models are updated):
+   ```bash
+   npm run download:models
+   ```
+   **Note**: Model files are large (~2GB total) and are not committed to the repository. They're downloaded during build or manually via this command.
+
+3. Run the app:
    ```bash
    npm run dev
    ```
