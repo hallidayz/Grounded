@@ -7,7 +7,6 @@
  * Model Selection:
  * - 'tinyllama' (default): Best for healthcare/psychology - balanced quality and performance
  * - 'distilbert': Fast classification, good for mood assessment
- * - 'minicpm': Higher quality, larger model for complex analysis
  */
 
 // CRITICAL: Initialize ONNX Runtime global object BEFORE any imports
@@ -75,13 +74,6 @@ export const MODEL_CONFIGS: Record<AIModelType, {
     task: 'text-generation',
     description: 'Best for healthcare/psychology - balanced quality and performance',
     size: '~637MB'
-  },
-  minicpm: {
-    name: 'MiniCPM',
-    path: '/models/MiniCPM-2-4B-ONNX', // Use local bundled model
-    task: 'text-generation',
-    description: 'Higher quality for complex analysis and detailed reports',
-    size: '~1.5GB'
   }
 };
 
@@ -494,10 +486,6 @@ export async function initializeModels(forceReload: boolean = false, modelType?:
       // Check memory constraints - warn if low memory and trying to load large model
       const strategy = compatibilityReport?.suggestedStrategy || 'standard';
       const useLowMemory = strategy === 'low-memory' || (compatibilityReport?.estimatedMemory !== null && compatibilityReport.estimatedMemory < 2048);
-      
-      if (useLowMemory && targetModel === 'minicpm') {
-        console.warn('⚠️ Low memory detected. MiniCPM may not load. Consider using TinyLlama instead.');
-      }
       
       // Load Model A: Mental state tracker (mood/anxiety/depression assessment)
       // For DistilBERT, use text-classification; for others, use text-generation

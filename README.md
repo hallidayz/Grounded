@@ -106,14 +106,13 @@ The app uses quantized transformer models that run efficiently in the browser:
 - Quantized for smaller file sizes and faster loading
 - Cached locally for offline use
 - Designed for mobile and desktop browsers
-- Similar architecture to MiniCPM4-0.5B (MoPHES framework)
+- Similar architecture to MoPHES framework
 - Automatic fallback to rule-based responses if models fail to load
 
 ### Model Selection
-The app intelligently selects models based on your device:
-- **Standard Mode**: DistilBERT (text classification) for mood tracking
-- **Low Memory Mode**: TinyLlama (smaller text generation model)
-- **Fallback**: MiniCPM for devices with more resources
+The app uses publicly available models:
+- **DistilBERT**: Fast text classification for mood tracking (~67MB)
+- **TinyLlama**: Balanced text generation for healthcare/psychology (~637MB, default)
 
 ## Development
 

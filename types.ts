@@ -51,7 +51,7 @@ export interface AppReminder {
   lastNotifiedMonth?: string; // YYYY-MM-DD for monthly
 }
 
-export type AIModelType = 'distilbert' | 'tinyllama' | 'minicpm';
+export type AIModelType = 'distilbert' | 'tinyllama';
 
 export interface AppSettings {
   reminders: AppReminder;

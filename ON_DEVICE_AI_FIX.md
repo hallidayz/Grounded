@@ -110,7 +110,7 @@ Open DevTools → Application → IndexedDB:
 ### Models Loading But Not Working?
 1. **Check Console Errors**: Look for `❌ On-device AI inference failed`
 2. **Check Model Type**: Ensure correct model is selected (TinyLlama recommended)
-3. **Check Memory**: Large models (MiniCPM) may fail on low-memory devices
+3. **Check Memory**: Ensure sufficient memory for model loading
 
 ### Fallback Being Used?
 If you see `ℹ️ Using rule-based fallback`, check:
@@ -123,7 +123,6 @@ If you see `ℹ️ Using rule-based fallback`, check:
 ### First Load (Models Download):
 - TinyLlama: ~30-60 seconds (downloads ~637MB)
 - DistilBERT: ~5-10 seconds (downloads ~67MB)
-- MiniCPM: ~2-5 minutes (downloads ~1.5GB)
 
 ### Subsequent Loads (From Cache):
 - All models: < 5 seconds (loads from IndexedDB)
@@ -131,7 +130,6 @@ If you see `ℹ️ Using rule-based fallback`, check:
 ### Inference Speed:
 - TinyLlama: ~200-500ms per response
 - DistilBERT: ~50-100ms per classification
-- MiniCPM: ~500-2000ms per response
 
 ## Next Steps
 

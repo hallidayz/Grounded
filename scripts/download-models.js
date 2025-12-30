@@ -64,26 +64,12 @@ const models = [
       'onnx/model_quantized.onnx'
     ],
     get baseUrl() { return getBaseUrl(this.name); }
-  },
-  {
-    name: 'MiniCPM-2-4B-ONNX',
-    type: 'text-generation',
-    files: [
-      'config.json',
-      'tokenizer.json',
-      'tokenizer_config.json',
-      'special_tokens_map.json',
-      'generation_config.json',
-      'onnx/model_quantized.onnx'
-    ],
-    get baseUrl() { return getBaseUrl(this.name); }
   }
 ];
 
-// Estimated total size: ~2.2GB (models are quantized)
+// Estimated total size: ~700MB (models are quantized)
 // - DistilBERT: ~67MB
 // - TinyLlama: ~637MB
-// - MiniCPM: ~1.5GB
 
 function downloadFile(url, dest) {
   return new Promise((resolve, reject) => {

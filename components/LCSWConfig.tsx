@@ -1167,7 +1167,7 @@ const LCSWConfigComponent: React.FC<LCSWConfigProps> = ({ config, onUpdate, onCl
                   {updatingModel ? '⏳ Updating...' : modelStatus?.loading ? '⏳ Loading...' : 'Update AI Model'}
                 </button>
                 <p className="text-xs sm:text-sm text-text-tertiary dark:text-text-tertiary text-center">
-                  Recommended: MiniCPM-0.5B or TinyLlama-1.1B (quantized for mobile)
+                  Recommended: TinyLlama-1.1B (quantized for mobile, publicly available)
                 </p>
                 {!modelStatus?.loaded && !modelStatus?.loading && (
                   <p className="text-xs sm:text-sm text-text-tertiary dark:text-text-tertiary text-center italic">

@@ -2,15 +2,13 @@
 
 This document describes where AI models can be downloaded from and how to configure alternative sources.
 
-## ⚠️ Important Note: Gated Models
+## ✅ All Models Are Publicly Available
 
-Some models (like `MiniCPM-2-4B-ONNX`) may be **gated/private** and return HTTP 401 Unauthorized errors. This means:
-- The model requires you to accept terms on HuggingFace
-- You may need to set up HuggingFace authentication
-- The download script will skip these models gracefully
-- The app will still work - it will attempt to download from HuggingFace at runtime
+All models used by this app are publicly available and do not require authentication:
+- **DistilBERT**: Publicly available on HuggingFace
+- **TinyLlama**: Publicly available on HuggingFace
 
-If you encounter 401 errors, the script will continue downloading other models and provide helpful warnings.
+No authentication or gated access is required for any models.
 
 ## Available Download Sources
 
@@ -99,13 +97,6 @@ Each model needs these files:
 - `generation_config.json`
 - `onnx/model_quantized.onnx`
 
-### MiniCPM
-- `config.json`
-- `tokenizer.json`
-- `tokenizer_config.json`
-- `special_tokens_map.json`
-- `generation_config.json`
-- `onnx/model_quantized.onnx`
 
 ## Setting Up Custom Hosting
 
@@ -141,7 +132,6 @@ You can set up a script to periodically mirror models from HuggingFace to your C
 MODELS=(
   "distilbert-base-uncased-finetuned-sst-2-english"
   "TinyLlama-1.1B-Chat-v1.0"
-  "MiniCPM-2-4B-ONNX"
 )
 
 for model in "${MODELS[@]}"; do
@@ -175,30 +165,9 @@ optimum-cli export onnx --task text-generation --model "model-name" output_direc
 
 Then host the converted models on your own server.
 
-## Handling Gated/Private Models
-
-If a model returns **HTTP 401 Unauthorized**, it's likely gated. Options:
-
-### Option 1: Accept Model Terms on HuggingFace
-1. Visit the model page on HuggingFace (e.g., `https://huggingface.co/Xenova/MiniCPM-2-4B-ONNX`)
-2. Accept the model's terms of use
-3. Try downloading again
-
-### Option 2: Use HuggingFace Authentication Token
-1. Create a HuggingFace account
-2. Generate an access token at https://huggingface.co/settings/tokens
-3. Set the token as an environment variable:
-```bash
-export HF_TOKEN="your_token_here"
-# Then update the download script to use this token
-```
-
-### Option 3: Skip Gated Models
-The download script will automatically skip gated models and continue with others. The app will attempt to download them at runtime if needed.
-
 ## Troubleshooting
 
-### Download Fails from HuggingFace (401 Unauthorized)
+### Download Fails from HuggingFace
 
 1. **Try CDN instead**:
 ```bash
@@ -231,14 +200,7 @@ public/models/
 │   ├── tokenizer_config.json
 │   ├── vocab.txt
 │   └── model_quantized.onnx
-├── TinyLlama-1.1B-Chat-v1.0/
-│   ├── config.json
-│   ├── tokenizer.json
-│   ├── tokenizer_config.json
-│   ├── special_tokens_map.json
-│   ├── generation_config.json
-│   └── model_quantized.onnx
-└── MiniCPM-2-4B-ONNX/
+└── TinyLlama-1.1B-Chat-v1.0/
     ├── config.json
     ├── tokenizer.json
     ├── tokenizer_config.json
