@@ -31,6 +31,7 @@ const excludeModelsPlugin = (): Plugin => {
   };
 };
 
+
 // Read app version from package.json
 const packageJson = JSON.parse(readFileSync('./package.json', 'utf-8'));
 const appVersion = packageJson.version;
@@ -251,16 +252,11 @@ export default defineConfig({
       include: [/node_modules/],
       transformMixedEsModules: true
     },
-    minify: 'terser',
-    terserOptions: {
-      compress: {
-        drop_console: true,
-        drop_debugger: true,
-        // Tauri-specific optimizations
-        passes: 2,
-        pure_funcs: ['console.log', 'console.info', 'console.debug']
-      }
-    },
+    // Use esbuild minification instead of terser - handles transformers better
+    // Terser was causing "Cannot access 'e' before initialization" errors with transformers
+    minify: 'esbuild',
+    // Note: esbuild minification is faster and handles complex dependencies better
+    // For terser-specific options, we'd need to use terser, but esbuild is safer here
     rollupOptions: {
       // Externalize Tauri plugins for web builds (they're only available in Tauri)
       external: isTauriBuild ? [] : [
@@ -292,8 +288,11 @@ export default defineConfig({
             if (id.includes('react') || id.includes('react-dom')) {
               return 'react-vendor';
             }
-            // Don't split transformers into separate chunk - let it bundle with the code that uses it
-            // This avoids circular dependency issues
+            // Put transformers in its own chunk to avoid minification issues
+            // This prevents "Cannot access 'e' before initialization" errors
+            if (id.includes('@xenova/transformers')) {
+              return 'transformers';
+            }
             if (id.includes('framer-motion')) {
               return 'animations';
             }
@@ -303,6 +302,14 @@ export default defineConfig({
           if (id.includes('services/ai/')) {
             return 'ai-services';
           }
+        },
+        // Configure chunk file names
+        chunkFileNames: (chunkInfo) => {
+          // Don't minify transformers chunk name - helps with debugging
+          if (chunkInfo.name === 'transformers') {
+            return 'assets/transformers-[hash].js';
+          }
+          return 'assets/[name]-[hash].js';
         }
       }
     },
