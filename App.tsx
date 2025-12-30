@@ -1150,6 +1150,18 @@ const App: React.FC = () => {
   // If encryption is enabled but not authenticated, login screen will handle unlock
   // No separate unlock screen needed - login combines both steps
   
+  // Safety timeout: If stuck in 'checking' state for too long, force transition to login
+  useEffect(() => {
+    if (authState === 'checking') {
+      const safetyTimeout = setTimeout(() => {
+        console.warn('[SAFETY] App stuck in checking state for 20 seconds - forcing login screen');
+        setAuthState('login');
+      }, 20000); // 20 second safety timeout
+      
+      return () => clearTimeout(safetyTimeout);
+    }
+  }, [authState]);
+
   // Show loading state while checking auth
   if (authState === 'checking') {
     
@@ -1163,6 +1175,10 @@ const App: React.FC = () => {
             src="/ac-minds-logo.png" 
             alt="AC MINDS" 
             className="w-20 h-20 object-contain mx-auto"
+            onError={(e) => {
+              // Hide image if it fails to load
+              (e.target as HTMLImageElement).style.display = 'none';
+            }}
           />
           <div className="space-y-4">
             <h2 className="text-xl font-black text-text-primary dark:text-white">
