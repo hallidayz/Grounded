@@ -239,15 +239,21 @@ export function useDashboard(
   }, [reflectionText, emotionalState, selectedFeeling, goalFreq, lcswConfig]);
 
   // AI Motivation Refresh - Focus Lens based on selected feeling
+  // Use ref to prevent infinite loops from logs array changes
+  const logsRef = useRef(logs);
+  logsRef.current = logs;
+  
   useEffect(() => {
     if (activeValueId) {
       const activeValue = values.find(v => v.id === activeValueId);
       if (activeValue) {
         setLoading(true);
         // Use generateEmotionalEncouragement if feeling is selected, otherwise use generateEncouragement
+        // Use ref to get latest logs without causing re-renders
+        const recentJournalText = logsRef.current.slice(0, 3).map(l => l.note || l.deepReflection || '').join(' ').substring(0, 500);
         const encouragementPromise = (emotionalState && selectedFeeling)
           ? generateEmotionalEncouragement(emotionalState, selectedFeeling, lowStateCount, lcswConfig, {
-              recentJournalText: logs.slice(0, 3).map(l => l.note || l.deepReflection || '').join(' ').substring(0, 500),
+              recentJournalText,
               timeOfDay: (() => {
                 const hour = new Date().getHours();
                 if (hour < 12) return 'morning';
@@ -279,7 +285,9 @@ export function useDashboard(
     } else {
       setCoachInsight(null);
     }
-  }, [debouncedGuideMood, activeValueId, values, lcswConfig, emotionalState, selectedFeeling, lowStateCount, logs]);
+    // Removed 'logs' from dependencies to prevent infinite loops
+    // Use logsRef.current inside the effect to access latest logs
+  }, [debouncedGuideMood, activeValueId, values, lcswConfig, emotionalState, selectedFeeling, lowStateCount]);
 
   // Generate mantra for top value on mount
   const [topValueMantra, setTopValueMantra] = useState<string | null>(null);

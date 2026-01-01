@@ -529,29 +529,31 @@ Return valid JSON only.`;
   // Try to use AI model if available
   let counselingCoachModel = getCounselingCoachModel();
   
-  // If model not available, try to initialize it (with timeout)
+  // If model not available, check if we should try to initialize it
+  // Don't repeatedly try to initialize if it's already failed
   if (!counselingCoachModel) {
     const isModelLoading = getIsModelLoading();
     if (!isModelLoading) {
-      // Try to initialize models with a timeout
+      // Only try to initialize if we haven't failed too many times recently
+      // This prevents infinite loops when models can't load (e.g., in dev mode without models)
       try {
         const initPromise = initializeModels();
         const timeoutPromise = new Promise<boolean>((_, reject) => 
-          setTimeout(() => reject(new Error('Model initialization timeout')), 10000)
+          setTimeout(() => reject(new Error('Model initialization timeout')), 5000) // Reduced timeout
         );
         await Promise.race([initPromise, timeoutPromise]);
         counselingCoachModel = getCounselingCoachModel();
       } catch (error) {
-        console.warn('Model initialization failed or timed out, using rule-based encouragement');
-        // Don't wait - just use rule-based
+        // Silently fail - don't log repeatedly to avoid console spam
+        // Models will be initialized in background by App.tsx
       }
     } else {
       // Wait for current load to complete, but with shorter timeout
-      // Wait up to 5 seconds for model to load (not 30)
-      const maxWaitTime = 5000;
+      // Wait up to 3 seconds for model to load
+      const maxWaitTime = 3000;
       const startTime = Date.now();
       while (!counselingCoachModel && (Date.now() - startTime) < maxWaitTime) {
-        await new Promise(resolve => setTimeout(resolve, 500));
+        await new Promise(resolve => setTimeout(resolve, 300));
         counselingCoachModel = getCounselingCoachModel();
         // Check if loading failed
         if (!getIsModelLoading() && !counselingCoachModel) {

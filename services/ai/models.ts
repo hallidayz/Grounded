@@ -89,6 +89,10 @@ let isModelLoading = false;
 let modelLoadPromise: Promise<boolean> | null = null;
 let compatibilityReport: CompatibilityReport | null = null;
 let lastErrorCategory: 'coop-coep' | 'memory' | 'webgpu' | 'network' | 'wasm' | 'unknown' | null = null;
+let lastInitAttempt: number = 0; // Track last initialization attempt timestamp
+let initFailureCount: number = 0; // Track consecutive failures
+const INIT_COOLDOWN = 30000; // 30 seconds cooldown between init attempts
+const MAX_INIT_FAILURES = 3; // Stop trying after 3 consecutive failures
 
 /**
  * Get model references (for use by other modules)
@@ -201,6 +205,7 @@ export async function initializeModels(forceReload: boolean = false, modelType?:
   
   if (forceReload) {
     await clearModels();
+    initFailureCount = 0; // Reset failure count on force reload
   }
   
   // Check if we already have the selected model loaded
@@ -209,6 +214,7 @@ export async function initializeModels(forceReload: boolean = false, modelType?:
     try {
       const modelsWork = await verifyModelsWork();
       if (modelsWork) {
+        initFailureCount = 0; // Reset failure count on success
         return true; // Already loaded with correct model and working
       }
     } catch {
@@ -229,6 +235,30 @@ export async function initializeModels(forceReload: boolean = false, modelType?:
       // Continue with new load attempt
     }
   }
+  
+  // Prevent repeated initialization attempts if we've failed too many times
+  const now = Date.now();
+  if (!forceReload && initFailureCount >= MAX_INIT_FAILURES) {
+    const timeSinceLastAttempt = now - lastInitAttempt;
+    if (timeSinceLastAttempt < INIT_COOLDOWN) {
+      console.log(`⏸️ Model initialization skipped - too many recent failures. Waiting ${Math.ceil((INIT_COOLDOWN - timeSinceLastAttempt) / 1000)}s before retry.`);
+      return false; // Return false without attempting
+    } else {
+      // Reset failure count after cooldown period
+      initFailureCount = 0;
+    }
+  }
+  
+  // Prevent rapid-fire initialization attempts
+  if (!forceReload && lastInitAttempt > 0) {
+    const timeSinceLastAttempt = now - lastInitAttempt;
+    if (timeSinceLastAttempt < INIT_COOLDOWN && !isModelLoading) {
+      console.log(`⏸️ Model initialization skipped - too soon after last attempt. Waiting ${Math.ceil((INIT_COOLDOWN - timeSinceLastAttempt) / 1000)}s.`);
+      return false;
+    }
+  }
+  
+  lastInitAttempt = now;
   
   // Update selected model if override provided
   if (modelType && modelType !== selectedModel) {
@@ -726,11 +756,23 @@ export async function initializeModels(forceReload: boolean = false, modelType?:
       }
       
       // Return false to indicate failure, but don't throw
+      initFailureCount++; // Increment failure count
       return false;
     }
   })();
 
-  return modelLoadPromise;
+  // Wrap the promise to track failures
+  return modelLoadPromise.then(result => {
+    if (!result) {
+      initFailureCount++; // Increment failure count on failure
+    } else {
+      initFailureCount = 0; // Reset on success
+    }
+    return result;
+  }).catch(error => {
+    initFailureCount++; // Increment failure count on error
+    throw error;
+  });
 }
 
 /**
