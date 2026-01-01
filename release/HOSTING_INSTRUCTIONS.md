@@ -1,4 +1,4 @@
-# Hosting Instructions for Grounded PWA v1.13.1
+# Hosting Instructions for Grounded PWA v1.13.4
 
 ## Quick Hosting Options
 
@@ -54,10 +54,10 @@ After hosting, verify:
 
 1. Go to your GitHub repository
 2. Click "Releases" → "Create a new release"
-3. Tag: `v1.13.1`
-4. Title: `Grounded PWA v1.13.1`
+3. Tag: `v1.13.4`
+4. Title: `Grounded PWA v1.13.4`
 5. Description: Copy contents from `RELEASE_NOTES.md`
-6. Attach: `Grounded-PWA-v1.13.1.zip`
+6. Attach: `Grounded-PWA-v1.13.4.zip`
 7. Publish release
 
 ## Distribution Checklist
@@ -74,5 +74,5 @@ After hosting, verify:
 
 ---
 
-**Version**: 1.13.1
+**Version**: 1.13.4
 **Release Date**: 2026-01-01
