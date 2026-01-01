@@ -353,21 +353,62 @@ try {
   console.log('📋 Preparing zip structure...');
   fs.cpSync(packageDir, tempExtractDir, { recursive: true });
   
-  // Create zip from the Grounded-Install folder
+  // Create zip from the Grounded-Install folder with maximum compression
   // This ensures the zip extracts to "Grounded-Install" folder
-  execSync(`cd "${path.dirname(tempExtractDir)}" && zip -r "${path.basename(zipPath)}" "${path.basename(tempExtractDir)}" -x "*.DS_Store" "*.git*"`, {
+  // Use -9 for maximum compression, -q for quiet mode
+  console.log('🗜️  Compressing with maximum compression (this may take a while)...');
+  
+  // Try 7z first (best compression), fallback to zip -9
+  let compressionCommand;
+  try {
+    execSync('which 7z', { stdio: 'pipe' });
+    // 7z with ultra compression (LZMA2, maximum dictionary size)
+    compressionCommand = `cd "${path.dirname(tempExtractDir)}" && 7z a -tzip -mx=9 -mm=Deflate -mmt=on "${path.basename(zipPath)}" "${path.basename(tempExtractDir)}" -xr!"*.DS_Store" -xr!"*.git*"`;
+    console.log('   Using 7z with ultra compression (LZMA2)...');
+  } catch {
+    // Fallback to zip with maximum compression
+    compressionCommand = `cd "${path.dirname(tempExtractDir)}" && zip -9 -r "${path.basename(zipPath)}" "${path.basename(tempExtractDir)}" -x "*.DS_Store" "*.git*"`;
+    console.log('   Using zip with maximum compression (-9)...');
+  }
+  
+  execSync(compressionCommand, {
     stdio: 'inherit'
   });
+  
+  // Calculate compression ratio before cleanup
+  function getTotalSize(dir) {
+    let size = 0;
+    try {
+      const files = fs.readdirSync(dir, { withFileTypes: true });
+      for (const file of files) {
+        const filePath = path.join(dir, file.name);
+        if (file.isDirectory()) {
+          size += getTotalSize(filePath);
+        } else {
+          size += fs.statSync(filePath).size;
+        }
+      }
+    } catch {
+      // Ignore errors
+    }
+    return size;
+  }
+  
+  const originalSize = getTotalSize(tempExtractDir);
+  const originalSizeMB = (originalSize / 1024 / 1024).toFixed(2);
   
   // Clean up temporary folder
   fs.rmSync(tempExtractDir, { recursive: true, force: true });
   
   const zipSize = fs.statSync(zipPath).size;
   const zipSizeMB = (zipSize / 1024 / 1024).toFixed(2);
+  const compressionRatio = ((1 - zipSize / originalSize) * 100).toFixed(1);
   
-  console.log(`\n✅ Zip archive created!`);
+  console.log(`\n✅ Zip archive created with maximum compression!`);
   console.log(`📦 File: ${zipPath}`);
-  console.log(`📊 Zip size: ${zipSizeMB} MB`);
+  console.log(`📊 Original size: ${originalSizeMB} MB`);
+  console.log(`📊 Compressed size: ${zipSizeMB} MB`);
+  console.log(`📊 Compression ratio: ${compressionRatio}%`);
   console.log(`📁 Extracts to: Grounded-Install/`);
   if (hasNativeInstallers) {
     console.log(`\n📱 Native installers included! Users can double-click to install.`);

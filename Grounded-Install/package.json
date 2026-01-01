@@ -1,0 +1,6 @@
+{
+  "type": "module",
+  "name": "grounded-launcher",
+  "version": "1.0.0",
+  "description": "Launcher for Grounded PWA"
+}
