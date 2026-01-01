@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { subscribeToProgress, getCurrentProgress } from '../services/progressTracker';
-import { areModelsLoaded, getIsModelLoading } from '../services/ai/models';
+import { areModelsLoaded, getIsModelLoading, getModelDownloadProgress } from '../services/ai/models';
 
 export type InstallationStatus = 'idle' | 'in-progress' | 'complete' | 'error';
 
@@ -11,20 +11,26 @@ export function useModelInstallationStatus() {
 
   useEffect(() => {
     // Check initial state
-    const currentProgress = getCurrentProgress();
+    const downloadProgress = getModelDownloadProgress();
     const modelsLoaded = areModelsLoaded();
     const isLoading = getIsModelLoading();
 
-    if (modelsLoaded) {
+    if (modelsLoaded || downloadProgress.status === 'complete') {
       setStatus('complete');
       setProgress(100);
       setLabel('Complete');
-    } else if (isLoading || currentProgress.status === 'loading') {
+    } else if (isLoading || downloadProgress.status === 'downloading' || downloadProgress.status === 'idle') {
       setStatus('in-progress');
-      setProgress(currentProgress.progress);
-      setLabel(currentProgress.label || 'In Progress');
+      setProgress(downloadProgress.progress);
+      setLabel(downloadProgress.label || 'In Progress');
+    } else if (downloadProgress.status === 'error') {
+      setStatus('error');
+      setProgress(downloadProgress.progress);
+      setLabel(downloadProgress.label || 'Error');
     } else {
       setStatus('idle');
+      setProgress(0);
+      setLabel('');
     }
 
     // Subscribe to progress updates
@@ -35,6 +41,7 @@ export function useModelInstallationStatus() {
         setLabel('Complete');
       } else if (state.status === 'error') {
         setStatus('error');
+        setProgress(state.progress);
         setLabel(state.label || 'Error');
       } else if (state.status === 'loading') {
         setStatus('in-progress');
@@ -43,20 +50,32 @@ export function useModelInstallationStatus() {
       }
     });
 
-    // Also check model loading state periodically
+    // Poll model download progress every 30 seconds
+    // This ensures we get accurate progress even if progress updates are missed
     const checkInterval = setInterval(() => {
+      const downloadProgress = getModelDownloadProgress();
       const modelsLoaded = areModelsLoaded();
       const isLoading = getIsModelLoading();
       
-      if (modelsLoaded && status !== 'complete') {
+      if (modelsLoaded || downloadProgress.status === 'complete') {
         setStatus('complete');
         setProgress(100);
         setLabel('Complete');
-      } else if (isLoading && status === 'idle') {
+      } else if (isLoading || downloadProgress.status === 'downloading') {
         setStatus('in-progress');
-        setLabel('In Progress');
+        setProgress(downloadProgress.progress);
+        setLabel(downloadProgress.label || 'In Progress');
+      } else if (downloadProgress.status === 'error') {
+        setStatus('error');
+        setProgress(downloadProgress.progress);
+        setLabel(downloadProgress.label || 'Error');
+      } else if (downloadProgress.status === 'idle' && isLoading) {
+        // Models are loading but no progress yet - show in progress
+        setStatus('in-progress');
+        setProgress(0);
+        setLabel('Starting download...');
       }
-    }, 1000);
+    }, 30000); // Update every 30 seconds
 
     return () => {
       unsubscribe();

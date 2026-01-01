@@ -311,6 +311,13 @@ const App: React.FC = () => {
         setModelLoadingProgress(10, 'Initializing app...', 'Setting up core services');
         console.log('[INIT] Progress updated to 10%');
         
+        // Set auth state to login quickly - don't wait for everything
+        // This allows user to start using app immediately
+        if (authState === 'checking') {
+          console.log('[INIT] Setting authState to login (non-blocking initialization)');
+          setAuthState('login');
+        }
+        
         // Initialize debug logging first
         try {
           initializeDebugLogging();
@@ -499,25 +506,8 @@ const App: React.FC = () => {
         // This ensures models can be cached by service worker
         // Don't block app initialization - allow user to create account immediately
         setModelLoadingProgress(40, 'Preparing AI models...', '');
-        const modelLoadPromise = (async () => {
-          // Small delay to ensure service worker is fully ready
-          await new Promise(resolve => setTimeout(resolve, 500));
-          
-          return preloadModels().then((loaded) => {
-            if (loaded) {
-              console.log('✅ AI models loaded successfully - AI features enabled');
-              setProgressSuccess('AI models ready', 'AI features are now available');
-            } else {
-              console.warn('⚠️ AI models not loaded - using rule-based responses');
-              setProgressError('AI models unavailable', 'App uses rule-based responses (fully functional)');
-            }
-          }).catch((error) => {
-            // Models will retry later, but log the error for debugging
-            console.warn('AI model preload failed, will retry later:', error);
-            setProgressError('Model loading failed', 'Will retry in background');
-          });
-        })();
         
+        // Start model loading in background (already started earlier, but ensure it continues)
         // Don't await - let it run in background
         // User can create account and use app while models load
         

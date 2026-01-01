@@ -94,6 +94,12 @@ let initFailureCount: number = 0; // Track consecutive failures
 const INIT_COOLDOWN = 30000; // 30 seconds cooldown between init attempts
 const MAX_INIT_FAILURES = 3; // Stop trying after 3 consecutive failures
 
+// Track actual download progress (0-100%)
+let currentDownloadProgress: number = 0;
+let currentDownloadStatus: 'idle' | 'downloading' | 'complete' | 'error' = 'idle';
+let currentDownloadLabel: string = '';
+let currentDownloadDetails: string = '';
+
 /**
  * Get model references (for use by other modules)
  */
@@ -107,6 +113,24 @@ export function getCounselingCoachModel() {
 
 export function getIsModelLoading() {
   return isModelLoading;
+}
+
+/**
+ * Get current model download progress (0-100%)
+ * This tracks actual download progress, not just initialization state
+ */
+export function getModelDownloadProgress(): {
+  progress: number; // 0-100
+  status: 'idle' | 'downloading' | 'complete' | 'error';
+  label: string;
+  details: string;
+} {
+  return {
+    progress: currentDownloadProgress,
+    status: currentDownloadStatus,
+    label: currentDownloadLabel,
+    details: currentDownloadDetails
+  };
 }
 
 /**
@@ -267,12 +291,21 @@ export async function initializeModels(forceReload: boolean = false, modelType?:
 
   isModelLoading = true;
   
+  // Initialize download progress tracking
+  currentDownloadProgress = 0;
+  currentDownloadStatus = 'downloading';
+  currentDownloadLabel = 'Starting download...';
+  currentDownloadDetails = 'Preparing AI models';
+  
   // Set a timeout to prevent infinite loading
   let loadingTimeout: NodeJS.Timeout | null = null;
   loadingTimeout = setTimeout(() => {
     if (isModelLoading) {
       console.warn('⚠️ Model loading timeout - stopping after 10 seconds');
       isModelLoading = false;
+      currentDownloadStatus = 'error';
+      currentDownloadLabel = 'AI models unavailable';
+      currentDownloadDetails = 'App uses rule-based responses (fully functional)';
       setProgressError('AI models unavailable', 'App uses rule-based responses (fully functional)');
     }
   }, 10000);
@@ -482,6 +515,12 @@ export async function initializeModels(forceReload: boolean = false, modelType?:
           // Only log every update, but throttle state updates
           console.log(`Model loading: ${modelName} - ${percent}%`);
           
+          // Update internal progress tracking
+          currentDownloadProgress = totalProgress;
+          currentDownloadStatus = 'downloading';
+          currentDownloadLabel = 'Loading AI models...';
+          currentDownloadDetails = `${modelName}: ${percent}%`;
+          
           // Throttle state updates to prevent infinite re-renders
           if (shouldUpdate) {
             setModelLoadingProgress(
@@ -498,6 +537,12 @@ export async function initializeModels(forceReload: boolean = false, modelType?:
           
           const modelName = progress.name || 'model';
           console.log(`Model loaded: ${modelName}`);
+          
+          // Update internal progress tracking
+          currentDownloadProgress = totalProgress;
+          currentDownloadStatus = modelsLoaded >= totalModels ? 'complete' : 'downloading';
+          currentDownloadLabel = modelsLoaded >= totalModels ? 'AI models ready' : 'Loading AI models...';
+          currentDownloadDetails = modelsLoaded >= totalModels ? 'All models loaded' : `${modelName} loaded`;
           
           // Always update on 'done' status (not throttled)
           setModelLoadingProgress(
@@ -679,6 +724,12 @@ export async function initializeModels(forceReload: boolean = false, modelType?:
       isModelLoading = false;
       
       if (modelsReady) {
+        // Update progress to complete
+        currentDownloadProgress = 100;
+        currentDownloadStatus = 'complete';
+        currentDownloadLabel = 'AI models ready';
+        currentDownloadDetails = 'All models loaded and verified';
+        
         // Verify models work before marking as ready
         console.log('[MODEL_VERIFY] Verifying loaded models work...');
         const modelsWork = await verifyModelsWork();
@@ -754,6 +805,11 @@ export async function initializeModels(forceReload: boolean = false, modelType?:
         default:
           console.warn('⚠️ Failed to load on-device models. App will use rule-based responses instead.');
       }
+      
+      // Update progress to error state
+      currentDownloadStatus = 'error';
+      currentDownloadLabel = 'AI models unavailable';
+      currentDownloadDetails = 'Will retry in background';
       
       // Return false to indicate failure, but don't throw
       initFailureCount++; // Increment failure count
@@ -963,8 +1019,33 @@ export async function preloadModelsContinuously(): Promise<void> {
     return;
   }
   
+  // Check if models are already loaded
+  if (areModelsLoaded()) {
+    const modelsWork = await verifyModelsWork().catch(() => false);
+    if (modelsWork) {
+      console.log('✅ Models already loaded and working - skipping continuous loading.');
+      currentDownloadProgress = 100;
+      currentDownloadStatus = 'complete';
+      currentDownloadLabel = 'Complete';
+      currentDownloadDetails = 'All models loaded';
+      return;
+    }
+  }
+  
+  // Check if models are already loading
+  if (isModelLoading && modelLoadPromise) {
+    console.log('🚀 Model loading already in progress, skipping duplicate call.');
+    return;
+  }
+  
   isContinuousLoadingActive = true;
   console.log('🚀 Starting continuous AI model loading (will retry until loaded or no internet)...');
+  
+  // Initialize download progress
+  currentDownloadProgress = 0;
+  currentDownloadStatus = 'downloading';
+  currentDownloadLabel = 'Starting download...';
+  currentDownloadDetails = 'Preparing AI models';
   
   // Start the continuous loading process
   (async () => {
