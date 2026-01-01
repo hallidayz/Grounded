@@ -3,8 +3,9 @@ import { defineConfig, Plugin } from 'vite';
 import react from '@vitejs/plugin-react';
 import { VitePWA } from 'vite-plugin-pwa';
 import Tauri from 'vite-plugin-tauri';
-import { readFileSync, writeFileSync } from 'fs';
+import { readFileSync, writeFileSync, existsSync } from 'fs';
 import { rmSync } from 'fs';
+import fs from 'fs';
 
 // Only load Tauri plugin when building for Tauri (when TAURI_PLATFORM is set)
 const isTauriBuild = process.env.TAURI_PLATFORM !== undefined;
@@ -35,9 +36,91 @@ const excludeModelsPlugin = (): Plugin => {
   };
 };
 
-// REMOVED: noMinifyTransformersPlugin - causes import path corruption
-// The post-build script fix-transformers-imports.js handles fixing any corrupted imports
-// This avoids corrupting import paths during the build process
+// Plugin to prevent minification of transformers chunk
+// Strategy: Use writeBundle to replace minified file with unminified version
+// This runs AFTER files are written, so we can safely replace without corrupting imports
+const noMinifyTransformersPlugin = (): Plugin => {
+  let unminifiedTransformersCode: string | null = null;
+  let transformersChunkFileName: string | null = null;
+  
+  return {
+    name: 'no-minify-transformers-safe',
+    enforce: 'post',
+    renderChunk(code, chunk) {
+      // Capture unminified code BEFORE minification
+      // renderChunk is called before minification, so we can capture the code here
+      if (chunk.name === 'transformers') {
+        unminifiedTransformersCode = code;
+        console.log('📦 Captured unminified transformers chunk in renderChunk');
+        // Don't return anything - let it be minified, we'll restore it in writeBundle
+        return null;
+      }
+      return null;
+    },
+    generateBundle(options, bundle) {
+      // Get the filename for transformers chunk
+      for (const [fileName, chunk] of Object.entries(bundle)) {
+        if (chunk.type === 'chunk' && chunk.name === 'transformers') {
+          transformersChunkFileName = fileName;
+          console.log(`📝 Found transformers chunk filename: ${fileName}`);
+          break;
+        }
+      }
+    },
+    writeBundle(options, bundle) {
+      // After files are written, replace transformers chunk with unminified version
+      if (unminifiedTransformersCode && transformersChunkFileName) {
+        const distDir = options.dir || path.resolve(__dirname, 'dist');
+        const transformersPath = path.join(distDir, transformersChunkFileName);
+        
+        console.log(`🔍 Looking for transformers chunk at: ${transformersPath}`);
+        
+        if (existsSync(transformersPath)) {
+          // Read the minified file to get correct import paths
+          const minifiedCode = fs.readFileSync(transformersPath, 'utf-8');
+          
+          // Extract correct import paths from minified code
+          const importRegex = /import\s+[^;]+from\s*['"]([^'"]+)['"];?/g;
+          const correctImports: string[] = [];
+          let match;
+          while ((match = importRegex.exec(minifiedCode)) !== null) {
+            correctImports.push(match[1]);
+          }
+          
+          console.log(`📋 Found ${correctImports.length} import(s) in minified code`);
+          
+          // Update import paths in unminified code
+          let restored = unminifiedTransformersCode;
+          if (correctImports.length > 0) {
+            const correctPath = correctImports[0]; // Should be the vendor chunk path
+            console.log(`🔧 Updating import path to: ${correctPath}`);
+            // Find and replace the import path in unminified code
+            restored = restored.replace(
+              /(import\s+[^;]+from\s*['"])(\.\/[^'"]+)(['"];?)/g,
+              (match, prefix, oldPath, suffix) => {
+                // Only replace relative chunk imports
+                if (oldPath.startsWith('./') && oldPath.includes('vendor')) {
+                  console.log(`   Replacing ${oldPath} with ${correctPath}`);
+                  return `${prefix}${correctPath}${suffix}`;
+                }
+                return match;
+              }
+            );
+          }
+          
+          // Write unminified code back to file
+          fs.writeFileSync(transformersPath, restored, 'utf-8');
+          const lineCount = restored.split('\n').length;
+          console.log(`✅ Restored unminified transformers chunk (${lineCount} lines) with correct imports`);
+        } else {
+          console.log(`⚠️  Transformers chunk file not found at: ${transformersPath}`);
+        }
+      } else {
+        console.log(`⚠️  Missing data: unminifiedCode=${!!unminifiedTransformersCode}, fileName=${transformersChunkFileName}`);
+      }
+    }
+  };
+};
 
 
 // Read app version from package.json
@@ -97,6 +180,9 @@ export default defineConfig({
     ...(isTauriBuild ? [Tauri()] : []),
     // Exclude models from web builds (they download at runtime)
     excludeModelsPlugin(),
+    // Prevent minification of transformers chunk to avoid initialization errors
+    // This plugin preserves unminified code but keeps correct import paths
+    noMinifyTransformersPlugin(),
     VitePWA({
       registerType: 'autoUpdate',
       includeAssets: ['favicon.ico', 'apple-touch-icon.png', 'pwa-192x192.png', 'pwa-512x512.png'],
