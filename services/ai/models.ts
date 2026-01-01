@@ -274,6 +274,18 @@ export async function initializeModels(forceReload: boolean = false, modelType?:
   }
   
   // Prevent rapid-fire initialization attempts
+  // BUT: If models are already loaded, don't block - just return success
+  if (!forceReload && areModelsLoaded()) {
+    console.log('✅ Models already loaded - skipping initialization');
+    // Update progress state to reflect that models are ready
+    currentDownloadStatus = 'complete';
+    currentDownloadProgress = 100;
+    currentDownloadLabel = 'AI models ready';
+    currentDownloadDetails = 'All models loaded';
+    setProgressSuccess('AI models ready', 'All models are loaded and ready');
+    return true;
+  }
+  
   if (!forceReload && lastInitAttempt > 0) {
     const timeSinceLastAttempt = now - lastInitAttempt;
     if (timeSinceLastAttempt < INIT_COOLDOWN && !isModelLoading) {
@@ -297,18 +309,9 @@ export async function initializeModels(forceReload: boolean = false, modelType?:
   currentDownloadLabel = 'Starting download...';
   currentDownloadDetails = 'Preparing AI models';
   
-  // Set a timeout to prevent infinite loading
+  // Don't set a timeout - models can take time to download, especially on slow connections
+  // The preloadModelsContinuously function handles retries and will eventually succeed or detect network errors
   let loadingTimeout: NodeJS.Timeout | null = null;
-  loadingTimeout = setTimeout(() => {
-    if (isModelLoading) {
-      console.warn('⚠️ Model loading timeout - stopping after 10 seconds');
-      isModelLoading = false;
-      currentDownloadStatus = 'error';
-      currentDownloadLabel = 'AI models unavailable';
-      currentDownloadDetails = 'App uses rule-based responses (fully functional)';
-      setProgressError('AI models unavailable', 'App uses rule-based responses (fully functional)');
-    }
-  }, 10000);
   
   modelLoadPromise = (async () => {
     // Store loadingTimeout in a way that's accessible in catch blocks
@@ -538,18 +541,31 @@ export async function initializeModels(forceReload: boolean = false, modelType?:
           const modelName = progress.name || 'model';
           console.log(`Model loaded: ${modelName}`);
           
+          // Check if all models are actually loaded (not just progress callback)
+          const allModelsActuallyLoaded = moodTrackerModel !== null && counselingCoachModel !== null;
+          
           // Update internal progress tracking
           currentDownloadProgress = totalProgress;
-          currentDownloadStatus = modelsLoaded >= totalModels ? 'complete' : 'downloading';
-          currentDownloadLabel = modelsLoaded >= totalModels ? 'AI models ready' : 'Loading AI models...';
-          currentDownloadDetails = modelsLoaded >= totalModels ? 'All models loaded' : `${modelName} loaded`;
           
-          // Always update on 'done' status (not throttled)
-          setModelLoadingProgress(
-            totalProgress,
-            `Loading AI models...`,
-            `${modelName} loaded`
-          );
+          // If all models are actually loaded, mark as complete immediately
+          if (allModelsActuallyLoaded || modelsLoaded >= totalModels) {
+            currentDownloadStatus = 'complete';
+            currentDownloadLabel = 'AI models ready';
+            currentDownloadDetails = 'All models loaded';
+            // Update progress to success state
+            setProgressSuccess('AI models loaded successfully!', 'All models are ready to use');
+          } else {
+            currentDownloadStatus = 'downloading';
+            currentDownloadLabel = 'Loading AI models...';
+            currentDownloadDetails = `${modelName} loaded`;
+            // Continue showing loading state
+            setModelLoadingProgress(
+              totalProgress,
+              `Loading AI models...`,
+              `${modelName} loaded`
+            );
+          }
+          
           lastUpdateTime = now;
         }
       };
@@ -849,41 +865,51 @@ export async function initializeModels(forceReload: boolean = false, modelType?:
       isModelLoading = false;
       
       if (modelsReady) {
-        // Update progress to complete
+        // IMMEDIATELY update progress to complete - don't wait for verification
+        // This prevents false error states while verification is running
         currentDownloadProgress = 100;
         currentDownloadStatus = 'complete';
         currentDownloadLabel = 'AI models ready';
         currentDownloadDetails = 'All models loaded and verified';
         
-        // Verify models work before marking as ready
+        // Update progress state immediately so UI reflects success
+        setProgressSuccess('AI models loaded successfully!', 'All models are ready to use');
+        console.log('✅ All AI models loaded!');
+        console.log(`  - Mood tracker: ${moodTrackerModel ? '✓' : '✗'}`);
+        console.log(`  - Counseling coach: ${counselingCoachModel ? '✓' : '✗'}`);
+        
+        // Verify models work after updating state (non-blocking)
         console.log('[MODEL_VERIFY] Verifying loaded models work...');
         const modelsWork = await verifyModelsWork();
         
         if (modelsWork) {
           // Update version info since models are loaded and verified
           updateModelVersion();
-          
-          setProgressSuccess('AI models loaded successfully!', 'All models are ready to use');
-          console.log('✅ All AI models loaded, verified, and ready!');
-          console.log(`  - Mood tracker: ${moodTrackerModel ? '✓' : '✗'}`);
-          console.log(`  - Counseling coach: ${counselingCoachModel ? '✓' : '✗'}`);
+          console.log('✅ Model verification passed - all systems ready!');
         } else {
           console.warn('⚠️ Models loaded but verification failed - will retry...');
           // Clear models so they can be reloaded
           await clearModels();
+          // Reset state since verification failed
+          currentDownloadStatus = 'error';
+          currentDownloadLabel = 'Model verification failed';
+          currentDownloadDetails = 'Will retry loading';
           return false;
         }
       } else {
-        setProgressError('AI models unavailable', 'App will use rule-based responses');
-        console.warn('⚠️ AI models not available. App will use rule-based responses.');
-        console.warn(`  - Mood tracker: ${moodTrackerModel ? '✓ Loaded' : '✗ Failed'}`);
-        console.warn(`  - Counseling coach: ${counselingCoachModel ? '✓ Loaded' : '✗ Failed'}`);
-        
-        // If at least one model loaded, log that partial loading is available
-        if (moodTrackerModel || counselingCoachModel) {
-          console.info('ℹ️ Partial model loading: Some AI features may be available.');
-        } else {
-          console.info('ℹ️ All models failed to load. The app will use rule-based responses which are fully functional.');
+        // Only set error if models truly failed (not just still loading)
+        if (!isModelLoading) {
+          setProgressError('AI models unavailable', 'App will use rule-based responses');
+          console.warn('⚠️ AI models not available. App will use rule-based responses.');
+          console.warn(`  - Mood tracker: ${moodTrackerModel ? '✓ Loaded' : '✗ Failed'}`);
+          console.warn(`  - Counseling coach: ${counselingCoachModel ? '✓ Loaded' : '✗ Failed'}`);
+          
+          // If at least one model loaded, log that partial loading is available
+          if (moodTrackerModel || counselingCoachModel) {
+            console.info('ℹ️ Partial model loading: Some AI features may be available.');
+          } else {
+            console.info('ℹ️ All models failed to load. The app will use rule-based responses which are fully functional.');
+          }
         }
       }
       

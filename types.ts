@@ -82,6 +82,11 @@ export interface GoalSuggestionResponse {
   description: string; // What they'll do
   whatThisHelpsWith: string; // Why it matters
   howToMeasureProgress: string[]; // 3 concrete steps
+  inferenceAnalysis?: string; // Inference analysis for the Self-Advocacy Aim
+  lcsmInferences?: {
+    encouragement: string; // First LCSM inference for encouragement
+    guidance: string; // Second LCSM inference for guidance
+  };
 }
 
 export interface EmotionalEncouragementResponse {

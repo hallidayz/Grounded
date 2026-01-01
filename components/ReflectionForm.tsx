@@ -297,7 +297,8 @@ const ReflectionForm: React.FC<ReflectionFormProps> = ({
               value={goalText}
               onChange={(e) => onGoalTextChange(e.target.value)}
               placeholder="Define one tool or boundary to implement next."
-              className="w-full p-3 sm:p-4 rounded-xl sm:rounded-2xl bg-bg-secondary dark:bg-dark-bg-primary/50 border-none focus:ring-2 focus:ring-yellow-warm/30 outline-none text-text-primary dark:text-white min-h-[100px] sm:min-h-[120px] resize-none text-sm sm:text-base leading-relaxed shadow-inner"
+              className="w-full p-3 sm:p-4 rounded-xl sm:rounded-2xl bg-bg-secondary dark:bg-dark-bg-primary/50 border-none focus:ring-2 focus:ring-yellow-warm/30 outline-none text-text-primary dark:text-white min-h-[160px] sm:min-h-[180px] resize-y text-sm sm:text-base leading-relaxed shadow-inner"
+              style={{ minHeight: '160px' }}
             />
           </div>
         </div>

@@ -45,11 +45,23 @@ ${json.sessionPrep}`;
  * Format JSON goal suggestion to markdown (temporary for backward compatibility)
  */
 function formatGoalSuggestionJSON(json: GoalSuggestionResponse): string {
-  return `### Structured Aim
+  let formatted = `### Structured Aim
 - **Description**: ${json.description}
 - **What this helps with**: ${json.whatThisHelpsWith}
 - **How do I measure progress**:
 ${json.howToMeasureProgress.map((step, i) => `  ${i + 1}. ${step}`).join('\n')}`;
+
+  // Add inference analysis if available
+  if (json.inferenceAnalysis) {
+    formatted += `\n\n### Inference Analysis\n${json.inferenceAnalysis}`;
+  }
+
+  // Add LCSM inferences if available
+  if (json.lcsmInferences) {
+    formatted += `\n\n### Encouragement & Guidance\n\n**Encouragement:**\n${json.lcsmInferences.encouragement}\n\n**Guidance:**\n${json.lcsmInferences.guidance}`;
+  }
+
+  return formatted;
 }
 
 /**
@@ -780,23 +792,38 @@ export async function suggestGoal(
       ? `The user's specific feeling is: ${selectedFeeling}\n\n`
       : '';
     
-    // Optimized JSON prompt for on-device LLM
-    const prompt = `Suggest a goal and return ONLY valid JSON (no markdown, no extra text):
+    // Always use Deep Reflection data if available - it's critical for generating meaningful goals
+    const deepReflectionText = reflection.includes('Deep Reflection:') 
+      ? reflection.split('Deep Reflection:')[1]?.split('Reflection Analysis:')[0]?.trim() || reflection
+      : reflection;
+    
+    // Optimized JSON prompt for on-device LLM with inference analysis and LCSM inferences
+    const prompt = `Analyze the Deep Reflection and suggest a Self-Advocacy Aim. Return ONLY valid JSON (no markdown, no extra text):
 
 {
   "description": "what they'll do",
   "whatThisHelpsWith": "why it matters",
-  "howToMeasureProgress": ["step1", "step2", "step3"]
+  "howToMeasureProgress": ["step1", "step2", "step3"],
+  "inferenceAnalysis": "analysis of how this aim addresses the reflection themes",
+  "lcsmInferences": {
+    "encouragement": "first LCSM inference providing encouragement based on the reflection",
+    "guidance": "second LCSM inference providing guidance for their personal journey"
+  }
 }
 
 Value: "${value.name}" (${value.description})
 Frequency: ${frequency}
-${feelingContext}${hasDeepReflection || hasAnalysis ? `Reflection:\n${reflection}` : `Recent reflection: "${reflection}"`}
+${feelingContext}Deep Reflection:
+${deepReflectionText}
+${hasAnalysis ? `\nReflection Analysis:\n${reflection.split('Reflection Analysis:')[1] || ''}` : ''}
 
 Requirements:
 - Specific and achievable for ${frequency}
 - Aligned with value "${value.name}"
-${hasDeepReflection || hasAnalysis ? '- Directly addresses the reflection content' : ''}
+- Directly addresses the Deep Reflection content
+- inferenceAnalysis: Explain how this aim connects to themes in their reflection
+- lcsmInferences.encouragement: Provide encouragement recognizing their self-awareness and progress
+- lcsmInferences.guidance: Offer guidance to support their personal journey and growth
 - Supports growth and success
 
 Return valid JSON only.`;
@@ -821,7 +848,7 @@ Return valid JSON only.`;
     try {
       console.log('🤖 Calling AI model for goal suggestion (JSON)...');
       const result = await counselingCoachModel(prompt, {
-        max_new_tokens: 200,
+        max_new_tokens: 400, // Increased for inference analysis and LCSM inferences
         temperature: 0.8,
         do_sample: true
       });
@@ -865,7 +892,7 @@ Return valid JSON only.`;
           if (reloadedModel) {
             console.log('✅ Model reloaded, retrying goal suggestion...');
             const retryResult = await reloadedModel(prompt, {
-              max_new_tokens: 200,
+              max_new_tokens: 400, // Increased for inference analysis and LCSM inferences
               temperature: 0.8,
               do_sample: true
             });

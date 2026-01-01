@@ -10,24 +10,36 @@ export function useModelInstallationStatus() {
   const [label, setLabel] = useState('');
 
   useEffect(() => {
-    // Check initial state
+    // Check initial state with priority: loaded > loading > error
     const downloadProgress = getModelDownloadProgress();
     const modelsLoaded = areModelsLoaded();
     const isLoading = getIsModelLoading();
 
-    if (modelsLoaded || downloadProgress.status === 'complete') {
+    // PRIORITY 1: Models are actually loaded (most reliable)
+    if (modelsLoaded) {
       setStatus('complete');
       setProgress(100);
       setLabel('Complete');
-    } else if (isLoading || downloadProgress.status === 'downloading' || downloadProgress.status === 'idle') {
+    } 
+    // PRIORITY 2: Models are currently loading (don't show error)
+    else if (isLoading || downloadProgress.status === 'downloading' || downloadProgress.status === 'idle') {
       setStatus('in-progress');
       setProgress(downloadProgress.progress);
       setLabel(downloadProgress.label || 'In Progress');
-    } else if (downloadProgress.status === 'error') {
+    } 
+    // PRIORITY 3: Only show error if models are NOT loaded AND NOT loading
+    else if (downloadProgress.status === 'error' && !isLoading && !modelsLoaded) {
       setStatus('error');
       setProgress(downloadProgress.progress);
       setLabel(downloadProgress.label || 'Error');
-    } else {
+    } 
+    // PRIORITY 4: Download complete but models not verified yet
+    else if (downloadProgress.status === 'complete' && !modelsLoaded) {
+      setStatus('in-progress');
+      setProgress(100);
+      setLabel('Verifying models...');
+    }
+    else {
       setStatus('idle');
       setProgress(0);
       setLabel('');
@@ -35,18 +47,24 @@ export function useModelInstallationStatus() {
 
     // Subscribe to progress updates
     const unsubscribe = subscribeToProgress((state) => {
-      if (state.status === 'success') {
+      // Always check actual model state first - don't trust progress tracker alone
+      const modelsLoaded = areModelsLoaded();
+      const isLoading = getIsModelLoading();
+      
+      if (modelsLoaded || state.status === 'success') {
         setStatus('complete');
         setProgress(100);
         setLabel('Complete');
-      } else if (state.status === 'error') {
-        setStatus('error');
-        setProgress(state.progress);
-        setLabel(state.label || 'Error');
-      } else if (state.status === 'loading') {
+      } else if (isLoading || state.status === 'loading') {
+        // Don't show error if models are actively loading
         setStatus('in-progress');
         setProgress(state.progress);
         setLabel(state.label || 'In Progress');
+      } else if (state.status === 'error' && !isLoading && !modelsLoaded) {
+        // Only show error if models truly failed (not loaded and not loading)
+        setStatus('error');
+        setProgress(state.progress);
+        setLabel(state.label || 'Error');
       }
     });
 
@@ -58,11 +76,16 @@ export function useModelInstallationStatus() {
       const isLoading = getIsModelLoading();
       const currentProgress = getCurrentProgress();
       
-      if (modelsLoaded || downloadProgress.status === 'complete') {
+      // PRIORITY 1: Check if models are actually loaded (most reliable indicator)
+      if (modelsLoaded) {
         setStatus('complete');
         setProgress(100);
         setLabel('Complete');
-      } else if (isLoading || downloadProgress.status === 'downloading') {
+        return; // Don't check anything else if models are loaded
+      }
+      
+      // PRIORITY 2: Check if models are currently loading (don't show error while loading)
+      if (isLoading || downloadProgress.status === 'downloading') {
         setStatus('in-progress');
         // Use the highest progress value available
         const progressValue = Math.max(
@@ -71,7 +94,12 @@ export function useModelInstallationStatus() {
         );
         setProgress(progressValue);
         setLabel(downloadProgress.label || currentProgress.label || 'Loading...');
-      } else if (downloadProgress.status === 'error') {
+        return; // Don't show error if actively loading
+      }
+      
+      // PRIORITY 3: Only show error if models are NOT loaded AND NOT loading AND status is error
+      // This prevents false error states when models are still downloading
+      if (downloadProgress.status === 'error' && !isLoading && !modelsLoaded) {
         setStatus('error');
         setProgress(downloadProgress.progress);
         setLabel(downloadProgress.label || 'Error');
@@ -80,6 +108,11 @@ export function useModelInstallationStatus() {
         setStatus('in-progress');
         setProgress(currentProgress.progress || 0);
         setLabel(currentProgress.label || 'Starting download...');
+      } else if (downloadProgress.status === 'complete') {
+        // Download complete but models not verified yet - show in progress
+        setStatus('in-progress');
+        setProgress(100);
+        setLabel('Verifying models...');
       }
     }, 2000); // Update every 2 seconds for real-time progress
 
