@@ -37,59 +37,74 @@ const excludeModelsPlugin = (): Plugin => {
 
 // Plugin to prevent minification of transformers chunk
 // This fixes "Cannot access 'X' before initialization" errors
+// Approach: Store unminified code, then restore it after build with correct import paths
 const noMinifyTransformersPlugin = (): Plugin => {
-  const transformersChunks = new Map<string, string>();
+  let unminifiedCode = '';
+  let transformersFileName = '';
   
   return {
     name: 'no-minify-transformers',
     enforce: 'post',
     renderChunk(code, chunk) {
-      // Store unminified code BEFORE minification happens
+      // Store unminified code BEFORE minification
       if (chunk.name === 'transformers' || 
           chunk.moduleIds.some(id => id.includes('@xenova/transformers'))) {
-        const key = chunk.fileName || chunk.name || String(Date.now());
-        transformersChunks.set(key, code);
-        console.log('📦 Stored unminified transformers chunk for post-processing');
+        unminifiedCode = code;
+        transformersFileName = chunk.fileName || '';
       }
-      return null; // Let minification proceed normally
+      return null; // Let minification proceed
     },
     writeBundle(options, bundle) {
-      // AFTER minification, restore unminified code
-      if (transformersChunks.size === 0) return;
+      // After bundle is written, restore unminified code with fixed imports
+      if (!unminifiedCode || !transformersFileName) return;
       
       const distDir = options.dir || 'dist';
+      const filePath = path.join(distDir, transformersFileName);
       
-      for (const [bundleFileName, chunk] of Object.entries(bundle)) {
-        if (chunk.type === 'chunk' && 
-            (bundleFileName.includes('transformers') || 
-             chunk.moduleIds?.some((id: string) => id.includes('@xenova/transformers')))) {
-          // Match stored chunk to bundle file by chunk name
-          let storedCode: string | undefined;
-          
-          if (chunk.name === 'transformers') {
-            // Find stored chunk by matching key (chunk.name is already 'transformers')
-            storedCode = Array.from(transformersChunks.values()).find((code, idx) => {
-              const key = Array.from(transformersChunks.keys())[idx];
-              return key.includes('transformers');
-            });
-          }
-          
-          // Fallback: use first stored chunk if no exact match found
-          if (!storedCode && transformersChunks.size > 0) {
-            storedCode = Array.from(transformersChunks.values())[0];
-          }
-          
-          if (storedCode) {
-            const filePath = path.join(distDir, bundleFileName);
-            try {
-              console.log(`⚠️ Restoring unminified transformers chunk: ${bundleFileName}`);
-              writeFileSync(filePath, storedCode, 'utf-8');
-              console.log(`✅ Restored unminified transformers chunk (${(storedCode.length / 1024).toFixed(1)}KB)`);
-            } catch (error) {
-              console.warn(`Could not restore transformers chunk ${bundleFileName}:`, error);
-            }
-          }
+      // Build map of chunk names to actual filenames from bundle
+      const chunkMap = new Map<string, string>();
+      for (const [fileName, chunk] of Object.entries(bundle)) {
+        if (chunk.type === 'chunk' && chunk.name) {
+          const baseName = fileName.replace(/^assets\//, '');
+          chunkMap.set(chunk.name, baseName);
         }
+      }
+      
+      // Read the minified file to get correct import paths
+      let minifiedCode = '';
+      try {
+        minifiedCode = readFileSync(filePath, 'utf-8');
+      } catch {
+        // File might not exist, skip fix
+        return;
+      }
+      
+      // Extract correct import statements from minified code
+      const importPattern = /import\s+([^'"]+)\s+from\s+['"]\.\/([^'"]+)['"]/g;
+      const correctImports: Array<{imports: string, path: string}> = [];
+      let match;
+      while ((match = importPattern.exec(minifiedCode)) !== null) {
+        correctImports.push({ imports: match[1].trim(), path: match[2] });
+      }
+      
+      // Replace imports in unminified code with correct paths
+      let fixedCode = unminifiedCode;
+      const unminifiedImportPattern = /import\s+([^'"]+)\s+from\s+['"]\.\/[^'"]+['"]/g;
+      let importIndex = 0;
+      fixedCode = fixedCode.replace(unminifiedImportPattern, (match, imports) => {
+        if (importIndex < correctImports.length) {
+          const correct = correctImports[importIndex++];
+          return `import ${imports} from './${correct.path}'`;
+        }
+        return match;
+      });
+      
+      // Write fixed unminified code
+      try {
+        writeFileSync(filePath, fixedCode, 'utf-8');
+        console.log(`✅ Restored unminified transformers chunk: ${transformersFileName}`);
+      } catch (error) {
+        console.warn(`⚠️ Could not restore transformers chunk:`, error);
       }
     }
   };
@@ -157,7 +172,7 @@ export default defineConfig({
     noMinifyTransformersPlugin(),
     VitePWA({
       registerType: 'autoUpdate',
-      includeAssets: ['favicon.ico', 'apple-touch-icon.png', 'mask-icon.svg', 'pwa-192x192.png', 'pwa-512x512.png'],
+      includeAssets: ['favicon.ico', 'apple-touch-icon.png', 'pwa-192x192.png', 'pwa-512x512.png'],
       filename: 'manifest.json', // Match index.html reference
       strategies: 'generateSW', // Use generateSW strategy (default)
       injectRegister: 'auto', // Auto-inject registration script
