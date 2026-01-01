@@ -87,12 +87,15 @@ if (missingIcons.length > 0) {
   console.log('   Or run: npm run build again after generating icons\n');
 }
 
-// Copy installation guide
+// Copy installation guide (updated with PWA first)
 console.log('📖 Copying installation guide...');
-fs.copyFileSync(
-  path.join(__dirname, '..', 'INSTALLATION_GUIDE.md'),
-  path.join(packageDir, 'INSTALLATION_GUIDE.md')
-);
+const installationGuidePath = path.join(__dirname, '..', 'INSTALLATION_GUIDE.md');
+if (fs.existsSync(installationGuidePath)) {
+  fs.copyFileSync(installationGuidePath, path.join(packageDir, 'INSTALLATION_GUIDE.md'));
+  console.log('   ✓ Copied INSTALLATION_GUIDE.md (PWA-first, fully automated)');
+} else {
+  console.log('   ⚠️  INSTALLATION_GUIDE.md not found, skipping...');
+}
 
 // Copy additional documentation
 console.log('📖 Copying additional documentation...');
@@ -107,8 +110,17 @@ additionalDocs.forEach(docName => {
   }
 });
 
-// Create mobile-first HTML launcher (opens automatically)
-console.log('📱 Creating mobile-first launcher...');
+// Create fully automated launcher (double-click and it works!)
+console.log('🚀 Creating fully automated launcher...');
+const createAutoLauncher = path.join(__dirname, 'create-auto-launcher.js');
+if (fs.existsSync(createAutoLauncher)) {
+  execSync(`node "${createAutoLauncher}"`, { stdio: 'inherit' });
+} else {
+  console.log('⚠️  create-auto-launcher.js not found, skipping...');
+}
+
+// Create mobile-first HTML launcher (backup/instructions page)
+console.log('📱 Creating mobile-friendly instructions page...');
 const createMobileLauncher = path.join(__dirname, 'create-mobile-launcher.js');
 if (fs.existsSync(createMobileLauncher)) {
   execSync(`node "${createMobileLauncher}"`, { stdio: 'inherit' });
@@ -116,81 +128,59 @@ if (fs.existsSync(createMobileLauncher)) {
   console.log('⚠️  create-mobile-launcher.js not found, skipping...');
 }
 
-// Create cross-platform launchers (for desktop users who want to run server)
-console.log('📦 Creating cross-platform server launchers...');
-const createLauncherScript = path.join(__dirname, 'create-launcher.js');
-if (fs.existsSync(createLauncherScript)) {
-  execSync(`node "${createLauncherScript}"`, { stdio: 'inherit' });
-} else {
-  console.log('⚠️  create-launcher.js not found, skipping...');
-}
-
 // Create README for the package
-const packageReadme = `# Grounded PWA - Mobile-First Installation
+const packageReadme = `# Grounded PWA - Fully Automated Installation
 
-**📱 Perfect for Android & iPhone users!**
+**🚀 Just Extract & Double-Click - Everything is Automated!**
 
-This package contains the complete Grounded by AC MiNDS Progressive Web App.
+This package contains the complete Grounded by AC MiNDS Progressive Web App with AI models included.
 
-## 🚀 Quick Start - Just Extract & Open!
+## 🚀 Quick Start - Zero Configuration!
 
 1. **Extract** this ZIP file to any folder
-2. **Double-click** \`index.html\` (or \`INSTALL.html\`)
-3. **Follow the on-screen instructions** for your device
+2. **Double-click** \`START.sh\` (Mac/Linux) or \`START.bat\` (Windows)
+3. **That's it!** Everything happens automatically:
+   - ✅ Server starts automatically
+   - ✅ Browser opens automatically
+   - ✅ App loads automatically
+   - ✅ QR code shown for mobile devices
 
-The launcher page will automatically:
-- ✅ Detect if you're on Android, iPhone, or Desktop
-- ✅ Show step-by-step installation instructions
-- ✅ Open the app with one click
+**No commands, no uploads, no configuration needed!**
 
 ## 📱 For Mobile Users (Android & iPhone)
 
-### Android:
-1. Extract the ZIP file
-2. Open \`index.html\` in Chrome
-3. Tap "Open App" button
-4. When the app loads, tap "Install" in the browser
-5. Done! App icon appears on home screen
+### Super Easy Method:
+1. Extract the ZIP file on your **computer**
+2. Double-click \`START.sh\` or \`START.bat\` on your computer
+3. Server starts automatically and shows a **QR code**
+4. **Scan the QR code** with your phone (make sure phone is on same WiFi)
+5. App opens on your phone
+6. Tap "Install" in your browser
+7. Done! App icon appears on home screen
 
-### iPhone/iPad:
-1. Extract the ZIP file  
-2. Open \`index.html\` in **Safari** (must use Safari!)
-3. Tap "Open App in Safari" button
-4. Tap Share button → "Add to Home Screen"
-5. Done! App icon appears on home screen
+**That's it!** No uploads, no configuration, no commands needed.
 
-**💡 Tip:** For mobile, you can also upload the \`dist/\` folder to a web server and share the URL.
+### Alternative (if you want to host online):
+Upload the \`dist/\` folder to Netlify/Vercel and share the URL.
 
 ## 💻 For Desktop Users
 
-### Option 1: Upload to Web Server (Recommended)
-1. Upload \`dist/\` folder contents to your web server
-2. Visit the URL in your browser
-3. Click install icon in address bar
+**Just double-click \`START.sh\` (Mac/Linux) or \`START.bat\` (Windows)**
 
-### Option 2: Run Local Server
-**Mac/Linux:**
-\`\`\`bash
-./start.sh
-\`\`\`
+- Server starts automatically
+- Browser opens automatically
+- App loads automatically
+- Click install icon in browser to install as PWA
 
-**Windows:**
-\`\`\`cmd
-start.bat
-\`\`\`
-
-Or with Node.js:
-\`\`\`bash
-node launcher.js
-\`\`\`
+**No commands, no configuration, no uploads needed!**
 
 ## 📁 What's Inside
 
-- \`index.html\` / \`INSTALL.html\` - **Start here!** Mobile-friendly launcher
-- \`dist/\` - The React app (upload this to a web server)
-- \`launcher.js\` - Local server for desktop (Node.js)
-- \`start.sh\` / \`start.bat\` - Desktop server launchers
-- \`INSTALLATION_GUIDE.md\` - Detailed instructions
+- \`START.sh\` / \`START.bat\` - **Double-click this!** Fully automated launcher
+- \`launcher.js\` - Auto-launcher script (runs automatically)
+- \`dist/\` - The React app (served automatically)
+- \`index.html\` / \`INSTALL.html\` - Instructions page (backup)
+- \`INSTALLATION_GUIDE.md\` - Detailed instructions (optional)
 
 ## ✅ Installation Success
 

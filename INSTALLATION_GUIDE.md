@@ -1,299 +1,166 @@
 # Grounded Installation Guide
 
-**Grounded by AC MiNDS** - Version 1.12.27
+**Grounded by AC MiNDS** - Version 1.13.1
 
 Privacy-first therapy integration app for values-based reflection and mental health support.
 
-Welcome! This guide will help you install Grounded on your device. Choose your operating system below.
+Welcome! This guide will help you install Grounded on your device.
 
 ---
 
-## 🍎 macOS Installation
+## 🌐 PWA Installation (Works on All Devices)
 
-### Step 1: Download the Installer
-- You should have received a file named `Grounded.dmg`
-- If not, contact your therapist or download from the provided link
+**🚀 Fully Automated - Just Extract & Double-Click!**
 
-### Step 2: Install the App
-1. **Double-click** the `Grounded.dmg` file
-2. A window will open showing the Grounded app icon
-3. **Drag** the Grounded app icon to your **Applications folder**
-4. Wait for the copy to complete
-5. **Eject** the disk image (click the eject button next to "Grounded" in Finder)
+Grounded is installed as a Progressive Web App (PWA). Everything is automated - no commands, no uploads, no configuration needed!
 
-### Step 3: Open the App
-1. Open **Finder**
-2. Go to **Applications**
-3. **Double-click** "Grounded" to launch
-4. If you see a security warning:
-   - Go to **System Settings** → **Privacy & Security**
-   - Click **"Open Anyway"** next to the Grounded message
-   - Confirm by clicking **"Open"**
+### Quick Start (Super Easy!)
 
-### That's it! 🎉
-The app is now installed and ready to use.
+1. **Extract** the `Grounded-PWA.zip` file to any folder
+2. **Double-click** `START.sh` (Mac/Linux) or `START.bat` (Windows)
+3. **That's it!** Everything happens automatically:
+   - ✅ Server starts automatically
+   - ✅ Browser opens automatically
+   - ✅ App loads automatically
+   - ✅ QR code shown for mobile devices
 
-**✅ Installation Success Indicator**: The app will appear in your Start menu, confirming successful installation. You can also pin it to your taskbar or create a desktop shortcut for quick access.
+### For Desktop Users (Windows, Mac, Linux)
 
----
+**Just double-click `START.sh` or `START.bat`**
 
-## 🪟 Windows Installation
+- Server starts automatically on your computer
+- Browser opens automatically showing the app
+- Click the install icon (➕) in your browser's address bar
+- Click "Install" to add to your desktop/applications
+- Done! App icon appears and works offline
 
-### Step 1: Download the Installer
-- You should have received a file named `Grounded_1.12.27_x64_en-US.msi` or `Grounded.exe`
-- If not, contact your therapist or download from the provided link
+**No commands, no configuration, no uploads needed!**
 
-### Step 2: Install the App
-1. **Double-click** the installer file
-2. If Windows shows a security warning:
-   - Click **"More info"**
-   - Click **"Run anyway"**
-3. The installation wizard will open
-4. Click **"Next"** to continue
-5. Choose installation location (default is fine)
-6. Click **"Install"**
-7. Wait for installation to complete
-8. Click **"Finish"**
+### For Mobile Users (Android & iPhone)
 
-### Step 3: Open the App
-1. Click the **Start menu** (Windows icon)
-2. Type **"Grounded"**
-3. Click on **Grounded** to launch
+**Super Easy Method:**
 
-### That's it! 🎉
-The app is now installed and ready to use.
+1. Extract the ZIP file on your **computer** (not your phone)
+2. Double-click `START.sh` or `START.bat` on your computer
+3. Server starts automatically and shows a **QR code** in the terminal
+4. **Make sure your phone is on the same WiFi network** as your computer
+5. **Scan the QR code** with your phone's camera
+6. App opens on your phone automatically
+7. Tap "Install" or "Add to Home Screen" in your browser
+8. Done! App icon appears on your home screen
 
-**✅ Installation Success Indicator**: The app will appear in your Start menu, confirming successful installation. You can also pin it to your taskbar or create a desktop shortcut for quick access.
+**That's it!** No uploads to Vercel/Netlify, no server configuration, no commands needed.
 
----
+### What Gets Installed
 
-## 🐧 Linux Installation
+When you install the PWA:
+- ✅ App icon appears on your home screen/desktop
+- ✅ Opens in standalone mode (no browser UI)
+- ✅ Works completely offline after first load
+- ✅ AI models included (no download needed!)
+- ✅ Automatic updates when online
+- ✅ All data stored locally on your device
 
-### Option A: AppImage (Easiest - Works on Most Linux Distributions)
-
-#### Step 1: Download
-- You should have received a file named `Grounded.AppImage`
-- If not, contact your therapist or download from the provided link
-
-#### Step 2: Make it Executable
-1. Open **Terminal**
-2. Navigate to where you downloaded the file:
-   ```bash
-   cd ~/Downloads
-   ```
-3. Make the file executable:
-   ```bash
-   chmod +x Grounded.AppImage
-   ```
-
-#### Step 3: Run the App
-1. **Double-click** `Grounded.AppImage` in your file manager, OR
-2. Run from terminal:
-   ```bash
-   ./Grounded.AppImage
-   ```
-
-#### Optional: Add to Applications Menu
-1. Create a desktop entry:
-   ```bash
-   mkdir -p ~/.local/share/applications
-   ```
-2. Create a file `~/.local/share/applications/grounded.desktop` with:
-   ```ini
-   [Desktop Entry]
-   Name=Grounded
-   Exec=/path/to/Grounded.AppImage
-   Icon=grounded
-   Type=Application
-   Categories=Health;
-   ```
-   (Replace `/path/to/` with the actual path to your AppImage)
-
-### Option B: DEB Package (For Debian/Ubuntu)
-
-#### Step 1: Download
-- You should have received a file named `Grounded.deb`
-- If not, contact your therapist or download from the provided link
-
-#### Step 2: Install
-1. **Double-click** the `.deb` file, OR
-2. Install from terminal:
-   ```bash
-   sudo dpkg -i Grounded.deb
-   sudo apt-get install -f  # Fix any missing dependencies
-   ```
-
-#### Step 3: Open the App
-- Search for "Grounded" in your applications menu
-- Click to launch
-
-**✅ Installation Success Indicator**: The app icon will appear in your applications menu, confirming successful installation.
-
-### That's it! 🎉
-The app is now installed and ready to use.
-
-**✅ Installation Success Indicator**: The app will appear in your Start menu, confirming successful installation. You can also pin it to your taskbar or create a desktop shortcut for quick access.
-
----
-
-## 📱 Android Installation
-
-### Step 1: Enable Unknown Sources
-1. Open **Settings** on your Android device
-2. Go to **Security** (or **Privacy** on newer devices)
-3. Find **"Install unknown apps"** or **"Unknown sources"**
-4. Select your file manager or browser (Chrome, Files, etc.)
-5. **Enable** "Allow from this source"
-
-### Step 2: Download the APK
-- You should have received a file named `app-release.apk`
-- If not, contact your therapist or download from the provided link
-- The file will download to your **Downloads** folder
-
-### Step 3: Install the App
-1. Open your **Downloads** folder (or use a file manager)
-2. **Tap** on `app-release.apk`
-3. If you see a security warning, tap **"Settings"** and enable **"Install unknown apps"**
-4. Tap **"Install"**
-5. Wait for installation to complete
-6. Tap **"Open"** to launch, or find "Grounded" in your app drawer
-
-### That's it! 🎉
-The app is now installed and ready to use.
-
-**Note**: You may see a warning about installing from unknown sources. This is normal for apps not from the Google Play Store. The app is safe to install.
-
----
-
-## 🍎 iOS Installation (iPhone/iPad)
-
-### Important Notes
-- iOS installation requires the app to be distributed through the App Store or via TestFlight
-- If you received a direct link, follow the instructions provided
-- You may need to trust the developer certificate
-
-### Option A: App Store (If Available)
-1. Open the **App Store** on your iPhone/iPad
-2. Search for **"Grounded"**
-3. Tap **"Get"** or **"Install"**
-4. Wait for installation to complete
-5. Tap the app icon to launch
-
-**✅ Installation Success Indicator**: The app icon will automatically appear on your home screen, confirming successful installation.
-
-### Option B: TestFlight (Beta Testing)
-1. Install **TestFlight** from the App Store (if not already installed)
-2. Open the invitation link you received
-3. Tap **"Accept"** and **"Install"**
-4. Wait for installation to complete
-5. Open **TestFlight** and tap **"Grounded"** to launch
-
-### Option C: Direct Installation (Enterprise/Development)
-1. Open the provided installation link on your iPhone/iPad
-2. Tap **"Install"**
-3. Go to **Settings** → **General** → **VPN & Device Management**
-4. Find the developer certificate and tap **"Trust"**
-5. Confirm by tapping **"Trust"** again
-6. Return to home screen and tap the Grounded icon
-
-### That's it! 🎉
-The app is now installed and ready to use.
-
-**✅ Installation Success Indicator**: The app will appear in your Start menu, confirming successful installation. You can also pin it to your taskbar or create a desktop shortcut for quick access.
-
----
-
-## 🌐 PWA Installation (Progressive Web App)
-
-**Works on all platforms** - Install Grounded directly from your web browser!
-
-### Step 1: Open in Browser
-1. Navigate to the Grounded app URL (provided by your therapist or organization)
-2. The app will open in your browser
-
-### Step 2: Install the PWA
+### Installation Steps by Platform
 
 **Chrome/Edge (Windows, Mac, Android):**
-1. Look for the install icon (➕) in the address bar
-2. Click **"Install"** or **"Add to Home Screen"**
-3. Confirm installation
-4. The app will appear in your applications/apps menu
+1. After double-clicking START.sh/START.bat, browser opens automatically
+2. Look for the install icon (➕) in the address bar
+3. Click **"Install"** or **"Add to Home Screen"**
+4. Confirm installation
+5. App icon appears in your applications/apps menu
 
 **Safari (iOS/macOS):**
-1. Tap the **Share** button (square with arrow)
-2. Scroll down and tap **"Add to Home Screen"**
-3. Tap **"Add"** in the top right
-4. The app will appear on your home screen
-
-**✅ Installation Success Indicator**: The app icon on your home screen confirms successful installation. You can tap it anytime to launch the app.
+1. After scanning QR code (mobile) or opening in Safari (desktop)
+2. Tap the **Share** button (square with arrow)
+3. Scroll down and tap **"Add to Home Screen"** (iOS) or **"Add to Dock"** (macOS)
+4. Tap **"Add"** in the top right
+5. App icon appears on your home screen/Dock
 
 **Firefox:**
-1. Click the menu (three lines) → **"Install"**
-2. Confirm installation
-3. The app will appear in your applications menu
-
-### Step 3: First Launch
-1. Open Grounded from your home screen/applications
-2. Create an account or log in
-3. Accept the terms and conditions
-4. **AI models will download automatically** - you'll see a progress bar
-5. Once models are loaded, you're ready to use the app!
+1. After opening the app
+2. Click the menu (three lines) → **"Install"**
+3. Confirm installation
+4. App appears in your applications menu
 
 ### Benefits of PWA Installation
-- ✅ Works offline after first load
-- ✅ App-like experience (no browser UI)
-- ✅ Automatic updates when you're online
-- ✅ Cross-platform (works on all devices)
-- ✅ No app store required
+
+- ✅ **Works on all platforms** - Windows, Mac, Linux, Android, iPhone/iPad
+- ✅ **Fully automated** - No commands, no uploads, no configuration
+- ✅ **Works offline** - After first load, works without internet
+- ✅ **App-like experience** - No browser UI, feels like a native app
+- ✅ **Automatic updates** - Updates when you're online
+- ✅ **No app store required** - Install directly from browser
+- ✅ **AI models included** - No download wait, instant loading
+- ✅ **Privacy-first** - All data stored locally on your device
+
+### Requirements
+
+**For the Auto-Launcher:**
+- **Node.js** (free, https://nodejs.org) - The launcher checks automatically and shows install link if missing
+- **Same WiFi network** (for mobile QR code access)
+
+**For the App:**
+- Modern browser (Chrome, Edge, Safari, Firefox)
+- That's it! No other requirements.
+
+### Troubleshooting PWA Installation
+
+**"Node.js not found" error:**
+- Install Node.js from https://nodejs.org (free, takes 2 minutes)
+- Then double-click START.sh/START.bat again
+
+**Browser doesn't open automatically:**
+- Manually open your browser
+- Visit: `http://localhost:8000`
+- The app will load
+
+**Mobile QR code doesn't work:**
+- Make sure phone and computer are on the same WiFi network
+- Check firewall settings on your computer
+- Try typing the URL manually shown in terminal
+- The terminal shows both the QR code URL and the direct URL
+
+**Install button doesn't appear:**
+- Make sure you're using Chrome, Edge, Safari, or Firefox
+- Try refreshing the page
+- Check browser console for errors (F12 → Console)
+- Some browsers require the app to be visited a few times before showing install prompt
+
+**Port 8000 already in use:**
+- Close any other applications using port 8000
+- Or edit START.sh/START.bat to use a different port (advanced)
+
+**Can't access from mobile device:**
+- Make sure both devices are on the same WiFi network
+- Check your computer's firewall isn't blocking connections
+- Try using the computer's IP address directly: `http://[your-ip]:8000`
 
 ---
 
 ## ❓ Troubleshooting
 
-### macOS
-- **"App is damaged"** error:
-  - Open **Terminal**
-  - Run: `xattr -cr /Applications/Grounded.app`
-  - Try opening again
+### General Issues
 
-- **Won't open**:
-  - Go to **System Settings** → **Privacy & Security**
-  - Scroll down and click **"Open Anyway"** next to Grounded
+**App won't load:**
+- Make sure the server is running (you should see it in terminal)
+- Check that you're visiting `http://localhost:8000` (not `https://`)
+- Try refreshing the page
 
-### Windows
-- **"Windows protected your PC"** warning:
-  - Click **"More info"**
-  - Click **"Run anyway"**
+**AI models don't work:**
+- Make sure you're accessing via `http://localhost:8000` (not `file://`)
+- Check browser console (F12) for errors
+- Models are bundled in the package - they should load automatically
 
-- **Installation fails**:
-  - Right-click the installer
-  - Select **"Run as administrator"**
-  - Try again
+**App icon doesn't appear after installation:**
+- On mobile: Check your home screen - it may be on a different page
+- On desktop: Check your applications menu or Start menu
+- Try uninstalling and reinstalling the PWA
 
-### Linux
-- **"Permission denied"**:
-  - Make sure you ran `chmod +x Grounded.AppImage`
-  - Check file permissions: `ls -l Grounded.AppImage`
-
-- **Won't run**:
-  - Install required libraries:
-    ```bash
-    sudo apt-get install libfuse2  # For AppImage
-    ```
-
-### Android
-- **"Install blocked"**:
-  - Make sure "Unknown sources" is enabled
-  - Try a different file manager
-
-- **"App not installed"**:
-  - Uninstall any previous version first
-  - Make sure you have enough storage space
-
-### iOS
-- **"Untrusted Developer"**:
-  - Go to **Settings** → **General** → **VPN & Device Management**
-  - Trust the developer certificate
+**Data not saving:**
+- Make sure you're using the installed PWA (not just the browser tab)
+- Check browser storage settings (some browsers block local storage)
+- Try clearing browser cache and reinstalling
 
 ---
 
@@ -303,6 +170,8 @@ The app is now installed and ready to use.
 - No data is sent to external servers
 - All AI processing happens **on your device**
 - No account required for basic use
+- AI models included in package (no external downloads)
+- Works completely offline after first load
 
 ---
 
@@ -311,23 +180,49 @@ The app is now installed and ready to use.
 If you encounter any issues during installation:
 - Email: **ac.minds.ai@gmail.com**
 - Include your operating system and error message (if any)
+- Check the troubleshooting section above first
 
 ---
 
 ## ✅ Verification
 
 After installation, verify everything works:
-1. Open the Grounded app
+1. Open the Grounded app (from home screen/desktop icon)
 2. You should see the login/registration screen
 3. Create an account or log in
 4. Accept the terms and conditions
-5. You'll see a progress bar showing AI model download (first launch only)
-6. Once models are loaded, the app should load without errors
+5. AI models load instantly (bundled in package - no download needed!)
+6. Once models are loaded, the app should work without errors
 
 **Congratulations!** You're ready to start using Grounded. 🎉
 
 ### First Launch Notes
-- **AI Model Download**: On first launch, AI models will download automatically. This may take a few minutes depending on your internet connection. The progress bar shows download status.
-- **Subsequent Launches**: Models are cached locally, so future launches are instant.
-- **Offline Use**: Once models are downloaded, the app works completely offline.
+
+- **AI Models**: Models are bundled in the package, so they load instantly - no download wait!
+- **Offline Use**: Once loaded, the app works completely offline
 - **If Models Fail to Load**: The app will continue to work with rule-based responses. AI features will be unavailable, but core functionality remains.
+- **Updates**: The app will automatically check for updates when you're online and connected to the server
+
+---
+
+## 📱 Platform-Specific Notes
+
+### Android
+- Use Chrome or Edge for best experience
+- Install prompt appears automatically after a few seconds
+- App works offline after installation
+
+### iPhone/iPad
+- **Must use Safari** - Chrome and other browsers cannot install PWAs on iOS
+- Tap Share button → "Add to Home Screen"
+- App works offline after installation
+
+### Desktop (Windows/Mac/Linux)
+- Works in Chrome, Edge, Firefox, or Safari
+- Install icon appears in address bar
+- App opens in standalone window (no browser UI)
+- Can be pinned to taskbar/Dock
+
+---
+
+**That's it!** The PWA installation method works on all platforms and requires no technical knowledge. Just extract, double-click, and install! 🚀
