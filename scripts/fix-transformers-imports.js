@@ -51,19 +51,21 @@ let fixed = false;
 // Fix corrupted import patterns
 // Pattern: vendor-!~{007}~.js or similar corrupted patterns
 const corruptedPattern = /from\s+['"]\.\/[^'"]*!~\{[^}]+\}~[^'"]*['"]/g;
-const matches = content.match(corruptedPattern);
-
-if (matches) {
-  matches.forEach(match => {
-    // Determine which chunk this should be based on context
-    const vendorFileName = chunkMap.get('vendor');
-    if (vendorFileName && match.includes('vendor')) {
-      const fixedImport = `from './${vendorFileName}'`;
-      content = content.replace(match, fixedImport);
+let match;
+while ((match = corruptedPattern.exec(content)) !== null) {
+  const corruptedPath = match[0];
+  // Extract chunk name from corrupted path (e.g., vendor-!~{007}~.js -> vendor)
+  const chunkNameMatch = corruptedPath.match(/([a-z-]+)-!~/);
+  if (chunkNameMatch) {
+    const chunkName = chunkNameMatch[1];
+    const correctFileName = chunkMap.get(chunkName);
+    if (correctFileName) {
+      const fixedImport = `from './${correctFileName}'`;
+      content = content.replace(corruptedPath, fixedImport);
       fixed = true;
-      console.log(`✅ Fixed corrupted import: ${match.trim()} → ${fixedImport}`);
+      console.log(`✅ Fixed corrupted import: ${corruptedPath.trim()} → ${fixedImport}`);
     }
-  });
+  }
 }
 
 // Also fix any other corrupted patterns

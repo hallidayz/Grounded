@@ -35,80 +35,8 @@ const excludeModelsPlugin = (): Plugin => {
   };
 };
 
-// Plugin to prevent minification of transformers chunk
-// This fixes "Cannot access 'X' before initialization" errors
-// Approach: Store unminified code, then restore it after build with correct import paths
-const noMinifyTransformersPlugin = (): Plugin => {
-  let unminifiedCode = '';
-  let transformersFileName = '';
-  
-  return {
-    name: 'no-minify-transformers',
-    enforce: 'post',
-    renderChunk(code, chunk) {
-      // Store unminified code BEFORE minification
-      if (chunk.name === 'transformers' || 
-          chunk.moduleIds.some(id => id.includes('@xenova/transformers'))) {
-        unminifiedCode = code;
-        transformersFileName = chunk.fileName || '';
-      }
-      return null; // Let minification proceed
-    },
-    writeBundle(options, bundle) {
-      // After bundle is written, restore unminified code with fixed imports
-      if (!unminifiedCode || !transformersFileName) return;
-      
-      const distDir = options.dir || 'dist';
-      const filePath = path.join(distDir, transformersFileName);
-      
-      // Build map of chunk names to actual filenames from bundle
-      const chunkMap = new Map<string, string>();
-      for (const [fileName, chunk] of Object.entries(bundle)) {
-        if (chunk.type === 'chunk' && chunk.name) {
-          const baseName = fileName.replace(/^assets\//, '');
-          chunkMap.set(chunk.name, baseName);
-        }
-      }
-      
-      // Read the minified file to get correct import paths
-      let minifiedCode = '';
-      try {
-        minifiedCode = readFileSync(filePath, 'utf-8');
-      } catch {
-        // File might not exist, skip fix
-        return;
-      }
-      
-      // Extract correct import statements from minified code
-      const importPattern = /import\s+([^'"]+)\s+from\s+['"]\.\/([^'"]+)['"]/g;
-      const correctImports: Array<{imports: string, path: string}> = [];
-      let match;
-      while ((match = importPattern.exec(minifiedCode)) !== null) {
-        correctImports.push({ imports: match[1].trim(), path: match[2] });
-      }
-      
-      // Replace imports in unminified code with correct paths
-      let fixedCode = unminifiedCode;
-      const unminifiedImportPattern = /import\s+([^'"]+)\s+from\s+['"]\.\/[^'"]+['"]/g;
-      let importIndex = 0;
-      fixedCode = fixedCode.replace(unminifiedImportPattern, (match, imports) => {
-        if (importIndex < correctImports.length) {
-          const correct = correctImports[importIndex++];
-          return `import ${imports} from './${correct.path}'`;
-        }
-        return match;
-      });
-      
-      // Write fixed unminified code
-      try {
-        writeFileSync(filePath, fixedCode, 'utf-8');
-        console.log(`✅ Restored unminified transformers chunk: ${transformersFileName}`);
-      } catch (error) {
-        console.warn(`⚠️ Could not restore transformers chunk:`, error);
-      }
-    }
-  };
-};
+// REMOVED: noMinifyTransformersPlugin - was causing import path corruption
+// The post-build script fix-transformers-imports.js handles fixing corrupted imports
 
 
 // Read app version from package.json
@@ -168,8 +96,6 @@ export default defineConfig({
     ...(isTauriBuild ? [Tauri()] : []),
     // Exclude models from web builds (they download at runtime)
     excludeModelsPlugin(),
-    // Prevent minification of transformers to avoid initialization errors
-    noMinifyTransformersPlugin(),
     VitePWA({
       registerType: 'autoUpdate',
       includeAssets: ['favicon.ico', 'apple-touch-icon.png', 'pwa-192x192.png', 'pwa-512x512.png'],
