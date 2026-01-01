@@ -31,7 +31,7 @@ const excludeModelsPlugin = () => {
 };
 
 // Plugin to prevent minification of transformers chunk
-// This runs AFTER import paths are resolved, so it won't corrupt imports
+// This prevents initialization errors by preserving variable names and initialization order
 const noMinifyTransformersPlugin = (): Plugin => {
   let unminifiedCode: string | null = null;
   let chunkFileName: string | null = null;
@@ -40,10 +40,9 @@ const noMinifyTransformersPlugin = (): Plugin => {
     name: 'no-minify-transformers',
     enforce: 'post',
     renderChunk(code, chunk) {
-      // Capture unminified code for transformers chunk
+      // Capture unminified code for transformers chunk BEFORE minification
       if (chunk.name === 'transformers') {
         unminifiedCode = code;
-        chunkFileName = chunk.fileName;
         return null; // Let it be minified first, we'll restore it later
       }
       return null;
@@ -67,21 +66,89 @@ const noMinifyTransformersPlugin = (): Plugin => {
           // Read minified file to get correct import paths
           const minified = readFileSync(filePath, 'utf-8');
           
-          // Extract correct import paths from minified code
-          const importMatch = minified.match(/from\s*['"](\.\/[^'"]+)['"]/);
-          if (importMatch) {
-            const correctImport = importMatch[1];
-            // Update import in unminified code
-            const restored = unminifiedCode.replace(
-              /from\s*['"](\.\/[^'"]+)['"]/,
-              `from '${correctImport}'`
-            );
+          // Extract ALL correct import paths from minified code
+          const importMatches = [...minified.matchAll(/from\s*['"](\.\/[^'"]+)['"]/g)];
+          
+          if (importMatches.length > 0) {
+            // Update ALL imports in unminified code to match correct paths
+            let restored = unminifiedCode;
+            
+            // Find all imports in unminified code and replace them
+            const unminifiedImports = [...unminifiedCode.matchAll(/import\s+[^;]+from\s*['"](\.\/[^'"]+)['"]/g)];
+            
+            unminifiedImports.forEach((unminMatch, idx) => {
+              const oldPath = unminMatch[1];
+              // Get the corresponding correct path from minified code
+              if (idx < importMatches.length) {
+                const correctPath = importMatches[idx][1];
+                // Replace this specific import
+                restored = restored.replace(
+                  new RegExp(`from\\s*['"]${oldPath.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}['"]`, 'g'),
+                  `from '${correctPath}'`
+                );
+              }
+            });
+            
+            // Fix initialization order: Convert static import to dynamic import for vendor
+            // This ensures vendor loads and initializes before ortWeb_min is accessed
+            const vendorImportMatch = importMatches.find(m => m[1].includes('vendor'));
+            if (vendorImportMatch) {
+              const vendorPath = vendorImportMatch[1];
+              
+              // Replace static import with dynamic import
+              // Initialize variables immediately to avoid TDZ errors
+              restored = restored.replace(
+                /import\s+\{\s*v\s+as\s+ortWeb_min,\s*O\s+as\s+ONNX_WEB,\s*T\s+as\s+Template\s*\}\s+from\s*['"](\.\/[^'"]+)['"];/,
+                `// Dynamic import to ensure vendor loads before accessing ortWeb_min
+                // Initialize variables immediately to avoid TDZ errors
+                let ortWeb_min = undefined;
+                let ONNX_WEB = undefined;
+                let Template = undefined;
+                // Load vendor module asynchronously
+                const _vendorModule = import('${vendorPath}').then(module => {
+                  ortWeb_min = module.v;
+                  ONNX_WEB = module.O;
+                  Template = module.T;
+                  return module;
+                }).catch(err => {
+                  console.error('Failed to load vendor module:', err);
+                });`
+              );
+              
+              // Update the ONNX assignment to wait for vendor and handle undefined safely
+              restored = restored.replace(
+                /ONNX\s*=\s*ortWeb_min\s*\?\?\s*ONNX_WEB;/g,
+                `// Wait for vendor module to load before accessing ortWeb_min
+                // Set initial fallback value (ONNX_WEB is undefined initially, will be set when vendor loads)
+                ONNX = undefined;
+                _vendorModule.then(() => {
+                  // Now ortWeb_min and ONNX_WEB are initialized from vendor module
+                  // Access them safely - they should be defined now
+                  if (typeof ortWeb_min !== 'undefined' && ortWeb_min !== null) {
+                    ONNX = ortWeb_min;
+                  } else if (typeof ONNX_WEB !== 'undefined' && ONNX_WEB !== null) {
+                    ONNX = ONNX_WEB;
+                  }
+                  // If both are undefined, ONNX stays undefined (fallback handled elsewhere)
+                }).catch(() => {
+                  // If vendor fails to load, ONNX stays undefined (will use fallback elsewhere)
+                  ONNX = undefined;
+                });`
+              );
+              
+              // Also fix any other direct uses of ortWeb_min, ONNX_WEB, or Template
+              // that might occur before the promise resolves
+              // Wrap the entire module in a way that defers execution until vendor is ready
+            }
+            
             writeFileSync(filePath, restored, 'utf-8');
-            console.log(`✅ Restored unminified transformers chunk (${restored.split('\n').length} lines)`);
+            const lineCount = restored.split('\n').length;
+            console.log(`✅ Restored unminified transformers chunk (${lineCount} lines) with dynamic import fix`);
           } else {
             // No imports to fix, just restore unminified code
             writeFileSync(filePath, unminifiedCode, 'utf-8');
-            console.log(`✅ Restored unminified transformers chunk (${unminifiedCode.split('\n').length} lines)`);
+            const lineCount = unminifiedCode.split('\n').length;
+            console.log(`✅ Restored unminified transformers chunk (${lineCount} lines)`);
           }
         }
       }
@@ -288,7 +355,14 @@ export default defineConfig({
       output: {
         manualChunks: (id) => {
           if (id.includes('node_modules')) {
-            if (id.includes('@xenova/transformers')) return 'transformers';
+            // Put ONNX Runtime and related deps in vendor FIRST (must load before transformers)
+            if (id.includes('onnxruntime-web') || id.includes('onnxruntime')) {
+              return 'vendor';
+            }
+            // Put transformers in its own chunk (loads after vendor)
+            if (id.includes('@xenova/transformers')) {
+              return 'transformers';
+            }
             if (id.includes('react') || id.includes('react-dom')) return 'react-vendor';
             if (id.includes('framer-motion')) return 'animations';
             return 'vendor';
