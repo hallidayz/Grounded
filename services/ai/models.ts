@@ -558,6 +558,29 @@ export async function initializeModels(forceReload: boolean = false, modelType?:
       const modelConfig = MODEL_CONFIGS[targetModel];
       console.log(`Loading ${modelConfig.name} (${modelConfig.description})...`);
       
+      // Determine model path - use HuggingFace model ID if local path fails
+      // HuggingFace model IDs for Xenova models
+      const HUGGINGFACE_MODEL_IDS: Record<AIModelType, string> = {
+        distilbert: 'Xenova/distilbert-base-uncased-finetuned-sst-2-english',
+        tinyllama: 'Xenova/TinyLlama-1.1B-Chat-v1.0'
+      };
+      
+      // Try local path first, fallback to HuggingFace if local fails
+      let modelPath = modelConfig.path;
+      const huggingfaceModelId = HUGGINGFACE_MODEL_IDS[targetModel];
+      
+      // Check if we're in development mode (models might not be available locally)
+      const isDev = import.meta.env.DEV;
+      if (isDev) {
+        // In dev mode, prefer HuggingFace to avoid 404 errors
+        // transformers.js will download and cache models automatically
+        console.log(`[MODEL_DEBUG] Development mode detected - using HuggingFace model: ${huggingfaceModelId}`);
+        modelPath = huggingfaceModelId;
+      } else {
+        // In production, try local first, but have fallback ready
+        console.log(`[MODEL_DEBUG] Production mode - trying local path: ${modelPath}`);
+      }
+      
       // Check memory constraints - warn if low memory and trying to load large model
       const strategy = compatibilityReport?.suggestedStrategy || 'standard';
       const useLowMemory = strategy === 'low-memory' || (compatibilityReport?.estimatedMemory !== null && compatibilityReport.estimatedMemory < 2048);
@@ -566,7 +589,7 @@ export async function initializeModels(forceReload: boolean = false, modelType?:
       // For DistilBERT, use text-classification; for others, use text-generation
       try {
         console.log(`Attempting to load ${modelConfig.name} for mood tracking...`);
-        console.log(`[MODEL_DEBUG] Pipeline call: task=${modelConfig.task}, path=${modelConfig.path}`);
+        console.log(`[MODEL_DEBUG] Pipeline call: task=${modelConfig.task}, path=${modelPath}`);
         
         // Configure pipeline options - use CPU with ONNX Runtime WASM backend
         // ONNX Runtime will automatically use WASM backend for optimal performance
@@ -583,13 +606,59 @@ export async function initializeModels(forceReload: boolean = false, modelType?:
           setTimeout(() => reject(new Error('Model loading timeout after 30 seconds')), 30000);
         });
         
-        moodTrackerModel = await Promise.race([
-          pipeline(modelConfig.task, modelConfig.path, pipelineOptions),
-          modelLoadTimeout
-        ]) as any;
+        // Try loading with current path, fallback to HuggingFace if it fails
+        try {
+          moodTrackerModel = await Promise.race([
+            pipeline(modelConfig.task, modelPath, pipelineOptions),
+            modelLoadTimeout
+          ]) as any;
+        } catch (localError: any) {
+          // If local path fails and we're not already using HuggingFace, try HuggingFace
+          if (modelPath !== huggingfaceModelId && huggingfaceModelId) {
+            const errorMsg = localError?.message || String(localError);
+            const errorStack = localError?.stack || '';
+            // Check for HTML/404 errors or JSON parse errors (which indicate HTML response)
+            if (errorMsg.includes('<!DOCTYPE') || errorMsg.includes('404') || errorMsg.includes('Not Found') || 
+                errorMsg.includes('not valid JSON') || errorMsg.includes('Unexpected token')) {
+              console.warn(`[MODEL_DEBUG] Local model path failed (${errorMsg.substring(0, 50)}), falling back to HuggingFace: ${huggingfaceModelId}`);
+              modelPath = huggingfaceModelId;
+              try {
+                moodTrackerModel = await Promise.race([
+                  pipeline(modelConfig.task, modelPath, pipelineOptions),
+                  modelLoadTimeout
+                ]) as any;
+              } catch (huggingfaceError: any) {
+                // If HuggingFace also fails, check if it's a CORS issue
+                const hfErrorMsg = huggingfaceError?.message || String(huggingfaceError);
+                if (hfErrorMsg.includes('<!DOCTYPE') || hfErrorMsg.includes('not valid JSON') || hfErrorMsg.includes('CORS')) {
+                  console.error(`[MODEL_DEBUG] HuggingFace model also failed - possible CORS issue: ${hfErrorMsg.substring(0, 100)}`);
+                  console.error(`[MODEL_DEBUG] This might be a CORS configuration issue. Models will be unavailable.`);
+                }
+                throw huggingfaceError; // Re-throw to be handled by outer catch
+              }
+            } else {
+              throw localError; // Re-throw if it's not a 404/HTML error
+            }
+          } else {
+            // Already using HuggingFace - check if it's a CORS or network issue
+            const errorMsg = localError?.message || String(localError);
+            if (errorMsg.includes('<!DOCTYPE') || errorMsg.includes('not valid JSON')) {
+              console.error(`[MODEL_DEBUG] HuggingFace model failed with HTML response - possible CORS or network issue: ${errorMsg.substring(0, 100)}`);
+              console.error(`[MODEL_DEBUG] Check browser console for CORS errors. Models may be unavailable.`);
+            }
+            throw localError; // Re-throw if we're already using HuggingFace or no fallback available
+          }
+        }
         
         console.log(`[MODEL_DEBUG] Pipeline call completed successfully`);
         console.log(`✓ ${modelConfig.name} model loaded successfully for mood tracking`);
+        console.log(`[MODEL_DEBUG] Model task: ${modelConfig.task}, can be reused: ${modelConfig.task === 'text-generation'}`);
+        console.log(`[MODEL_DEBUG] moodTrackerModel is set: ${!!moodTrackerModel}, type: ${typeof moodTrackerModel}`);
+        
+        // Verify the model is actually usable before caching
+        if (!moodTrackerModel) {
+          throw new Error('Model loaded but moodTrackerModel is null');
+        }
         
         // Cache the model
         allModelsCache.set(targetModel, moodTrackerModel);
@@ -612,34 +681,54 @@ export async function initializeModels(forceReload: boolean = false, modelType?:
           lastErrorCategory = 'memory';
           console.warn('⚠️ Insufficient memory for model loading.');
         } else if (errorMsg.includes('network') || errorMsg.includes('fetch') || errorMsg.includes('Failed to fetch') || 
-                   errorMsg.includes('Unexpected token') || errorMsg.includes('<!DOCTYPE') || errorMsg.includes('not valid JSON')) {
+                   errorMsg.includes('Unexpected token') || errorMsg.includes('<!DOCTYPE') || errorMsg.includes('not valid JSON') ||
+                   errorMsg.includes('CORS') || errorMsg.includes('Cross-Origin')) {
           lastErrorCategory = 'network';
-          console.warn('⚠️ Network/CORS error during model loading. The model may not be accessible from HuggingFace.');
-          console.warn('⚠️ This could be due to CORS restrictions or network connectivity issues.');
-          console.warn('⚠️ Try checking your network connection or using a different model.');
+          console.warn('⚠️ Network/CORS error during model loading.');
+          console.warn('⚠️ The model may not be accessible due to CORS restrictions or network issues.');
+          console.warn('⚠️ This is common in development mode. Models will retry in the background.');
+          console.warn('⚠️ The app will continue using rule-based responses (fully functional).');
         } else {
           lastErrorCategory = 'unknown';
           console.warn('⚠️ Model loading failed for unknown reason.');
         }
         
-        console.warn('The app will continue using rule-based responses. AI features will not be available.');
+        console.warn('ℹ️ The app will continue using rule-based responses. AI features will not be available until models load.');
+        console.warn('ℹ️ Models will continue retrying in the background.');
         moodTrackerModel = null;
       }
 
       // Model B: Counseling coach - Use same model if it's text-generation, otherwise load TinyLlama
       console.log('Loading counseling coach model...');
       
-      // Check if moodTrackerModel is a text-generation model we can reuse
+      // Check if we can reuse the mood tracker model for counseling
+      // If the model is text-generation type, we can reuse it for both tasks
       let canReuseModel = false;
-      if (moodTrackerModel) {
-        try {
-          const modelTask = (moodTrackerModel as any).task;
-          if (modelTask === 'text-generation') {
-            canReuseModel = true;
-            console.log(`✓ Reusing ${modelConfig.name} for counseling (text-generation model)`);
-          }
-        } catch {
-          canReuseModel = false;
+      console.log(`[MODEL_DEBUG] Checking model reuse: moodTrackerModel=${!!moodTrackerModel}, modelConfig.task=${modelConfig.task}, targetModel=${targetModel}`);
+      
+      // For text-generation models, we can always reuse the same model instance
+      // Check both the modelConfig.task and verify moodTrackerModel exists
+      // Also check if the model is in cache (in case it was loaded in a previous attempt)
+      const cachedModel = allModelsCache.get(targetModel);
+      const modelToReuse = moodTrackerModel || cachedModel;
+      
+      if (modelToReuse && modelConfig.task === 'text-generation') {
+        canReuseModel = true;
+        // Use the model from cache if moodTrackerModel is null
+        if (!moodTrackerModel && cachedModel) {
+          moodTrackerModel = cachedModel;
+          console.log(`[MODEL_DEBUG] Using cached model for mood tracking`);
+        }
+        counselingCoachModel = moodTrackerModel;
+        console.log(`✓ Reusing ${modelConfig.name} for counseling (text-generation model)`);
+        console.log(`[MODEL_DEBUG] Model reuse check passed - will reuse moodTrackerModel for counseling`);
+      } else {
+        console.log(`[MODEL_DEBUG] Model reuse check failed: moodTrackerModel=${!!moodTrackerModel}, cachedModel=${!!cachedModel}, task=${modelConfig.task}`);
+        // If moodTrackerModel exists but task check failed, log why
+        if (modelToReuse && modelConfig.task !== 'text-generation') {
+          console.log(`[MODEL_DEBUG] Cannot reuse: model is ${modelConfig.task}, need text-generation for counseling`);
+        } else if (!modelToReuse) {
+          console.log(`[MODEL_DEBUG] Cannot reuse: moodTrackerModel is null and no cached model`);
         }
       }
       
@@ -657,6 +746,17 @@ export async function initializeModels(forceReload: boolean = false, modelType?:
           try {
             console.log(`Attempting to load ${counselingConfig.name} for counseling...`);
             
+            // Determine model path for counseling - use HuggingFace in dev, local in prod
+            let counselingModelPath = counselingConfig.path;
+            const counselingHuggingfaceId = HUGGINGFACE_MODEL_IDS[counselingModelType];
+            
+            if (isDev) {
+              console.log(`[MODEL_DEBUG] Development mode - using HuggingFace for counseling: ${counselingHuggingfaceId}`);
+              counselingModelPath = counselingHuggingfaceId;
+            } else {
+              console.log(`[MODEL_DEBUG] Production mode - trying local path for counseling: ${counselingModelPath}`);
+            }
+            
             // Configure pipeline options - use CPU with ONNX Runtime WASM backend
             // ONNX Runtime will automatically use WASM backend for optimal performance
             const counselingOptions: any = {
@@ -672,10 +772,30 @@ export async function initializeModels(forceReload: boolean = false, modelType?:
               setTimeout(() => reject(new Error('Counseling model loading timeout after 30 seconds')), 30000);
             });
             
-            counselingCoachModel = await Promise.race([
-              pipeline('text-generation', counselingConfig.path, counselingOptions),
-              counselingLoadTimeout
-            ]) as any;
+            // Try loading with current path, fallback to HuggingFace if it fails
+            try {
+              counselingCoachModel = await Promise.race([
+                pipeline('text-generation', counselingModelPath, counselingOptions),
+                counselingLoadTimeout
+              ]) as any;
+            } catch (localError: any) {
+              // If local path fails and we're not already using HuggingFace, try HuggingFace
+              if (counselingModelPath !== counselingHuggingfaceId && counselingHuggingfaceId) {
+                const errorMsg = localError?.message || String(localError);
+                if (errorMsg.includes('<!DOCTYPE') || errorMsg.includes('404') || errorMsg.includes('Not Found') || errorMsg.includes('not valid JSON')) {
+                  console.warn(`[MODEL_DEBUG] Local counseling model path failed (${errorMsg.substring(0, 50)}), falling back to HuggingFace: ${counselingHuggingfaceId}`);
+                  counselingModelPath = counselingHuggingfaceId;
+                  counselingCoachModel = await Promise.race([
+                    pipeline('text-generation', counselingModelPath, counselingOptions),
+                    counselingLoadTimeout
+                  ]) as any;
+                } else {
+                  throw localError; // Re-throw if it's not a 404/HTML error
+                }
+              } else {
+                throw localError; // Re-throw if we're already using HuggingFace or no fallback available
+              }
+            }
             
             console.log(`✓ ${counselingConfig.name} loaded successfully for counseling`);
             
@@ -695,15 +815,20 @@ export async function initializeModels(forceReload: boolean = false, modelType?:
             if (counselingMsg.includes('memory') || counselingMsg.includes('OOM') || counselingMsg.includes('out of memory')) {
               lastErrorCategory = 'memory';
               console.warn('⚠️ Insufficient memory for counseling model loading.');
-            } else if (counselingMsg.includes('network') || counselingMsg.includes('fetch') || counselingMsg.includes('Failed to fetch')) {
+            } else if (counselingMsg.includes('network') || counselingMsg.includes('fetch') || counselingMsg.includes('Failed to fetch') ||
+                       counselingMsg.includes('Unexpected token') || counselingMsg.includes('<!DOCTYPE') || counselingMsg.includes('not valid JSON') ||
+                       counselingMsg.includes('CORS') || counselingMsg.includes('Cross-Origin')) {
               lastErrorCategory = 'network';
-              console.warn('⚠️ Network error during counseling model loading.');
+              console.warn('⚠️ Network/CORS error during counseling model loading.');
+              console.warn('⚠️ This is common in development mode. Models will retry in the background.');
+              console.warn('⚠️ The app will continue using rule-based responses (fully functional).');
             } else {
               lastErrorCategory = 'unknown';
               console.warn('⚠️ Counseling model loading failed for unknown reason.');
             }
             
-            console.warn('The app will continue using rule-based responses. AI features will not be available.');
+            console.warn('ℹ️ The app will continue using rule-based responses. AI features will not be available until models load.');
+            console.warn('ℹ️ Models will continue retrying in the background.');
             counselingCoachModel = null;
           }
         }

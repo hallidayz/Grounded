@@ -50,12 +50,13 @@ export function useModelInstallationStatus() {
       }
     });
 
-    // Poll model download progress every 30 seconds
+    // Poll model download progress every 2 seconds for real-time updates
     // This ensures we get accurate progress even if progress updates are missed
     const checkInterval = setInterval(() => {
       const downloadProgress = getModelDownloadProgress();
       const modelsLoaded = areModelsLoaded();
       const isLoading = getIsModelLoading();
+      const currentProgress = getCurrentProgress();
       
       if (modelsLoaded || downloadProgress.status === 'complete') {
         setStatus('complete');
@@ -63,8 +64,13 @@ export function useModelInstallationStatus() {
         setLabel('Complete');
       } else if (isLoading || downloadProgress.status === 'downloading') {
         setStatus('in-progress');
-        setProgress(downloadProgress.progress);
-        setLabel(downloadProgress.label || 'In Progress');
+        // Use the highest progress value available
+        const progressValue = Math.max(
+          downloadProgress.progress || 0,
+          currentProgress.progress || 0
+        );
+        setProgress(progressValue);
+        setLabel(downloadProgress.label || currentProgress.label || 'Loading...');
       } else if (downloadProgress.status === 'error') {
         setStatus('error');
         setProgress(downloadProgress.progress);
@@ -72,10 +78,10 @@ export function useModelInstallationStatus() {
       } else if (downloadProgress.status === 'idle' && isLoading) {
         // Models are loading but no progress yet - show in progress
         setStatus('in-progress');
-        setProgress(0);
-        setLabel('Starting download...');
+        setProgress(currentProgress.progress || 0);
+        setLabel(currentProgress.label || 'Starting download...');
       }
-    }, 30000); // Update every 30 seconds
+    }, 2000); // Update every 2 seconds for real-time progress
 
     return () => {
       unsubscribe();
@@ -84,5 +90,17 @@ export function useModelInstallationStatus() {
   }, [status]);
 
   return { status, progress, label };
+}
+
+/**
+ * Get formatted progress text with percentage
+ */
+export function getProgressText(progress: number, label: string): string {
+  if (progress > 0 && progress < 100) {
+    return `${label} (${progress}%)`;
+  } else if (progress === 100) {
+    return 'Complete';
+  }
+  return label;
 }
 

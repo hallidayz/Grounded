@@ -197,7 +197,7 @@ const App: React.FC = () => {
   }
   
   const auth = useAuth();
-  const { status: installationStatus, label: installationLabel } = useModelInstallationStatus();
+  const { status: installationStatus, label: installationLabel, progress: installationProgress } = useModelInstallationStatus();
 
   // Initialize database and check auth state
   useEffect(() => {
@@ -1259,14 +1259,19 @@ const App: React.FC = () => {
             />
             <span className="font-bold text-base sm:text-lg tracking-tight text-text-primary dark:text-white hidden sm:inline">Grounded</span>
             {/* Installation Status Indicator */}
-            {installationStatus !== 'idle' && installationStatus !== 'complete' && (
-              <span className="text-xs font-medium px-2 py-0.5 rounded-full bg-yellow-warm/20 dark:bg-yellow-warm/30 text-yellow-warm dark:text-yellow-warm border border-yellow-warm/30">
-                Installation: {installationLabel}
+            {installationStatus === 'in-progress' && (
+              <span className="text-xs font-medium px-2 py-0.5 rounded-full bg-green-500/20 dark:bg-green-500/30 text-green-600 dark:text-green-400 border border-green-500/30">
+                Installation: {installationProgress > 0 ? `${installationProgress}%` : installationLabel}
               </span>
             )}
             {installationStatus === 'complete' && (
               <span className="text-xs font-medium px-2 py-0.5 rounded-full bg-green-500/20 dark:bg-green-500/30 text-green-600 dark:text-green-400 border border-green-500/30">
                 Installation: Complete
+              </span>
+            )}
+            {installationStatus === 'error' && (
+              <span className="text-xs font-medium px-2 py-0.5 rounded-full bg-yellow-warm/20 dark:bg-yellow-warm/30 text-yellow-warm dark:text-yellow-warm border border-yellow-warm/30">
+                Installation: {installationLabel}
               </span>
             )}
           </div>
