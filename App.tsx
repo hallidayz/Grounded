@@ -34,6 +34,7 @@ import { subscribeToProgress, setModelLoadingProgress, setProgressSuccess, setPr
 import ProgressBar from './components/ProgressBar';
 import { initializeShortcuts } from './utils/createShortcut';
 import { ensureServiceWorkerActive, listenForServiceWorkerUpdates } from './utils/serviceWorker';
+import { useModelInstallationStatus } from './hooks/useModelInstallationStatus';
 
 // Module-level guard to prevent multiple initializations (persists across remounts)
 // Use sessionStorage to persist across page reloads/remounts
@@ -196,6 +197,7 @@ const App: React.FC = () => {
   }
   
   const auth = useAuth();
+  const { status: installationStatus, label: installationLabel } = useModelInstallationStatus();
 
   // Initialize database and check auth state
   useEffect(() => {
@@ -351,10 +353,14 @@ const App: React.FC = () => {
         console.log('[INIT] Progress updated to 30%');
         
         // Ensure service worker is active (for PWA, offline, and AI model caching)
-        // Completely non-blocking - fire and forget (non-critical)
-        ensureServiceWorkerActive().catch(() => {
-          // Silently fail - service worker is non-critical
-        });
+        // Wait for service worker to be active before starting model loading
+        const swActive = await ensureServiceWorkerActive().catch(() => false);
+        
+        if (swActive) {
+          console.log('✅ Service Worker is active - starting background model loading');
+        } else {
+          console.log('⚠️ Service Worker not active - starting model loading anyway');
+        }
         
         // Listen for service worker updates
         try {
@@ -489,20 +495,31 @@ const App: React.FC = () => {
         // Update progress: Checking authentication
         setModelLoadingProgress(60, 'Checking authentication...', '');
         
-        // Start AI model download immediately in background - don't wait for anything
-        // This ensures models are downloading while user is reading terms/login
-        // Service worker will cache models for offline use
-        // On updates, models will be reloaded if needed (cached models are preserved)
-        const modelLoadPromise = preloadModels().then((loaded) => {
-          if (loaded) {
-            console.log('✅ AI models loaded successfully - AI features enabled');
-          } else {
-            console.warn('⚠️ AI models not loaded - using rule-based responses');
-          }
-        }).catch((error) => {
-          // Models will retry later, but log the error for debugging
-          console.warn('AI model preload failed, will retry later:', error);
-        });
+        // Start AI model download in background AFTER service worker is ready
+        // This ensures models can be cached by service worker
+        // Don't block app initialization - allow user to create account immediately
+        setModelLoadingProgress(40, 'Preparing AI models...', '');
+        const modelLoadPromise = (async () => {
+          // Small delay to ensure service worker is fully ready
+          await new Promise(resolve => setTimeout(resolve, 500));
+          
+          return preloadModels().then((loaded) => {
+            if (loaded) {
+              console.log('✅ AI models loaded successfully - AI features enabled');
+              setProgressSuccess('AI models ready', 'AI features are now available');
+            } else {
+              console.warn('⚠️ AI models not loaded - using rule-based responses');
+              setProgressError('AI models unavailable', 'App uses rule-based responses (fully functional)');
+            }
+          }).catch((error) => {
+            // Models will retry later, but log the error for debugging
+            console.warn('AI model preload failed, will retry later:', error);
+            setProgressError('Model loading failed', 'Will retry in background');
+          });
+        })();
+        
+        // Don't await - let it run in background
+        // User can create account and use app while models load
         
         // Cleanup expired tokens on startup
         dbService.cleanupExpiredTokens().catch(console.error);
@@ -1251,6 +1268,17 @@ const App: React.FC = () => {
               className="w-7 h-7 object-contain"
             />
             <span className="font-bold text-base sm:text-lg tracking-tight text-text-primary dark:text-white hidden sm:inline">Grounded</span>
+            {/* Installation Status Indicator */}
+            {installationStatus !== 'idle' && installationStatus !== 'complete' && (
+              <span className="text-xs font-medium px-2 py-0.5 rounded-full bg-yellow-warm/20 dark:bg-yellow-warm/30 text-yellow-warm dark:text-yellow-warm border border-yellow-warm/30">
+                Installation: {installationLabel}
+              </span>
+            )}
+            {installationStatus === 'complete' && (
+              <span className="text-xs font-medium px-2 py-0.5 rounded-full bg-green-500/20 dark:bg-green-500/30 text-green-600 dark:text-green-400 border border-green-500/30">
+                Installation: Complete
+              </span>
+            )}
           </div>
           <div className="flex items-center space-x-1.5 sm:space-x-2">
             {/* Top navigation kept for desktop, bottom nav for mobile */}
