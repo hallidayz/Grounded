@@ -49,7 +49,7 @@ rootElement.innerHTML = `
   <div style="min-height: 100vh; display: flex; align-items: center; justify-content: center; background-color: #f6f7f9; font-family: 'Inter', sans-serif;">
     <div style="text-align: center;">
       <img src="/ac-minds-logo.png" alt="AC MINDS" style="width: 80px; height: 80px; margin: 0 auto 24px; object-fit: contain;" onerror="this.style.display='none'" />
-      <h2 style="font-size: 20px; font-weight: 900; color: #000; margin-bottom: 16px;">Initializing...</h2>
+      <h2 style="font-size: 20px; font-weight: 900; color: #000; margin-bottom: 16px;">Loading...</h2>
       <div style="width: 200px; height: 4px; background-color: #e5e7eb; border-radius: 2px; margin: 0 auto; overflow: hidden;">
         <div style="width: 30%; height: 100%; background-color: #02295b; animation: pulse 1.5s ease-in-out infinite;"></div>
       </div>
