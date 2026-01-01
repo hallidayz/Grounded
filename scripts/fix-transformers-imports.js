@@ -50,49 +50,94 @@ let fixed = false;
 
 // Fix corrupted import patterns
 // Pattern: vendor-!~{007}~.js or similar corrupted patterns
-// Handle both minified (no spaces) and unminified versions
-const corruptedPatterns = [
-  /from\s+['"]\.\/[^'"]*!~\{[^}]+\}~[^'"]*['"]/g,  // with spaces: from './vendor-!~{007}~.js'
-  /from['"]\.\/[^'"]*!~\{[^}]+\}~[^'"]*['"]/g,    // minified: from'./vendor-!~{007}~.js'
-  /from\s*['"]\.\/[^'"]*!~\{[^}]+\}~[^'"]*['"]/g, // flexible spaces
-];
+// The corrupted pattern appears as: from './vendor-!~{007}~.js'
+console.log('🔍 Searching for corrupted import patterns...\n');
+console.log(`📄 Checking file: ${transformersFile}`);
+console.log(`📦 Found ${chunkMap.size} chunk types: ${Array.from(chunkMap.keys()).join(', ')}\n`);
 
-for (const corruptedPattern of corruptedPatterns) {
-  let match;
-  while ((match = corruptedPattern.exec(content)) !== null) {
-    const corruptedPath = match[0];
+// Debug: Check if corrupted pattern exists at all
+const debugPattern = /!~\{[^}]+\}~/;
+if (debugPattern.test(content)) {
+  console.log('⚠️  Found corrupted pattern marker (!~{...}~) in file');
+  // Show a sample of where it appears
+  const sampleMatch = content.match(/from\s*['"]\.\/[^'"]*!~\{[^}]+\}~[^'"]*['"]/);
+  if (sampleMatch) {
+    console.log(`   Sample match: ${sampleMatch[0].substring(0, 80)}...`);
+  }
+} else {
+  console.log('✅ No corrupted pattern markers found');
+}
+console.log('');
+
+// First, try to find and fix all corrupted patterns using a more comprehensive approach
+chunkMap.forEach((fileName, chunkName) => {
+  // Pattern 1: from './chunkname-!~{hash}~.js' (with space and single quote)
+  const pattern1 = new RegExp(`from\\s+['"]\\./${chunkName}-!~\\{[^}]+\\}~[^'"]*\\.js['"]`, 'g');
+  // Pattern 2: from'./chunkname-!~{hash}~.js' (minified, no space)
+  const pattern2 = new RegExp(`from['"]\\./${chunkName}-!~\\{[^}]+\\}~[^'"]*\\.js['"]`, 'g');
+  // Pattern 3: from "./chunkname-!~{hash}~.js" (with double quote)
+  const pattern3 = new RegExp(`from\\s+["']\\./${chunkName}-!~\\{[^}]+\\}~[^"']*\\.js["']`, 'g');
+  // Pattern 4: More flexible - any from statement with corrupted path
+  const pattern4 = new RegExp(`from\\s*['"]\\./${chunkName}-!~\\{[^}]+\\}~[^'"]*\\.js['"]`, 'g');
+  
+  const patterns = [
+    { regex: pattern1, name: 'pattern1 (space + single quote)' },
+    { regex: pattern2, name: 'pattern2 (minified)' },
+    { regex: pattern3, name: 'pattern3 (double quote)' },
+    { regex: pattern4, name: 'pattern4 (flexible)' }
+  ];
+  
+  patterns.forEach(({ regex, name }) => {
+    // Use matchAll for better matching
+    const matches = [...content.matchAll(regex)];
+    if (matches.length > 0) {
+      matches.forEach(match => {
+        const fullMatch = match[0];
+        // Determine if original had spaces
+        const hasSpaces = fullMatch.includes(' from ');
+        const quoteChar = fullMatch.match(/['"]/)?.[0] || "'";
+        const fixedImport = hasSpaces 
+          ? `from ${quoteChar}./${fileName}${quoteChar}`
+          : `from${quoteChar}./${fileName}${quoteChar}`;
+        content = content.replace(fullMatch, fixedImport);
+        fixed = true;
+        console.log(`✅ Fixed corrupted import (${name}): ${fullMatch.trim()} → ${fixedImport}`);
+      });
+    }
+  });
+});
+
+// Also search for any remaining corrupted patterns more broadly
+// This catches any pattern we might have missed
+const broadPattern = /from\s*['"]\.\/[^'"]*!~\{[^}]+\}~[^'"]*\.js['"]/g;
+const allMatches = [...content.matchAll(broadPattern)];
+if (allMatches.length > 0) {
+  console.log(`🔍 Found ${allMatches.length} corrupted import(s) via broad search\n`);
+  allMatches.forEach(match => {
+    const fullMatch = match[0];
     // Extract chunk name from corrupted path (e.g., vendor-!~{007}~.js -> vendor)
-    const chunkNameMatch = corruptedPath.match(/([a-z-]+)-!~/);
+    const chunkNameMatch = fullMatch.match(/([a-z-]+)-!~/);
     if (chunkNameMatch) {
       const chunkName = chunkNameMatch[1];
       const correctFileName = chunkMap.get(chunkName);
       if (correctFileName) {
-        // Preserve the original format (with or without spaces)
-        const hasSpaces = corruptedPath.includes(' from ');
+        const hasSpaces = fullMatch.includes(' from ');
+        const quoteChar = fullMatch.match(/['"]/)?.[0] || "'";
         const fixedImport = hasSpaces 
-          ? `from './${correctFileName}'`
-          : `from'./${correctFileName}'`;
-        content = content.replace(corruptedPath, fixedImport);
+          ? `from ${quoteChar}./${correctFileName}${quoteChar}`
+          : `from${quoteChar}./${correctFileName}${quoteChar}`;
+        content = content.replace(fullMatch, fixedImport);
         fixed = true;
-        console.log(`✅ Fixed corrupted import: ${corruptedPath.trim()} → ${fixedImport}`);
-        // Reset regex lastIndex to avoid issues
-        corruptedPattern.lastIndex = 0;
-        break; // Move to next pattern after fixing
+        console.log(`✅ Fixed corrupted import (broad search): ${fullMatch.trim()} → ${fixedImport}`);
+      } else {
+        console.log(`⚠️  Found corrupted import but couldn't resolve chunk name "${chunkName}": ${fullMatch.trim()}`);
+        console.log(`   Available chunks: ${Array.from(chunkMap.keys()).join(', ')}`);
       }
+    } else {
+      console.log(`⚠️  Found corrupted import but couldn't extract chunk name: ${fullMatch.trim()}`);
     }
-  }
+  });
 }
-
-// Also fix any other corrupted patterns
-chunkMap.forEach((fileName, chunkName) => {
-  // Pattern: chunkname-!~{hash}~.js
-  const pattern = new RegExp(`['"]\\./[^'"]*${chunkName}-!~\\{[^}]+\\}~[^'"]*['"]`, 'g');
-  if (pattern.test(content)) {
-    content = content.replace(pattern, `'./${fileName}'`);
-    fixed = true;
-    console.log(`✅ Fixed ${chunkName} import path`);
-  }
-});
 
 if (fixed) {
   fs.writeFileSync(transformersPath, content, 'utf-8');
