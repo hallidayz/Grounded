@@ -37,47 +37,52 @@ chunkFiles.forEach(file => {
   }
 });
 
-// Find transformers chunk
+// Find transformers chunk - also check all JS files for corrupted imports
 const transformersFile = chunkFiles.find(file => file.includes('transformers'));
 if (!transformersFile) {
   console.log('⚠️  Transformers chunk not found. Skipping fix.');
   process.exit(0);
 }
 
-const transformersPath = path.join(assetsDir, transformersFile);
-let content = fs.readFileSync(transformersPath, 'utf-8');
-let fixed = false;
+// Check ALL JS files for corrupted imports, not just transformers
+const filesToCheck = chunkFiles.filter(file => file.endsWith('.js'));
+console.log(`📋 Checking ${filesToCheck.length} JavaScript files for corrupted imports...\n`);
 
-// Fix corrupted import patterns
-// Pattern: vendor-!~{007}~.js or similar corrupted patterns
-// The corrupted pattern appears as: from './vendor-!~{007}~.js'
-console.log('🔍 Searching for corrupted import patterns...\n');
-console.log(`📄 Checking file: ${transformersFile}`);
-console.log(`📦 Found ${chunkMap.size} chunk types: ${Array.from(chunkMap.keys()).join(', ')}\n`);
+let totalFixed = 0;
 
-// Debug: Check if corrupted pattern exists at all
-const debugPattern = /!~\{[^}]+\}~/;
-if (debugPattern.test(content)) {
-  console.log('⚠️  Found corrupted pattern marker (!~{...}~) in file');
-  // Show a sample of where it appears
-  const sampleMatch = content.match(/from\s*['"]\.\/[^'"]*!~\{[^}]+\}~[^'"]*['"]/);
-  if (sampleMatch) {
-    console.log(`   Sample match: ${sampleMatch[0].substring(0, 80)}...`);
+// Process each file
+filesToCheck.forEach(file => {
+  const filePath = path.join(assetsDir, file);
+  let content = fs.readFileSync(filePath, 'utf-8');
+  let fileFixed = false;
+  
+  console.log(`📄 Checking: ${file}`);
+  
+  // Debug: Check if corrupted pattern exists at all
+  const debugPattern = /!~\{[^}]+\}~/;
+  const hasCorruption = debugPattern.test(content);
+  
+  if (hasCorruption) {
+    console.log(`   ⚠️  Found corrupted pattern marker (!~{...}~) in ${file}`);
+    // Show a sample of where it appears
+    const sampleMatches = content.match(/from\s*['"]\.\/[^'"]*!~\{[^}]+\}~[^'"]*['"]/g);
+    if (sampleMatches && sampleMatches.length > 0) {
+      console.log(`   Found ${sampleMatches.length} corrupted import(s):`);
+      sampleMatches.slice(0, 3).forEach((match, idx) => {
+        console.log(`     ${idx + 1}. ${match.substring(0, 100)}${match.length > 100 ? '...' : ''}`);
+      });
+    }
   }
-} else {
-  console.log('✅ No corrupted pattern markers found');
-}
-console.log('');
 
-// First, try to find and fix all corrupted patterns using a more comprehensive approach
-chunkMap.forEach((fileName, chunkName) => {
-  // Pattern 1: from './chunkname-!~{hash}~.js' (with space and single quote)
-  const pattern1 = new RegExp(`from\\s+['"]\\./${chunkName}-!~\\{[^}]+\\}~[^'"]*\\.js['"]`, 'g');
+  // First, try to find and fix all corrupted patterns using a more comprehensive approach
+  chunkMap.forEach((fileName, chunkName) => {
+  // Pattern 1: from './chunkname-!~{hash}~.js' (with space and single quote) - EXACT MATCH
+  const pattern1 = new RegExp(`from\\s+['"]\\./${chunkName}-!~\\{[^}]+\\}~\\.js['"]`, 'g');
   // Pattern 2: from'./chunkname-!~{hash}~.js' (minified, no space)
-  const pattern2 = new RegExp(`from['"]\\./${chunkName}-!~\\{[^}]+\\}~[^'"]*\\.js['"]`, 'g');
+  const pattern2 = new RegExp(`from['"]\\./${chunkName}-!~\\{[^}]+\\}~\\.js['"]`, 'g');
   // Pattern 3: from "./chunkname-!~{hash}~.js" (with double quote)
-  const pattern3 = new RegExp(`from\\s+["']\\./${chunkName}-!~\\{[^}]+\\}~[^"']*\\.js["']`, 'g');
-  // Pattern 4: More flexible - any from statement with corrupted path
+  const pattern3 = new RegExp(`from\\s+["']\\./${chunkName}-!~\\{[^}]+\\}~\\.js["']`, 'g');
+  // Pattern 4: More flexible - any from statement with corrupted path (allows extra chars)
   const pattern4 = new RegExp(`from\\s*['"]\\./${chunkName}-!~\\{[^}]+\\}~[^'"]*\\.js['"]`, 'g');
   
   const patterns = [
@@ -100,8 +105,8 @@ chunkMap.forEach((fileName, chunkName) => {
           ? `from ${quoteChar}./${fileName}${quoteChar}`
           : `from${quoteChar}./${fileName}${quoteChar}`;
         content = content.replace(fullMatch, fixedImport);
-        fixed = true;
-        console.log(`✅ Fixed corrupted import (${name}): ${fullMatch.trim()} → ${fixedImport}`);
+        fileFixed = true;
+        console.log(`   ✅ Fixed corrupted import (${name}): ${fullMatch.trim()} → ${fixedImport}`);
       });
     }
   });
@@ -127,8 +132,8 @@ if (allMatches.length > 0) {
           ? `from ${quoteChar}./${correctFileName}${quoteChar}`
           : `from${quoteChar}./${correctFileName}${quoteChar}`;
         content = content.replace(fullMatch, fixedImport);
-        fixed = true;
-        console.log(`✅ Fixed corrupted import (broad search): ${fullMatch.trim()} → ${fixedImport}`);
+        fileFixed = true;
+        console.log(`   ✅ Fixed corrupted import (broad search): ${fullMatch.trim()} → ${fixedImport}`);
       } else {
         console.log(`⚠️  Found corrupted import but couldn't resolve chunk name "${chunkName}": ${fullMatch.trim()}`);
         console.log(`   Available chunks: ${Array.from(chunkMap.keys()).join(', ')}`);
@@ -139,11 +144,21 @@ if (allMatches.length > 0) {
   });
 }
 
-if (fixed) {
-  fs.writeFileSync(transformersPath, content, 'utf-8');
-  console.log(`\n✅ Fixed transformers chunk: ${transformersFile}`);
+  if (fileFixed) {
+    fs.writeFileSync(filePath, content, 'utf-8');
+    totalFixed++;
+    console.log(`   ✅ Fixed ${file}\n`);
+  } else if (hasCorruption) {
+    console.log(`   ⚠️  Found corruption markers but couldn't fix ${file}\n`);
+  } else {
+    console.log(`   ✅ No corrupted imports in ${file}\n`);
+  }
+});
+
+if (totalFixed > 0) {
+  console.log(`\n✅ Fixed corrupted imports in ${totalFixed} file(s)`);
 } else {
-  console.log('✅ No corrupted imports found. Transformers chunk is already correct.');
+  console.log('\n✅ No corrupted imports found in any files.');
 }
 
 console.log('');
