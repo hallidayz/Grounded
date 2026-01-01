@@ -1,9 +1,9 @@
 import path from 'path';
-import { defineConfig } from 'vite';
+import { defineConfig, Plugin } from 'vite';
 import react from '@vitejs/plugin-react';
 import { VitePWA } from 'vite-plugin-pwa';
 import Tauri from 'vite-plugin-tauri';
-import { readFileSync, rmSync } from 'fs';
+import { readFileSync, rmSync, writeFileSync, existsSync } from 'fs';
 
 // Only load Tauri plugin when building for Tauri
 const isTauriBuild = process.env.TAURI_PLATFORM !== undefined;
@@ -25,6 +25,65 @@ const excludeModelsPlugin = () => {
         }
       } else if (process.env.INCLUDE_MODELS === 'true') {
         console.log('✅ Models included in build output (for packaged distribution)');
+      }
+    }
+  };
+};
+
+// Plugin to prevent minification of transformers chunk
+// This runs AFTER import paths are resolved, so it won't corrupt imports
+const noMinifyTransformersPlugin = (): Plugin => {
+  let unminifiedCode: string | null = null;
+  let chunkFileName: string | null = null;
+  
+  return {
+    name: 'no-minify-transformers',
+    enforce: 'post',
+    renderChunk(code, chunk) {
+      // Capture unminified code for transformers chunk
+      if (chunk.name === 'transformers') {
+        unminifiedCode = code;
+        chunkFileName = chunk.fileName;
+        return null; // Let it be minified first, we'll restore it later
+      }
+      return null;
+    },
+    generateBundle(options, bundle) {
+      // Get the actual filename after minification
+      for (const [fileName, chunk] of Object.entries(bundle)) {
+        if (chunk.type === 'chunk' && chunk.name === 'transformers') {
+          chunkFileName = fileName;
+          break;
+        }
+      }
+    },
+    writeBundle(options) {
+      // After files are written, replace minified transformers chunk with unminified version
+      if (unminifiedCode && chunkFileName) {
+        const distDir = options.dir || path.resolve(__dirname, 'dist');
+        const filePath = path.join(distDir, chunkFileName);
+        
+        if (existsSync(filePath)) {
+          // Read minified file to get correct import paths
+          const minified = readFileSync(filePath, 'utf-8');
+          
+          // Extract correct import paths from minified code
+          const importMatch = minified.match(/from\s*['"](\.\/[^'"]+)['"]/);
+          if (importMatch) {
+            const correctImport = importMatch[1];
+            // Update import in unminified code
+            const restored = unminifiedCode.replace(
+              /from\s*['"](\.\/[^'"]+)['"]/,
+              `from '${correctImport}'`
+            );
+            writeFileSync(filePath, restored, 'utf-8');
+            console.log(`✅ Restored unminified transformers chunk (${restored.split('\n').length} lines)`);
+          } else {
+            // No imports to fix, just restore unminified code
+            writeFileSync(filePath, unminifiedCode, 'utf-8');
+            console.log(`✅ Restored unminified transformers chunk (${unminifiedCode.split('\n').length} lines)`);
+          }
+        }
       }
     }
   };
@@ -74,6 +133,8 @@ export default defineConfig({
     react(),
     ...(isTauriBuild ? [Tauri()] : []),
     excludeModelsPlugin(),
+    // Prevent minification of transformers chunk to avoid initialization errors
+    noMinifyTransformersPlugin(),
     VitePWA({
       registerType: 'autoUpdate',
       includeAssets: ['favicon.ico', 'apple-touch-icon.png', 'pwa-192x192.png', 'pwa-512x512.png'],
