@@ -58,15 +58,29 @@ filesToCheck.forEach(file => {
   
   console.log(`📄 Checking: ${file}`);
   
-  // Debug: Check if corrupted pattern exists at all
-  const debugPattern = /!~\{[^}]+\}~/;
-  const hasCorruption = debugPattern.test(content);
+  // Debug: Check if corrupted pattern exists at all - USE MULTIPLE PATTERNS
+  const debugPattern1 = /!~\{[^}]+\}~/;
+  const debugPattern2 = /vendor-!~/;
+  const hasCorruption = debugPattern1.test(content) || debugPattern2.test(content);
   
   if (hasCorruption) {
-    console.log(`   ⚠️  Found corrupted pattern marker (!~{...}~) in ${file}`);
-    // Show a sample of where it appears
-    const sampleMatches = content.match(/from\s*['"]\.\/[^'"]*!~\{[^}]+\}~[^'"]*['"]/g);
-    if (sampleMatches && sampleMatches.length > 0) {
+    console.log(`   ⚠️  Found corrupted pattern marker in ${file}`);
+    // Show a sample of where it appears - try multiple patterns
+    let sampleMatches = content.match(/from\s*['"]\.\/[^'"]*!~\{[^}]+\}~[^'"]*['"]/g);
+    if (!sampleMatches || sampleMatches.length === 0) {
+      // Try without the 'from' requirement
+      sampleMatches = content.match(/['"]\.\/[^'"]*!~\{[^}]+\}~[^'"]*['"]/g);
+    }
+    if (!sampleMatches || sampleMatches.length === 0) {
+      // Try even simpler - just find the corruption marker with context
+      const contextMatches = content.match(/.{0,50}!~\{[^}]+\}~.{0,50}/g);
+      if (contextMatches) {
+        console.log(`   Found corruption markers with context:`);
+        contextMatches.slice(0, 3).forEach((match, idx) => {
+          console.log(`     ${idx + 1}. ...${match}...`);
+        });
+      }
+    } else {
       console.log(`   Found ${sampleMatches.length} corrupted import(s):`);
       sampleMatches.slice(0, 3).forEach((match, idx) => {
         console.log(`     ${idx + 1}. ${match.substring(0, 100)}${match.length > 100 ? '...' : ''}`);
@@ -104,7 +118,8 @@ filesToCheck.forEach(file => {
         const fixedImport = hasSpaces 
           ? `from ${quoteChar}./${fileName}${quoteChar}`
           : `from${quoteChar}./${fileName}${quoteChar}`;
-        content = content.replace(fullMatch, fixedImport);
+        // Use split/join to replace ALL instances, not just first
+        content = content.split(fullMatch).join(fixedImport);
         fileFixed = true;
         console.log(`   ✅ Fixed corrupted import (${name}): ${fullMatch.trim()} → ${fixedImport}`);
       });
@@ -112,37 +127,100 @@ filesToCheck.forEach(file => {
   });
 });
 
-// Also search for any remaining corrupted patterns more broadly
-// This catches any pattern we might have missed
-const broadPattern = /from\s*['"]\.\/[^'"]*!~\{[^}]+\}~[^'"]*\.js['"]/g;
-const allMatches = [...content.matchAll(broadPattern)];
-if (allMatches.length > 0) {
-  console.log(`🔍 Found ${allMatches.length} corrupted import(s) via broad search\n`);
-  allMatches.forEach(match => {
-    const fullMatch = match[0];
-    // Extract chunk name from corrupted path (e.g., vendor-!~{007}~.js -> vendor)
-    const chunkNameMatch = fullMatch.match(/([a-z-]+)-!~/);
-    if (chunkNameMatch) {
-      const chunkName = chunkNameMatch[1];
-      const correctFileName = chunkMap.get(chunkName);
-      if (correctFileName) {
-        const hasSpaces = fullMatch.includes(' from ');
-        const quoteChar = fullMatch.match(/['"]/)?.[0] || "'";
-        const fixedImport = hasSpaces 
-          ? `from ${quoteChar}./${correctFileName}${quoteChar}`
-          : `from${quoteChar}./${correctFileName}${quoteChar}`;
-        content = content.replace(fullMatch, fixedImport);
-        fileFixed = true;
-        console.log(`   ✅ Fixed corrupted import (broad search): ${fullMatch.trim()} → ${fixedImport}`);
-      } else {
-        console.log(`⚠️  Found corrupted import but couldn't resolve chunk name "${chunkName}": ${fullMatch.trim()}`);
-        console.log(`   Available chunks: ${Array.from(chunkMap.keys()).join(', ')}`);
+  // Also search for any remaining corrupted patterns more broadly
+  // This catches any pattern we might have missed - USE SIMPLER PATTERN
+  const broadPattern = /from\s*['"]\.\/[^'"]*!~\{[^}]+\}~[^'"]*\.js['"]/g;
+  let allMatches = [...content.matchAll(broadPattern)];
+  
+  // If no matches, try even simpler pattern - just look for the corruption marker
+  if (allMatches.length === 0 && hasCorruption) {
+    console.log(`   🔍 Trying alternative pattern matching...`);
+    // Try matching just the corrupted filename part - be VERY flexible
+    const altPatterns = [
+      /(['"]\.\/[^'"]*)([a-z-]+)-!~\{[^}]+\}~\.js(['"])/g,  // Standard
+      /(from\s*['"]\.\/[^'"]*)([a-z-]+)-!~\{[^}]+\}~\.js(['"])/g,  // With 'from'
+      /([a-z-]+)-!~\{[^}]+\}~\.js/g,  // Just the filename part
+    ];
+    
+    for (const altPattern of altPatterns) {
+      allMatches = [...content.matchAll(altPattern)];
+      if (allMatches.length > 0) {
+        console.log(`   Found ${allMatches.length} match(es) with alternative pattern`);
+        break;
       }
-    } else {
-      console.log(`⚠️  Found corrupted import but couldn't extract chunk name: ${fullMatch.trim()}`);
     }
-  });
-}
+    
+    // Last resort: direct string replacement if we find the pattern
+    if (allMatches.length === 0) {
+      // Try to find and replace using string search
+      chunkMap.forEach((fileName, chunkName) => {
+        const searchStr = `${chunkName}-!~{`;
+        if (content.includes(searchStr)) {
+          console.log(`   🔧 Found corruption via string search for ${chunkName}`);
+          // Find the full corrupted path
+          const regex = new RegExp(`${chunkName}-!~\\{[^}]+\\}~\\.js`, 'g');
+          const matches = content.match(regex);
+          if (matches) {
+            matches.forEach(corruptedPath => {
+              const quoteMatch = content.match(new RegExp(`(['"])\\./${corruptedPath.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}\\1`));
+              if (quoteMatch) {
+                const fullPath = quoteMatch[0];
+                const quoteChar = quoteMatch[1];
+                const fixedPath = `${quoteChar}./${fileName}${quoteChar}`;
+                content = content.replace(fullPath, fixedPath);
+                fileFixed = true;
+                console.log(`   ✅ Fixed via string search: ${fullPath} → ${fixedPath}`);
+              }
+            });
+          }
+        }
+      });
+    }
+  }
+  
+  if (allMatches.length > 0) {
+    console.log(`   🔍 Found ${allMatches.length} corrupted import(s) via broad search`);
+    allMatches.forEach(match => {
+      const fullMatch = match[0];
+      // Extract chunk name from corrupted path (e.g., vendor-!~{007}~.js -> vendor)
+      const chunkNameMatch = fullMatch.match(/([a-z-]+)-!~/);
+      if (chunkNameMatch) {
+        const chunkName = chunkNameMatch[1];
+        const correctFileName = chunkMap.get(chunkName);
+        if (correctFileName) {
+          const hasSpaces = fullMatch.includes(' from ');
+          const quoteChar = fullMatch.match(/['"]/)?.[0] || "'";
+          const fixedImport = hasSpaces 
+            ? `from ${quoteChar}./${correctFileName}${quoteChar}`
+            : `from${quoteChar}./${correctFileName}${quoteChar}`;
+          // Use replace with string replacement to ensure we get all instances
+          content = content.split(fullMatch).join(fixedImport);
+          fileFixed = true;
+          console.log(`   ✅ Fixed corrupted import (broad search): ${fullMatch.trim()} → ${fixedImport}`);
+        } else {
+          console.log(`   ⚠️  Found corrupted import but couldn't resolve chunk name "${chunkName}": ${fullMatch.trim()}`);
+          console.log(`      Available chunks: ${Array.from(chunkMap.keys()).join(', ')}`);
+        }
+      } else {
+        console.log(`   ⚠️  Found corrupted import but couldn't extract chunk name: ${fullMatch.trim()}`);
+      }
+    });
+  }
+
+  // FINAL FALLBACK: If we detected corruption but didn't fix it, try brute force replacement
+  if (!fileFixed && hasCorruption) {
+    console.log(`   🔧 Attempting brute force fix...`);
+    chunkMap.forEach((fileName, chunkName) => {
+      // Try to find ANY occurrence of the corrupted pattern and replace it
+      const corruptedPattern = new RegExp(`${chunkName}-!~\\{[^}]+\\}~\\.js`, 'g');
+      if (corruptedPattern.test(content)) {
+        // Replace all occurrences of the corrupted filename with the correct one
+        content = content.replace(corruptedPattern, fileName);
+        fileFixed = true;
+        console.log(`   ✅ Fixed via brute force: replaced ${chunkName}-!~{...}~.js with ${fileName}`);
+      }
+    });
+  }
 
   if (fileFixed) {
     fs.writeFileSync(filePath, content, 'utf-8');
@@ -150,6 +228,7 @@ if (allMatches.length > 0) {
     console.log(`   ✅ Fixed ${file}\n`);
   } else if (hasCorruption) {
     console.log(`   ⚠️  Found corruption markers but couldn't fix ${file}\n`);
+    console.log(`   ⚠️  This file may need manual inspection!\n`);
   } else {
     console.log(`   ✅ No corrupted imports in ${file}\n`);
   }
