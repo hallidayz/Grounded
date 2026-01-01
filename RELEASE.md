@@ -9,13 +9,13 @@ This project uses a standardized version control release module that automates v
 ### Quick Start
 
 ```bash
-# Patch release (bug fixes) - 1.12.27 → 1.12.28
+# Patch release (bug fixes) - 1.13.4 → 1.13.5
 npm run release:patch
 
-# Minor release (new features) - 1.12.27 → 1.13.0
+# Minor release (new features) - 1.13.4 → 1.14.0
 npm run release:minor
 
-# Major release (breaking changes) - 1.12.27 → 2.0.0
+# Major release (breaking changes) - 1.13.4 → 2.0.0
 npm run release:major
 
 # Create release without version bump (rebuild/repackage only)
@@ -111,20 +111,20 @@ npm run create-release -- --skip-version --skip-validation
 
 ## Version Types
 
-### Patch (1.12.27 → 1.12.28)
+### Patch (1.13.4 → 1.13.5)
 - Bug fixes
 - Security patches
 - Documentation updates
 - Performance improvements
 - **Use when**: Fixing issues without adding features
 
-### Minor (1.12.27 → 1.13.0)
+### Minor (1.13.4 → 1.14.0)
 - New features
 - New functionality
 - API additions (backward compatible)
 - **Use when**: Adding features without breaking changes
 
-### Major (1.12.27 → 2.0.0)
+### Major (1.13.4 → 2.0.0)
 - Breaking changes
 - API changes that break compatibility
 - Major architectural changes

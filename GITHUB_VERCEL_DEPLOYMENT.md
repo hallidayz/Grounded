@@ -109,15 +109,15 @@ Ensure `vercel.json` is in your project root:
    ```bash
    # Ensure all changes are committed
    git add .
-   git commit -m "Release v1.12.26"
+   git commit -m "Release v1.13.4"
    git push origin main
    ```
 
 2. **Create a GitHub Release**
    - Go to your GitHub repository
    - Click "Releases" → "Create a new release"
-   - **Tag version**: `v1.12.26` (must match `package.json` version)
-   - **Release title**: `Grounded PWA v1.12.26`
+   - **Tag version**: `v1.13.4` (must match `package.json` version)
+   - **Release title**: `Grounded PWA v1.13.4`
    - **Description**: Copy from `RELEASE_NOTES.md` or write release notes
    - **Target**: `main` (or your default branch)
    - Click "Publish release"
@@ -137,8 +137,8 @@ Ensure `vercel.json` is in your project root:
 
 ```bash
 # Create and push a tag
-git tag -a v1.12.26 -m "Release v1.12.26"
-git push origin v1.12.26
+git tag -a v1.13.4 -m "Release v1.13.4"
+git push origin v1.13.4
 
 # Vercel will automatically deploy
 ```
@@ -326,7 +326,7 @@ vercel logs
    ```
 
 2. **Use semantic versioning for releases**
-   - Format: `v1.12.26`
+   - Format: `v1.13.4`
    - Update `package.json` version before release
 
 3. **Create release notes**

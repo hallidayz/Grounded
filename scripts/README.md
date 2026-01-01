@@ -46,9 +46,9 @@ Main release orchestrator:
 
 ```bash
 # Version bumping only (no build)
-npm run version:patch   # 1.12.27 → 1.12.28
-npm run version:minor   # 1.12.27 → 1.13.0
-npm run version:major   # 1.12.27 → 2.0.0
+npm run version:patch   # 1.13.4 → 1.13.5
+npm run version:minor   # 1.13.4 → 1.14.0
+npm run version:major   # 1.13.4 → 2.0.0
 
 # Full release (with build)
 npm run release:patch
