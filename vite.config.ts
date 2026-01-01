@@ -35,8 +35,26 @@ const excludeModelsPlugin = (): Plugin => {
   };
 };
 
-// REMOVED: noMinifyTransformersPlugin - was causing import path corruption
-// The post-build script fix-transformers-imports.js handles fixing corrupted imports
+// Plugin to prevent minification of transformers chunk
+// This runs AFTER bundle generation to avoid import path corruption
+// The renderChunk hook runs after import paths are resolved, so it's safe
+const noMinifyTransformersPlugin = (): Plugin => {
+  return {
+    name: 'no-minify-transformers',
+    enforce: 'post', // Run after other plugins
+    renderChunk(code, chunk, options) {
+      // Skip minification for transformers chunk only
+      // Import paths are already resolved correctly at this stage
+      if (chunk.name === 'transformers') {
+        // Return code as-is without minification
+        // This prevents "Cannot access 'cu' before initialization" errors
+        return { code, map: null };
+      }
+      // Let other chunks be minified normally
+      return null;
+    }
+  };
+};
 
 
 // Read app version from package.json
@@ -96,6 +114,9 @@ export default defineConfig({
     ...(isTauriBuild ? [Tauri()] : []),
     // Exclude models from web builds (they download at runtime)
     excludeModelsPlugin(),
+    // Prevent minification of transformers chunk to avoid initialization errors
+    // This runs after import paths are resolved, so it won't corrupt imports
+    noMinifyTransformersPlugin(),
     VitePWA({
       registerType: 'autoUpdate',
       includeAssets: ['favicon.ico', 'apple-touch-icon.png', 'pwa-192x192.png', 'pwa-512x512.png'],

@@ -43,11 +43,27 @@ if (webmanifestPattern.test(fixedContent)) {
 }
 
 // Fix manifest.json references (CRITICAL - this is the current issue)
-const jsonPattern = /navigator\.serviceWorker\.register\(['"]\/manifest\.json['"]/g;
-if (jsonPattern.test(fixedContent)) {
-  fixedContent = fixedContent.replace(jsonPattern, "navigator.serviceWorker.register('/manifest.js'");
-  changes.push('/manifest.json → /manifest.js');
-}
+// Handle various formats: '/manifest.json', "/manifest.json", '/manifest.json'
+const jsonPatterns = [
+  /navigator\.serviceWorker\.register\(['"]\/manifest\.json['"]/g,
+  /register\(['"]\/manifest\.json['"]/g,
+  /['"]\/manifest\.json['"]/g  // Catch any reference to manifest.json
+];
+jsonPatterns.forEach(pattern => {
+  if (pattern.test(fixedContent)) {
+    fixedContent = fixedContent.replace(pattern, (match) => {
+      // Preserve the quote style and structure
+      const quoteChar = match.match(/['"]/)?.[0] || "'";
+      if (match.includes('register(')) {
+        return match.replace('/manifest.json', '/manifest.js');
+      }
+      return match.replace('/manifest.json', '/manifest.js');
+    });
+    if (!changes.includes('/manifest.json → /manifest.js')) {
+      changes.push('/manifest.json → /manifest.js');
+    }
+  }
+});
 
 // Also handle minified versions - manifest.webmanifest
 const minifiedWebmanifestPattern = /register\(['"]\/manifest\.webmanifest['"]/g;
