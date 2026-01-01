@@ -120,18 +120,32 @@ function updateVersionInTextFile(filePath, oldVersion, newVersion) {
       (match) => match.replace(oldVersion, newVersion)
     );
     
-    content = content.replace(
-      new RegExp(`(Version|**Version**|Current Version|**Current Version**)\\s*[:]?\\s*${escapedOldVersion}`, 'gi'),
-      (match) => match.replace(oldVersion, newVersion)
-    );
+    // Escape special regex characters in patterns
+    const escapedPatterns = [
+      `Version\\s*[:]?\\s*${escapedOldVersion}`,
+      `\\*\\*Version\\*\\*\\s*[:]?\\s*${escapedOldVersion}`,
+      `Current Version\\s*[:]?\\s*${escapedOldVersion}`,
+      `\\*\\*Current Version\\*\\*\\s*[:]?\\s*${escapedOldVersion}`,
+    ];
+    
+    escapedPatterns.forEach(pattern => {
+      content = content.replace(
+        new RegExp(pattern, 'gi'),
+        (match) => match.replace(oldVersion, newVersion)
+      );
+    });
     
     content = content.replace(
       new RegExp(`App Version:\\s*${escapedOldVersion}`, 'g'),
       `App Version: ${newVersion}`
     );
     
-    // General replacement for any remaining instances
-    content = content.replace(new RegExp(escapedOldVersion, 'g'), newVersion);
+    // General replacement for any remaining instances (be careful with this)
+    // Only replace if it's a standalone version number (not part of a larger number)
+    content = content.replace(
+      new RegExp(`\\b${escapedOldVersion}\\b`, 'g'),
+      newVersion
+    );
     
     writeFileSync(filePath, content, 'utf-8');
     return true;

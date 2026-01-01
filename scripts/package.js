@@ -35,6 +35,47 @@ fs.mkdirSync(packageDir, { recursive: true });
 console.log('📋 Copying build files...');
 fs.cpSync(distDir, path.join(packageDir, 'dist'), { recursive: true });
 
+// Copy AI models if they exist (for bundled package)
+// Models are downloaded to public/models/ and need to be copied to dist/models/
+const publicModelsDir = path.join(__dirname, '..', 'public', 'models');
+const distModelsDir = path.join(packageDir, 'dist', 'models');
+
+// Check if models exist in public (downloaded during build)
+if (fs.existsSync(publicModelsDir)) {
+  console.log('📦 Copying AI models to package...');
+  fs.mkdirSync(distModelsDir, { recursive: true });
+  fs.cpSync(publicModelsDir, distModelsDir, { recursive: true });
+  
+  // Calculate models size
+  function getDirSize(dir) {
+    let size = 0;
+    try {
+      const files = fs.readdirSync(dir, { withFileTypes: true });
+      for (const file of files) {
+        const filePath = path.join(dir, file.name);
+        if (file.isDirectory()) {
+          size += getDirSize(filePath);
+        } else {
+          size += fs.statSync(filePath).size;
+        }
+      }
+    } catch {
+      // Ignore errors
+    }
+    return size;
+  }
+  
+  const modelsSize = getDirSize(distModelsDir);
+  const modelsSizeMB = (modelsSize / 1024 / 1024).toFixed(2);
+  console.log(`   ✅ Models included (${modelsSizeMB} MB)`);
+  console.log('   💡 Models are bundled - no download needed on first use!');
+  console.log('   💡 App will load models instantly from the package');
+} else {
+  console.log('⚠️  AI models not found in public/models/');
+  console.log('   💡 Models will be downloaded from HuggingFace on first use');
+  console.log('   💡 To include models: Run "npm run download:models" before "npm run build:pwa"');
+}
+
 // Check for required icons and warn if missing
 const requiredIcons = ['pwa-192x192.png', 'pwa-512x512.png', 'apple-touch-icon.png'];
 const publicDir = path.join(__dirname, '..', 'public');
@@ -66,98 +107,120 @@ additionalDocs.forEach(docName => {
   }
 });
 
-// Copy Node.js server script (preferred - includes COOP/COEP headers)
-console.log('📦 Copying server script...');
-const servePwaScript = path.join(__dirname, 'serve-pwa.js');
-if (fs.existsSync(servePwaScript)) {
-  fs.copyFileSync(servePwaScript, path.join(packageDir, 'serve-pwa.js'));
-  fs.chmodSync(path.join(packageDir, 'serve-pwa.js'), '755');
+// Create mobile-first HTML launcher (opens automatically)
+console.log('📱 Creating mobile-first launcher...');
+const createMobileLauncher = path.join(__dirname, 'create-mobile-launcher.js');
+if (fs.existsSync(createMobileLauncher)) {
+  execSync(`node "${createMobileLauncher}"`, { stdio: 'inherit' });
+} else {
+  console.log('⚠️  create-mobile-launcher.js not found, skipping...');
 }
 
-// Create a simple server script for local testing (fallback)
-const serverScript = `#!/bin/bash
-# Simple HTTP server for testing the PWA locally
-# Usage: ./serve.sh [port]
-# 
-# NOTE: For SharedArrayBuffer support (AI models), use serve-pwa.js instead:
-#   node serve-pwa.js [port]
-
-PORT=${process.argv[2] || 8000}
-cd "$(dirname "$0")/dist"
-echo "🌐 Serving Grounded on http://localhost:$PORT"
-echo "📱 Open this URL on your device to install the app"
-echo "⚠️  Note: This server doesn't include COOP/COEP headers."
-echo "   For AI model support, use: node ../serve-pwa.js"
-python3 -m http.server $PORT 2>/dev/null || python -m http.server $PORT 2>/dev/null || php -S localhost:$PORT || echo "Please install Python or PHP to run the server"
-`;
-
-fs.writeFileSync(path.join(packageDir, 'serve.sh'), serverScript);
-fs.chmodSync(path.join(packageDir, 'serve.sh'), '755');
-
-// Create Windows server script
-const serverScriptWin = `@echo off
-REM Simple HTTP server for testing the PWA locally
-REM Usage: serve.bat [port]
-
-set PORT=%1
-if "%PORT%"=="" set PORT=8000
-
-cd /d "%~dp0dist"
-echo Serving Grounded on http://localhost:%PORT%
-echo Open this URL on your device to install the app
-python -m http.server %PORT% 2>nul || php -S localhost:%PORT% || echo Please install Python or PHP to run the server
-pause
-`;
-
-fs.writeFileSync(path.join(packageDir, 'serve.bat'), serverScriptWin);
+// Create cross-platform launchers (for desktop users who want to run server)
+console.log('📦 Creating cross-platform server launchers...');
+const createLauncherScript = path.join(__dirname, 'create-launcher.js');
+if (fs.existsSync(createLauncherScript)) {
+  execSync(`node "${createLauncherScript}"`, { stdio: 'inherit' });
+} else {
+  console.log('⚠️  create-launcher.js not found, skipping...');
+}
 
 // Create README for the package
-const packageReadme = `# Grounded PWA Package
+const packageReadme = `# Grounded PWA - Mobile-First Installation
 
-This package contains the complete Grounded by AC MiNDS Progressive Web App, ready for distribution.
+**📱 Perfect for Android & iPhone users!**
 
-## 📁 Contents
+This package contains the complete Grounded by AC MiNDS Progressive Web App.
 
-- \`dist/\` - The built application (upload this to your web server)
-- \`INSTALLATION_GUIDE.md\` - Complete installation instructions
-- \`serve.sh\` / \`serve.bat\` - Simple scripts to test locally
+## 🚀 Quick Start - Just Extract & Open!
 
-## 🚀 Quick Start
+1. **Extract** this ZIP file to any folder
+2. **Double-click** \`index.html\` (or \`INSTALL.html\`)
+3. **Follow the on-screen instructions** for your device
 
-### Option 1: Upload to Web Server
-1. Upload the contents of the \`dist/\` folder to your web server
-2. Ensure HTTPS is enabled (required for PWA)
-3. Share the URL with users
-4. Users can install following the INSTALLATION_GUIDE.md
+The launcher page will automatically:
+- ✅ Detect if you're on Android, iPhone, or Desktop
+- ✅ Show step-by-step installation instructions
+- ✅ Open the app with one click
 
-### Option 2: Test Locally
-1. Run \`./serve.sh\` (Mac/Linux) or \`serve.bat\` (Windows)
-2. Open http://localhost:8000 in a browser
-3. Follow installation guide for mobile devices
+## 📱 For Mobile Users (Android & iPhone)
 
-## 📱 Installation
+### Android:
+1. Extract the ZIP file
+2. Open \`index.html\` in Chrome
+3. Tap "Open App" button
+4. When the app loads, tap "Install" in the browser
+5. Done! App icon appears on home screen
 
-See INSTALLATION_GUIDE.md for detailed instructions on installing the app on:
-- Android devices
-- iOS devices (iPhone/iPad)
-- Desktop computers
+### iPhone/iPad:
+1. Extract the ZIP file  
+2. Open \`index.html\` in **Safari** (must use Safari!)
+3. Tap "Open App in Safari" button
+4. Tap Share button → "Add to Home Screen"
+5. Done! App icon appears on home screen
 
-## 📊 Package Size
+**💡 Tip:** For mobile, you can also upload the \`dist/\` folder to a web server and share the URL.
 
-The dist folder is optimized for minimal size:
-- All assets are minified and compressed
-- Unused code is removed
-- Images are optimized
+## 💻 For Desktop Users
 
-## 🔒 Security
+### Option 1: Upload to Web Server (Recommended)
+1. Upload \`dist/\` folder contents to your web server
+2. Visit the URL in your browser
+3. Click install icon in address bar
 
-- App must be served over HTTPS (or localhost)
-- All data is stored locally on user's device
-- No external API calls required
+### Option 2: Run Local Server
+**Mac/Linux:**
+\`\`\`bash
+./start.sh
+\`\`\`
 
-## 📞 Support
+**Windows:**
+\`\`\`cmd
+start.bat
+\`\`\`
 
-Refer to INSTALLATION_GUIDE.md for troubleshooting.
+Or with Node.js:
+\`\`\`bash
+node launcher.js
+\`\`\`
+
+## 📁 What's Inside
+
+- \`index.html\` / \`INSTALL.html\` - **Start here!** Mobile-friendly launcher
+- \`dist/\` - The React app (upload this to a web server)
+- \`launcher.js\` - Local server for desktop (Node.js)
+- \`start.sh\` / \`start.bat\` - Desktop server launchers
+- \`INSTALLATION_GUIDE.md\` - Detailed instructions
+
+## ✅ Installation Success
+
+After installation:
+- **Mobile**: App icon appears on home screen
+- **Desktop**: App appears in applications menu
+- **All devices**: App works offline after first load
+- **AI Models**: Load instantly (bundled in package - no download needed!)
+
+## 🤖 AI Models Included
+
+This package includes AI models bundled directly:
+- ✅ **Instant loading** - No wait time for model downloads
+- ✅ **Offline capable** - Models work without internet
+- ✅ **Faster startup** - Models ready immediately
+- ✅ **No HuggingFace download** - Everything included in the package
+
+**Note**: If models aren't included, the app will download them from HuggingFace on first use.
+
+## 🔒 Security & Privacy
+
+- ✅ All data stored on your device (private & secure)
+- ✅ No external servers required
+- ✅ Works completely offline
+- ✅ HTTPS required for installation (or localhost)
+- ✅ AI models run entirely in your browser
+
+## 📞 Need Help?
+
+See \`INSTALLATION_GUIDE.md\` for detailed troubleshooting.
 
 ---
 Generated: ${new Date().toISOString()}
@@ -183,9 +246,22 @@ function getSize(dir) {
 const distSize = getSize(path.join(packageDir, 'dist'));
 const distSizeMB = (distSize / 1024 / 1024).toFixed(2);
 
-console.log(`\n✅ Package created successfully!`);
-console.log(`📊 Package size: ${distSizeMB} MB`);
-console.log(`📁 Location: ${packageDir}\n`);
+// Check if models were included
+const modelsIncluded = fs.existsSync(path.join(packageDir, 'dist', 'models'));
+if (modelsIncluded) {
+  const modelsSize = getSize(path.join(packageDir, 'dist', 'models'));
+  const modelsSizeMB = (modelsSize / 1024 / 1024).toFixed(2);
+  console.log(`\n✅ Package created successfully!`);
+  console.log(`📊 App size: ${distSizeMB} MB`);
+  console.log(`🤖 AI Models: ${modelsSizeMB} MB (bundled - no download needed!)`);
+  console.log(`📦 Total size: ${((distSize + modelsSize) / 1024 / 1024).toFixed(2)} MB`);
+  console.log(`📁 Location: ${packageDir}\n`);
+} else {
+  console.log(`\n✅ Package created successfully!`);
+  console.log(`📊 Package size: ${distSizeMB} MB`);
+  console.log(`⚠️  AI models not included - will download on first use`);
+  console.log(`📁 Location: ${packageDir}\n`);
+}
 
 // Check for native installers
 console.log('🔍 Checking for native installers...\n');

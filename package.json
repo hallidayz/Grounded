@@ -1,7 +1,7 @@
 {
   "name": "grounded",
   "private": true,
-  "version": "1.13.1",
+  "version": "1.13.3",
   "type": "module",
   "scripts": {
     "dev": "ulimit -n 10240 2>/dev/null || true && vite --open",
@@ -11,7 +11,7 @@
     "dev:tauri": "tauri dev",
     "download:models": "node scripts/download-models.js",
     "build": "vite build && node scripts/fix-sw-registration.js",
-    "build:pwa": "vite build && node scripts/fix-sw-registration.js && npm run package",
+    "build:pwa": "npm run download:models && INCLUDE_MODELS=true vite build && node scripts/fix-sw-registration.js && npm run package",
     "build:desktop": "npm run download:models && vite build && tauri build",
     "build:android": "vite build && npx cap sync android && cd android && ./gradlew assembleRelease",
     "build:android:debug": "vite build && npx cap sync android && cd android && ./gradlew assembleDebug",

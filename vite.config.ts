@@ -10,12 +10,14 @@ import { rmSync } from 'fs';
 const isTauriBuild = process.env.TAURI_PLATFORM !== undefined;
 
 // Plugin to exclude model files from web builds (models download at runtime)
+// Can be disabled by setting INCLUDE_MODELS=true to bundle models with the package
 const excludeModelsPlugin = (): Plugin => {
   return {
     name: 'exclude-models',
     closeBundle() {
       // Only exclude models for web builds, not Tauri builds (Tauri needs bundled models)
-      if (!isTauriBuild) {
+      // Also skip exclusion if INCLUDE_MODELS is set (for packaged distribution)
+      if (!isTauriBuild && process.env.INCLUDE_MODELS !== 'true') {
         const modelsPath = path.resolve(__dirname, 'dist/models');
         try {
           rmSync(modelsPath, { recursive: true, force: true });
@@ -26,6 +28,8 @@ const excludeModelsPlugin = (): Plugin => {
             console.warn('⚠️ Could not remove models directory:', error);
           }
         }
+      } else if (process.env.INCLUDE_MODELS === 'true') {
+        console.log('✅ Models included in build output (for packaged distribution)');
       }
     }
   };
