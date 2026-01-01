@@ -1,3 +1,5 @@
+# Netlify automatically serves files if they exist, redirects to index.html if they don't
+# This handles SPA routing correctly
 [[redirects]]
   from = "/*"
   to = "/index.html"
