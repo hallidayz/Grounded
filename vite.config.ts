@@ -100,6 +100,7 @@ const appVersion = packageJson.version;
 // The stub plugin is removed - ONNX Runtime will use WASM backend automatically
 
 export default defineConfig({
+  base: '/',
   define: {
     // Inject app version at build time
     'import.meta.env.VITE_APP_VERSION': JSON.stringify(appVersion),
