@@ -1,6 +1,6 @@
 # Grounded Installation Guide
 
-**Grounded by AC MiNDS** - Version 1.13.1
+**Grounded by AC MiNDS** - Version 1.13.4
 
 Privacy-first therapy integration app for values-based reflection and mental health support.
 
