@@ -50,20 +50,35 @@ let fixed = false;
 
 // Fix corrupted import patterns
 // Pattern: vendor-!~{007}~.js or similar corrupted patterns
-const corruptedPattern = /from\s+['"]\.\/[^'"]*!~\{[^}]+\}~[^'"]*['"]/g;
-let match;
-while ((match = corruptedPattern.exec(content)) !== null) {
-  const corruptedPath = match[0];
-  // Extract chunk name from corrupted path (e.g., vendor-!~{007}~.js -> vendor)
-  const chunkNameMatch = corruptedPath.match(/([a-z-]+)-!~/);
-  if (chunkNameMatch) {
-    const chunkName = chunkNameMatch[1];
-    const correctFileName = chunkMap.get(chunkName);
-    if (correctFileName) {
-      const fixedImport = `from './${correctFileName}'`;
-      content = content.replace(corruptedPath, fixedImport);
-      fixed = true;
-      console.log(`✅ Fixed corrupted import: ${corruptedPath.trim()} → ${fixedImport}`);
+// Handle both minified (no spaces) and unminified versions
+const corruptedPatterns = [
+  /from\s+['"]\.\/[^'"]*!~\{[^}]+\}~[^'"]*['"]/g,  // with spaces: from './vendor-!~{007}~.js'
+  /from['"]\.\/[^'"]*!~\{[^}]+\}~[^'"]*['"]/g,    // minified: from'./vendor-!~{007}~.js'
+  /from\s*['"]\.\/[^'"]*!~\{[^}]+\}~[^'"]*['"]/g, // flexible spaces
+];
+
+for (const corruptedPattern of corruptedPatterns) {
+  let match;
+  while ((match = corruptedPattern.exec(content)) !== null) {
+    const corruptedPath = match[0];
+    // Extract chunk name from corrupted path (e.g., vendor-!~{007}~.js -> vendor)
+    const chunkNameMatch = corruptedPath.match(/([a-z-]+)-!~/);
+    if (chunkNameMatch) {
+      const chunkName = chunkNameMatch[1];
+      const correctFileName = chunkMap.get(chunkName);
+      if (correctFileName) {
+        // Preserve the original format (with or without spaces)
+        const hasSpaces = corruptedPath.includes(' from ');
+        const fixedImport = hasSpaces 
+          ? `from './${correctFileName}'`
+          : `from'./${correctFileName}'`;
+        content = content.replace(corruptedPath, fixedImport);
+        fixed = true;
+        console.log(`✅ Fixed corrupted import: ${corruptedPath.trim()} → ${fixedImport}`);
+        // Reset regex lastIndex to avoid issues
+        corruptedPattern.lastIndex = 0;
+        break; // Move to next pattern after fixing
+      }
     }
   }
 }
