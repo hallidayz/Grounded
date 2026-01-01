@@ -676,8 +676,9 @@ export async function initializeModels(forceReload: boolean = false, modelType?:
           throw new Error('Model loaded but moodTrackerModel is null');
         }
         
-        // Cache the model
+        // Cache the model IMMEDIATELY after assignment
         allModelsCache.set(targetModel, moodTrackerModel);
+        console.log(`[MODEL_DEBUG] Model cached: ${targetModel}`);
       } catch (modelError: any) {
         const modelErrorMsg = modelError?.message || String(modelError);
         const modelErrorStack = modelError?.stack || '';
@@ -717,6 +718,15 @@ export async function initializeModels(forceReload: boolean = false, modelType?:
       // Model B: Counseling coach - Use same model if it's text-generation, otherwise load TinyLlama
       console.log('Loading counseling coach model...');
       
+      // IMPORTANT: Re-check cache right before reuse check - model might have been cached during loading
+      // The progress callback fires when files download, but pipeline() might still be initializing
+      // So we need to check cache again in case the model was cached but moodTrackerModel isn't set yet
+      const cachedModel = allModelsCache.get(targetModel);
+      if (cachedModel && !moodTrackerModel) {
+        console.log(`[MODEL_DEBUG] Found cached model, assigning to moodTrackerModel`);
+        moodTrackerModel = cachedModel;
+      }
+      
       // Check if we can reuse the mood tracker model for counseling
       // If the model is text-generation type, we can reuse it for both tasks
       let canReuseModel = false;
@@ -724,8 +734,6 @@ export async function initializeModels(forceReload: boolean = false, modelType?:
       
       // For text-generation models, we can always reuse the same model instance
       // Check both the modelConfig.task and verify moodTrackerModel exists
-      // Also check if the model is in cache (in case it was loaded in a previous attempt)
-      const cachedModel = allModelsCache.get(targetModel);
       const modelToReuse = moodTrackerModel || cachedModel;
       
       if (modelToReuse && modelConfig.task === 'text-generation') {

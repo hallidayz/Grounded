@@ -538,44 +538,44 @@ Return valid JSON only.`;
     fallbackResponse = `You're feeling energized and motivated—that's powerful! This is a great time to explore opportunities and take meaningful action. What possibilities are calling to you? How can you channel this energy toward what matters most to you?`;
   }
 
-  // Try to use AI model if available
+  // PRIORITY: Try to use AI model FIRST if available
+  // Check if any model is loaded (mood tracker or counseling coach)
   let counselingCoachModel = getCounselingCoachModel();
+  const { getMoodTrackerModel, areModelsLoaded } = await import('./models');
+  const moodTrackerModel = getMoodTrackerModel();
   
-  // If model not available, check if we should try to initialize it
-  // Don't repeatedly try to initialize if it's already failed
+  // Use the first available model (mood tracker can also do text generation)
+  if (!counselingCoachModel && moodTrackerModel) {
+    console.log('✅ Using mood tracker model for Focus Lens (first available model)');
+    counselingCoachModel = moodTrackerModel;
+  }
+  
+  // If no model available, check if one is loading and wait briefly
   if (!counselingCoachModel) {
     const isModelLoading = getIsModelLoading();
-    if (!isModelLoading) {
-      // Only try to initialize if we haven't failed too many times recently
-      // This prevents infinite loops when models can't load (e.g., in dev mode without models)
-      try {
-        const initPromise = initializeModels();
-        const timeoutPromise = new Promise<boolean>((_, reject) => 
-          setTimeout(() => reject(new Error('Model initialization timeout')), 5000) // Reduced timeout
-        );
-        await Promise.race([initPromise, timeoutPromise]);
-        counselingCoachModel = getCounselingCoachModel();
-      } catch (error) {
-        // Silently fail - don't log repeatedly to avoid console spam
-        // Models will be initialized in background by App.tsx
-      }
-    } else {
-      // Wait for current load to complete, but with shorter timeout
-      // Wait up to 3 seconds for model to load
-      const maxWaitTime = 3000;
+    if (isModelLoading) {
+      // Wait up to 2 seconds for model to load (non-blocking)
+      const maxWaitTime = 2000;
       const startTime = Date.now();
       while (!counselingCoachModel && (Date.now() - startTime) < maxWaitTime) {
-        await new Promise(resolve => setTimeout(resolve, 300));
+        await new Promise(resolve => setTimeout(resolve, 200));
         counselingCoachModel = getCounselingCoachModel();
+        if (!counselingCoachModel) {
+          const moodModel = getMoodTrackerModel();
+          if (moodModel) {
+            counselingCoachModel = moodModel;
+            break;
+          }
+        }
         // Check if loading failed
         if (!getIsModelLoading() && !counselingCoachModel) {
-          // Loading completed but no model - break early
           break;
         }
       }
     }
   }
   
+  // If AI model is available, use it FIRST (JSON in/out)
   if (counselingCoachModel) {
     try {
       const result = await counselingCoachModel(prompt, {
@@ -659,7 +659,11 @@ Return valid JSON only.`;
     }
   }
 
-  // Return fallback response
+  // Return rule-based fallback response immediately if AI model not available
+  // This ensures the app works with rule-based responses from the start
+  console.log('ℹ️ Using rule-based Focus Lens (AI model not available)');
+  // Cache the fallback response
+  await setCachedResponse(cacheKey, { encouragement: fallbackResponse }).catch(() => {});
   return fallbackResponse;
 }
 

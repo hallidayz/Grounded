@@ -225,6 +225,12 @@ class DatabaseService {
       return;
     }
 
+    // Check if metadata store exists before trying to access it
+    if (!this.db.objectStoreNames.contains('metadata')) {
+      console.warn('Metadata object store does not exist - database may need upgrade');
+      return; // Silently fail - metadata is non-critical
+    }
+
     const platform = this.detectPlatform();
     const metadata: DatabaseMetadata = {
       appName: this.APP_NAME,
@@ -236,12 +242,22 @@ class DatabaseService {
     };
 
     return new Promise((resolve, reject) => {
-      const transaction = this.db!.transaction(['metadata'], 'readwrite');
-      const store = transaction.objectStore('metadata');
-      const request = store.put({ id: 'app_metadata', ...metadata });
+      try {
+        const transaction = this.db!.transaction(['metadata'], 'readwrite');
+        const store = transaction.objectStore('metadata');
+        const request = store.put({ id: 'app_metadata', ...metadata });
 
-      request.onsuccess = () => resolve();
-      request.onerror = () => reject(request.error);
+        request.onsuccess = () => resolve();
+        request.onerror = () => {
+          // Silently fail - metadata is non-critical
+          console.warn('Failed to set metadata (non-critical):', request.error);
+          resolve(); // Resolve instead of reject to prevent blocking
+        };
+      } catch (error) {
+        // Silently fail - metadata is non-critical
+        console.warn('Failed to set metadata (non-critical):', error);
+        resolve(); // Resolve instead of reject to prevent blocking
+      }
     });
   }
 
@@ -249,12 +265,21 @@ class DatabaseService {
    * Update metadata validation timestamp
    */
   private async updateMetadataValidation(): Promise<void> {
+    if (!this.db || !this.db.objectStoreNames.contains('metadata')) {
+      return; // Silently fail - metadata is non-critical
+    }
+    
     const metadata = await this.getMetadata();
     if (metadata) {
-      metadata.lastValidated = new Date().toISOString();
-      const transaction = this.db!.transaction(['metadata'], 'readwrite');
-      const store = transaction.objectStore('metadata');
-      store.put({ id: 'app_metadata', ...metadata });
+      try {
+        metadata.lastValidated = new Date().toISOString();
+        const transaction = this.db!.transaction(['metadata'], 'readwrite');
+        const store = transaction.objectStore('metadata');
+        store.put({ id: 'app_metadata', ...metadata });
+      } catch (error) {
+        // Silently fail - metadata is non-critical
+        console.warn('Failed to update metadata validation (non-critical):', error);
+      }
     }
   }
 
@@ -568,116 +593,221 @@ class DatabaseService {
   // App data operations
   async getAppData(userId: string): Promise<AppData | null> {
     const db = await this.ensureDB();
+    
+    // Check if appData store exists
+    if (!db.objectStoreNames.contains('appData')) {
+      // Store doesn't exist - return null
+      return null;
+    }
+    
     return new Promise((resolve, reject) => {
-      const transaction = db.transaction(['appData'], 'readonly');
-      const store = transaction.objectStore('appData');
-      const request = store.get(userId);
+      try {
+        const transaction = db.transaction(['appData'], 'readonly');
+        const store = transaction.objectStore('appData');
+        const request = store.get(userId);
 
-      request.onsuccess = () => {
-        const result = request.result;
-        resolve(result ? result.data : null);
-      };
-      request.onerror = () => reject(request.error);
+        request.onsuccess = () => {
+          const result = request.result;
+          resolve(result ? result.data : null);
+        };
+        request.onerror = () => {
+          // Silently fail - return null if store access fails
+          console.warn('Failed to get app data (non-critical):', request.error);
+          resolve(null);
+        };
+      } catch (error) {
+        // Silently fail - return null if store access fails
+        console.warn('Failed to get app data (non-critical):', error);
+        resolve(null);
+      }
     });
   }
 
   async saveAppData(userId: string, data: AppData): Promise<void> {
     const db = await this.ensureDB();
+    
+    // Check if appData store exists
+    if (!db.objectStoreNames.contains('appData')) {
+      // Store doesn't exist - silently fail (non-critical)
+      console.warn('App data store not available - data will not be saved');
+      return;
+    }
+    
     return new Promise((resolve, reject) => {
-      const transaction = db.transaction(['appData'], 'readwrite');
-      const store = transaction.objectStore('appData');
-      const request = store.put({ userId, data });
+      try {
+        const transaction = db.transaction(['appData'], 'readwrite');
+        const store = transaction.objectStore('appData');
+        const request = store.put({ userId, data });
 
-      request.onsuccess = () => resolve();
-      request.onerror = () => reject(request.error);
+        request.onsuccess = () => resolve();
+        request.onerror = () => {
+          // Silently fail - saving is non-critical
+          console.warn('Failed to save app data (non-critical):', request.error);
+          resolve(); // Resolve instead of reject to prevent blocking
+        };
+      } catch (error) {
+        // Silently fail - saving is non-critical
+        console.warn('Failed to save app data (non-critical):', error);
+        resolve(); // Resolve instead of reject to prevent blocking
+      }
     });
   }
 
   // Reset token operations
   async createResetToken(userId: string, email: string): Promise<string> {
     const db = await this.ensureDB();
+    
+    // Check if resetTokens store exists
+    if (!db.objectStoreNames.contains('resetTokens')) {
+      throw new Error('Reset tokens store not available - database may need upgrade');
+    }
+    
     const token = this.generateUUID();
     const expires = Date.now() + 24 * 60 * 60 * 1000; // 24 hours
 
     return new Promise((resolve, reject) => {
-      const transaction = db.transaction(['resetTokens'], 'readwrite');
-      const store = transaction.objectStore('resetTokens');
-      const request = store.add({
-        token,
-        userId,
-        email,
-        expires,
-        createdAt: new Date().toISOString(),
-      });
+      try {
+        const transaction = db.transaction(['resetTokens'], 'readwrite');
+        const store = transaction.objectStore('resetTokens');
+        const request = store.add({
+          token,
+          userId,
+          email,
+          expires,
+          createdAt: new Date().toISOString(),
+        });
 
-      request.onsuccess = () => resolve(token);
-      request.onerror = (event) => {
-        const error = (event.target as IDBRequest).error;
+        request.onsuccess = () => resolve(token);
+        request.onerror = (event) => {
+          const error = (event.target as IDBRequest).error;
+          console.error('Failed to create reset token:', error);
+          reject(error || new Error('Failed to create reset token in database'));
+        };
+      } catch (error) {
         console.error('Failed to create reset token:', error);
-        reject(error || new Error('Failed to create reset token in database'));
-      };
+        reject(error);
+      }
     });
   }
 
   async getResetToken(token: string): Promise<{ userId: string; email: string } | null> {
     const db = await this.ensureDB();
+    
+    // Check if resetTokens store exists
+    if (!db.objectStoreNames.contains('resetTokens')) {
+      // Store doesn't exist - no token to get
+      return null;
+    }
+    
     return new Promise((resolve, reject) => {
-      const transaction = db.transaction(['resetTokens'], 'readonly');
-      const store = transaction.objectStore('resetTokens');
-      const request = store.get(token);
+      try {
+        const transaction = db.transaction(['resetTokens'], 'readonly');
+        const store = transaction.objectStore('resetTokens');
+        const request = store.get(token);
 
-      request.onsuccess = () => {
-        const result = request.result;
-        if (!result) {
+        request.onsuccess = () => {
+          const result = request.result;
+          if (!result) {
+            resolve(null);
+            return;
+          }
+
+          // Check if token is expired
+          if (result.expires < Date.now()) {
+            resolve(null);
+            return;
+          }
+
+          resolve({ userId: result.userId, email: result.email });
+        };
+        request.onerror = () => {
+          // Silently fail - return null if store access fails
+          console.warn('Failed to get reset token (non-critical):', request.error);
           resolve(null);
-          return;
-        }
-
-        // Check if token is expired
-        if (result.expires < Date.now()) {
-          resolve(null);
-          return;
-        }
-
-        resolve({ userId: result.userId, email: result.email });
-      };
-      request.onerror = () => reject(request.error);
+        };
+      } catch (error) {
+        // Silently fail - return null if store access fails
+        console.warn('Failed to get reset token (non-critical):', error);
+        resolve(null);
+      }
     });
   }
 
   async deleteResetToken(token: string): Promise<void> {
     const db = await this.ensureDB();
+    
+    // Check if resetTokens store exists
+    if (!db.objectStoreNames.contains('resetTokens')) {
+      // Store doesn't exist - nothing to delete, silently return
+      return;
+    }
+    
     return new Promise((resolve, reject) => {
-      const transaction = db.transaction(['resetTokens'], 'readwrite');
-      const store = transaction.objectStore('resetTokens');
-      const request = store.delete(token);
+      try {
+        const transaction = db.transaction(['resetTokens'], 'readwrite');
+        const store = transaction.objectStore('resetTokens');
+        const request = store.delete(token);
 
-      request.onsuccess = () => resolve();
-      request.onerror = () => reject(request.error);
+        request.onsuccess = () => resolve();
+        request.onerror = () => {
+          // Silently fail - deletion is non-critical
+          console.warn('Failed to delete reset token (non-critical):', request.error);
+          resolve(); // Resolve instead of reject to prevent blocking
+        };
+      } catch (error) {
+        // Silently fail - deletion is non-critical
+        console.warn('Failed to delete reset token (non-critical):', error);
+        resolve(); // Resolve instead of reject to prevent blocking
+      }
     });
   }
 
   // Cleanup expired tokens
   async cleanupExpiredTokens(): Promise<void> {
     const db = await this.ensureDB();
+    
+    // Check if resetTokens store exists before trying to access it
+    if (!db.objectStoreNames.contains('resetTokens')) {
+      // Store doesn't exist - nothing to clean up, silently return
+      return;
+    }
+    
     return new Promise((resolve, reject) => {
-      const transaction = db.transaction(['resetTokens'], 'readwrite');
-      const store = transaction.objectStore('resetTokens');
-      const index = store.index('expires');
-      const request = index.openCursor();
-
-      request.onsuccess = (event) => {
-        const cursor = (event.target as IDBRequest<IDBCursorWithValue>).result;
-        if (cursor) {
-          if (cursor.value.expires < Date.now()) {
-            cursor.delete();
-          }
-          cursor.continue();
-        } else {
+      try {
+        const transaction = db.transaction(['resetTokens'], 'readwrite');
+        const store = transaction.objectStore('resetTokens');
+        
+        // Check if index exists
+        if (!store.indexNames.contains('expires')) {
+          // Index doesn't exist - nothing to clean up, silently return
           resolve();
+          return;
         }
-      };
-      request.onerror = () => reject(request.error);
+        
+        const index = store.index('expires');
+        const request = index.openCursor();
+
+        request.onsuccess = (event) => {
+          const cursor = (event.target as IDBRequest<IDBCursorWithValue>).result;
+          if (cursor) {
+            if (cursor.value.expires < Date.now()) {
+              cursor.delete();
+            }
+            cursor.continue();
+          } else {
+            resolve();
+          }
+        };
+        request.onerror = () => {
+          // Silently fail - cleanup is non-critical
+          console.warn('Failed to cleanup expired tokens (non-critical):', request.error);
+          resolve(); // Resolve instead of reject to prevent blocking
+        };
+      } catch (error) {
+        // Silently fail - cleanup is non-critical
+        console.warn('Failed to cleanup expired tokens (non-critical):', error);
+        resolve(); // Resolve instead of reject to prevent blocking
+      }
     });
   }
 
