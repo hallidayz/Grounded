@@ -87,11 +87,13 @@ export function useModelInstallationStatus() {
       // PRIORITY 2: Check if models are currently loading (don't show error while loading)
       if (isLoading || downloadProgress.status === 'downloading') {
         setStatus('in-progress');
-        // Use the highest progress value available
-        const progressValue = Math.max(
+        // Use the highest progress value available, but cap at 95% unless models are actually loaded
+        const rawProgress = Math.max(
           downloadProgress.progress || 0,
           currentProgress.progress || 0
         );
+        // Don't show 100% unless models are actually loaded - cap at 95% during download/initialization
+        const progressValue = modelsLoaded ? rawProgress : Math.min(95, rawProgress);
         setProgress(progressValue);
         setLabel(downloadProgress.label || currentProgress.label || 'Loading...');
         return; // Don't show error if actively loading
@@ -110,8 +112,10 @@ export function useModelInstallationStatus() {
         setLabel(currentProgress.label || 'Starting download...');
       } else if (downloadProgress.status === 'complete') {
         // Download complete but models not verified yet - show in progress
+        // Don't show 100% unless models are actually loaded
         setStatus('in-progress');
-        setProgress(100);
+        const progressValue = modelsLoaded ? Math.min(95, downloadProgress.progress || 90) : Math.min(90, downloadProgress.progress || 0);
+        setProgress(progressValue);
         setLabel('Verifying models...');
       }
     }, 2000); // Update every 2 seconds for real-time progress
@@ -124,20 +128,25 @@ export function useModelInstallationStatus() {
 
   // Determine display text based on status
   let displayText = '';
+  const modelsLoaded = areModelsLoaded();
+  
   if (status === 'complete') {
     displayText = 'AI Ready';
   } else if (status === 'in-progress') {
-    displayText = progress > 0 ? `AI Loading ${progress}%` : 'AI Loading...';
+    // Don't show 100% unless models are actually loaded - cap at 95% during loading
+    const displayProgress = (progress >= 100 && !modelsLoaded) ? 95 : progress;
+    displayText = displayProgress > 0 ? `AI Loading ${displayProgress}%` : 'AI Loading...';
   } else if (status === 'error') {
     displayText = 'Rules Only';
   } else {
     // idle - check if models are actually loaded
-    const modelsLoaded = areModelsLoaded();
     const isLoading = getIsModelLoading();
     if (modelsLoaded) {
       displayText = 'AI Ready';
     } else if (isLoading) {
-      displayText = progress > 0 ? `AI Loading ${progress}%` : 'AI Loading...';
+      // Don't show 100% unless models are actually loaded - cap at 95% during loading
+      const displayProgress = (progress >= 100 && !modelsLoaded) ? 95 : progress;
+      displayText = displayProgress > 0 ? `AI Loading ${displayProgress}%` : 'AI Loading...';
     } else {
       displayText = 'Rules Only';
     }

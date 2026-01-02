@@ -535,11 +535,13 @@ export async function initializeModels(forceReload: boolean = false, modelType?:
           }
         } else if (progress.status === 'done') {
           modelsLoaded++;
-          const modelProgress = Math.round((modelsLoaded / totalModels) * 100);
-          totalProgress = Math.min(100, modelProgress);
+          // Don't show 100% until models are actually loaded - cap at 90% for download progress
+          // The remaining 10% is reserved for model initialization/verification
+          const modelProgress = Math.round((modelsLoaded / totalModels) * 90); // Cap at 90%
+          totalProgress = Math.min(90, modelProgress);
           
           const modelName = progress.name || 'model';
-          console.log(`Model progress callback: ${modelName} reported done`);
+          console.log(`Model progress callback: ${modelName} reported done (files downloaded)`);
           
           // IMPORTANT: Don't set status to complete here - wait for actual model assignment
           // The progress callback fires when files download, but the model might still fail to initialize
@@ -549,7 +551,7 @@ export async function initializeModels(forceReload: boolean = false, modelType?:
           currentDownloadLabel = 'Loading AI models...';
           currentDownloadDetails = `${modelName} downloaded`;
           
-          // Update progress but don't mark as complete yet
+          // Update progress but don't mark as complete yet - cap at 90% to indicate still initializing
           setModelLoadingProgress(
             totalProgress,
             `Loading AI models...`,
