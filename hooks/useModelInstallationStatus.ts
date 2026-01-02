@@ -122,7 +122,28 @@ export function useModelInstallationStatus() {
     };
   }, [status]);
 
-  return { status, progress, label };
+  // Determine display text based on status
+  let displayText = '';
+  if (status === 'complete') {
+    displayText = 'AI Ready';
+  } else if (status === 'in-progress') {
+    displayText = progress > 0 ? `AI Loading ${progress}%` : 'AI Loading...';
+  } else if (status === 'error') {
+    displayText = 'Rules Only';
+  } else {
+    // idle - check if models are actually loaded
+    const modelsLoaded = areModelsLoaded();
+    const isLoading = getIsModelLoading();
+    if (modelsLoaded) {
+      displayText = 'AI Ready';
+    } else if (isLoading) {
+      displayText = progress > 0 ? `AI Loading ${progress}%` : 'AI Loading...';
+    } else {
+      displayText = 'Rules Only';
+    }
+  }
+
+  return { status, progress, label, displayText };
 }
 
 /**

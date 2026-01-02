@@ -18,17 +18,21 @@ interface DashboardProps {
   lcswConfig?: LCSWConfig;
   onNavigate?: (view: 'values' | 'report' | 'vault') => void;
   onReset?: () => void;
+  initialValueId?: string | null;
 }
 
-const Dashboard: React.FC<DashboardProps> = ({ values, onLog, goals, onUpdateGoals, logs, lcswConfig, onNavigate, onReset }) => {
+const Dashboard: React.FC<DashboardProps> = ({ values, onLog, goals, onUpdateGoals, logs, lcswConfig, onNavigate, onReset, initialValueId }) => {
   const dashboard = useDashboard(values, goals, logs, lcswConfig, onLog, onUpdateGoals);
   const [showResourcesModal, setShowResourcesModal] = useState(false);
 
-  // Reset active value card when navigating to home
+  // Reset active value card when navigating to home, or set initial value if provided
   useEffect(() => {
-    const handleReset = () => {
-      dashboard.setActiveValueId(null);
-    };
+    if (initialValueId) {
+      dashboard.setActiveValueId(initialValueId);
+    } else {
+      const handleReset = () => {
+        dashboard.setActiveValueId(null);
+      };
     // Store reset handler for App.tsx to call
     (window as any).__dashboardReset = handleReset;
     return () => {
@@ -269,6 +273,11 @@ const Dashboard: React.FC<DashboardProps> = ({ values, onLog, goals, onUpdateGoa
               getReflectionPlaceholder={dashboard.getReflectionPlaceholder}
               onTriggerReflectionAnalysis={dashboard.triggerReflectionAnalysis}
               lcswConfig={lcswConfig}
+              onNavigateToHome={() => {
+                // Navigate to home and open this value card
+                onNavigate?.('home');
+                dashboard.setActiveValueId(value.id);
+              }}
             />
           );
         })}

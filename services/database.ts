@@ -812,15 +812,50 @@ class DatabaseService {
   }
 
   // Feeling logs operations - for behavioral tracking and AI context
-  async saveFeelingLog(feelingLog: { id: string; timestamp: string; emotionalState: string; selectedFeeling: string | null; aiResponse: string; isAIResponse: boolean; lowStateCount: number }): Promise<void> {
+  async saveFeelingLog(feelingLog: any): Promise<void> {
     const db = await this.ensureDB();
+    
+    // Ensure object store exists
+    if (!db.objectStoreNames.contains('feelingLogs')) {
+      console.warn('feelingLogs object store does not exist');
+      return Promise.resolve();
+    }
+    
     return new Promise((resolve, reject) => {
-      const transaction = db.transaction(['feelingLogs'], 'readwrite');
-      const store = transaction.objectStore('feelingLogs');
-      const request = store.add(feelingLog);
+      try {
+        const transaction = db.transaction(['feelingLogs'], 'readwrite');
+        const store = transaction.objectStore('feelingLogs');
+        
+        // Normalize the log entry - support both old and new schema
+        const normalizedLog: any = {
+          id: feelingLog.id,
+          timestamp: feelingLog.timestamp,
+          // New schema fields
+          emotion: feelingLog.emotion || feelingLog.emotionalState || '',
+          subEmotion: feelingLog.subEmotion !== undefined ? feelingLog.subEmotion : (feelingLog.selectedFeeling || null),
+          jsonIn: feelingLog.jsonIn || '',
+          jsonOut: feelingLog.jsonOut || '',
+          focusLens: feelingLog.focusLens || '',
+          reflection: feelingLog.reflection || '',
+          selfAdvocacy: feelingLog.selfAdvocacy || '',
+          frequency: feelingLog.frequency || 'daily',
+          jsonAssessment: feelingLog.jsonAssessment || '',
+          // Legacy fields for backward compatibility
+          emotionalState: feelingLog.emotionalState || feelingLog.emotion || '',
+          selectedFeeling: feelingLog.selectedFeeling !== undefined ? feelingLog.selectedFeeling : (feelingLog.subEmotion || null),
+          aiResponse: feelingLog.aiResponse || feelingLog.jsonOut || '',
+          isAIResponse: feelingLog.isAIResponse !== undefined ? feelingLog.isAIResponse : true,
+          lowStateCount: feelingLog.lowStateCount || 0,
+        };
+        
+        const request = store.put(normalizedLog); // Use put instead of add to allow updates
 
-      request.onsuccess = () => resolve();
-      request.onerror = () => reject(request.error);
+        request.onsuccess = () => resolve();
+        request.onerror = () => reject(request.error);
+      } catch (error) {
+        console.error('Error saving feeling log:', error);
+        resolve(); // Fail silently for non-critical operations
+      }
     });
   }
 

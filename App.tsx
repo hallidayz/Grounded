@@ -197,7 +197,7 @@ const App: React.FC = () => {
   }
   
   const auth = useAuth();
-  const { status: installationStatus, label: installationLabel, progress: installationProgress } = useModelInstallationStatus();
+  const { status: installationStatus, label: installationLabel, progress: installationProgress, displayText: aiStatusText } = useModelInstallationStatus();
 
   // Initialize database and check auth state
   useEffect(() => {
@@ -1048,6 +1048,8 @@ const App: React.FC = () => {
     if (userId) {
       await acceptTerms(userId);
       setAuthState('app');
+      // Navigate to settings (vault) after terms acceptance
+      setView('vault');
       
       // User has committed to using the app - ensure models are loading
       // This is a good time to start/retry model loading if not already started
@@ -1258,20 +1260,14 @@ const App: React.FC = () => {
               className="w-7 h-7 object-contain"
             />
             <span className="font-bold text-base sm:text-lg tracking-tight text-text-primary dark:text-white hidden sm:inline">Grounded</span>
-            {/* Installation Status Indicator */}
-            {installationStatus === 'in-progress' && (
-              <span className="text-xs font-medium px-2 py-0.5 rounded-full bg-green-500/20 dark:bg-green-500/30 text-green-600 dark:text-green-400 border border-green-500/30">
-                Installation: {installationProgress > 0 ? `${installationProgress}%` : installationLabel}
-              </span>
-            )}
-            {installationStatus === 'complete' && (
-              <span className="text-xs font-medium px-2 py-0.5 rounded-full bg-green-500/20 dark:bg-green-500/30 text-green-600 dark:text-green-400 border border-green-500/30">
-                Installation: Complete
-              </span>
-            )}
-            {installationStatus === 'error' && (
-              <span className="text-xs font-medium px-2 py-0.5 rounded-full bg-yellow-warm/20 dark:bg-yellow-warm/30 text-yellow-warm dark:text-yellow-warm border border-yellow-warm/30">
-                Installation: {installationLabel}
+            {/* AI Status Indicator */}
+            {authState === 'app' && aiStatusText && (
+              <span className={`text-xs font-medium px-2 py-0.5 rounded-full border ${
+                aiStatusText === 'AI Ready' 
+                  ? 'bg-green-500/20 dark:bg-green-500/30 text-green-600 dark:text-green-400 border-green-500/30'
+                  : 'bg-yellow-warm/20 dark:bg-yellow-warm/30 text-yellow-warm dark:text-yellow-warm border-yellow-warm/30'
+              }`}>
+                {aiStatusText}
               </span>
             )}
           </div>
@@ -1365,7 +1361,13 @@ const App: React.FC = () => {
         {view === 'values' && (
           <ValueSelection 
             initialSelected={selectedValueIds} 
-            onComplete={handleSelectionComplete} 
+            onComplete={handleSelectionComplete}
+            onAddGoal={(valueId) => {
+              // Navigate to home and open the value card for goal creation
+              setInitialValueIdForGoal(valueId);
+              setView('home');
+            }}
+            goals={goals}
           />
         )}
         
@@ -1379,6 +1381,7 @@ const App: React.FC = () => {
               logs={logs}
               lcswConfig={settings.lcswConfig}
               onNavigate={(view) => setView(view)}
+              initialValueId={initialValueIdForGoal}
             />
           </Suspense>
         )}

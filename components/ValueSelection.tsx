@@ -7,9 +7,11 @@ interface ValueSelectionProps {
   initialSelected: string[];
   onComplete: (ids: string[]) => void;
   isReorderingOnly?: boolean;
+  onAddGoal?: (valueId: string) => void;
+  goals?: Array<{ valueId: string }>;
 }
 
-const ValueSelection: React.FC<ValueSelectionProps> = ({ initialSelected, onComplete, isReorderingOnly = false }) => {
+const ValueSelection: React.FC<ValueSelectionProps> = ({ initialSelected, onComplete, isReorderingOnly = false, onAddGoal, goals = [] }) => {
   const [selected, setSelected] = useState<string[]>(initialSelected);
   const [shakeId, setShakeId] = useState<string | null>(null);
   const [collapsedCategories, setCollapsedCategories] = useState<Set<string>>(new Set());
@@ -155,6 +157,9 @@ const ValueSelection: React.FC<ValueSelectionProps> = ({ initialSelected, onComp
             const isDragging = draggedIndex === index;
             const isDragOver = dragOverIndex === index;
 
+            const valueGoals = goals.filter((g: any) => g.valueId === value.id);
+            const hasGoals = valueGoals.length > 0;
+
             return (
               <div 
                 key={value.id}
@@ -163,7 +168,7 @@ const ValueSelection: React.FC<ValueSelectionProps> = ({ initialSelected, onComp
                 onDragOver={(e) => handleDragOver(e, index)}
                 onDragLeave={() => setDragOverIndex(null)}
                 onDrop={() => handleDrop(index)}
-                className={`flex items-center gap-2 sm:gap-3 bg-white dark:bg-dark-bg-primary p-2 sm:p-2.5 rounded-lg sm:rounded-xl border transition-all cursor-grab active:cursor-grabbing ${isDragging ? 'opacity-30 scale-95 border-dashed border-yellow-warm/50' : 'border-border-soft dark:border-dark-border/30 shadow-sm'} ${isDragOver ? 'border-yellow-warm' : ''}`}
+                className={`relative flex items-center gap-2 sm:gap-3 bg-white dark:bg-dark-bg-primary p-2 sm:p-2.5 rounded-lg sm:rounded-xl border transition-all cursor-grab active:cursor-grabbing ${isDragging ? 'opacity-30 scale-95 border-dashed border-yellow-warm/50' : 'border-border-soft dark:border-dark-border/30 shadow-sm'} ${isDragOver ? 'border-yellow-warm' : ''}`}
               >
                 <div className="flex flex-col gap-0.5 items-center bg-bg-secondary dark:bg-dark-bg-primary/50 p-1 rounded-md">
                   <button onClick={(e) => { e.stopPropagation(); moveValue(index, 'up'); }} disabled={index === 0} className="text-text-primary/30 dark:text-white/30 hover:text-yellow-warm disabled:opacity-0"><svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={3} d="M5 15l7-7 7 7" /></svg></button>
@@ -176,6 +181,22 @@ const ValueSelection: React.FC<ValueSelectionProps> = ({ initialSelected, onComp
                     <p className="text-xs text-text-primary/50 dark:text-white/50 font-bold uppercase tracking-widest">{value.category}</p>
                   </div>
                 </div>
+                {/* Plus button for adding goals - only in Values menu */}
+                {onAddGoal && (
+                  <button
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      onAddGoal(value.id);
+                    }}
+                    className="w-6 h-6 sm:w-7 sm:h-7 flex items-center justify-center rounded-lg bg-yellow-warm text-text-primary hover:opacity-90 transition-all shadow-sm active:scale-95 flex-shrink-0"
+                    title="Add goal"
+                    aria-label="Add goal"
+                  >
+                    <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={3}>
+                      <path strokeLinecap="round" strokeLinejoin="round" d="M12 4v16m8-8H4" />
+                    </svg>
+                  </button>
+                )}
                 <div className="text-text-primary/20 dark:text-white/20 pr-1 flex-shrink-0"><svg className="w-3 h-3" fill="currentColor" viewBox="0 0 24 24"><path d="M11 18c0 1.1-.9 2-2 2s-2-.9-2-2 .9-2 2-2 2 .9 2 2zm-2-8c-1.1 0-2 .9-2 2s.9 2 2 2 2-.9 2-2-.9-2-2-2zm0-6c-1.1 0-2 .9-2 2s.9 2 2 2 2-.9 2-2-.9-2-2-2zm6 4c1.1 0 2-.9 2-2s-.9-2-2-2-2 .9-2 2 .9 2 2 2zm0 2c-1.1 0-2 .9-2 2s.9 2 2 2 2-.9 2-2-.9-2-2-2zm0 6c-1.1 0-2 .9-2 2s.9 2 2 2 2-.9 2-2-.9-2-2-2z" /></svg></div>
               </div>
             );

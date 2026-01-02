@@ -64,6 +64,104 @@ export function useDashboard(
       return v.toString(16);
     });
   }, []);
+
+  // Save emotion interaction to database
+  const saveEmotionInteraction = useCallback(async (
+    emotion: string,
+    subEmotion: string,
+    valueId: string
+  ): Promise<void> => {
+    try {
+      const userId = sessionStorage.getItem('userId') || 'anonymous';
+      const timestamp = new Date().toISOString();
+      const logId = `feeling-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
+      
+      // Build JSON input
+      const jsonIn = JSON.stringify({
+        emotion,
+        subEmotion,
+        valueId,
+        timestamp,
+        userId
+      });
+      
+      // Get AI response (or rule-based fallback)
+      let jsonOut = '';
+      let focusLens = '';
+      let isAIResponse = false;
+      
+      try {
+        // Try to get AI encouragement
+        const encouragement = await generateEmotionalEncouragement(
+          emotion as EmotionalState,
+          subEmotion,
+          0, // lowStateCount - we'll track this separately
+          lcswConfig,
+          {
+            recentJournalText: '',
+            timeOfDay: (() => {
+              const hour = new Date().getHours();
+              if (hour < 12) return 'morning';
+              if (hour < 18) return 'afternoon';
+              if (hour < 22) return 'evening';
+              return 'night';
+            })(),
+            userPatterns: {
+              frequentStates: [],
+              progress: 0
+            }
+          }
+        );
+        
+        // Format as JSON response
+        jsonOut = JSON.stringify({
+          message: encouragement,
+          acknowledgeFeeling: subEmotion,
+          timestamp
+        });
+        isAIResponse = true;
+        focusLens = encouragement; // Initial focus lens is the encouragement
+      } catch (error) {
+        console.warn('AI encouragement failed, using rule-based fallback:', error);
+        // Rule-based fallback
+        const fallbackMessage = `I hear that you're feeling ${subEmotion}. That's valid, and it's okay to feel this way. Take a moment to breathe and remember that feelings are temporary.`;
+        jsonOut = JSON.stringify({
+          message: fallbackMessage,
+          acknowledgeFeeling: subEmotion,
+          timestamp
+        });
+        isAIResponse = false;
+        focusLens = fallbackMessage;
+      }
+      
+      // Save to database
+      const feelingLog: FeelingLog = {
+        id: logId,
+        timestamp,
+        emotion,
+        subEmotion,
+        jsonIn,
+        jsonOut,
+        focusLens,
+        reflection: '',
+        selfAdvocacy: '',
+        frequency: 'daily',
+        jsonAssessment: '',
+        // Legacy fields
+        emotionalState: emotion as any,
+        selectedFeeling: subEmotion,
+        aiResponse: jsonOut,
+        isAIResponse,
+        lowStateCount: 0
+      };
+      
+      await dbService.saveFeelingLog(feelingLog);
+      console.log('✅ Emotion interaction saved to database');
+    } catch (error) {
+      console.error('Error saving emotion interaction:', error);
+      // Don't throw - this is non-critical
+    }
+  }, [lcswConfig, generateEmotionalEncouragement]);
   
   // Save user interaction helper
   const saveInteraction = useCallback(async (type: UserInteraction['type'], metadata?: Record<string, any>) => {
@@ -94,12 +192,17 @@ export function useDashboard(
     }
   }, [activeValueId, saveInteraction]);
   
-  const setSelectedFeeling = useCallback((feeling: string | null) => {
+  const setSelectedFeeling = useCallback(async (feeling: string | null) => {
     _setSelectedFeeling(feeling);
     if (activeValueId && feeling) {
       saveInteraction('sub_feeling_selected', { selectedFeeling: feeling });
+      
+      // Save emotion interaction to database when both emotion and sub-emotion are selected
+      if (emotionalState && emotionalState !== 'mixed' && feeling && activeValueId) {
+        await saveEmotionInteraction(emotionalState, feeling, activeValueId);
+      }
     }
-  }, [activeValueId, saveInteraction]);
+  }, [activeValueId, saveInteraction, emotionalState]);
   
   // Start session when card opens
   const startSession = useCallback(async (valueId: string) => {

@@ -157,12 +157,22 @@ export interface CrisisDetection {
 
 export interface FeelingLog {
   id: string;
-  timestamp: string; // ISO string
-  emotionalState: 'drained' | 'heavy' | 'overwhelmed' | 'mixed' | 'calm' | 'hopeful' | 'positive' | 'energized';
-  selectedFeeling: string | null;
-  aiResponse: string; // The AI-generated encouragement or rule-based fallback
-  isAIResponse: boolean; // true if from AI, false if rule-based fallback
-  lowStateCount: number; // Count of consecutive low states for pattern tracking
+  timestamp: string; // ISO datetime
+  emotion: string; // emotionalState (renamed for consistency)
+  subEmotion: string | null; // selectedFeeling (renamed for consistency)
+  jsonIn: string; // JSON string of input to AI
+  jsonOut: string; // JSON string of AI response
+  focusLens: string; // AI-generated focus lens text
+  reflection: string; // User's deep reflection text
+  selfAdvocacy: string; // Self-advocacy aim/goal text
+  frequency: GoalFrequency; // 'daily' | 'weekly' | 'monthly'
+  jsonAssessment: string; // JSON string of reflection analysis
+  // Legacy fields for backward compatibility
+  emotionalState?: 'drained' | 'heavy' | 'overwhelmed' | 'mixed' | 'calm' | 'hopeful' | 'positive' | 'energized';
+  selectedFeeling?: string | null;
+  aiResponse?: string; // The AI-generated encouragement or rule-based fallback
+  isAIResponse?: boolean; // true if from AI, false if rule-based fallback
+  lowStateCount?: number; // Count of consecutive low states for pattern tracking
 }
 
 export interface UserInteraction {

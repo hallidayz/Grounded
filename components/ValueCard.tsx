@@ -35,6 +35,7 @@ interface ValueCardProps {
   getReflectionPlaceholder: (freq: GoalFrequency, subFeeling?: string | null) => string;
   onTriggerReflectionAnalysis: () => void;
   lcswConfig?: any;
+  onNavigateToHome?: () => void;
 }
 
 const ValueCard: React.FC<ValueCardProps> = ({
@@ -69,6 +70,7 @@ const ValueCard: React.FC<ValueCardProps> = ({
   getReflectionPlaceholder,
   onTriggerReflectionAnalysis,
   lcswConfig,
+  onNavigateToHome,
 }) => {
   return (
     <div 
@@ -119,6 +121,13 @@ const ValueCard: React.FC<ValueCardProps> = ({
                 </button>
               </div>
             ))}
+          </div>
+        )}
+        {!isActive && valueGoals.length === 0 && onNavigateToHome && (
+          <div className="mt-3 pt-3 border-t border-border-soft dark:border-dark-border/30">
+            <p className="text-xs sm:text-sm text-text-primary/60 dark:text-white/60 text-center">
+              No goals yet. Start with <button onClick={onNavigateToHome} className="text-yellow-warm underline font-bold hover:opacity-90">reflections</button> to create your first goal.
+            </p>
           </div>
         )}
 
