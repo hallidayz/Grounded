@@ -539,32 +539,22 @@ export async function initializeModels(forceReload: boolean = false, modelType?:
           totalProgress = Math.min(100, modelProgress);
           
           const modelName = progress.name || 'model';
-          console.log(`Model loaded: ${modelName}`);
+          console.log(`Model progress callback: ${modelName} reported done`);
           
-          // Check if all models are actually loaded (not just progress callback)
-          const allModelsActuallyLoaded = moodTrackerModel !== null && counselingCoachModel !== null;
-          
-          // Update internal progress tracking
+          // IMPORTANT: Don't set status to complete here - wait for actual model assignment
+          // The progress callback fires when files download, but the model might still fail to initialize
+          // Only update progress, not final status
           currentDownloadProgress = totalProgress;
+          currentDownloadStatus = 'downloading'; // Keep as downloading until models are actually assigned
+          currentDownloadLabel = 'Loading AI models...';
+          currentDownloadDetails = `${modelName} downloaded`;
           
-          // If all models are actually loaded, mark as complete immediately
-          if (allModelsActuallyLoaded || modelsLoaded >= totalModels) {
-            currentDownloadStatus = 'complete';
-            currentDownloadLabel = 'AI models ready';
-            currentDownloadDetails = 'All models loaded';
-            // Update progress to success state
-            setProgressSuccess('AI models loaded successfully!', 'All models are ready to use');
-          } else {
-            currentDownloadStatus = 'downloading';
-            currentDownloadLabel = 'Loading AI models...';
-            currentDownloadDetails = `${modelName} loaded`;
-            // Continue showing loading state
-            setModelLoadingProgress(
-              totalProgress,
-              `Loading AI models...`,
-              `${modelName} loaded`
-            );
-          }
+          // Update progress but don't mark as complete yet
+          setModelLoadingProgress(
+            totalProgress,
+            `Loading AI models...`,
+            `${modelName} downloaded`
+          );
           
           lastUpdateTime = now;
         }
@@ -932,8 +922,23 @@ export async function initializeModels(forceReload: boolean = false, modelType?:
           // If at least one model loaded, log that partial loading is available
           if (moodTrackerModel || counselingCoachModel) {
             console.info('ℹ️ Partial model loading: Some AI features may be available.');
+            // Set status based on what actually loaded
+            if (moodTrackerModel && counselingCoachModel) {
+              currentDownloadStatus = 'complete';
+              currentDownloadLabel = 'AI models ready';
+              setProgressSuccess('AI models loaded successfully!', 'All models are ready to use');
+            } else {
+              currentDownloadStatus = 'error';
+              currentDownloadLabel = 'Partial model loading';
+              setModelLoadingProgress(50, 'Partial model loading', 'Some AI features available');
+            }
           } else {
             console.info('ℹ️ All models failed to load. The app will use rule-based responses which are fully functional.');
+            // Explicitly set error state when all models failed
+            currentDownloadStatus = 'error';
+            currentDownloadLabel = 'AI models unavailable';
+            currentDownloadProgress = 0;
+            setModelLoadingProgress(0, 'AI models unavailable', 'Using rule-based responses');
           }
         }
       }
