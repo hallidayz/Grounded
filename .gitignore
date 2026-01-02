@@ -1,75 +1,26 @@
-# Dependencies
+# Node.js / Vite
 node_modules/
-.pnp
-.pnp.js
-
-# Testing
-coverage/
-
-# Production
 dist/
-build/
-
-# Misc
-.DS_Store
+.build/
+.env
 .env.local
-.env.development.local
-.env.test.local
-.env.production.local
+coverage/
+.vscode/
+.DS_Store
 
 # Logs
 npm-debug.log*
 yarn-debug.log*
 yarn-error.log*
-lerna-debug.log*
-
-# Editor
-.vscode/
-.idea/
-*.swp
-*.swo
-*~
+pnpm-debug.log*
 
 # Tauri
 src-tauri/target/
-src-tauri/Cargo.lock
+src-tauri/.cargo-lock
 
-# Capacitor
-android/
-ios/
-.capacitor/
-
-# Package
-package/
-*.zip
-
-# Release build artifacts
-release/dist-for-hosting/
-release/package/
-
-# Temporary DMG files
-rw.*.dmg
-*.rw.dmg
+# Build artifacts
+*.log
+*.sw?
 
 # OS
-.DS_Store
 Thumbs.db
-
-# Ignore Gradle project-specific cache directory
-.gradle
-
-# Ignore Gradle build output directory
-build
-
-# Android local configuration (contains user-specific paths)
-local.properties
-android/local.properties
-
-# Debug logs and temporary files
-.cursor/
-*.log
-
-# AI Models (downloaded during build, too large for GitHub)
-# Models are downloaded via npm run download:models and bundled during build
-public/models/
-dist/models/

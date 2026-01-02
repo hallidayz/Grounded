@@ -1,18 +1,18 @@
 /** @type {import('tailwindcss').Config} */
 export default {
   content: [
-    "./index.html",
-    "./src/**/*.{js,ts,jsx,tsx}",
-    "./components/**/*.{js,ts,jsx,tsx}",
-    "./services/**/*.{js,ts}",
-    "./utils/**/*.{js,ts}",
-    "./App.tsx",
-    "./index.tsx",
+    './index.html',
+    './src/**/*.{js,ts,jsx,tsx}',
   ],
-  darkMode: 'class',
   theme: {
     extend: {
       colors: {
+        brand: {
+          light: '#A5B4FC',
+          DEFAULT: '#4F46E5',
+          dark: '#3730A3',
+        },
+        // Preserve existing custom colors below this point
         // Core Brand (Navy)
         'navy-primary': '#2c5282',
         'navy-dark': '#1e3a5f',
@@ -60,5 +60,5 @@ export default {
     },
   },
   plugins: [],
-}
-
+  darkMode: 'class', // better theme control
+};

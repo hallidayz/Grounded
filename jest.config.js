@@ -6,7 +6,7 @@ export default {
   preset: 'ts-jest',
   testEnvironment: 'jsdom',
   roots: ['<rootDir>/tests'],
-  testMatch: ['**/*.test.ts', '**/*.test.tsx'],
+  testMatch: ['**/tests/**/*.test.ts?(x)'],
   moduleNameMapper: {
     '^@/(.*)$': '<rootDir>/$1',
   },
@@ -18,13 +18,8 @@ export default {
     '!**/*.d.ts',
     '!**/node_modules/**',
   ],
-  transform: {
-    '^.+\\.tsx?$': ['ts-jest', {
-      tsconfig: {
-        jsx: 'react',
-      },
-    }],
-  },
-  moduleFileExtensions: ['ts', 'tsx', 'js', 'jsx', 'json'],
-};
+  maxWorkers: '50%',
+  coverageDirectory: './coverage',
+  collectCoverageFrom: ['src/**/*.{ts,tsx}', '!src/**/*.d.ts'],
+  verbose: false,
 

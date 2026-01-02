@@ -1,0 +1,1 @@
+var e=Object.defineProperty;var i=(t,a)=>e(t,"name",{value:a,configurable:!0});const r=i((t="light")=>{if("vibrate"in navigator){const a={light:10,medium:20,heavy:30};navigator.vibrate(a[t])}},"hapticFeedback");export{r as h};

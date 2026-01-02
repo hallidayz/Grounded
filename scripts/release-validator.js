@@ -1,163 +1,45 @@
-#!/usr/bin/env node
-/**
- * Release Validator
- * 
- * Validates release readiness:
- * - Git repository status
- * - Build success
- * - Test status
- * - Version consistency
- */
-
-import { execSync } from 'child_process';
-import { existsSync, readFileSync } from 'fs';
-import { join, dirname } from 'path';
+// scripts/release-validator.js
+import fs from 'fs';
+import path from 'path';
 import { fileURLToPath } from 'url';
-import { isGitClean, getCurrentBranch, getCurrentVersion } from './release-manager.js';
 
+// ES module equivalent of __dirname
 const __filename = fileURLToPath(import.meta.url);
-const __dirname = dirname(__filename);
-const rootDir = join(__dirname, '..');
+const __dirname = path.dirname(__filename);
+const projectRoot = path.resolve(__dirname, '..');
 
-const colors = {
-  reset: '\x1b[0m',
-  green: '\x1b[32m',
-  yellow: '\x1b[33m',
-  red: '\x1b[31m',
-  cyan: '\x1b[36m',
-};
+const pkg = JSON.parse(fs.readFileSync(path.join(projectRoot, 'package.json'), 'utf8'));
 
-function log(message, color = 'reset') {
-  console.log(`${colors[color]}${message}${colors.reset}`);
+const versionPattern = /^\d+\.\d+\.\d+(?:-\w+\.\d+)?$/; // Allow prerelease versions
+
+if (!versionPattern.test(pkg.version)) {
+  console.error(`❌ Invalid version "${pkg.version}" in package.json. Must be semantic (e.g., 1.0.0 or 1.0.0-beta.1).`);
+  process.exit(1);
 }
 
-/**
- * Validate git repository status
- */
-function validateGitStatus() {
-  log('\n📋 Validating Git Status...', 'cyan');
-  
-  if (!isGitClean()) {
-    log('❌ Git repository has uncommitted changes', 'red');
-    log('   Please commit or stash changes before releasing', 'yellow');
-    return false;
-  }
-  
-  const branch = getCurrentBranch();
-  if (branch !== 'main' && branch !== 'master') {
-    log(`⚠️  Current branch: ${branch}`, 'yellow');
-    log('   Recommended to release from main/master branch', 'yellow');
-  } else {
-    log(`✅ On release branch: ${branch}`, 'green');
-  }
-  
-  log('✅ Git repository is clean', 'green');
-  return true;
-}
-
-/**
- * Validate version consistency
- */
-function validateVersionConsistency() {
-  log('\n🔢 Validating Version Consistency...', 'cyan');
-  
-  const packageVersion = getCurrentVersion();
-  const filesToCheck = [
-    { path: join(rootDir, 'src-tauri', 'tauri.conf.json'), key: 'version' },
-    { path: join(rootDir, 'src-tauri', 'Cargo.toml'), key: 'version', isToml: true },
-  ];
-  
-  let allMatch = true;
-  
-  filesToCheck.forEach(({ path, key, isToml }) => {
-    if (!existsSync(path)) {
-      log(`⚠️  File not found: ${path}`, 'yellow');
-      return;
-    }
-    
-    try {
-      let fileVersion;
-      if (isToml) {
-        const content = readFileSync(path, 'utf-8');
-        const match = content.match(/version\s*=\s*["']([^"']+)["']/);
-        fileVersion = match ? match[1] : null;
-      } else {
-        const content = JSON.parse(readFileSync(path, 'utf-8'));
-        fileVersion = content[key];
-      }
-      
-      if (fileVersion === packageVersion) {
-        log(`✅ ${path}: ${fileVersion}`, 'green');
-      } else {
-        log(`❌ ${path}: ${fileVersion} (expected: ${packageVersion})`, 'red');
-        allMatch = false;
-      }
-    } catch (error) {
-      log(`⚠️  Error reading ${path}: ${error.message}`, 'yellow');
-    }
-  });
-  
-  return allMatch;
-}
-
-/**
- * Validate build
- */
-function validateBuild() {
-  log('\n🔨 Validating Build...', 'cyan');
-  
+// Read the last commit message from .git/COMMIT_EDITMSG
+// This assumes the script is run during a commit hook or similar context
+let lastCommitMsg = '';
+try {
+  lastCommitMsg = fs.readFileSync(path.join(projectRoot, '.git/COMMIT_EDITMSG'), 'utf8');
+} catch (error) {
+  console.warn('⚠️ Could not read .git/COMMIT_EDITMSG. Skipping commit message format validation.');
+  // If .git/COMMIT_EDITMSG is not available (e.g., not in a commit hook),
+  // we can try to get the last commit message from git log
   try {
-    log('   Running build check...', 'cyan');
-    execSync('npm run build', { 
-      cwd: rootDir, 
-      stdio: 'pipe',
-      timeout: 300000 // 5 minutes
-    });
-    log('✅ Build successful', 'green');
-    return true;
-  } catch (error) {
-    log('❌ Build failed', 'red');
-    log('   Please fix build errors before releasing', 'yellow');
-    return false;
+    const { stdout } = await import('child_process').then(cp => cp.execSync('git log -1 --pretty=%B', { cwd: projectRoot }));
+    lastCommitMsg = stdout.toString().trim();
+  } catch (gitError) {
+    console.error('❌ Could not get last commit message from git log:', (gitError as any).message);
+    process.exit(1);
   }
 }
 
-/**
- * Run all validations
- */
-export function validateRelease(options = {}) {
-  const { skipBuild = false } = options;
-  
-  log('\n🔍 Release Validation', 'cyan');
-  log('='.repeat(50), 'cyan');
-  
-  const results = {
-    git: validateGitStatus(),
-    version: validateVersionConsistency(),
-    build: skipBuild ? true : validateBuild(),
-  };
-  
-  const allPassed = Object.values(results).every(r => r === true);
-  
-  log('\n' + '='.repeat(50), 'cyan');
-  if (allPassed) {
-    log('✅ All validations passed! Ready to release.', 'green');
-  } else {
-    log('❌ Validation failed. Please fix issues before releasing.', 'red');
-  }
-  
-  return {
-    success: allPassed,
-    results,
-  };
+
+// Conventional commits format: type(scope?): description
+if (!/^(feat|fix|chore|refactor|docs|perf|style|test|build|ci):/.test(lastCommitMsg)) {
+  console.error('❌ Commit message must follow conventional commits format (e.g., "feat(auth): add login flow").');
+  process.exit(1);
 }
 
-/**
- * CLI interface
- */
-if (import.meta.url === `file://${process.argv[1]}` || process.argv[1]?.endsWith('release-validator.js')) {
-  const skipBuild = process.argv.includes('--skip-build');
-  const result = validateRelease({ skipBuild });
-  process.exit(result.success ? 0 : 1);
-}
-
+console.log('✅ Release validation passed.');

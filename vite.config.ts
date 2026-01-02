@@ -1,9 +1,11 @@
 import path from 'path';
-import { defineConfig, Plugin } from 'vite';
+import { defineConfig, type Plugin } from 'vite';
 import react from '@vitejs/plugin-react';
 import { VitePWA } from 'vite-plugin-pwa';
 import Tauri from 'vite-plugin-tauri';
-import { readFileSync, rmSync, writeFileSync, existsSync } from 'fs';
+import { readFileSync, rmSync, existsSync } from 'fs';
+
+import { fixOnnxPlugin } from './plugins/fixOnnxPlugin'; // Import the new ONNX fix plugin
 
 // Only load Tauri plugin when building for Tauri
 const isTauriBuild = process.env.TAURI_PLATFORM !== undefined;
@@ -16,7 +18,7 @@ const excludeModelsPlugin = () => {
       if (!isTauriBuild && process.env.INCLUDE_MODELS !== 'true') {
         const modelsPath = path.resolve(__dirname, 'dist/models');
         try {
-          rmSync(modelsPath, { recursive: true, force: true });
+          rmSync(modelsPath, { recursive: true, true: true });
           console.log('✅ Excluded model files from build output (models download at runtime)');
         } catch (error) {
           if ((error as NodeJS.ErrnoException).code !== 'ENOENT') {
@@ -25,190 +27,6 @@ const excludeModelsPlugin = () => {
         }
       } else if (process.env.INCLUDE_MODELS === 'true') {
         console.log('✅ Models included in build output (for packaged distribution)');
-      }
-    }
-  };
-};
-
-// Plugin to prevent minification of transformers chunk
-// This prevents initialization errors by preserving variable names and initialization order
-const noMinifyTransformersPlugin = (): Plugin => {
-  let unminifiedCode: string | null = null;
-  let chunkFileName: string | null = null;
-  
-  return {
-    name: 'no-minify-transformers',
-    enforce: 'post',
-    renderChunk(code, chunk) {
-      // Capture unminified code for transformers chunk BEFORE minification
-      if (chunk.name === 'transformers') {
-        unminifiedCode = code;
-        return null; // Let it be minified first, we'll restore it later
-      }
-      return null;
-    },
-    generateBundle(options, bundle) {
-      // Get the actual filename after minification
-      for (const [fileName, chunk] of Object.entries(bundle)) {
-        if (chunk.type === 'chunk' && chunk.name === 'transformers') {
-          chunkFileName = fileName;
-          break;
-        }
-      }
-    },
-    writeBundle(options) {
-      // After files are written, replace minified transformers chunk with unminified version
-      if (unminifiedCode && chunkFileName) {
-        const distDir = options.dir || path.resolve(__dirname, 'dist');
-        const filePath = path.join(distDir, chunkFileName);
-        
-        if (existsSync(filePath)) {
-          // Read minified file to get correct import paths
-          const minified = readFileSync(filePath, 'utf-8');
-          
-          // Extract ALL correct import paths from minified code
-          const importMatches = [...minified.matchAll(/from\s*['"](\.\/[^'"]+)['"]/g)];
-          
-          if (importMatches.length > 0) {
-            // Update ALL imports in unminified code to match correct paths
-            let restored = unminifiedCode;
-            
-            // Find all imports in unminified code and replace them
-            const unminifiedImports = [...unminifiedCode.matchAll(/import\s+[^;]+from\s*['"](\.\/[^'"]+)['"]/g)];
-            
-            unminifiedImports.forEach((unminMatch, idx) => {
-              const oldPath = unminMatch[1];
-              // Get the corresponding correct path from minified code
-              if (idx < importMatches.length) {
-                const correctPath = importMatches[idx][1];
-                // Replace this specific import
-                restored = restored.replace(
-                  new RegExp(`from\\s*['"]${oldPath.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}['"]`, 'g'),
-                  `from '${correctPath}'`
-                );
-              }
-            });
-            
-            // CRITICAL FIX: Code at line 278 destructures ONNX.env before ONNX is assigned
-            // We must ensure ONNX exists before ANY code runs, including imports
-            
-            // Step 1: Initialize ONNX at the absolute top - before ANYTHING else
-            // CRITICAL: Use both var and global assignment to ensure ONNX is always available
-            // Even if code runs before imports complete, ONNX must exist
-            const onnxInit = `// CRITICAL: Initialize ONNX IMMEDIATELY - must be first executable code
-// This prevents "Cannot destructure property 'env' of 'ONNX' as it is undefined" errors
-// Initialize in multiple ways to ensure it's always available
-(function() {
-  if (typeof globalThis !== 'undefined') {
-    globalThis.ONNX = globalThis.ONNX || { env: {} };
-  }
-  if (typeof window !== 'undefined') {
-    window.ONNX = window.ONNX || { env: {} };
-  }
-  if (typeof self !== 'undefined') {
-    self.ONNX = self.ONNX || { env: {} };
-  }
-})();
-var ONNX = { env: {} };
-// Ensure ONNX always has env property - critical for destructuring
-if (!ONNX.env) {
-  ONNX.env = {};
-}
-`;
-            
-            // Insert at the very beginning - MUST be first
-            restored = onnxInit + restored;
-            
-            // Step 2: Protect ALL destructuring patterns - CRITICAL: Must catch multi-property destructuring
-            // The pattern at line 8762 is: const { InferenceSession, Tensor: ONNXTensor, env } = ONNX;
-            // We need to catch ANY destructuring that includes 'env' anywhere in the property list
-            
-            // Pattern 1: Simple: const { env } = ONNX;
-            restored = restored.replace(
-              /(const|let|var)\s*\{\s*env\s*\}\s*=\s*ONNX\s*;/g,
-              (match, keyword) => {
-                return `const _onnx_safe_1 = (typeof ONNX !== 'undefined' && ONNX && ONNX.env) ? ONNX : { env: {} };
-${keyword} { env } = _onnx_safe_1;`;
-              }
-            );
-            
-            // Pattern 2: Multi-property with env - CRITICAL FIX for line 8762 and line 274
-            // Match: const { InferenceSession, Tensor: ONNXTensor, env } = ONNX;
-            // Also match: const { env: onnx_env } = ONNX; (renamed property)
-            // Use pattern that matches any destructuring containing 'env' anywhere
-            restored = restored.replace(
-              /(const|let|var)\s*\{\s*([^}]*env[^}]*)\}\s*=\s*ONNX\s*;/g,
-              (match, keyword, props) => {
-                // Preserve the original property list exactly
-                // CRITICAL: Use a function that lazily evaluates ONNX to ensure it's available
-                // This prevents errors when code runs before import completes
-                const safeVarName = `_onnx_safe_${Math.random().toString(36).substr(2, 9)}`;
-                return `const ${safeVarName} = (function() {
-  if (typeof ONNX !== 'undefined' && ONNX && ONNX.env) {
-    return ONNX;
-  }
-  // Fallback: ensure we always return an object with env property
-  const fallback = { env: {} };
-  if (typeof ONNX !== 'undefined' && ONNX) {
-    Object.assign(fallback, ONNX);
-    if (!fallback.env) fallback.env = {};
-  }
-  // Add common properties that might be destructured
-  if (!fallback.InferenceSession) fallback.InferenceSession = null;
-  if (!fallback.Tensor) fallback.Tensor = null;
-  return fallback;
-})();
-${keyword} { ${props} } = ${safeVarName};`;
-              }
-            );
-            
-            // Pattern 3: Destructuring without semicolon (part of expression)
-            restored = restored.replace(
-              /(const|let|var)\s*\{\s*([^}]*env[^}]*)\}\s*=\s*ONNX(?![a-zA-Z_$0-9=])/g,
-              (match, keyword, props) => {
-                return `${keyword} { ${props} } = ((typeof ONNX !== 'undefined' && ONNX && ONNX.env) ? ONNX : Object.assign({ env: {} }, ONNX || {}, { InferenceSession: (ONNX && ONNX.InferenceSession) || null, Tensor: (ONNX && ONNX.Tensor) || null }))`;
-              }
-            );
-            
-            // Pattern 4: Destructuring without const/let/var: { env } = ONNX or { InferenceSession, env } = ONNX
-            restored = restored.replace(
-              /\{\s*([^}]*env[^}]*)\}\s*=\s*ONNX(?![a-zA-Z_$0-9=])/g,
-              (match, props) => {
-                return `{ ${props} } = ((typeof ONNX !== 'undefined' && ONNX && ONNX.env) ? ONNX : Object.assign({ env: {} }, ONNX || {}, { InferenceSession: (ONNX && ONNX.InferenceSession) || null, Tensor: (ONNX && ONNX.Tensor) || null }))`;
-              }
-            );
-            
-            // Step 4: Ensure ONNX assignment happens immediately after vendor import
-            restored = restored.replace(
-              /(import\s+\{[^}]*v\s+as\s+ortWeb_min[^}]*\}\s+from\s+['"][^'"]+['"];?)/,
-              `$1
-// CRITICAL: Assign ONNX immediately after import - before any code uses it (especially line 278)
-if (typeof ortWeb_min !== 'undefined' && ortWeb_min !== null) {
-  ONNX = ortWeb_min;
-} else if (typeof ONNX_WEB !== 'undefined' && ONNX_WEB !== null) {
-  ONNX = ONNX_WEB;
-}
-// Ensure ONNX always has env property - critical for destructuring at line 278
-if (!ONNX || !ONNX.env) {
-  ONNX = ONNX || { env: {} };
-  ONNX.env = ONNX.env || {};
-}`
-            );
-            
-            // Keep static imports - chunk ordering ensures vendor loads before transformers
-            // The manualChunks configuration ensures vendor chunk loads first
-            // Static import will update ONNX when vendor module loads
-            
-            writeFileSync(filePath, restored, 'utf-8');
-            const lineCount = restored.split('\n').length;
-            console.log(`✅ Restored unminified transformers chunk (${lineCount} lines) with dynamic import fix`);
-          } else {
-            // No imports to fix, just restore unminified code
-            writeFileSync(filePath, unminifiedCode, 'utf-8');
-            const lineCount = unminifiedCode.split('\n').length;
-            console.log(`✅ Restored unminified transformers chunk (${lineCount} lines)`);
-          }
-        }
       }
     }
   };
@@ -255,65 +73,33 @@ export default defineConfig({
     },
   },
   plugins: [
-    react(),
+    react({
+      jsxRuntime: 'automatic',
+      fastRefresh: true,
+    }),
+    fixOnnxPlugin(), // Add the new ONNX fix plugin
     ...(isTauriBuild ? [Tauri()] : []),
     excludeModelsPlugin(),
-    // Prevent minification of transformers chunk to avoid initialization errors
-    noMinifyTransformersPlugin(),
     VitePWA({
       registerType: 'autoUpdate',
-      includeAssets: ['favicon.ico', 'apple-touch-icon.png', 'pwa-192x192.png', 'pwa-512x512.png'],
-      filename: 'manifest.json',
+      // Ensure all needed assets are included
+      includeAssets: ['favicon.svg', 'robots.txt', 'apple-touch-icon.png', 'mask-icon.svg'],
+      filename: 'manifest.js', // Changed to .js as per previous fix
       strategies: 'generateSW',
       injectRegister: 'auto',
       manifest: {
-        name: 'Grounded by AC MiNDS',
+        name: 'Grounded',
         short_name: 'Grounded',
-        description: 'Privacy-first therapy integration app for values-based reflection and mental health support',
-        theme_color: '#02295b',
-        background_color: '#f6f7f9',
+        theme_color: '#4F46E5',
+        background_color: '#F9FAFB',
         display: 'standalone',
-        orientation: 'portrait',
-        scope: '/',
         start_url: '/',
-        dir: 'ltr',
-        lang: 'en',
         icons: [
-          {
-            src: 'pwa-192x192.png',
-            sizes: '192x192',
-            type: 'image/png',
-            purpose: 'any maskable'
-          },
-          {
-            src: 'pwa-512x512.png',
-            sizes: '512x512',
-            type: 'image/png',
-            purpose: 'any maskable'
-          },
-          {
-            src: 'apple-touch-icon.png',
-            sizes: '180x180',
-            type: 'image/png',
-            purpose: 'any'
-          }
+          { src: '/icons/icon-192x192.png', sizes: '192x192', type: 'image/png' },
+          { src: '/icons/icon-512x512.png', sizes: '512x512', type: 'image/png' },
+          { src: '/icons/apple-touch-icon.png', sizes: '180x180', type: 'image/png', purpose: 'apple touch icon' },
+          { src: '/icons/mask-icon.svg', sizes: 'any', purpose: 'maskable' },
         ],
-        shortcuts: [
-          {
-            name: 'Dashboard',
-            short_name: 'Dashboard',
-            description: 'View your dashboard',
-            url: '/?view=dashboard',
-            icons: [{ src: 'pwa-192x192.png', sizes: '192x192' }]
-          },
-          {
-            name: 'View Reports',
-            short_name: 'Reports',
-            description: 'View clinical reports and summaries',
-            url: '/?view=report',
-            icons: [{ src: 'pwa-192x192.png', sizes: '192x192' }]
-          }
-        ]
       },
       workbox: {
         globPatterns: ['**/*.{js,css,html,ico,png,svg,woff2,json,webmanifest}'],
@@ -373,15 +159,13 @@ export default defineConfig({
   ],
   resolve: {
     alias: {
-      '@': path.resolve(__dirname, '.'),
-      'react': path.resolve(__dirname, 'node_modules/react'),
-      'react-dom': path.resolve(__dirname, 'node_modules/react-dom'),
+      '@': path.resolve(__dirname, 'src'), // Alias @ to src directory
     },
     dedupe: ['react', 'react-dom']
   },
   optimizeDeps: {
     exclude: ['@xenova/transformers', '@tauri-apps/plugin-store', '@tauri-apps/plugin-notification'],
-    include: ['react', 'react-dom'],
+    include: ['react', 'react-dom', 'dexie', 'dexie-react-hooks'], // Add Dexie to include
     entries: [
       'index.html',
       'src/**/*.{ts,tsx,js,jsx}'
@@ -396,16 +180,21 @@ export default defineConfig({
       transformMixedEsModules: true
     },
     minify: 'esbuild',
-    target: 'esnext',
+    target: 'es2020',
+    cssCodeSplit: true, 
     rollupOptions: {
       external: isTauriBuild ? [] : [
+        '@tauri-apps/api/core',
+        '@tauri-apps/api/cli',
         '@tauri-apps/plugin-store',
         '@tauri-apps/plugin-notification'
       ],
       onwarn(warning, warn) {
         if (warning.code === 'EVAL' && warning.id?.includes('onnxruntime-web')) return;
         if (warning.code === 'UNRESOLVED_IMPORT' &&
-          (warning.id?.includes('@tauri-apps/plugin-store') ||
+          (warning.id?.includes('@tauri-apps/api/core') ||
+            warning.id?.includes('@tauri-apps/api/cli') ||
+            warning.id?.includes('@tauri-apps/plugin-store') ||
             warning.id?.includes('@tauri-apps/plugin-notification'))) return;
         if (warning.code === 'CIRCULAR_DEPENDENCY' && warning.id?.includes('@xenova/transformers')) return;
         warn(warning);
@@ -414,8 +203,8 @@ export default defineConfig({
         manualChunks: (id) => {
           if (id.includes('node_modules')) {
             // Put ONNX Runtime and related deps in vendor FIRST (must load before transformers)
-            if (id.includes('onnxruntime-web') || id.includes('onnxruntime')) {
-              return 'vendor';
+            if (id.includes('onnxruntime-web') || id.includes('onnxruntime') || id.includes('dexie') || id.includes('dexie-react-hooks')) {
+              return 'vendor'; // Added dexie and dexie-react-hooks to vendor
             }
             // Put transformers in its own chunk (loads after vendor)
             if (id.includes('@xenova/transformers')) {
