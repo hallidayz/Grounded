@@ -42,7 +42,7 @@ interface DatabaseMetadata {
 class DatabaseService {
   // Database name: groundedDB - simple and descriptive
   private dbName = 'groundedDB';
-  private dbVersion = 4; // Incremented to add metadata store and validation
+  private dbVersion = 5; // Incremented to add ruleBasedUsageLogs store
   private db: IDBDatabase | null = null;
   private oldDbName = 'com.acminds.grounded.therapy.db'; // Old database name for migration detection
   
@@ -481,6 +481,13 @@ class DatabaseService {
           const metadataStore = db.createObjectStore('metadata', { keyPath: 'id' });
           metadataStore.createIndex('appId', 'appId', { unique: false });
           metadataStore.createIndex('platform', 'platform', { unique: false });
+        }
+
+        // Rule-based usage logs store - tracks when rule-based fallbacks are used
+        if (!db.objectStoreNames.contains('ruleBasedUsageLogs')) {
+          const ruleBasedLogStore = db.createObjectStore('ruleBasedUsageLogs', { keyPath: 'id' });
+          ruleBasedLogStore.createIndex('timestamp', 'timestamp', { unique: false });
+          ruleBasedLogStore.createIndex('type', 'type', { unique: false });
         }
         
         request.onblocked = () => {

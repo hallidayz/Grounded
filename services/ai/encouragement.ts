@@ -5,23 +5,125 @@
  * Supports therapy integration with value-based reflection and emotional support.
  */
 
-import { ValueItem, GoalFrequency, LCSWConfig, ReflectionAnalysisResponse, GoalSuggestionResponse, EmotionalEncouragementResponse, CounselingGuidanceResponse } from "../../types";
+import { ValueItem, GoalFrequency, LCSWConfig, ReflectionAnalysisResponse, GoalSuggestionResponse, EmotionalEncouragementResponse, CounselingGuidanceResponse, EmotionalState } from "../../types";
 import { initializeModels, getCounselingCoachModel, getIsModelLoading } from "./models";
 import { detectCrisis, getCrisisResponse } from "./crisis";
 import { generateCacheKey, getCachedResponse, setCachedResponse, shouldInvalidateCache } from "./cache";
+import { emotionalEncouragementFallbacks, focusLensFallbacks, reflectionAnalysisFallbacks, goalSuggestionFallbacks, getFallbackResponse } from "./fallbackTables";
 
 /**
- * Fallback guidance generator (used when models aren't available)
+ * Generates Focus Lens guidance using AI first, with a rule-based fallback.
+ * This is a core AI feature to guide user reflection.
  */
-function generateFallbackGuidance(value: ValueItem, mood: string, reflection: string): string {
-  const moodContext = {
-    '🌱': 'growth and adaptation',
-    '🔥': 'momentum and action',
-    '✨': 'alignment and flow',
-    '🧗': 'challenge and resilience'
-  }[mood] || 'your journey';
+export async function generateFocusLens(
+  emotionalState: EmotionalState,
+  value: ValueItem,
+  lcswConfig?: LCSWConfig,
+  context?: {
+    recentReflections?: string;
+    timeOfDay?: 'morning' | 'afternoon' | 'evening' | 'night';
+  }
+): Promise<string> {
+  const protocols = lcswConfig?.protocols || [];
+  
+  const cacheKey = generateCacheKey(
+    `${emotionalState}|${value.id}|${context?.recentReflections?.substring(0, 50) || ''}`,
+    emotionalState,
+    undefined,
+    undefined,
+    protocols
+  );
 
-  return `Your focus on ${value.name} during this time of ${moodContext} shows self-awareness. Consider how this reflection connects to what you've discussed with your LCSW. What small step can you take today that aligns with your treatment plan?`;
+  const cached = await getCachedResponse(cacheKey);
+  if (cached?.focusLens) {
+    console.log('✅ Using cached Focus Lens');
+    return cached.focusLens;
+  }
+
+  let counselingCoachModel = getCounselingCoachModel();
+  if (!counselingCoachModel) {
+    const isModelLoading = getIsModelLoading();
+    if (isModelLoading) {
+      // Wait up to 2 seconds for model to load (non-blocking)
+      const maxWaitTime = 2000;
+      const startTime = Date.now();
+      while (!counselingCoachModel && (Date.now() - startTime) < maxWaitTime) {
+        await new Promise(resolve => setTimeout(resolve, 200));
+        counselingCoachModel = getCounselingCoachModel();
+      }
+    } else {
+      try {
+        await initializeModels();
+        counselingCoachModel = getCounselingCoachModel();
+      } catch (error) {
+        console.warn('Model initialization failed for Focus Lens');
+      }
+    }
+  }
+
+  const protocolContext = protocols.length > 0 
+    ? `The user is working with an LCSW using ${protocols.join(', ')} protocols.`
+    : 'The user is working with a licensed clinical social worker.';
+  
+  const reflectionContext = context?.recentReflections 
+    ? ` Recent reflections: "${context.recentReflections.substring(0, 200)}".` 
+    : '';
+
+  const prompt = `Generate a concise, empathetic "Focus Lens" message (2-3 sentences) for a user.
+
+Context: User is currently feeling ${emotionalState}. They are reflecting on the value: "${value.name}" (${value.description}).${reflectionContext}
+${protocolContext}
+
+Your Focus Lens should:
+- Acknowledge their emotional state.
+- Connect to their chosen value.
+- Offer a gentle perspective or question to guide their reflection.
+- Avoid giving direct advice or therapeutic interventions.
+
+Return ONLY the Focus Lens text.`;
+
+  if (counselingCoachModel) {
+    try {
+      console.log('🤖 Calling AI model for Focus Lens...');
+      const result = await counselingCoachModel(prompt, {
+        max_new_tokens: 100,
+        temperature: 0.7,
+        do_sample: true,
+        top_p: 0.9
+      });
+
+      const generatedText = result[0]?.generated_text || '';
+      const extracted = generatedText.replace(prompt, '').trim();
+      if (extracted && extracted.length > 20) {
+        await setCachedResponse(cacheKey, { focusLens: extracted });
+        return extracted;
+      }
+    } catch (error) {
+      console.warn('AI Focus Lens generation failed:', error);
+      // Fall through to fallback
+    }
+  }
+
+  // Rule-based fallback
+  const fallback = getFallbackResponse(
+    focusLensFallbacks,
+    { emotionalState, valueCategory: value.category },
+    focusLensFallbacks.default
+  );
+  console.log('ℹ️ Using rule-based Focus Lens fallback.');
+  await setCachedResponse(cacheKey, { focusLens: fallback });
+  return fallback;
+}
+
+/**
+ * Fallback Focus Lens generator (used when models aren't available)
+ */
+function generateFallbackFocusLens(emotionalState: EmotionalState, value: ValueItem): string {
+  const context = {
+    emotionalState,
+    valueCategory: value.category,
+  };
+  return getFallbackResponse(focusLensFallbacks, context, focusLensFallbacks.default);
 }
 
 /**
@@ -69,65 +171,19 @@ ${json.howToMeasureProgress.map((step, i) => `  ${i + 1}. ${step}`).join('\n')}`
  */
 function generateFallbackReflectionAnalysis(
   reflection: string,
+  emotionalState: EmotionalState, // Added emotionalState
+  selectedFeeling: string | null, // Added selectedFeeling
   frequency: GoalFrequency,
   lcswConfig?: LCSWConfig
-): string {
-  const lowerReflection = reflection.toLowerCase();
-  
-  // Detect themes
-  const themes: string[] = [];
-  if (lowerReflection.includes('anxious') || lowerReflection.includes('worried') || lowerReflection.includes('stress')) {
-    themes.push('Anxiety/Stress');
-  }
-  if (lowerReflection.includes('sad') || lowerReflection.includes('down') || lowerReflection.includes('depressed')) {
-    themes.push('Mood/Low Energy');
-  }
-  if (lowerReflection.includes('work') || lowerReflection.includes('job') || lowerReflection.includes('colleague')) {
-    themes.push('Work Environment');
-  }
-  if (lowerReflection.includes('family') || lowerReflection.includes('relationship') || lowerReflection.includes('friend')) {
-    themes.push('Interpersonal Relationships');
-  }
-  if (lowerReflection.includes('sleep') || lowerReflection.includes('tired') || lowerReflection.includes('exhausted')) {
-    themes.push('Physical Well-being');
-  }
-  if (themes.length === 0) {
-    themes.push('Self-Reflection', 'Personal Growth');
-  }
-
-  // Environment connections
-  let environmentNote = '';
-  if (lowerReflection.includes('work') || lowerReflection.includes('office')) {
-    environmentNote = 'Your work environment appears to be influencing your mental state. Notice how your physical space and work relationships impact your internal experience.';
-  } else if (lowerReflection.includes('home') || lowerReflection.includes('house')) {
-    environmentNote = 'Your home environment seems significant in this reflection. Consider how your physical space and home relationships affect your well-being.';
-  } else {
-    environmentNote = 'Consider how your environment—whether work, home, or social spaces—connects to what you\'re experiencing internally.';
-  }
-
-  // Generate questions
-  const questions = [
-    `What specific coping mechanism did you use (or could you use) in response to what you observed?`,
-    `How might advocating for yourself in this situation look different than what you've done before?`
-  ];
-
-  // Session prep
-  const frequencyLabel = frequency === 'quarterly' ? 'monthly' : frequency;
-  const sessionPrep = themes.length > 0 
-    ? `Bring the theme of "${themes[0]}" to your next session. Consider discussing how your environment and coping strategies are working (or not working) for you right now.`
-    : `Focus on discussing your reflection about ${frequencyLabel} patterns with your therapist. Consider what you want to explore more deeply.`;
-
-  return `## Core Themes
-${themes.slice(0, 3).map(t => `- ${t}`).join('\n')}
-
-## The 'LCSW Lens'
-${environmentNote}
-
-## Reflective Inquiry
-${questions.map((q, i) => `${i + 1}. ${q}`).join('\n')}
-
-## Session Prep
-${sessionPrep}`;
+): ReflectionAnalysisResponse { // Changed return type to ReflectionAnalysisResponse
+  const context = {
+    reflection,
+    emotionalState,
+    selectedFeeling,
+    frequencyLabel: frequency === 'quarterly' ? 'monthly' : frequency,
+    protocols: lcswConfig?.protocols || [],
+  };
+  return getFallbackResponse(reflectionAnalysisFallbacks, context, reflectionAnalysisFallbacks.default);
 }
 
 /**
@@ -139,17 +195,31 @@ export async function analyzeReflection(
   frequency: GoalFrequency,
   lcswConfig?: LCSWConfig,
   emotionalState?: string | null,
-  selectedFeeling?: string | null
-): Promise<string> {
+  selectedFeeling?: string | null,
+  previousAnalysis?: ReflectionAnalysisResponse | null // Added new parameter
+): Promise<ReflectionAnalysisResponse> { // Changed return type to ReflectionAnalysisResponse
   try {
     // Check for crisis first
     const crisisCheck = detectCrisis(reflection, lcswConfig);
     if (crisisCheck.isCrisis) {
-      return getCrisisResponse(crisisCheck, lcswConfig);
+      // For crisis, return a structured response indicating crisis with specific guidance
+      return {
+        coreThemes: ["Crisis Intervention"],
+        lcswLens: getCrisisResponse(crisisCheck, lcswConfig),
+        reflectiveInquiry: ["What immediate support can you access?", "Who can you reach out to right now?"],
+        sessionPrep: "Focus on safety planning and immediate support with your therapist.",
+        isCrisis: true, // Indicate crisis
+      };
     }
 
     if (!reflection.trim()) {
-      return 'Please enter your reflection to receive analysis.';
+      return generateFallbackReflectionAnalysis(
+        reflection,
+        emotionalState as EmotionalState,
+        selectedFeeling,
+        frequency,
+        lcswConfig
+      );
     }
 
     const protocols = lcswConfig?.protocols || [];
@@ -166,7 +236,7 @@ export async function analyzeReflection(
     const cached = await getCachedResponse(cacheKey);
     if (cached?.reflectionAnalysis) {
       console.log('✅ Using cached reflection analysis');
-      return cached.reflectionAnalysis;
+      return JSON.parse(cached.reflectionAnalysis); // Return parsed JSON
     }
 
     const protocolContext = protocols.length > 0 
@@ -176,16 +246,19 @@ export async function analyzeReflection(
     const frequencyLabel = frequency === 'quarterly' ? 'monthly' : frequency;
     
     // Optimized JSON prompt for on-device LLM
-    const prompt = `Analyze this ${frequencyLabel} reflection and return ONLY valid JSON (no markdown, no extra text):
+    const prompt = `Analyze this ${frequencyLabel} reflection and return ONLY valid JSON (no markdown, no extra text) conforming to the ReflectionAnalysisResponse type:
 
-{
-  "coreThemes": ["theme1", "theme2", "theme3"],
-  "lcswLens": "environment/internal state connections text",
-  "reflectiveInquiry": ["question1", "question2"],
-  "sessionPrep": "key takeaway text"
+interface ReflectionAnalysisResponse {
+  coreThemes: string[];
+  lcswLens: string;
+  reflectiveInquiry: string[];
+  sessionPrep: string;
 }
 
 Context: ${protocolContext}
+${emotionalState ? `Current Emotional State: ${emotionalState}` : ''}
+${selectedFeeling ? `Specific Feeling: ${selectedFeeling}` : ''}
+${previousAnalysis ? `\nPrevious Analysis:\n${JSON.stringify(previousAnalysis, null, 2)}` : ''}
 
 Reflection:
 ${reflection}
@@ -226,15 +299,15 @@ Return valid JSON only.`;
         const extracted = generatedText.replace(prompt, '').trim();
         
         // Try to parse JSON from response
-        const jsonMatch = extracted.match(/\{[\s\S]*\}/);
+        const jsonMatch = extracted.match(/{\s*[\s\S]*?}/);
         if (jsonMatch) {
           try {
             const jsonResponse: ReflectionAnalysisResponse = JSON.parse(jsonMatch[0]);
             console.log('✅ AI-generated JSON reflection analysis received');
-            // Format JSON to markdown for backward compatibility (React will handle formatting later)
-            return formatReflectionAnalysisJSON(jsonResponse);
+            await setCachedResponse(cacheKey, { reflectionAnalysis: JSON.stringify(jsonResponse) });
+            return jsonResponse;
           } catch (parseError) {
-            console.warn('Failed to parse JSON response, using fallback');
+            console.warn('Failed to parse JSON response, using fallback', parseError);
           }
         }
       } catch (error) {
@@ -243,10 +316,11 @@ Return valid JSON only.`;
     }
     
     // Fallback to rule-based
-    return generateFallbackReflectionAnalysis(reflection, frequency, lcswConfig);
+    return generateFallbackReflectionAnalysis(reflection, emotionalState as EmotionalState, selectedFeeling, frequency, lcswConfig);
   } catch (error) {
     console.error('Reflection analysis error:', error);
-    return generateFallbackReflectionAnalysis(reflection, frequency, lcswConfig);
+    // Ensure that even if there's an internal error, we return a structured fallback
+    return generateFallbackReflectionAnalysis(reflection, emotionalState as EmotionalState, selectedFeeling, frequency, lcswConfig);
   }
 }
 
@@ -718,6 +792,7 @@ export async function suggestGoal(
   value: ValueItem,
   frequency: GoalFrequency,
   reflection: string = '',
+  counselingGuidance: string = '', // Added new parameter
   lcswConfig?: LCSWConfig,
   emotionalState?: string | null,
   selectedFeeling?: string | null
@@ -817,7 +892,7 @@ export async function suggestGoal(
 
 Value: "${value.name}" (${value.description})
 Frequency: ${frequency}
-${feelingContext}Deep Reflection:
+${feelingContext}${counselingGuidance ? `Counseling Guidance: ${counselingGuidance}\n\n` : ''}Deep Reflection:
 ${deepReflectionText}
 ${hasAnalysis ? `\nReflection Analysis:\n${reflection.split('Reflection Analysis:')[1] || ''}` : ''}
 
@@ -833,7 +908,9 @@ Requirements:
 Return valid JSON only.`;
 
     // Default fallback response (only used if AI model is unavailable)
-    const fallbackResponse = `### Structured Aim\n- **Description**: Take one small action today that aligns with ${value.name}\n- **What this helps with**: Building consistency and self-efficacy\n- **How do I measure progress**:\n  1. Identified the action\n  2. Completed the action\n  3. Reflected on the experience`;
+    const fallbackResponse: GoalSuggestionResponse = generateFallbackGoalSuggestion(
+      value, frequency, reflection, counselingGuidance, emotionalState as EmotionalState, selectedFeeling
+    );
     
     if (!counselingCoachModel) {
       console.warn('⚠️ AI model not available for goal suggestion - using fallback response');
@@ -844,8 +921,8 @@ Return valid JSON only.`;
         hasAnalysis: reflection.includes('Reflection Analysis:')
       });
       // Cache fallback
-      await setCachedResponse(cacheKey, { goalSuggestion: fallbackResponse });
-      return fallbackResponse;
+      await setCachedResponse(cacheKey, { goalSuggestion: formatGoalSuggestionJSON(fallbackResponse) });
+      return formatGoalSuggestionJSON(fallbackResponse);
     }
     
     // AI model is available - use it to generate JSON suggestion
@@ -927,16 +1004,39 @@ Return valid JSON only.`;
       
       // If all AI attempts fail, return fallback
       console.warn('⚠️ Using fallback goal suggestion due to AI model errors');
+      const finalFallback = generateFallbackGoalSuggestion(value, frequency, reflection, counselingGuidance, emotionalState as EmotionalState, selectedFeeling);
       // Cache fallback
-      await setCachedResponse(cacheKey, { goalSuggestion: fallbackResponse });
-      return fallbackResponse;
+      await setCachedResponse(cacheKey, { goalSuggestion: formatGoalSuggestionJSON(finalFallback) });
+      return formatGoalSuggestionJSON(finalFallback);
     }
   } catch (error) {
     console.error('Goal suggestion error:', error);
-    const fallback = `### Structured Aim\n- **Description**: Practice ${value.name} in one specific way today\n- **What this helps with**: Building value-aligned habits\n- **How do I measure progress**:\n  1. Planned the action\n  2. Took the action\n  3. Noted the outcome`;
+    const finalFallback = generateFallbackGoalSuggestion(value, frequency, reflection, counselingGuidance, emotionalState as EmotionalState, selectedFeeling);
     // Cache fallback
-    await setCachedResponse(cacheKey, { goalSuggestion: fallback }).catch(console.warn);
-    return fallback;
+    await setCachedResponse(cacheKey, { goalSuggestion: formatGoalSuggestionJSON(finalFallback) }).catch(console.warn);
+    return formatGoalSuggestionJSON(finalFallback);
   }
+}
+
+/**
+ * Fallback goal suggestion using rule-based approach
+ */
+function generateFallbackGoalSuggestion(
+  value: ValueItem,
+  frequency: GoalFrequency,
+  reflection: string,
+  counselingGuidance: string,
+  emotionalState: EmotionalState,
+  selectedFeeling: string | null
+): GoalSuggestionResponse {
+  const context = {
+    valueName: value.name,
+    frequencyLabel: frequency === 'quarterly' ? 'monthly' : frequency,
+    reflectionSummary: reflection.substring(0, 200),
+    counselingGuidanceSummary: counselingGuidance.substring(0, 200),
+    emotionalState,
+    selectedFeeling,
+  };
+  return getFallbackResponse(goalSuggestionFallbacks, context, goalSuggestionFallbacks.default);
 }
 

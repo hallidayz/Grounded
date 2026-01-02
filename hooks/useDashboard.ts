@@ -95,7 +95,7 @@ export function useDashboard(
         const encouragement = await generateEmotionalEncouragement(
           emotion as EmotionalState,
           subEmotion,
-          0, // lowStateCount - we'll track this separately
+          lowStateCount,
           lcswConfig,
           {
             recentJournalText: '',
@@ -113,27 +113,51 @@ export function useDashboard(
           }
         );
         
-        // Format as JSON response
-        jsonOut = JSON.stringify({
-          message: encouragement,
-          acknowledgeFeeling: subEmotion,
-          timestamp
-        });
+        jsonOut = JSON.stringify(encouragement); // Assuming encouragement is already JSON
         isAIResponse = true;
-        focusLens = encouragement; // Initial focus lens is the encouragement
       } catch (error) {
         console.warn('AI encouragement failed, using rule-based fallback:', error);
         // Rule-based fallback
-        const fallbackMessage = `I hear that you're feeling ${subEmotion}. That's valid, and it's okay to feel this way. Take a moment to breathe and remember that feelings are temporary.`;
-        jsonOut = JSON.stringify({
-          message: fallbackMessage,
-          acknowledgeFeeling: subEmotion,
-          timestamp
-        });
+        const fallbackResponse = await generateEmotionalEncouragement(
+          emotion as EmotionalState, 
+          subEmotion, 
+          lowStateCount,
+          lcswConfig, 
+          { recentJournalText: '', timeOfDay: (() => {
+            const hour = new Date().getHours();
+            if (hour < 12) return 'morning';
+            if (hour < 18) return 'afternoon';
+            if (hour < 22) return 'evening';
+            return 'night';
+          })(), userPatterns: { frequentStates: [], progress: 0 } }
+        );
+        jsonOut = JSON.stringify({ message: fallbackResponse, acknowledgeFeeling: subEmotion, timestamp });
         isAIResponse = false;
-        focusLens = fallbackMessage;
       }
       
+      // Get Focus Lens (if not already set by encouragement)
+      let currentFocusLens = focusLens;
+      if (!currentFocusLens && activeValueId) {
+        const activeValue = values.find(v => v.id === activeValueId);
+        if (activeValue) {
+          currentFocusLens = await generateFocusLens(
+            emotion as EmotionalState,
+            activeValue,
+            lcswConfig,
+            {
+              recentReflections: '', // No specific reflection here, just general focus
+              timeOfDay: (() => {
+                const hour = new Date().getHours();
+                if (hour < 12) return 'morning';
+                if (hour < 18) return 'afternoon';
+                if (hour < 22) return 'evening';
+                return 'night';
+              })(),
+            }
+          );
+        }
+      }
+
       // Save to database
       const feelingLog: FeelingLog = {
         id: logId,
@@ -142,17 +166,13 @@ export function useDashboard(
         subEmotion,
         jsonIn,
         jsonOut,
-        focusLens,
+        focusLens: currentFocusLens || '',
         reflection: '',
         selfAdvocacy: '',
         frequency: 'daily',
         jsonAssessment: '',
-        // Legacy fields
-        emotionalState: emotion as any,
-        selectedFeeling: subEmotion,
-        aiResponse: jsonOut,
         isAIResponse,
-        lowStateCount: 0
+        lowStateCount,
       };
       
       await dbService.saveFeelingLog(feelingLog);
@@ -331,7 +351,14 @@ export function useDashboard(
     
     setAnalyzingReflection(true);
     try {
-      const analysis = await analyzeReflection(enhancedReflection, goalFreq, lcswConfig, emotionalState, selectedFeeling);
+      const analysis = await analyzeReflection(
+        enhancedReflection,
+        goalFreq,
+        lcswConfig,
+        emotionalState,
+        selectedFeeling,
+        reflectionAnalysis // Pass previous analysis as context
+      );
       setReflectionAnalysis(analysis);
     } catch (error) {
       console.error('Reflection analysis error:', error);
@@ -351,28 +378,18 @@ export function useDashboard(
       const activeValue = values.find(v => v.id === activeValueId);
       if (activeValue) {
         setLoading(true);
-        // Use generateEmotionalEncouragement if feeling is selected, otherwise use generateEncouragement
-        // Use ref to get latest logs without causing re-renders
-        const recentJournalText = logsRef.current.slice(0, 3).map(l => l.note || l.deepReflection || '').join(' ').substring(0, 500);
-        const encouragementPromise = (emotionalState && selectedFeeling)
-          ? generateEmotionalEncouragement(emotionalState, selectedFeeling, lowStateCount, lcswConfig, {
-              recentJournalText,
-              timeOfDay: (() => {
-                const hour = new Date().getHours();
-                if (hour < 12) return 'morning';
-                if (hour < 18) return 'afternoon';
-                if (hour < 22) return 'evening';
-                return 'night';
-              })(),
-              userPatterns: {
-                frequentStates: [],
-                progress: 0
-              }
-            })
-          : generateEncouragement(activeValue, debouncedGuideMood, lcswConfig);
-        
+        // Generate Focus Lens and Mantra
         Promise.all([
-          encouragementPromise,
+          generateFocusLens(emotionalState, activeValue, {
+            recentReflections: recentJournalText,
+            timeOfDay: (() => {
+              const hour = new Date().getHours();
+              if (hour < 12) return 'morning';
+              if (hour < 18) return 'afternoon';
+              if (hour < 22) return 'evening';
+              return 'night';
+            })(),
+          }),
           generateValueMantra(activeValue)
         ]).then(([insight, mantra]) => {
           setCoachInsight(insight);
@@ -473,10 +490,18 @@ export function useDashboard(
       
       // Always include deep reflection if it exists
       const deepReflectionContext = reflectionText.trim() 
-        ? `${feelingContext}Deep Reflection:\n${reflectionText}\n\n${reflectionAnalysis ? `Reflection Analysis:\n${reflectionAnalysis}` : ''}`
-        : feelingContext + (reflectionAnalysis || '');
+        ? `${feelingContext}Deep Reflection:\n${reflectionText}\n\n${reflectionAnalysis ? `Reflection Analysis:\n${JSON.stringify(reflectionAnalysis, null, 2)}` : ''}`
+        : feelingContext + (reflectionAnalysis ? JSON.stringify(reflectionAnalysis, null, 2) : '');
       
-      const suggestion = await suggestGoal(value, goalFreq, deepReflectionContext, lcswConfig, emotionalState, selectedFeeling);
+      // Generate counseling guidance to inform goal suggestion
+      const counselingGuidance = await generateCounselingGuidance(
+        value,
+        emotionalState || 'mixed',
+        reflectionText,
+        lcswConfig
+      );
+      
+      const suggestion = await suggestGoal(value, goalFreq, deepReflectionContext, counselingGuidance, lcswConfig, emotionalState, selectedFeeling);
       setGoalText(suggestion);
     } catch (error) {
       console.error("AI Goal Error:", error);
@@ -659,11 +684,12 @@ export function useDashboard(
       note: reflectionText.trim() || "Observed without judgment.",
       mood: guideMood,
       type: goalText.trim() ? 'goal-update' : 'standard',
-      goalText: goalText.trim() || undefined,
       deepReflection: reflectionText.trim() || undefined,
-      reflectionAnalysis: reflectionAnalysis || undefined,
+      reflectionAnalysis: reflectionAnalysis ? JSON.stringify(reflectionAnalysis) : undefined,
       emotionalState: emotionalState,
-      selectedFeeling: selectedFeeling || undefined
+      selectedFeeling: selectedFeeling || undefined,
+      selfAdvocacy: goalText.trim() || undefined,
+      frequency: goalFreq,
     });
     
     // End session
