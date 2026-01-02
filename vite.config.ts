@@ -89,89 +89,9 @@ const noMinifyTransformersPlugin = (): Plugin => {
               }
             });
             
-            // Fix initialization order: Convert static import to dynamic import for vendor
-            // This ensures vendor loads and initializes before ortWeb_min is accessed
-            const vendorImportMatch = importMatches.find(m => m[1].includes('vendor'));
-            if (vendorImportMatch) {
-              const vendorPath = vendorImportMatch[1];
-              
-              // CRITICAL FIX: Initialize ONNX with placeholder BEFORE any code uses it
-              // This prevents "Cannot destructure property 'env' of 'ONNX' as it is undefined" errors
-              // Check if ONNX is already declared - if not, add initialization at the very top
-              const hasOnnxDeclaration = /(?:var|let|const)\s+ONNX\s*[=;]/.test(restored);
-              if (!hasOnnxDeclaration) {
-                // Insert ONNX initialization at the absolute beginning, before any code
-                // Use 'var' at top level so it's accessible throughout the module
-                const onnxInit = `// CRITICAL: Initialize ONNX placeholder BEFORE any code uses it
-// This prevents "Cannot destructure property 'env' of 'ONNX' as it is undefined" errors
-var ONNX = { env: {} };
-`;
-                // Insert at the very beginning, even before 'use strict'
-                restored = onnxInit + restored;
-              } else {
-                // ONNX is declared but might be undefined - ensure it's initialized
-                // Replace any "let ONNX" or "const ONNX" declarations that don't initialize
-                restored = restored.replace(
-                  /(let|const)\s+ONNX\s*;/g,
-                  `$1 ONNX = { env: {} };`
-                );
-                // Also ensure any "var ONNX" without initialization gets initialized
-                if (restored.includes('var ONNX') && !restored.includes('var ONNX =')) {
-                  restored = restored.replace(/var\s+ONNX\s*;/g, 'var ONNX = { env: {} };');
-                }
-                // Add safeguard initialization at the top as well to ensure it's set before use
-                const safeguardInit = `// Safeguard: Ensure ONNX is initialized before any code uses it
-if (typeof ONNX === 'undefined' || !ONNX || !ONNX.env) {
-  var ONNX = { env: {} };
-}
-`;
-                // Insert at the beginning
-                if (restored.match(/^(['"]use strict['"];?\s*\n)/)) {
-                  restored = restored.replace(/^(['"]use strict['"];?\s*\n)/, `$1${safeguardInit}`);
-                } else {
-                  restored = safeguardInit + restored;
-                }
-              }
-              
-              // Replace static import with dynamic import
-              // Initialize variables immediately to avoid TDZ errors
-              restored = restored.replace(
-                /import\s+\{\s*v\s+as\s+ortWeb_min,\s*O\s+as\s+ONNX_WEB,\s*T\s+as\s+Template\s*\}\s+from\s*['"](\.\/[^'"]+)['"];/,
-                `// Dynamic import to ensure vendor loads before accessing ortWeb_min
-                // Initialize variables immediately to avoid TDZ errors
-                let ortWeb_min = undefined;
-                let ONNX_WEB = undefined;
-                let Template = undefined;
-                // Load vendor module asynchronously and update ONNX when ready
-                const _vendorModule = import('${vendorPath}').then(module => {
-                  ortWeb_min = module.v;
-                  ONNX_WEB = module.O;
-                  Template = module.T;
-                  // Update ONNX with actual value from vendor module (ONNX already initialized above)
-                  if (typeof ortWeb_min !== 'undefined' && ortWeb_min !== null) {
-                    ONNX = ortWeb_min;
-                  } else if (typeof ONNX_WEB !== 'undefined' && ONNX_WEB !== null) {
-                    ONNX = ONNX_WEB;
-                  }
-                  return module;
-                }).catch(err => {
-                  console.error('Failed to load vendor module:', err);
-                  // Keep placeholder ONNX if vendor fails to load
-                });`
-              );
-              
-              // Update the ONNX assignment - ONNX is already initialized above, just update it
-              restored = restored.replace(
-                /ONNX\s*=\s*ortWeb_min\s*\?\?\s*ONNX_WEB;/g,
-                `// ONNX is initialized at module top with placeholder { env: {} }
-                // It will be updated when vendor module loads via _vendorModule promise above
-                // This line removed to prevent assignment before vendor loads`
-              );
-              
-              // Also fix any other direct uses of ortWeb_min, ONNX_WEB, or Template
-              // that might occur before the promise resolves
-              // Wrap the entire module in a way that defers execution until vendor is ready
-            }
+            // Keep static imports - chunk ordering ensures vendor loads before transformers
+            // The manualChunks configuration ensures vendor chunk loads first
+            // No need to convert to dynamic import - that causes ONNX to be undefined
             
             writeFileSync(filePath, restored, 'utf-8');
             const lineCount = restored.split('\n').length;
