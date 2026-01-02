@@ -275,14 +275,14 @@ const ReflectionForm: React.FC<ReflectionFormProps> = ({
                   }
                   
                   return analysisText.split('\n').map((line, idx) => {
-                    if (line.startsWith('##')) {
-                      return <div key={idx} className="font-black text-yellow-warm mt-3 first:mt-0">{line.replace('##', '').trim()}</div>;
-                    } else if (line.startsWith('-') || /^\d+\./.test(line.trim())) {
-                      return <div key={idx} className="ml-2">{line}</div>;
-                    } else if (line.trim()) {
-                      return <div key={idx}>{line}</div>;
-                    }
-                    return <br key={idx} />;
+                  if (line.startsWith('##')) {
+                    return <div key={idx} className="font-black text-yellow-warm mt-3 first:mt-0">{line.replace('##', '').trim()}</div>;
+                  } else if (line.startsWith('-') || /^\d+\./.test(line.trim())) {
+                    return <div key={idx} className="ml-2">{line}</div>;
+                  } else if (line.trim()) {
+                    return <div key={idx}>{line}</div>;
+                  }
+                  return <br key={idx} />;
                   });
                 })()}
               </div>

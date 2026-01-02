@@ -22,7 +22,7 @@ if (!versionPattern.test(pkg.version)) {
 let lastCommitMsg = '';
 try {
   lastCommitMsg = fs.readFileSync(path.join(projectRoot, '.git/COMMIT_EDITMSG'), 'utf8');
-} catch (error) {
+    } catch (error) {
   console.warn('⚠️ Could not read .git/COMMIT_EDITMSG. Skipping commit message format validation.');
   // If .git/COMMIT_EDITMSG is not available (e.g., not in a commit hook),
   // we can try to get the last commit message from git log

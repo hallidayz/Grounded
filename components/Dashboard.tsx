@@ -32,14 +32,14 @@ const Dashboard: React.FC<DashboardProps> = ({ values, onLog, goals, onUpdateGoa
       // Clear initialValueId after it's been used (by calling a callback if provided)
       // The parent component (App.tsx) should clear it after this effect runs
     } else {
-      const handleReset = () => {
-        dashboard.setActiveValueId(null);
-      };
-      // Store reset handler for App.tsx to call
-      (window as any).__dashboardReset = handleReset;
-      return () => {
-        delete (window as any).__dashboardReset;
-      };
+    const handleReset = () => {
+      dashboard.setActiveValueId(null);
+    };
+    // Store reset handler for App.tsx to call
+    (window as any).__dashboardReset = handleReset;
+    return () => {
+      delete (window as any).__dashboardReset;
+    };
     }
   }, [initialValueId, dashboard]);
 

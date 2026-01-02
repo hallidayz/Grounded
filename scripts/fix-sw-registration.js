@@ -60,8 +60,8 @@ jsonPatterns.forEach(pattern => {
       return match.replace('/manifest.json', '/manifest.js');
     });
     if (!changes.includes('/manifest.json → /manifest.js')) {
-      changes.push('/manifest.json → /manifest.js');
-    }
+  changes.push('/manifest.json → /manifest.js');
+}
   }
 });
 

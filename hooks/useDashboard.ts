@@ -308,7 +308,7 @@ export function useDashboard(
       // Card closed - end session if we have one
       if (currentSessionId) {
         const valueId = sessionValueId || '';
-        if (valueId) {
+      if (valueId) {
           endSessionRef.current(valueId, false);
         }
       }
@@ -462,13 +462,13 @@ export function useDashboard(
         Promise.all([
           generateFocusLens(emotionalState, activeValue, {
             recentReflections: recentJournalText,
-            timeOfDay: (() => {
-              const hour = new Date().getHours();
-              if (hour < 12) return 'morning';
-              if (hour < 18) return 'afternoon';
-              if (hour < 22) return 'evening';
-              return 'night';
-            })(),
+              timeOfDay: (() => {
+                const hour = new Date().getHours();
+                if (hour < 12) return 'morning';
+                if (hour < 18) return 'afternoon';
+                if (hour < 22) return 'evening';
+                return 'night';
+              })(),
           }),
           generateValueMantra(activeValue)
         ]).then(([insight, mantra]) => {

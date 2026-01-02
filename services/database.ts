@@ -243,11 +243,11 @@ class DatabaseService {
 
     return new Promise((resolve, reject) => {
       try {
-        const transaction = this.db!.transaction(['metadata'], 'readwrite');
-        const store = transaction.objectStore('metadata');
-        const request = store.put({ id: 'app_metadata', ...metadata });
+      const transaction = this.db!.transaction(['metadata'], 'readwrite');
+      const store = transaction.objectStore('metadata');
+      const request = store.put({ id: 'app_metadata', ...metadata });
 
-        request.onsuccess = () => resolve();
+      request.onsuccess = () => resolve();
         request.onerror = () => {
           // Silently fail - metadata is non-critical
           console.warn('Failed to set metadata (non-critical):', request.error);
@@ -272,10 +272,10 @@ class DatabaseService {
     const metadata = await this.getMetadata();
     if (metadata) {
       try {
-        metadata.lastValidated = new Date().toISOString();
-        const transaction = this.db!.transaction(['metadata'], 'readwrite');
-        const store = transaction.objectStore('metadata');
-        store.put({ id: 'app_metadata', ...metadata });
+      metadata.lastValidated = new Date().toISOString();
+      const transaction = this.db!.transaction(['metadata'], 'readwrite');
+      const store = transaction.objectStore('metadata');
+      store.put({ id: 'app_metadata', ...metadata });
       } catch (error) {
         // Silently fail - metadata is non-critical
         console.warn('Failed to update metadata validation (non-critical):', error);
@@ -609,14 +609,14 @@ class DatabaseService {
     
     return new Promise((resolve, reject) => {
       try {
-        const transaction = db.transaction(['appData'], 'readonly');
-        const store = transaction.objectStore('appData');
-        const request = store.get(userId);
+      const transaction = db.transaction(['appData'], 'readonly');
+      const store = transaction.objectStore('appData');
+      const request = store.get(userId);
 
-        request.onsuccess = () => {
-          const result = request.result;
-          resolve(result ? result.data : null);
-        };
+      request.onsuccess = () => {
+        const result = request.result;
+        resolve(result ? result.data : null);
+      };
         request.onerror = () => {
           // Silently fail - return null if store access fails
           console.warn('Failed to get app data (non-critical):', request.error);
@@ -642,11 +642,11 @@ class DatabaseService {
     
     return new Promise((resolve, reject) => {
       try {
-        const transaction = db.transaction(['appData'], 'readwrite');
-        const store = transaction.objectStore('appData');
-        const request = store.put({ userId, data });
+      const transaction = db.transaction(['appData'], 'readwrite');
+      const store = transaction.objectStore('appData');
+      const request = store.put({ userId, data });
 
-        request.onsuccess = () => resolve();
+      request.onsuccess = () => resolve();
         request.onerror = () => {
           // Silently fail - saving is non-critical
           console.warn('Failed to save app data (non-critical):', request.error);
@@ -674,22 +674,22 @@ class DatabaseService {
 
     return new Promise((resolve, reject) => {
       try {
-        const transaction = db.transaction(['resetTokens'], 'readwrite');
-        const store = transaction.objectStore('resetTokens');
-        const request = store.add({
-          token,
-          userId,
-          email,
-          expires,
-          createdAt: new Date().toISOString(),
-        });
+      const transaction = db.transaction(['resetTokens'], 'readwrite');
+      const store = transaction.objectStore('resetTokens');
+      const request = store.add({
+        token,
+        userId,
+        email,
+        expires,
+        createdAt: new Date().toISOString(),
+      });
 
-        request.onsuccess = () => resolve(token);
-        request.onerror = (event) => {
-          const error = (event.target as IDBRequest).error;
-          console.error('Failed to create reset token:', error);
-          reject(error || new Error('Failed to create reset token in database'));
-        };
+      request.onsuccess = () => resolve(token);
+      request.onerror = (event) => {
+        const error = (event.target as IDBRequest).error;
+        console.error('Failed to create reset token:', error);
+        reject(error || new Error('Failed to create reset token in database'));
+      };
       } catch (error) {
         console.error('Failed to create reset token:', error);
         reject(error);
@@ -708,25 +708,25 @@ class DatabaseService {
     
     return new Promise((resolve, reject) => {
       try {
-        const transaction = db.transaction(['resetTokens'], 'readonly');
-        const store = transaction.objectStore('resetTokens');
-        const request = store.get(token);
+      const transaction = db.transaction(['resetTokens'], 'readonly');
+      const store = transaction.objectStore('resetTokens');
+      const request = store.get(token);
 
-        request.onsuccess = () => {
-          const result = request.result;
-          if (!result) {
-            resolve(null);
-            return;
-          }
+      request.onsuccess = () => {
+        const result = request.result;
+        if (!result) {
+          resolve(null);
+          return;
+        }
 
-          // Check if token is expired
-          if (result.expires < Date.now()) {
-            resolve(null);
-            return;
-          }
+        // Check if token is expired
+        if (result.expires < Date.now()) {
+          resolve(null);
+          return;
+        }
 
-          resolve({ userId: result.userId, email: result.email });
-        };
+        resolve({ userId: result.userId, email: result.email });
+      };
         request.onerror = () => {
           // Silently fail - return null if store access fails
           console.warn('Failed to get reset token (non-critical):', request.error);
@@ -751,11 +751,11 @@ class DatabaseService {
     
     return new Promise((resolve, reject) => {
       try {
-        const transaction = db.transaction(['resetTokens'], 'readwrite');
-        const store = transaction.objectStore('resetTokens');
-        const request = store.delete(token);
+      const transaction = db.transaction(['resetTokens'], 'readwrite');
+      const store = transaction.objectStore('resetTokens');
+      const request = store.delete(token);
 
-        request.onsuccess = () => resolve();
+      request.onsuccess = () => resolve();
         request.onerror = () => {
           // Silently fail - deletion is non-critical
           console.warn('Failed to delete reset token (non-critical):', request.error);
@@ -781,8 +781,8 @@ class DatabaseService {
     
     return new Promise((resolve, reject) => {
       try {
-        const transaction = db.transaction(['resetTokens'], 'readwrite');
-        const store = transaction.objectStore('resetTokens');
+      const transaction = db.transaction(['resetTokens'], 'readwrite');
+      const store = transaction.objectStore('resetTokens');
         
         // Check if index exists
         if (!store.indexNames.contains('expires')) {
@@ -791,20 +791,20 @@ class DatabaseService {
           return;
         }
         
-        const index = store.index('expires');
-        const request = index.openCursor();
+      const index = store.index('expires');
+      const request = index.openCursor();
 
-        request.onsuccess = (event) => {
-          const cursor = (event.target as IDBRequest<IDBCursorWithValue>).result;
-          if (cursor) {
-            if (cursor.value.expires < Date.now()) {
-              cursor.delete();
-            }
-            cursor.continue();
-          } else {
-            resolve();
+      request.onsuccess = (event) => {
+        const cursor = (event.target as IDBRequest<IDBCursorWithValue>).result;
+        if (cursor) {
+          if (cursor.value.expires < Date.now()) {
+            cursor.delete();
           }
-        };
+          cursor.continue();
+        } else {
+          resolve();
+        }
+      };
         request.onerror = () => {
           // Silently fail - cleanup is non-critical
           console.warn('Failed to cleanup expired tokens (non-critical):', request.error);
@@ -830,8 +830,8 @@ class DatabaseService {
     
     return new Promise((resolve, reject) => {
       try {
-        const transaction = db.transaction(['feelingLogs'], 'readwrite');
-        const store = transaction.objectStore('feelingLogs');
+      const transaction = db.transaction(['feelingLogs'], 'readwrite');
+      const store = transaction.objectStore('feelingLogs');
         
         // Normalize the log entry - support both old and new schema
         const normalizedLog: any = {
@@ -857,8 +857,8 @@ class DatabaseService {
         
         const request = store.put(normalizedLog); // Use put instead of add to allow updates
 
-        request.onsuccess = () => resolve();
-        request.onerror = () => reject(request.error);
+      request.onsuccess = () => resolve();
+      request.onerror = () => reject(request.error);
       } catch (error) {
         console.error('Error saving feeling log:', error);
         resolve(); // Fail silently for non-critical operations

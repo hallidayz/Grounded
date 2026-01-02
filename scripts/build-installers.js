@@ -37,7 +37,7 @@ async function main() {
   );
 
   console.log('✅ All installers built successfully.');
-}
+      }
 
 main().catch((err) => {
   console.error('Build installers failed:', err);

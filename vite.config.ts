@@ -191,7 +191,7 @@ export default defineConfig({
       ],
       onwarn(warning, warn) {
         if (warning.code === 'EVAL' && warning.id?.includes('onnxruntime-web')) return;
-        if (warning.code === 'UNRESOLVED_IMPORT' &&
+        if (warning.code === 'UNRESOLVED_IMPORT' && 
           (warning.id?.includes('@tauri-apps/api/core') ||
             warning.id?.includes('@tauri-apps/api/cli') ||
             warning.id?.includes('@tauri-apps/plugin-store') ||

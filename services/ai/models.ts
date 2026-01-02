@@ -463,8 +463,8 @@ export async function initializeModels(forceReload: boolean = false, modelType?:
         
         if (!isDev) {
           // Only show this message in production
-          console.log('📦 Using local bundled models from /models/ directory');
-          console.log('📦 Will fallback to HuggingFace if local model not available');
+        console.log('📦 Using local bundled models from /models/ directory');
+        console.log('📦 Will fallback to HuggingFace if local model not available');
         } else {
           // In dev mode, we're using HuggingFace directly
           console.log('📦 Development mode: Downloading models from HuggingFace');
@@ -552,12 +552,12 @@ export async function initializeModels(forceReload: boolean = false, modelType?:
           // This prevents showing 90% when the model is about to fail
           if (shouldUpdate) {
             // Only update if we have meaningful progress, otherwise keep current state
-            setModelLoadingProgress(
+          setModelLoadingProgress(
               Math.min(totalProgress, 85), // Cap at 85% for file download, reserve 15% for initialization
-              `Loading AI models...`,
+            `Loading AI models...`,
               `${modelName} files downloaded, initializing...`
-            );
-            lastUpdateTime = now;
+          );
+          lastUpdateTime = now;
           }
         }
       };
@@ -616,10 +616,10 @@ export async function initializeModels(forceReload: boolean = false, modelType?:
         
         // Try loading with current path, fallback to HuggingFace if it fails
         try {
-          moodTrackerModel = await Promise.race([
+        moodTrackerModel = await Promise.race([
             pipeline(modelConfig.task, modelPath, pipelineOptions),
-            modelLoadTimeout
-          ]) as any;
+          modelLoadTimeout
+        ]) as any;
         } catch (localError: any) {
           // If local path fails and we're not already using HuggingFace, try HuggingFace
           if (modelPath !== huggingfaceModelId && huggingfaceModelId) {
@@ -708,8 +708,8 @@ export async function initializeModels(forceReload: boolean = false, modelType?:
           console.warn(`[MODEL_DEBUG] Development mode: Model loading failed (CORS expected). Using rule-based responses.`);
         } else {
           console.error(`[MODEL_DEBUG] Pipeline call failed for ${modelConfig.name}:`, errorMsg);
-          if (errorStack) {
-            console.error(`[MODEL_DEBUG] Error stack:`, errorStack);
+        if (errorStack) {
+          console.error(`[MODEL_DEBUG] Error stack:`, errorStack);
           }
         }
         
@@ -765,14 +765,14 @@ export async function initializeModels(forceReload: boolean = false, modelType?:
       // we should NOT try to load it again for counseling - it will fail again
       // Only reuse if the model actually loaded successfully
       if (modelToReuse && modelConfig.task === 'text-generation') {
-        canReuseModel = true;
+            canReuseModel = true;
         // Use the model from cache if moodTrackerModel is null
         if (!moodTrackerModel && cachedModel) {
           moodTrackerModel = cachedModel;
           console.log(`[MODEL_DEBUG] Using cached model for mood tracking`);
         }
         counselingCoachModel = moodTrackerModel;
-        console.log(`✓ Reusing ${modelConfig.name} for counseling (text-generation model)`);
+            console.log(`✓ Reusing ${modelConfig.name} for counseling (text-generation model)`);
         console.log(`[MODEL_DEBUG] Model reuse check passed - will reuse moodTrackerModel for counseling`);
       } else {
         console.log(`[MODEL_DEBUG] Model reuse check failed: moodTrackerModel=${!!moodTrackerModel}, cachedModel=${!!cachedModel}, task=${modelConfig.task}`);
@@ -785,8 +785,8 @@ export async function initializeModels(forceReload: boolean = false, modelType?:
           if (targetModel === 'tinyllama' && modelConfig.task === 'text-generation') {
             console.log(`[MODEL_DEBUG] Skipping counseling model load - TinyLlama already failed, would fail again`);
             canReuseModel = false; // Explicitly set to false to skip loading
-          }
         }
+      }
       }
       
       // Only try to load a separate counseling model if:
@@ -835,10 +835,10 @@ export async function initializeModels(forceReload: boolean = false, modelType?:
             
             // Try loading with current path, fallback to HuggingFace if it fails
             try {
-              counselingCoachModel = await Promise.race([
+            counselingCoachModel = await Promise.race([
                 pipeline('text-generation', counselingModelPath, counselingOptions),
-                counselingLoadTimeout
-              ]) as any;
+              counselingLoadTimeout
+            ]) as any;
             } catch (localError: any) {
               // If local path fails and we're not already using HuggingFace, try HuggingFace
               if (counselingModelPath !== counselingHuggingfaceId && counselingHuggingfaceId) {
@@ -976,14 +976,14 @@ export async function initializeModels(forceReload: boolean = false, modelType?:
       } else {
         // Only set error if models truly failed (not just still loading)
         if (!isModelLoading) {
-          setProgressError('AI models unavailable', 'App will use rule-based responses');
-          console.warn('⚠️ AI models not available. App will use rule-based responses.');
-          console.warn(`  - Mood tracker: ${moodTrackerModel ? '✓ Loaded' : '✗ Failed'}`);
-          console.warn(`  - Counseling coach: ${counselingCoachModel ? '✓ Loaded' : '✗ Failed'}`);
-          
-          // If at least one model loaded, log that partial loading is available
-          if (moodTrackerModel || counselingCoachModel) {
-            console.info('ℹ️ Partial model loading: Some AI features may be available.');
+        setProgressError('AI models unavailable', 'App will use rule-based responses');
+        console.warn('⚠️ AI models not available. App will use rule-based responses.');
+        console.warn(`  - Mood tracker: ${moodTrackerModel ? '✓ Loaded' : '✗ Failed'}`);
+        console.warn(`  - Counseling coach: ${counselingCoachModel ? '✓ Loaded' : '✗ Failed'}`);
+        
+        // If at least one model loaded, log that partial loading is available
+        if (moodTrackerModel || counselingCoachModel) {
+          console.info('ℹ️ Partial model loading: Some AI features may be available.');
             // Set status based on what actually loaded
             if (moodTrackerModel && counselingCoachModel) {
               currentDownloadStatus = 'complete';
@@ -994,8 +994,8 @@ export async function initializeModels(forceReload: boolean = false, modelType?:
               currentDownloadLabel = 'Partial model loading';
               setModelLoadingProgress(50, 'Partial model loading', 'Some AI features available');
             }
-          } else {
-            console.info('ℹ️ All models failed to load. The app will use rule-based responses which are fully functional.');
+        } else {
+          console.info('ℹ️ All models failed to load. The app will use rule-based responses which are fully functional.');
             // Explicitly set error state when all models failed
             currentDownloadStatus = 'error';
             currentDownloadLabel = 'AI models unavailable';

@@ -1362,7 +1362,7 @@ const App: React.FC = () => {
         {view === 'values' && (
           <ValueSelection 
             initialSelected={selectedValueIds} 
-            onComplete={handleSelectionComplete}
+            onComplete={handleSelectionComplete} 
             onAddGoal={(valueId) => {
               // Navigate to home and open the value card for goal creation
               setInitialValueIdForGoal(valueId);
