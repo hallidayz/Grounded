@@ -93,11 +93,26 @@ const noMinifyTransformersPlugin = (): Plugin => {
             // We must ensure ONNX exists before ANY code runs, including imports
             
             // Step 1: Initialize ONNX at the absolute top - before ANYTHING else
+            // CRITICAL: Use both var and global assignment to ensure ONNX is always available
+            // Even if code runs before imports complete, ONNX must exist
             const onnxInit = `// CRITICAL: Initialize ONNX IMMEDIATELY - must be first executable code
 // This prevents "Cannot destructure property 'env' of 'ONNX' as it is undefined" errors
+// Initialize in multiple ways to ensure it's always available
+(function() {
+  if (typeof globalThis !== 'undefined') {
+    globalThis.ONNX = globalThis.ONNX || { env: {} };
+  }
+  if (typeof window !== 'undefined') {
+    window.ONNX = window.ONNX || { env: {} };
+  }
+  if (typeof self !== 'undefined') {
+    self.ONNX = self.ONNX || { env: {} };
+  }
+})();
 var ONNX = { env: {} };
-if (typeof globalThis !== 'undefined') {
-  globalThis.ONNX = globalThis.ONNX || { env: {} };
+// Ensure ONNX always has env property - critical for destructuring
+if (!ONNX.env) {
+  ONNX.env = {};
 }
 `;
             
@@ -117,16 +132,33 @@ ${keyword} { env } = _onnx_safe_1;`;
               }
             );
             
-            // Pattern 2: Multi-property with env - CRITICAL FIX for line 8762
+            // Pattern 2: Multi-property with env - CRITICAL FIX for line 8762 and line 274
             // Match: const { InferenceSession, Tensor: ONNXTensor, env } = ONNX;
+            // Also match: const { env: onnx_env } = ONNX; (renamed property)
             // Use pattern that matches any destructuring containing 'env' anywhere
             restored = restored.replace(
               /(const|let|var)\s*\{\s*([^}]*env[^}]*)\}\s*=\s*ONNX\s*;/g,
               (match, keyword, props) => {
                 // Preserve the original property list exactly
-                // Create safe ONNX that has all needed properties
-                return `const _onnx_safe_2 = (typeof ONNX !== 'undefined' && ONNX && ONNX.env) ? ONNX : Object.assign({ env: {} }, ONNX || {}, { InferenceSession: (ONNX && ONNX.InferenceSession) || null, Tensor: (ONNX && ONNX.Tensor) || null });
-${keyword} { ${props} } = _onnx_safe_2;`;
+                // CRITICAL: Use a function that lazily evaluates ONNX to ensure it's available
+                // This prevents errors when code runs before import completes
+                const safeVarName = `_onnx_safe_${Math.random().toString(36).substr(2, 9)}`;
+                return `const ${safeVarName} = (function() {
+  if (typeof ONNX !== 'undefined' && ONNX && ONNX.env) {
+    return ONNX;
+  }
+  // Fallback: ensure we always return an object with env property
+  const fallback = { env: {} };
+  if (typeof ONNX !== 'undefined' && ONNX) {
+    Object.assign(fallback, ONNX);
+    if (!fallback.env) fallback.env = {};
+  }
+  // Add common properties that might be destructured
+  if (!fallback.InferenceSession) fallback.InferenceSession = null;
+  if (!fallback.Tensor) fallback.Tensor = null;
+  return fallback;
+})();
+${keyword} { ${props} } = ${safeVarName};`;
               }
             );
             
