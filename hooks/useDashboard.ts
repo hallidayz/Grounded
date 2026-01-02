@@ -286,23 +286,36 @@ export function useDashboard(
   // Use refs to avoid infinite loops from callback dependencies
   const startSessionRef = useRef(startSession);
   const endSessionRef = useRef(endSession);
+  const previousActiveValueIdRef = useRef<string | null>(null);
   startSessionRef.current = startSession;
   endSessionRef.current = endSession;
   
   useEffect(() => {
+    // Only start/end session if activeValueId actually changed
+    const activeValueIdChanged = activeValueId !== previousActiveValueIdRef.current;
+    previousActiveValueIdRef.current = activeValueId;
+    
+    if (!activeValueIdChanged) {
+      return; // Don't do anything if activeValueId didn't change
+    }
+    
     if (activeValueId) {
-      // Card opened - start session
-      startSessionRef.current(activeValueId);
-    } else if (currentSessionId) {
-      // Card closed - end session
-      const valueId = values.find(v => v.id === activeValueId)?.id || sessionValueId || '';
-      if (valueId) {
-        endSessionRef.current(valueId, false);
+      // Card opened - start session only if we don't already have one
+      if (!currentSessionId) {
+        startSessionRef.current(activeValueId);
+      }
+    } else {
+      // Card closed - end session if we have one
+      if (currentSessionId) {
+        const valueId = sessionValueId || '';
+        if (valueId) {
+          endSessionRef.current(valueId, false);
+        }
       }
     }
-    // Only depend on activeValueId and currentSessionId to avoid infinite loops
+    // Only depend on activeValueId to avoid infinite loops
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [activeValueId, currentSessionId]);
+  }, [activeValueId]);
   
   // Load/save drafts
   useEffect(() => {
@@ -365,9 +378,11 @@ export function useDashboard(
         lcswConfig,
         emotionalState,
         selectedFeeling,
-        reflectionAnalysis // Pass previous analysis as context
+        reflectionAnalysis ? (typeof reflectionAnalysis === 'string' ? JSON.parse(reflectionAnalysis) : reflectionAnalysis) : null // Pass previous analysis as context
       );
-      setReflectionAnalysis(analysis);
+      // Format the analysis response as a string for display
+      const formattedAnalysis = `## Core Themes\n${analysis.coreThemes.map(t => `- ${t}`).join('\n')}\n\n## The 'LCSW Lens'\n${analysis.lcswLens}\n\n## Reflective Inquiry\n${analysis.reflectiveInquiry.map(q => `- ${q}`).join('\n')}\n\n## Session Prep\n${analysis.sessionPrep}`;
+      setReflectionAnalysis(formattedAnalysis);
     } catch (error) {
       console.error('Reflection analysis error:', error);
       setReflectionAnalysis(null);
