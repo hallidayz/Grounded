@@ -736,6 +736,9 @@ export async function initializeModels(forceReload: boolean = false, modelType?:
       // Check both the modelConfig.task and verify moodTrackerModel exists
       const modelToReuse = moodTrackerModel || cachedModel;
       
+      // CRITICAL: If targetModel is text-generation (TinyLlama) and moodTrackerModel failed to load,
+      // we should NOT try to load it again for counseling - it will fail again
+      // Only reuse if the model actually loaded successfully
       if (modelToReuse && modelConfig.task === 'text-generation') {
         canReuseModel = true;
         // Use the model from cache if moodTrackerModel is null
@@ -753,10 +756,19 @@ export async function initializeModels(forceReload: boolean = false, modelType?:
           console.log(`[MODEL_DEBUG] Cannot reuse: model is ${modelConfig.task}, need text-generation for counseling`);
         } else if (!modelToReuse) {
           console.log(`[MODEL_DEBUG] Cannot reuse: moodTrackerModel is null and no cached model`);
+          // If targetModel is TinyLlama and it failed to load, don't try to load it again
+          if (targetModel === 'tinyllama' && modelConfig.task === 'text-generation') {
+            console.log(`[MODEL_DEBUG] Skipping counseling model load - TinyLlama already failed, would fail again`);
+            canReuseModel = false; // Explicitly set to false to skip loading
+          }
         }
       }
       
-      if (!canReuseModel) {
+      // Only try to load a separate counseling model if:
+      // 1. We can't reuse the mood tracker model AND
+      // 2. The targetModel is NOT TinyLlama (or if it is, it must have loaded successfully)
+      if (!canReuseModel && !(targetModel === 'tinyllama' && !moodTrackerModel && !cachedModel)) {
+        // Need to load a separate counseling model (user selected DistilBERT, need TinyLlama for counseling)
         // Need a text-generation model for counseling
         // If user selected DistilBERT (classification), load TinyLlama for counseling
         const counselingModelType = targetModel === 'distilbert' ? 'tinyllama' : targetModel;
@@ -856,10 +868,15 @@ export async function initializeModels(forceReload: boolean = false, modelType?:
             counselingCoachModel = null;
           }
         }
-      } else {
+      } else if (canReuseModel) {
         // Reuse the text-generation model for both tasks
         counselingCoachModel = moodTrackerModel;
         console.log(`✓ Using ${modelConfig.name} for both mood tracking and counseling`);
+      } else {
+        // TinyLlama failed to load - can't reuse and shouldn't try again
+        // Set counselingCoachModel to null explicitly
+        counselingCoachModel = null;
+        console.log(`[MODEL_DEBUG] TinyLlama failed - skipping separate counseling model load (would fail again)`);
       }
       
       if (counselingCoachModel) {
