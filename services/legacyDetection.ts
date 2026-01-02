@@ -20,7 +20,38 @@ const BACKUP_EXPIRY_DAYS = 7;
  */
 export async function detectLegacyData(): Promise<LegacyDataInfo> {
   try {
-    const db = await openDB('groundedDB', 4);
+    // Try to open database with current version (5), fallback to version 4 if needed
+    // Handle VersionError gracefully - if database is newer, just check if it exists
+    let db;
+    try {
+      db = await openDB('groundedDB', 5);
+    } catch (versionError: any) {
+      // If version error (requested version < existing), try to open without version
+      // This happens when database was upgraded but we're checking with old version
+      if (versionError?.name === 'VersionError' || versionError?.message?.includes('version')) {
+        // Database exists but is newer - use dbService to access it properly
+        const { dbService } = await import('./database');
+        await dbService.init();
+        // Return empty - database exists but is current version, not legacy
+        return {
+          hasLegacyData: false,
+          recordCount: 0,
+          tables: []
+        };
+      }
+      // Try version 4 as fallback
+      try {
+        db = await openDB('groundedDB', 4);
+      } catch (fallbackError) {
+        // Database doesn't exist or can't be opened
+        return {
+          hasLegacyData: false,
+          recordCount: 0,
+          tables: []
+        };
+      }
+    }
+    
     const tables: string[] = [];
     let totalCount = 0;
     
@@ -52,7 +83,8 @@ export async function detectLegacyData(): Promise<LegacyDataInfo> {
       lastBackup: backup?.timestamp
     };
   } catch (error) {
-    console.error('Error detecting legacy data:', error);
+    // Silently handle errors - database might not exist or be inaccessible
+    // Don't log as error since this is expected in some cases
     return {
       hasLegacyData: false,
       recordCount: 0,
@@ -66,7 +98,17 @@ export async function detectLegacyData(): Promise<LegacyDataInfo> {
  */
 export async function createLegacyBackup(): Promise<void> {
   try {
-    const db = await openDB('groundedDB', 4);
+    // Try current version first, fallback to version 4
+    let db;
+    try {
+      db = await openDB('groundedDB', 5);
+    } catch (versionError: any) {
+      if (versionError?.name === 'VersionError' || versionError?.message?.includes('version')) {
+        // Database is newer - can't backup with old version
+        throw new Error('Database version mismatch - cannot create backup');
+      }
+      db = await openDB('groundedDB', 4);
+    }
     const backup: Record<string, any[]> = {};
     
     // Backup all object stores
@@ -138,7 +180,16 @@ export async function restoreLegacyBackup(): Promise<void> {
   }
   
   try {
-    const db = await openDB('groundedDB', 4);
+    // Try current version first, fallback to version 4
+    let db;
+    try {
+      db = await openDB('groundedDB', 5);
+    } catch (versionError: any) {
+      if (versionError?.name === 'VersionError' || versionError?.message?.includes('version')) {
+        throw new Error('Database version mismatch - cannot restore backup');
+      }
+      db = await openDB('groundedDB', 4);
+    }
     
     // Clear existing data
     for (const storeName of db.objectStoreNames) {

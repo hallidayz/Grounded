@@ -95,6 +95,22 @@ const noMinifyTransformersPlugin = (): Plugin => {
             if (vendorImportMatch) {
               const vendorPath = vendorImportMatch[1];
               
+              // CRITICAL FIX: Initialize ONNX with placeholder BEFORE any code uses it
+              // This prevents "Cannot destructure property 'env' of 'ONNX' as it is undefined" errors
+              // Add initialization at the very top of the module
+              if (!restored.includes('var ONNX') && !restored.includes('let ONNX') && !restored.includes('const ONNX')) {
+                // Insert ONNX initialization at the beginning
+                const onnxInit = `// Initialize ONNX placeholder to prevent undefined errors
+                var ONNX = { env: {} };
+                `;
+                // Insert after 'use strict' if present, otherwise at the very beginning
+                if (restored.match(/^(['"]use strict['"];?\s*\n)/)) {
+                  restored = restored.replace(/^(['"]use strict['"];?\s*\n)/, `$1${onnxInit}`);
+                } else {
+                  restored = onnxInit + restored;
+                }
+              }
+              
               // Replace static import with dynamic import
               // Initialize variables immediately to avoid TDZ errors
               restored = restored.replace(
@@ -104,36 +120,30 @@ const noMinifyTransformersPlugin = (): Plugin => {
                 let ortWeb_min = undefined;
                 let ONNX_WEB = undefined;
                 let Template = undefined;
-                // Load vendor module asynchronously
+                // Load vendor module asynchronously and update ONNX when ready
                 const _vendorModule = import('${vendorPath}').then(module => {
                   ortWeb_min = module.v;
                   ONNX_WEB = module.O;
                   Template = module.T;
-                  return module;
-                }).catch(err => {
-                  console.error('Failed to load vendor module:', err);
-                });`
-              );
-              
-              // Update the ONNX assignment to wait for vendor and handle undefined safely
-              restored = restored.replace(
-                /ONNX\s*=\s*ortWeb_min\s*\?\?\s*ONNX_WEB;/g,
-                `// Wait for vendor module to load before accessing ortWeb_min
-                // Set initial fallback value (ONNX_WEB is undefined initially, will be set when vendor loads)
-                ONNX = undefined;
-                _vendorModule.then(() => {
-                  // Now ortWeb_min and ONNX_WEB are initialized from vendor module
-                  // Access them safely - they should be defined now
+                  // Update ONNX with actual value from vendor module (ONNX already initialized above)
                   if (typeof ortWeb_min !== 'undefined' && ortWeb_min !== null) {
                     ONNX = ortWeb_min;
                   } else if (typeof ONNX_WEB !== 'undefined' && ONNX_WEB !== null) {
                     ONNX = ONNX_WEB;
                   }
-                  // If both are undefined, ONNX stays undefined (fallback handled elsewhere)
-                }).catch(() => {
-                  // If vendor fails to load, ONNX stays undefined (will use fallback elsewhere)
-                  ONNX = undefined;
+                  return module;
+                }).catch(err => {
+                  console.error('Failed to load vendor module:', err);
+                  // Keep placeholder ONNX if vendor fails to load
                 });`
+              );
+              
+              // Update the ONNX assignment - ONNX is already initialized above, just update it
+              restored = restored.replace(
+                /ONNX\s*=\s*ortWeb_min\s*\?\?\s*ONNX_WEB;/g,
+                `// ONNX is initialized at module top with placeholder { env: {} }
+                // It will be updated when vendor module loads via _vendorModule promise above
+                // This line removed to prevent assignment before vendor loads`
               );
               
               // Also fix any other direct uses of ortWeb_min, ONNX_WEB, or Template

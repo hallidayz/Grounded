@@ -453,15 +453,22 @@ export async function initializeModels(forceReload: boolean = false, modelType?:
         env.useBrowserCache = true;
         env.useCustomCache = false;
         
-        // Configure model loading - use local bundled models, fallback to HuggingFace
+        // Configure model loading - use local bundled models in production, HuggingFace in dev
         // Models are bundled in public/models/ during build for instant loading
         // If local model not available, transformers.js will try HuggingFace as fallback
+        const isDev = import.meta.env.DEV;
         env.cacheDir = './models-cache'; // Virtual path - actual storage is IndexedDB
         env.useBrowserCache = true; // Enable IndexedDB caching
         env.allowRemoteModels = true; // Allow HuggingFace as fallback if local model not found
         
-        console.log('📦 Using local bundled models from /models/ directory');
-        console.log('📦 Will fallback to HuggingFace if local model not available');
+        if (!isDev) {
+          // Only show this message in production
+          console.log('📦 Using local bundled models from /models/ directory');
+          console.log('📦 Will fallback to HuggingFace if local model not available');
+        } else {
+          // In dev mode, we're using HuggingFace directly
+          console.log('📦 Development mode: Downloading models from HuggingFace');
+        }
       } catch (configError) {
         console.warn('Could not configure transformers environment, using defaults:', configError);
         // Continue anyway - library may have defaults
