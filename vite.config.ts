@@ -89,59 +89,74 @@ const noMinifyTransformersPlugin = (): Plugin => {
               }
             });
             
-            // CRITICAL: Initialize ONNX at the very top BEFORE any code runs
-            // Even with static imports, code that destructures ONNX.env might run before import completes
-            // Initialize with placeholder to prevent "Cannot destructure property 'env' of 'ONNX' as it is undefined"
-            // CRITICAL FIX: Code at line 278 destructures ONNX.env but ONNX is undefined
-            // We must initialize ONNX BEFORE any code runs and protect all destructuring
+            // CRITICAL FIX: Code at line 278 destructures ONNX.env before ONNX is assigned
+            // We must ensure ONNX exists before ANY code runs, including imports
             
-            // Step 1: Initialize ONNX at the absolute top - use both var and global assignment
-            const onnxInit = `// CRITICAL: Initialize ONNX IMMEDIATELY - must execute before any code
+            // Step 1: Initialize ONNX at the absolute top - before ANYTHING else
+            const onnxInit = `// CRITICAL: Initialize ONNX IMMEDIATELY - must be first executable code
 // This prevents "Cannot destructure property 'env' of 'ONNX' as it is undefined" errors
-(function() {
-  if (typeof globalThis !== 'undefined') {
-    globalThis.ONNX = globalThis.ONNX || { env: {} };
-  }
-  if (typeof window !== 'undefined') {
-    window.ONNX = window.ONNX || { env: {} };
-  }
-})();
 var ONNX = { env: {} };
+if (typeof globalThis !== 'undefined') {
+  globalThis.ONNX = globalThis.ONNX || { env: {} };
+}
 `;
             
             // Insert at the very beginning - MUST be first
             restored = onnxInit + restored;
             
-            // Step 2: Protect ALL destructuring of ONNX.env - replace with safe access
-            // Pattern: const { env } = ONNX; or let { env } = ONNX; etc.
+            // Step 2: Protect ALL destructuring patterns - CRITICAL: Must catch multi-property destructuring
+            // The pattern at line 8762 is: const { InferenceSession, Tensor: ONNXTensor, env } = ONNX;
+            // We need to catch ANY destructuring that includes 'env' anywhere in the property list
+            
+            // Pattern 1: Simple: const { env } = ONNX;
             restored = restored.replace(
               /(const|let|var)\s*\{\s*env\s*\}\s*=\s*ONNX\s*;/g,
               (match, keyword) => {
-                // Replace with safe version that ensures ONNX exists
-                return `const _onnx_temp = (typeof ONNX !== 'undefined' && ONNX) ? ONNX : { env: {} };
-${keyword} { env } = _onnx_temp;`;
+                return `const _onnx_safe_1 = (typeof ONNX !== 'undefined' && ONNX && ONNX.env) ? ONNX : { env: {} };
+${keyword} { env } = _onnx_safe_1;`;
               }
             );
             
-            // Step 3: Also protect destructuring without semicolon (part of expression)
+            // Pattern 2: Multi-property with env - CRITICAL FIX for line 8762
+            // Match: const { InferenceSession, Tensor: ONNXTensor, env } = ONNX;
+            // Use pattern that matches any destructuring containing 'env' anywhere
             restored = restored.replace(
-              /(const|let|var)\s*\{\s*env\s*\}\s*=\s*ONNX(?![a-zA-Z_$0-9=])/g,
-              (match, keyword) => {
-                return `${keyword} { env } = ((typeof ONNX !== 'undefined' && ONNX && ONNX.env) ? ONNX : { env: {} })`;
+              /(const|let|var)\s*\{\s*([^}]*env[^}]*)\}\s*=\s*ONNX\s*;/g,
+              (match, keyword, props) => {
+                // Preserve the original property list exactly
+                // Create safe ONNX that has all needed properties
+                return `const _onnx_safe_2 = (typeof ONNX !== 'undefined' && ONNX && ONNX.env) ? ONNX : Object.assign({ env: {} }, ONNX || {}, { InferenceSession: (ONNX && ONNX.InferenceSession) || null, Tensor: (ONNX && ONNX.Tensor) || null });
+${keyword} { ${props} } = _onnx_safe_2;`;
               }
             );
             
-            // Step 4: Ensure ONNX assignment happens right after vendor import
+            // Pattern 3: Destructuring without semicolon (part of expression)
+            restored = restored.replace(
+              /(const|let|var)\s*\{\s*([^}]*env[^}]*)\}\s*=\s*ONNX(?![a-zA-Z_$0-9=])/g,
+              (match, keyword, props) => {
+                return `${keyword} { ${props} } = ((typeof ONNX !== 'undefined' && ONNX && ONNX.env) ? ONNX : Object.assign({ env: {} }, ONNX || {}, { InferenceSession: (ONNX && ONNX.InferenceSession) || null, Tensor: (ONNX && ONNX.Tensor) || null }))`;
+              }
+            );
+            
+            // Pattern 4: Destructuring without const/let/var: { env } = ONNX or { InferenceSession, env } = ONNX
+            restored = restored.replace(
+              /\{\s*([^}]*env[^}]*)\}\s*=\s*ONNX(?![a-zA-Z_$0-9=])/g,
+              (match, props) => {
+                return `{ ${props} } = ((typeof ONNX !== 'undefined' && ONNX && ONNX.env) ? ONNX : Object.assign({ env: {} }, ONNX || {}, { InferenceSession: (ONNX && ONNX.InferenceSession) || null, Tensor: (ONNX && ONNX.Tensor) || null }))`;
+              }
+            );
+            
+            // Step 4: Ensure ONNX assignment happens immediately after vendor import
             restored = restored.replace(
               /(import\s+\{[^}]*v\s+as\s+ortWeb_min[^}]*\}\s+from\s+['"][^'"]+['"];?)/,
               `$1
-// CRITICAL: Assign ONNX immediately after import - before line 278 code runs
+// CRITICAL: Assign ONNX immediately after import - before any code uses it (especially line 278)
 if (typeof ortWeb_min !== 'undefined' && ortWeb_min !== null) {
   ONNX = ortWeb_min;
 } else if (typeof ONNX_WEB !== 'undefined' && ONNX_WEB !== null) {
   ONNX = ONNX_WEB;
 }
-// Double-check ONNX has env property
+// Ensure ONNX always has env property - critical for destructuring at line 278
 if (!ONNX || !ONNX.env) {
   ONNX = ONNX || { env: {} };
   ONNX.env = ONNX.env || {};
