@@ -186,6 +186,26 @@ export interface UserInteraction {
   metadata?: Record<string, any>;
 }
 
+export interface RuleBasedUsageLog {
+  id: string;
+  timestamp: string; // ISO datetime
+  operationType: 'encouragement' | 'focusLens' | 'reflectionAnalysis' | 'goalSuggestion';
+  emotionalState?: string;
+  subEmotion?: string | null;
+  valueId?: string;
+  valueCategory?: string;
+  frequency?: GoalFrequency;
+  fallbackKey: string; // Which fallback table entry was used
+  fallbackResponse: string; // JSON string of response used
+  context: {
+    timeOfDay?: string;
+    recentJournalText?: string;
+    userPatterns?: any;
+  };
+  aiUnavailableReason?: 'notLoaded' | 'loading' | 'error' | 'timeout';
+  userId: string;
+}
+
 export interface Session {
   id: string;
   userId: string;

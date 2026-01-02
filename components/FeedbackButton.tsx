@@ -9,6 +9,7 @@ const FeedbackButton: React.FC<FeedbackButtonProps> = ({ className = '' }) => {
   const [selectedEmoji, setSelectedEmoji] = useState<string | null>(null);
   const [feedback, setFeedback] = useState('');
   const [submitted, setSubmitted] = useState(false);
+  const [includeUsageData, setIncludeUsageData] = useState(false);
 
   const emojis = [
     { emoji: '😍', label: 'Love it' },
@@ -18,21 +19,79 @@ const FeedbackButton: React.FC<FeedbackButtonProps> = ({ className = '' }) => {
     { emoji: '😢', label: 'Very unhappy' },
   ];
 
-  const handleSubmit = () => {
+  const handleSubmit = async () => {
     if (!selectedEmoji && !feedback.trim()) {
       return; // At least one required
     }
 
     const emojiLabel = emojis.find(e => e.emoji === selectedEmoji)?.label || 'None';
-    const subject = encodeURIComponent('Grounded App Feedback');
-    const body = encodeURIComponent(
-      `Feedback for Grounded App\n\n` +
+    
+    // Build feedback payload
+    let feedbackBody = `Feedback for Grounded App\n\n` +
       `Rating: ${selectedEmoji || 'None'} (${emojiLabel})\n\n` +
-      `Feedback:\n${feedback.trim() || '(No additional feedback provided)'}\n\n` +
-      `---\n` +
+      `Feedback:\n${feedback.trim() || '(No additional feedback provided)'}\n\n`;
+    
+    // Include rule-based usage data if consent given
+    if (includeUsageData) {
+      try {
+        const { dbService } = await import('../services/database');
+        const usageLogs = await dbService.getRuleBasedUsageLogs(10, 7); // Last 10 entries from last 7 days
+        
+        if (usageLogs.length > 0) {
+          // Calculate summary
+          const byOperationType: Record<string, number> = {};
+          const commonScenarios: Array<{ operationType: string; emotionalState: string; count: number }> = [];
+          const scenarioCounts: Record<string, number> = {};
+          
+          usageLogs.forEach(log => {
+            byOperationType[log.operationType] = (byOperationType[log.operationType] || 0) + 1;
+            const key = `${log.operationType}-${log.emotionalState || 'unknown'}`;
+            scenarioCounts[key] = (scenarioCounts[key] || 0) + 1;
+          });
+          
+          Object.entries(scenarioCounts).forEach(([key, count]) => {
+            const [operationType, emotionalState] = key.split('-');
+            commonScenarios.push({ operationType, emotionalState, count });
+          });
+          
+          commonScenarios.sort((a, b) => b.count - a.count);
+          
+          feedbackBody += `---\n` +
+            `Rule-Based Usage Data (with consent):\n` +
+            `Total Uses: ${usageLogs.length}\n` +
+            `By Operation Type:\n${Object.entries(byOperationType).map(([type, count]) => `  - ${type}: ${count}`).join('\n')}\n` +
+            `Most Common Scenarios:\n${commonScenarios.slice(0, 5).map(s => `  - ${s.operationType} (${s.emotionalState}): ${s.count}`).join('\n')}\n` +
+            `\nSample Entries (anonymized, last ${Math.min(usageLogs.length, 3)}):\n`;
+          
+          // Include anonymized sample entries (remove personal reflection content)
+          usageLogs.slice(0, 3).forEach((log, idx) => {
+            const sample = {
+              operationType: log.operationType,
+              emotionalState: log.emotionalState,
+              subEmotion: log.subEmotion,
+              valueCategory: log.valueCategory,
+              frequency: log.frequency,
+              fallbackKey: log.fallbackKey,
+              aiUnavailableReason: log.aiUnavailableReason,
+              timestamp: log.timestamp
+            };
+            feedbackBody += `\nSample ${idx + 1}:\n${JSON.stringify(sample, null, 2)}\n`;
+          });
+          
+          feedbackBody += `\n---\n`;
+        }
+      } catch (error) {
+        console.warn('Failed to include rule-based usage data:', error);
+        feedbackBody += `\n(Note: Could not include rule-based usage data)\n\n`;
+      }
+    }
+    
+    feedbackBody += `---\n` +
       `App Version: 1.12.27\n` +
-      `Timestamp: ${new Date().toISOString()}`
-    );
+      `Timestamp: ${new Date().toISOString()}`;
+
+    const subject = encodeURIComponent('Grounded App Feedback');
+    const body = encodeURIComponent(feedbackBody);
 
     const mailtoLink = `mailto:ac.minds.ai@gmail.com?subject=${subject}&body=${body}`;
     window.location.href = mailtoLink;
@@ -43,6 +102,7 @@ const FeedbackButton: React.FC<FeedbackButtonProps> = ({ className = '' }) => {
       setSubmitted(false);
       setSelectedEmoji(null);
       setFeedback('');
+      setIncludeUsageData(false);
     }, 2000);
   };
 
@@ -155,6 +215,20 @@ const FeedbackButton: React.FC<FeedbackButtonProps> = ({ className = '' }) => {
                     <p className="text-xs text-text-tertiary dark:text-text-tertiary mt-2 text-right">
                       {feedback.length}/1000
                     </p>
+                  </div>
+
+                  {/* Consent Checkbox for Rule-Based Usage Data */}
+                  <div className="flex items-start gap-3 p-4 bg-bg-secondary dark:bg-dark-bg-secondary rounded-xl border border-border-soft dark:border-dark-border">
+                    <input
+                      type="checkbox"
+                      id="includeUsageData"
+                      checked={includeUsageData}
+                      onChange={(e) => setIncludeUsageData(e.target.checked)}
+                      className="mt-1 w-5 h-5 rounded border-2 border-text-primary/30 dark:border-white/30 text-navy-primary focus:ring-2 focus:ring-navy-primary/50 cursor-pointer"
+                    />
+                    <label htmlFor="includeUsageData" className="flex-1 text-xs sm:text-sm text-text-primary dark:text-white leading-relaxed cursor-pointer">
+                      <span className="font-bold">Include rule-based usage data</span> to help improve responses. This includes anonymized information about when rule-based fallbacks were used (no personal reflection content).
+                    </label>
                   </div>
                 </div>
 

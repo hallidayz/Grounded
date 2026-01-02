@@ -866,6 +866,70 @@ class DatabaseService {
     });
   }
 
+  async saveRuleBasedUsage(log: any): Promise<void> {
+    const db = await this.ensureDB();
+    
+    // Ensure object store exists
+    if (!db.objectStoreNames.contains('ruleBasedUsageLogs')) {
+      console.warn('ruleBasedUsageLogs object store does not exist - skipping save (non-critical)');
+      return Promise.resolve();
+    }
+    
+    return new Promise((resolve, reject) => {
+      try {
+        const transaction = db.transaction(['ruleBasedUsageLogs'], 'readwrite');
+        const store = transaction.objectStore('ruleBasedUsageLogs');
+        const request = store.add(log);
+
+        request.onsuccess = () => resolve();
+        request.onerror = () => {
+          console.error('Failed to save rule-based usage log:', request.error);
+          resolve(); // Fail silently for non-critical logging
+        };
+      } catch (error) {
+        console.error('Error saving rule-based usage log:', error);
+        resolve(); // Fail silently
+      }
+    });
+  }
+
+  async getRuleBasedUsageLogs(limit?: number, days?: number): Promise<any[]> {
+    const db = await this.ensureDB();
+    
+    if (!db.objectStoreNames.contains('ruleBasedUsageLogs')) {
+      return Promise.resolve([]);
+    }
+    
+    return new Promise((resolve, reject) => {
+      try {
+        const transaction = db.transaction(['ruleBasedUsageLogs'], 'readonly');
+        const store = transaction.objectStore('ruleBasedUsageLogs');
+        const index = store.index('timestamp');
+        
+        let range: IDBKeyRange | null = null;
+        if (days) {
+          const cutoffDate = new Date();
+          cutoffDate.setDate(cutoffDate.getDate() - days);
+          range = IDBKeyRange.lowerBound(cutoffDate.toISOString());
+        }
+        
+        const request = range ? index.getAll(range) : index.getAll();
+        
+        request.onsuccess = () => {
+          let results = request.result || [];
+          if (limit) {
+            results = results.slice(0, limit);
+          }
+          resolve(results);
+        };
+        request.onerror = () => reject(request.error);
+      } catch (error) {
+        console.error('Error getting rule-based usage logs:', error);
+        resolve([]); // Return empty array on error
+      }
+    });
+  }
+
   async getFeelingLogs(limit?: number): Promise<any[]> {
     const db = await this.ensureDB();
     return new Promise((resolve, reject) => {

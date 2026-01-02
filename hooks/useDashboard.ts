@@ -366,7 +366,7 @@ export function useDashboard(
     } finally {
       setAnalyzingReflection(false);
     }
-  }, [reflectionText, emotionalState, selectedFeeling, goalFreq, lcswConfig]);
+  }, [reflectionText, emotionalState, selectedFeeling, goalFreq, lcswConfig, reflectionAnalysis]);
 
   // AI Motivation Refresh - Focus Lens based on selected feeling
   // Use ref to prevent infinite loops from logs array changes
@@ -501,7 +501,7 @@ export function useDashboard(
         lcswConfig
       );
       
-      const suggestion = await suggestGoal(value, goalFreq, deepReflectionContext, counselingGuidance, lcswConfig, emotionalState, selectedFeeling);
+      const suggestion = await suggestGoal(value, goalFreq, deepReflectionContext, counselingGuidance, lcswConfig, emotionalState, selectedFeeling, reflectionAnalysis);
       setGoalText(suggestion);
     } catch (error) {
       console.error("AI Goal Error:", error);
@@ -691,6 +691,56 @@ export function useDashboard(
       selfAdvocacy: goalText.trim() || undefined,
       frequency: goalFreq,
     });
+    
+    // Save complete AI interaction data to feelingLogs
+    if (emotionalState && emotionalState !== 'mixed') {
+      try {
+        // Build JSON input
+        const jsonIn = JSON.stringify({
+          emotion: emotionalState,
+          subEmotion: selectedFeeling,
+          valueId,
+          reflection: reflectionText.trim(),
+          goalText: goalText.trim(),
+          frequency: goalFreq,
+          timestamp
+        });
+        
+        // Build JSON output (all AI responses)
+        const jsonOut = JSON.stringify({
+          encouragement: encouragementText || '',
+          focusLens: coachInsight || '',
+          reflectionAnalysis: reflectionAnalysis || null,
+          goalSuggestion: goalText.trim() || null
+        });
+        
+        const feelingLog: FeelingLog = {
+          id: `feeling-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`,
+          timestamp,
+          emotion: emotionalState,
+          subEmotion: selectedFeeling || null,
+          jsonIn,
+          jsonOut,
+          focusLens: coachInsight || '',
+          reflection: reflectionText.trim(),
+          selfAdvocacy: goalText.trim(),
+          frequency: goalFreq,
+          jsonAssessment: reflectionAnalysis ? JSON.stringify(reflectionAnalysis) : '',
+          // Legacy fields
+          emotionalState: emotionalState as any,
+          selectedFeeling: selectedFeeling || null,
+          aiResponse: encouragementText || '',
+          isAIResponse: true,
+          lowStateCount: lowStateCount
+        };
+        
+        await dbService.saveFeelingLog(feelingLog);
+        console.log('✅ Complete AI interaction saved to feelingLogs');
+      } catch (error) {
+        console.error('Error saving complete feeling log:', error);
+        // Don't block user flow
+      }
+    }
     
     // End session
     await endSession(valueId, goalCreated);

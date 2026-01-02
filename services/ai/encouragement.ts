@@ -111,6 +111,30 @@ Return ONLY the Focus Lens text.`;
     focusLensFallbacks.default
   );
   console.log('ℹ️ Using rule-based Focus Lens fallback.');
+  
+  // Log rule-based usage
+  try {
+    const { dbService } = await import('../database');
+    const userId = sessionStorage.getItem('userId') || 'anonymous';
+    await dbService.saveRuleBasedUsage({
+      id: `rule-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`,
+      timestamp: new Date().toISOString(),
+      operationType: 'focusLens',
+      emotionalState,
+      valueCategory: value.category,
+      fallbackKey: `${emotionalState}-${value.category}`,
+      fallbackResponse: JSON.stringify({ focusLens: fallback }),
+      context: {
+        timeOfDay: context?.timeOfDay,
+        recentJournalText: context?.recentReflections?.substring(0, 200)
+      },
+      aiUnavailableReason: counselingCoachModel ? 'error' : 'notLoaded',
+      userId
+    });
+  } catch (logError) {
+    console.warn('Failed to log rule-based usage:', logError);
+  }
+  
   await setCachedResponse(cacheKey, { focusLens: fallback });
   return fallback;
 }
@@ -171,19 +195,33 @@ ${json.howToMeasureProgress.map((step, i) => `  ${i + 1}. ${step}`).join('\n')}`
  */
 function generateFallbackReflectionAnalysis(
   reflection: string,
-  emotionalState: EmotionalState, // Added emotionalState
-  selectedFeeling: string | null, // Added selectedFeeling
+  emotionalState: EmotionalState,
+  selectedFeeling: string | null,
   frequency: GoalFrequency,
-  lcswConfig?: LCSWConfig
-): ReflectionAnalysisResponse { // Changed return type to ReflectionAnalysisResponse
-  const context = {
-    reflection,
-    emotionalState,
-    selectedFeeling,
-    frequencyLabel: frequency === 'quarterly' ? 'monthly' : frequency,
-    protocols: lcswConfig?.protocols || [],
-  };
-  return getFallbackResponse(reflectionAnalysisFallbacks, context, reflectionAnalysisFallbacks.default);
+  lcswConfig?: LCSWConfig,
+  previousAnalysis?: ReflectionAnalysisResponse | null
+): ReflectionAnalysisResponse {
+  // If this is a refresh, modify the response to provide a different perspective
+  const baseResponse = getFallbackResponse(
+    reflectionAnalysisFallbacks,
+    { emotionalState },
+    reflectionAnalysisFallbacks.default
+  );
+  
+  // If refresh, provide alternative perspective
+  if (previousAnalysis) {
+    return {
+      ...baseResponse,
+      lcswLens: `${baseResponse.lcswLens} Consider this alternative perspective: ${baseResponse.reflectiveInquiry[0] || 'What else might be important here?'}`,
+      reflectiveInquiry: [
+        baseResponse.reflectiveInquiry[1] || baseResponse.reflectiveInquiry[0] || 'What other aspects feel important?',
+        'What would a different perspective reveal about this situation?'
+      ],
+      sessionPrep: `Explore alternative perspectives and what they reveal about your experience. ${baseResponse.sessionPrep}`
+    };
+  }
+  
+  return baseResponse;
 }
 
 /**
@@ -213,12 +251,13 @@ export async function analyzeReflection(
     }
 
     if (!reflection.trim()) {
-      return generateFallbackReflectionAnalysis(
+      return await generateFallbackReflectionAnalysis(
         reflection,
         emotionalState as EmotionalState,
         selectedFeeling,
         frequency,
-        lcswConfig
+        lcswConfig,
+        previousAnalysis
       );
     }
 
@@ -245,7 +284,13 @@ export async function analyzeReflection(
 
     const frequencyLabel = frequency === 'quarterly' ? 'monthly' : frequency;
     
-    // Optimized JSON prompt for on-device LLM
+    // Check if this is a refresh request (prompt chain)
+    const isRefresh = !!previousAnalysis;
+    const refreshContext = isRefresh 
+      ? `\n\nIMPORTANT: This is a refresh request. The user wants a different perspective on the same reflection. Previous analysis:\n${JSON.stringify(previousAnalysis, null, 2)}\n\nProvide a NEW perspective that offers different insights while staying true to what the user actually wrote.`
+      : '';
+    
+    // Optimized JSON prompt for on-device LLM - Human-centered, relatable, no assumptions
     const prompt = `Analyze this ${frequencyLabel} reflection and return ONLY valid JSON (no markdown, no extra text) conforming to the ReflectionAnalysisResponse type:
 
 interface ReflectionAnalysisResponse {
@@ -255,10 +300,18 @@ interface ReflectionAnalysisResponse {
   sessionPrep: string;
 }
 
+CRITICAL GUIDELINES:
+- Use the user's ACTUAL WORDS from their reflection. Don't assume context they didn't provide.
+- If the user doesn't mention "work", "job", "career", or "office", DO NOT assume work-related themes.
+- Focus on the PERSON - their feelings, their journey, their human experience.
+- Be relatable and use language that connects to what they actually wrote.
+- This is about the human making efforts, not external circumstances unless explicitly mentioned.
+${isRefresh ? '- This is a refresh - provide a DIFFERENT perspective while staying true to their words.' : ''}
+
 Context: ${protocolContext}
 ${emotionalState ? `Current Emotional State: ${emotionalState}` : ''}
 ${selectedFeeling ? `Specific Feeling: ${selectedFeeling}` : ''}
-${previousAnalysis ? `\nPrevious Analysis:\n${JSON.stringify(previousAnalysis, null, 2)}` : ''}
+${refreshContext}
 
 Reflection:
 ${reflection}
@@ -315,12 +368,12 @@ Return valid JSON only.`;
       }
     }
     
-    // Fallback to rule-based
-    return generateFallbackReflectionAnalysis(reflection, emotionalState as EmotionalState, selectedFeeling, frequency, lcswConfig);
+    // Fallback to rule-based using fallback tables
+    return generateFallbackReflectionAnalysis(reflection, emotionalState as EmotionalState, selectedFeeling, frequency, lcswConfig, previousAnalysis);
   } catch (error) {
     console.error('Reflection analysis error:', error);
     // Ensure that even if there's an internal error, we return a structured fallback
-    return generateFallbackReflectionAnalysis(reflection, emotionalState as EmotionalState, selectedFeeling, frequency, lcswConfig);
+    return await generateFallbackReflectionAnalysis(reflection, emotionalState as EmotionalState, selectedFeeling, frequency, lcswConfig, previousAnalysis);
   }
 }
 
@@ -591,25 +644,17 @@ Requirements:
 
 Return valid JSON only.`;
 
-  // Build fallback response based on state
-  let fallbackResponse = '';
+  // Build fallback response using fallback tables
+  const fallbackData = getFallbackResponse(
+    emotionalEncouragementFallbacks,
+    { emotionalState, subEmotion: selectedFeeling },
+    emotionalEncouragementFallbacks.default
+  );
   
-  if (emotionalState === 'drained') {
-    fallbackResponse = `Feeling drained is real and valid. Right now might feel heavy, but there are opportunities ahead. Consider reaching out to someone you trust—you don't have to carry this alone. Small steps forward are still progress.${isRepeated ? ' Please consider reaching out to your therapist, a trusted friend, or the 988 Crisis & Suicide Lifeline. You deserve support.' : ''}`;
-  } else if (emotionalState === 'heavy') {
-    fallbackResponse = `Feeling heavy is understandable. These moments can feel overwhelming, but they also show your capacity to feel deeply. There are possibilities and opportunities waiting for you.${isRepeated ? ' Please consider reaching out to your therapist, a trusted friend, or a support line (988). You deserve support.' : ' Consider connecting with someone who cares about you.'}`;
-  } else if (emotionalState === 'overwhelmed') {
-    fallbackResponse = `Feeling overwhelmed is completely understandable when there's so much happening. Take a moment to breathe. You can break things down into smaller, manageable steps. There are opportunities ahead, and you have the capacity to navigate them.${isRepeated ? ' Consider reaching out to someone you trust for support.' : ''}`;
-  } else if (emotionalState === 'mixed') {
-    fallbackResponse = `Mixed feelings are completely normal and valid. This in-between space can actually be a place of growth and possibility. There are opportunities ahead, and you have the capacity to navigate them. Consider what feels most authentic to you right now.`;
-  } else if (emotionalState === 'calm') {
-    fallbackResponse = `It's wonderful that you're feeling calm and centered. This peaceful state is a gift—take time to appreciate it and notice what brought you here. There are opportunities to build on this sense of stability.`;
-  } else if (emotionalState === 'hopeful') {
-    fallbackResponse = `Feeling hopeful is a sign of resilience and possibility. This forward-looking energy is valuable—there are opportunities ahead that align with your values and goals. How can you channel this hope into meaningful action?`;
-  } else if (emotionalState === 'positive') {
-    fallbackResponse = `It's wonderful that you're feeling positive and grounded. This is a great time to explore opportunities and possibilities. Consider what you'd like to build on or move toward. You have momentum—how can you channel this energy in meaningful ways?`;
-  } else { // energized
-    fallbackResponse = `You're feeling energized and motivated—that's powerful! This is a great time to explore opportunities and take meaningful action. What possibilities are calling to you? How can you channel this energy toward what matters most to you?`;
+  // Build fallback response message, adding support message if repeated low states
+  let fallbackResponse = fallbackData.message;
+  if (isRepeated && (emotionalState === 'drained' || emotionalState === 'heavy' || emotionalState === 'overwhelmed')) {
+    fallbackResponse += ' Please consider reaching out to your therapist, a trusted friend, or the 988 Crisis & Suicide Lifeline. You deserve support.';
   }
 
   // PRIORITY: Try to use AI model FIRST if available
@@ -792,10 +837,11 @@ export async function suggestGoal(
   value: ValueItem,
   frequency: GoalFrequency,
   reflection: string = '',
-  counselingGuidance: string = '', // Added new parameter
+  counselingGuidance: string = '',
   lcswConfig?: LCSWConfig,
   emotionalState?: string | null,
-  selectedFeeling?: string | null
+  selectedFeeling?: string | null,
+  reflectionAnalysis?: ReflectionAnalysisResponse | null // Added reflection analysis parameter
 ): Promise<string> {
   try {
     // Check for crisis
@@ -892,7 +938,7 @@ export async function suggestGoal(
 
 Value: "${value.name}" (${value.description})
 Frequency: ${frequency}
-${feelingContext}${counselingGuidance ? `Counseling Guidance: ${counselingGuidance}\n\n` : ''}Deep Reflection:
+${feelingContext}${counselingGuidance ? `Counseling Guidance: ${counselingGuidance}\n\n` : ''}${reflectionAnalysis ? `Reflection Analysis:\nCore Themes: ${reflectionAnalysis.coreThemes.join(', ')}\nLCSW Lens: ${reflectionAnalysis.lcswLens}\nReflective Inquiry: ${reflectionAnalysis.reflectiveInquiry.join('; ')}\nSession Prep: ${reflectionAnalysis.sessionPrep}\n\n` : ''}Deep Reflection:
 ${deepReflectionText}
 ${hasAnalysis ? `\nReflection Analysis:\n${reflection.split('Reflection Analysis:')[1] || ''}` : ''}
 
@@ -908,7 +954,7 @@ Requirements:
 Return valid JSON only.`;
 
     // Default fallback response (only used if AI model is unavailable)
-    const fallbackResponse: GoalSuggestionResponse = generateFallbackGoalSuggestion(
+    const fallbackResponse: GoalSuggestionResponse = await generateFallbackGoalSuggestion(
       value, frequency, reflection, counselingGuidance, emotionalState as EmotionalState, selectedFeeling
     );
     
@@ -1004,14 +1050,14 @@ Return valid JSON only.`;
       
       // If all AI attempts fail, return fallback
       console.warn('⚠️ Using fallback goal suggestion due to AI model errors');
-      const finalFallback = generateFallbackGoalSuggestion(value, frequency, reflection, counselingGuidance, emotionalState as EmotionalState, selectedFeeling);
+      const finalFallback = await generateFallbackGoalSuggestion(value, frequency, reflection, counselingGuidance, emotionalState as EmotionalState, selectedFeeling);
       // Cache fallback
       await setCachedResponse(cacheKey, { goalSuggestion: formatGoalSuggestionJSON(finalFallback) });
       return formatGoalSuggestionJSON(finalFallback);
     }
   } catch (error) {
     console.error('Goal suggestion error:', error);
-    const finalFallback = generateFallbackGoalSuggestion(value, frequency, reflection, counselingGuidance, emotionalState as EmotionalState, selectedFeeling);
+    const finalFallback = await generateFallbackGoalSuggestion(value, frequency, reflection, counselingGuidance, emotionalState as EmotionalState, selectedFeeling);
     // Cache fallback
     await setCachedResponse(cacheKey, { goalSuggestion: formatGoalSuggestionJSON(finalFallback) }).catch(console.warn);
     return formatGoalSuggestionJSON(finalFallback);
@@ -1029,14 +1075,19 @@ function generateFallbackGoalSuggestion(
   emotionalState: EmotionalState,
   selectedFeeling: string | null
 ): GoalSuggestionResponse {
-  const context = {
-    valueName: value.name,
-    frequencyLabel: frequency === 'quarterly' ? 'monthly' : frequency,
-    reflectionSummary: reflection.substring(0, 200),
-    counselingGuidanceSummary: counselingGuidance.substring(0, 200),
-    emotionalState,
-    selectedFeeling,
+  // Use fallback tables for structured response
+  const fallback = getFallbackResponse(
+    goalSuggestionFallbacks,
+    { valueCategory: value.category, frequency },
+    goalSuggestionFallbacks.default
+  );
+  
+  return {
+    description: fallback.description,
+    whatThisHelpsWith: fallback.whatThisHelpsWith,
+    howToMeasureProgress: fallback.howToMeasureProgress,
+    inferenceAnalysis: fallback.inferenceAnalysis,
+    lcsmInferences: fallback.lcsmInferences
   };
-  return getFallbackResponse(goalSuggestionFallbacks, context, goalSuggestionFallbacks.default);
 }
 
