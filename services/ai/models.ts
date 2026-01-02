@@ -534,31 +534,24 @@ export async function initializeModels(forceReload: boolean = false, modelType?:
             lastUpdateTime = now;
           }
         } else if (progress.status === 'done') {
-          modelsLoaded++;
-          // Don't show 100% until models are actually loaded - cap at 90% for download progress
-          // The remaining 10% is reserved for model initialization/verification
-          const modelProgress = Math.round((modelsLoaded / totalModels) * 90); // Cap at 90%
-          totalProgress = Math.min(90, modelProgress);
-          
+          // "done" means files are downloaded, but model initialization may still fail
+          // Don't increment modelsLoaded or set high progress until model is actually initialized
+          // Just log that files are downloaded - progress will be set when model successfully initializes
           const modelName = progress.name || 'model';
-          console.log(`Model progress callback: ${modelName} reported done (files downloaded)`);
+          console.log(`Model progress callback: ${modelName} reported done (files downloaded, initializing...)`);
           
-          // IMPORTANT: Don't set status to complete here - wait for actual model assignment
-          // The progress callback fires when files download, but the model might still fail to initialize
-          // Only update progress, not final status
-          currentDownloadProgress = totalProgress;
-          currentDownloadStatus = 'downloading'; // Keep as downloading until models are actually assigned
-          currentDownloadLabel = 'Loading AI models...';
-          currentDownloadDetails = `${modelName} downloaded`;
-          
-          // Update progress but don't mark as complete yet - cap at 90% to indicate still initializing
-          setModelLoadingProgress(
-            totalProgress,
-            `Loading AI models...`,
-            `${modelName} downloaded`
-          );
-          
-          lastUpdateTime = now;
+          // Keep progress at current level - don't jump to 90% until model is actually initialized
+          // The actual progress will be set when the pipeline() call succeeds
+          // This prevents showing 90% when the model is about to fail
+          if (shouldUpdate) {
+            // Only update if we have meaningful progress, otherwise keep current state
+            setModelLoadingProgress(
+              Math.min(totalProgress, 85), // Cap at 85% for file download, reserve 15% for initialization
+              `Loading AI models...`,
+              `${modelName} files downloaded, initializing...`
+            );
+            lastUpdateTime = now;
+          }
         }
       };
       
@@ -638,24 +631,36 @@ export async function initializeModels(forceReload: boolean = false, modelType?:
               } catch (huggingfaceError: any) {
                 // If HuggingFace also fails, check if it's a CORS issue
                 const hfErrorMsg = huggingfaceError?.message || String(huggingfaceError);
+                const isDev = import.meta.env.DEV;
                 if (hfErrorMsg.includes('<!DOCTYPE') || hfErrorMsg.includes('not valid JSON') || hfErrorMsg.includes('CORS')) {
-                  console.error(`[MODEL_DEBUG] HuggingFace model also failed - possible CORS issue: ${hfErrorMsg.substring(0, 100)}`);
-                  console.error(`[MODEL_DEBUG] This might be a CORS configuration issue. Models will be unavailable.`);
+                  if (isDev) {
+                    // In development, CORS errors are expected - suppress noisy error messages
+                    console.warn(`[MODEL_DEBUG] Development mode: HuggingFace model unavailable (CORS expected). Using rule-based responses.`);
+                  } else {
+                    console.error(`[MODEL_DEBUG] HuggingFace model also failed - possible CORS issue: ${hfErrorMsg.substring(0, 100)}`);
+                    console.error(`[MODEL_DEBUG] This might be a CORS configuration issue. Models will be unavailable.`);
+                  }
                 }
                 throw huggingfaceError; // Re-throw to be handled by outer catch
               }
             } else {
               throw localError; // Re-throw if it's not a 404/HTML error
             }
-          } else {
-            // Already using HuggingFace - check if it's a CORS or network issue
-            const errorMsg = localError?.message || String(localError);
-            if (errorMsg.includes('<!DOCTYPE') || errorMsg.includes('not valid JSON')) {
-              console.error(`[MODEL_DEBUG] HuggingFace model failed with HTML response - possible CORS or network issue: ${errorMsg.substring(0, 100)}`);
-              console.error(`[MODEL_DEBUG] Check browser console for CORS errors. Models may be unavailable.`);
+            } else {
+              // Already using HuggingFace - check if it's a CORS or network issue
+              const errorMsg = localError?.message || String(localError);
+              const isDev = import.meta.env.DEV;
+              if (errorMsg.includes('<!DOCTYPE') || errorMsg.includes('not valid JSON')) {
+                if (isDev) {
+                  // In development, CORS errors are expected - suppress noisy error messages
+                  console.warn(`[MODEL_DEBUG] Development mode: HuggingFace model unavailable (CORS expected). Using rule-based responses.`);
+                } else {
+                  console.error(`[MODEL_DEBUG] HuggingFace model failed with HTML response - possible CORS or network issue: ${errorMsg.substring(0, 100)}`);
+                  console.error(`[MODEL_DEBUG] Check browser console for CORS errors. Models may be unavailable.`);
+                }
+              }
+              throw localError; // Re-throw if we're already using HuggingFace or no fallback available
             }
-            throw localError; // Re-throw if we're already using HuggingFace or no fallback available
-          }
         }
         
         console.log(`[MODEL_DEBUG] Pipeline call completed successfully`);
@@ -671,18 +676,34 @@ export async function initializeModels(forceReload: boolean = false, modelType?:
         // Cache the model IMMEDIATELY after assignment
         allModelsCache.set(targetModel, moodTrackerModel);
         console.log(`[MODEL_DEBUG] Model cached: ${targetModel}`);
+        
+        // NOW update progress - model is actually initialized successfully
+        // This is when we can safely increment modelsLoaded and show higher progress
+        modelsLoaded++;
+        const modelProgress = Math.round((modelsLoaded / totalModels) * 95); // 95% for first model initialized
+        totalProgress = Math.min(95, modelProgress);
+        currentDownloadProgress = totalProgress;
+        currentDownloadStatus = 'downloading';
+        currentDownloadLabel = 'Loading AI models...';
+        currentDownloadDetails = `${modelConfig.name} initialized`;
+        setModelLoadingProgress(
+          totalProgress,
+          `Loading AI models...`,
+          `${modelConfig.name} initialized`
+        );
       } catch (modelError: any) {
-        const modelErrorMsg = modelError?.message || String(modelError);
-        const modelErrorStack = modelError?.stack || '';
-        console.error(`[MODEL_DEBUG] Pipeline call failed for ${modelConfig.name}:`, modelErrorMsg);
-        console.error(`[MODEL_DEBUG] Error stack:`, modelErrorStack);
         const errorMsg = modelError?.message || String(modelError);
         const errorStack = modelError?.stack || '';
+        const isDev = import.meta.env.DEV;
         
-        // Log the error for debugging
-        console.error(`[MODEL_DEBUG] Model loading error:`, errorMsg);
-        if (errorStack) {
-          console.error(`[MODEL_DEBUG] Error stack:`, errorStack);
+        // In development, suppress noisy CORS/HTML error messages
+        if (isDev && (errorMsg.includes('<!DOCTYPE') || errorMsg.includes('not valid JSON') || errorMsg.includes('CORS'))) {
+          console.warn(`[MODEL_DEBUG] Development mode: Model loading failed (CORS expected). Using rule-based responses.`);
+        } else {
+          console.error(`[MODEL_DEBUG] Pipeline call failed for ${modelConfig.name}:`, errorMsg);
+          if (errorStack) {
+            console.error(`[MODEL_DEBUG] Error stack:`, errorStack);
+          }
         }
         
         // Categorize error
@@ -693,10 +714,15 @@ export async function initializeModels(forceReload: boolean = false, modelType?:
                    errorMsg.includes('Unexpected token') || errorMsg.includes('<!DOCTYPE') || errorMsg.includes('not valid JSON') ||
                    errorMsg.includes('CORS') || errorMsg.includes('Cross-Origin')) {
           lastErrorCategory = 'network';
-          console.warn('⚠️ Network/CORS error during model loading.');
-          console.warn('⚠️ The model may not be accessible due to CORS restrictions or network issues.');
-          console.warn('⚠️ This is common in development mode. Models will retry in the background.');
-          console.warn('⚠️ The app will continue using rule-based responses (fully functional).');
+          if (isDev) {
+            // In development, suppress noisy CORS warnings - they're expected
+            console.info('ℹ️ Development mode: Models unavailable (CORS expected). Using rule-based responses.');
+          } else {
+            console.warn('⚠️ Network/CORS error during model loading.');
+            console.warn('⚠️ The model may not be accessible due to CORS restrictions or network issues.');
+            console.warn('⚠️ Models will retry in the background.');
+            console.warn('⚠️ The app will continue using rule-based responses (fully functional).');
+          }
         } else {
           lastErrorCategory = 'unknown';
           console.warn('⚠️ Model loading failed for unknown reason.');
@@ -829,6 +855,20 @@ export async function initializeModels(forceReload: boolean = false, modelType?:
             
             // Cache the model
             allModelsCache.set(counselingModelType, counselingCoachModel);
+            
+            // Update progress - counseling model initialized successfully
+            modelsLoaded++;
+            const counselingProgress = Math.round((modelsLoaded / totalModels) * 100); // 100% when both models loaded
+            totalProgress = Math.min(100, counselingProgress);
+            currentDownloadProgress = totalProgress;
+            currentDownloadStatus = 'downloading';
+            currentDownloadLabel = 'Loading AI models...';
+            currentDownloadDetails = `${counselingConfig.name} initialized`;
+            setModelLoadingProgress(
+              totalProgress,
+              `Loading AI models...`,
+              `${counselingConfig.name} initialized`
+            );
           } catch (counselingError: any) {
             const counselingMsg = counselingError?.message || String(counselingError);
             const counselingStack = counselingError?.stack || '';
@@ -864,6 +904,19 @@ export async function initializeModels(forceReload: boolean = false, modelType?:
         // Reuse the text-generation model for both tasks
         counselingCoachModel = moodTrackerModel;
         console.log(`✓ Using ${modelConfig.name} for both mood tracking and counseling`);
+        
+        // Update progress - both models ready (reused same model)
+        modelsLoaded = totalModels; // Both models are ready
+        totalProgress = 100;
+        currentDownloadProgress = totalProgress;
+        currentDownloadStatus = 'downloading';
+        currentDownloadLabel = 'Loading AI models...';
+        currentDownloadDetails = `${modelConfig.name} ready for both tasks`;
+        setModelLoadingProgress(
+          totalProgress,
+          `Loading AI models...`,
+          `${modelConfig.name} ready for both tasks`
+        );
       } else {
         // TinyLlama failed to load - can't reuse and shouldn't try again
         // Set counselingCoachModel to null explicitly

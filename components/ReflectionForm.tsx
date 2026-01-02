@@ -217,11 +217,18 @@ const ReflectionForm: React.FC<ReflectionFormProps> = ({
             className="w-full p-3 sm:p-4 rounded-xl sm:rounded-2xl bg-bg-secondary dark:bg-dark-bg-primary/50 border-none focus:ring-2 focus:ring-yellow-warm/30 outline-none text-text-primary dark:text-white min-h-[140px] sm:min-h-[160px] resize-none text-sm sm:text-base leading-relaxed shadow-inner"
           />
           <button
-            onClick={onTriggerReflectionAnalysis}
-            disabled={analyzingReflection || !reflectionText.trim() || !emotionalState || emotionalState === 'mixed' || !selectedFeeling}
+            onClick={async () => {
+              // Save the reflection first, then analyze
+              if (reflectionText.trim()) {
+                // Trigger analysis - it will save as part of the analysis flow
+                // The analysis function saves the reflection to the database
+                onTriggerReflectionAnalysis();
+              }
+            }}
+            disabled={analyzingReflection || !reflectionText.trim()}
             className="w-full py-2 sm:py-2.5 bg-yellow-warm text-text-primary rounded-lg sm:rounded-xl font-black uppercase tracking-widest text-xs sm:text-sm shadow-sm hover:opacity-90 transition-all active:scale-[0.98] disabled:opacity-30 disabled:cursor-not-allowed"
           >
-            {analyzingReflection ? 'Analyzing...' : '💾 Save & Analyze'}
+            {analyzingReflection ? 'Analyzing...' : '💾 Save'}
           </button>
           {analyzingReflection && (
             <div className="text-xs sm:text-sm text-yellow-warm font-bold uppercase tracking-widest animate-pulse">

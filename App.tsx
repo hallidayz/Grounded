@@ -1164,7 +1164,7 @@ const App: React.FC = () => {
   useEffect(() => {
     if (authState === 'checking') {
       const safetyTimeout = setTimeout(() => {
-        console.warn('[SAFETY] App stuck in checking state for 20 seconds - forcing login screen');
+        console.warn('[SAFETY] App stuck in checking state for 10 seconds - forcing login screen');
         setAuthState('login');
       }, 20000); // 20 second safety timeout
       

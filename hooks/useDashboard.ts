@@ -345,13 +345,61 @@ export function useDashboard(
 
   // Manual reflection analysis trigger
   // Builds enhanced reflection context with feeling + sub-feeling + deep reflection
+  // Now also saves the reflection to database before analyzing
   const triggerReflectionAnalysis = useCallback(async () => {
-    const hasReflection = reflectionText.trim().length > 20; // Minimum 20 characters
+    const hasReflection = reflectionText.trim().length > 0; // Allow any length for saving
+    
+    if (!hasReflection) {
+      console.warn('Reflection text is required');
+      return;
+    }
+    
+    // Save the reflection first (even without emotion/feeling selection)
+    // This ensures the reflection is saved before analysis
+    if (activeValueId && reflectionText.trim()) {
+      try {
+        const timestamp = new Date().toISOString();
+        const feelingLog: FeelingLog = {
+          id: `feeling-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`,
+          timestamp,
+          emotion: emotionalState || 'mixed',
+          subEmotion: selectedFeeling || null,
+          jsonIn: JSON.stringify({
+            emotion: emotionalState || 'mixed',
+            subEmotion: selectedFeeling,
+            valueId: activeValueId,
+            reflection: reflectionText.trim(),
+            timestamp
+          }),
+          jsonOut: '', // Will be updated after analysis
+          focusLens: coachInsight || '',
+          reflection: reflectionText.trim(),
+          selfAdvocacy: '',
+          frequency: goalFreq,
+          jsonAssessment: '', // Will be updated after analysis
+          // Legacy fields
+          emotionalState: (emotionalState || 'mixed') as any,
+          selectedFeeling: selectedFeeling || null,
+          aiResponse: '',
+          isAIResponse: false,
+          lowStateCount: lowStateCount
+        };
+        
+        await dbService.saveFeelingLog(feelingLog);
+        console.log('✅ Reflection saved to database');
+      } catch (error) {
+        console.error('Error saving reflection:', error);
+        // Continue with analysis even if save fails
+      }
+    }
+    
+    // Now proceed with analysis if we have enough data
+    const hasEnoughReflection = reflectionText.trim().length > 20; // Minimum 20 characters for analysis
     const hasFeeling = emotionalState && emotionalState !== 'mixed';
     const hasSubFeeling = selectedFeeling !== null;
     
-    if (!hasReflection) {
-      console.warn('Reflection text is too short for analysis');
+    if (!hasEnoughReflection) {
+      console.warn('Reflection text is too short for analysis (minimum 20 characters)');
       return;
     }
     
@@ -389,7 +437,7 @@ export function useDashboard(
     } finally {
       setAnalyzingReflection(false);
     }
-  }, [reflectionText, emotionalState, selectedFeeling, goalFreq, lcswConfig, reflectionAnalysis]);
+  }, [reflectionText, emotionalState, selectedFeeling, goalFreq, lcswConfig, reflectionAnalysis, activeValueId, coachInsight, lowStateCount]);
 
   // AI Motivation Refresh - Focus Lens based on selected feeling
   // Use ref to prevent infinite loops from logs array changes
