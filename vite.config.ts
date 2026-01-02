@@ -92,34 +92,61 @@ const noMinifyTransformersPlugin = (): Plugin => {
             // CRITICAL: Initialize ONNX at the very top BEFORE any code runs
             // Even with static imports, code that destructures ONNX.env might run before import completes
             // Initialize with placeholder to prevent "Cannot destructure property 'env' of 'ONNX' as it is undefined"
-            // CRITICAL: Initialize ONNX and ensure assignment happens before any destructuring
-            const onnxInit = `// CRITICAL: Initialize ONNX placeholder BEFORE any imports or code
+            // CRITICAL FIX: Code at line 278 destructures ONNX.env but ONNX is undefined
+            // We must initialize ONNX BEFORE any code runs and protect all destructuring
+            
+            // Step 1: Initialize ONNX at the absolute top - use both var and global assignment
+            const onnxInit = `// CRITICAL: Initialize ONNX IMMEDIATELY - must execute before any code
 // This prevents "Cannot destructure property 'env' of 'ONNX' as it is undefined" errors
+(function() {
+  if (typeof globalThis !== 'undefined') {
+    globalThis.ONNX = globalThis.ONNX || { env: {} };
+  }
+  if (typeof window !== 'undefined') {
+    window.ONNX = window.ONNX || { env: {} };
+  }
+})();
 var ONNX = { env: {} };
 `;
             
-            // Insert at the absolute beginning of the file, before any imports
+            // Insert at the very beginning - MUST be first
             restored = onnxInit + restored;
             
-            // CRITICAL: Ensure ONNX assignment happens immediately after import, before any code uses it
-            // Find the import statement and add ONNX assignment right after it
+            // Step 2: Protect ALL destructuring of ONNX.env - replace with safe access
+            // Pattern: const { env } = ONNX; or let { env } = ONNX; etc.
             restored = restored.replace(
-              /(import\s+\{[^}]*\}\s+from\s+['"][^'"]+vendor[^'"]+['"];)/,
+              /(const|let|var)\s*\{\s*env\s*\}\s*=\s*ONNX\s*;/g,
+              (match, keyword) => {
+                // Replace with safe version that ensures ONNX exists
+                return `const _onnx_temp = (typeof ONNX !== 'undefined' && ONNX) ? ONNX : { env: {} };
+${keyword} { env } = _onnx_temp;`;
+              }
+            );
+            
+            // Step 3: Also protect destructuring without semicolon (part of expression)
+            restored = restored.replace(
+              /(const|let|var)\s*\{\s*env\s*\}\s*=\s*ONNX(?![a-zA-Z_$0-9=])/g,
+              (match, keyword) => {
+                return `${keyword} { env } = ((typeof ONNX !== 'undefined' && ONNX && ONNX.env) ? ONNX : { env: {} })`;
+              }
+            );
+            
+            // Step 4: Ensure ONNX assignment happens right after vendor import
+            restored = restored.replace(
+              /(import\s+\{[^}]*v\s+as\s+ortWeb_min[^}]*\}\s+from\s+['"][^'"]+['"];?)/,
               `$1
-// Immediately assign ONNX after import to ensure it's available before any code uses it
+// CRITICAL: Assign ONNX immediately after import - before line 278 code runs
 if (typeof ortWeb_min !== 'undefined' && ortWeb_min !== null) {
   ONNX = ortWeb_min;
 } else if (typeof ONNX_WEB !== 'undefined' && ONNX_WEB !== null) {
   ONNX = ONNX_WEB;
+}
+// Double-check ONNX has env property
+if (!ONNX || !ONNX.env) {
+  ONNX = ONNX || { env: {} };
+  ONNX.env = ONNX.env || {};
 }`
             );
-            
-            // Also ensure any existing ONNX = ortWeb_min ?? ONNX_WEB assignments happen early
-            // Move them to right after imports if they exist later in the code
-            if (restored.includes('ONNX = ortWeb_min') || restored.includes('ONNX = ONNX_WEB')) {
-              // The assignment is already there, but ensure it happens before destructuring
-              // We've already initialized ONNX at the top, so this should work
-            }
             
             // Keep static imports - chunk ordering ensures vendor loads before transformers
             // The manualChunks configuration ensures vendor chunk loads first
