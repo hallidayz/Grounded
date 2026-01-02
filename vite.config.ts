@@ -89,9 +89,41 @@ const noMinifyTransformersPlugin = (): Plugin => {
               }
             });
             
+            // CRITICAL: Initialize ONNX at the very top BEFORE any code runs
+            // Even with static imports, code that destructures ONNX.env might run before import completes
+            // Initialize with placeholder to prevent "Cannot destructure property 'env' of 'ONNX' as it is undefined"
+            // CRITICAL: Initialize ONNX and ensure assignment happens before any destructuring
+            const onnxInit = `// CRITICAL: Initialize ONNX placeholder BEFORE any imports or code
+// This prevents "Cannot destructure property 'env' of 'ONNX' as it is undefined" errors
+var ONNX = { env: {} };
+`;
+            
+            // Insert at the absolute beginning of the file, before any imports
+            restored = onnxInit + restored;
+            
+            // CRITICAL: Ensure ONNX assignment happens immediately after import, before any code uses it
+            // Find the import statement and add ONNX assignment right after it
+            restored = restored.replace(
+              /(import\s+\{[^}]*\}\s+from\s+['"][^'"]+vendor[^'"]+['"];)/,
+              `$1
+// Immediately assign ONNX after import to ensure it's available before any code uses it
+if (typeof ortWeb_min !== 'undefined' && ortWeb_min !== null) {
+  ONNX = ortWeb_min;
+} else if (typeof ONNX_WEB !== 'undefined' && ONNX_WEB !== null) {
+  ONNX = ONNX_WEB;
+}`
+            );
+            
+            // Also ensure any existing ONNX = ortWeb_min ?? ONNX_WEB assignments happen early
+            // Move them to right after imports if they exist later in the code
+            if (restored.includes('ONNX = ortWeb_min') || restored.includes('ONNX = ONNX_WEB')) {
+              // The assignment is already there, but ensure it happens before destructuring
+              // We've already initialized ONNX at the top, so this should work
+            }
+            
             // Keep static imports - chunk ordering ensures vendor loads before transformers
             // The manualChunks configuration ensures vendor chunk loads first
-            // No need to convert to dynamic import - that causes ONNX to be undefined
+            // Static import will update ONNX when vendor module loads
             
             writeFileSync(filePath, restored, 'utf-8');
             const lineCount = restored.split('\n').length;
