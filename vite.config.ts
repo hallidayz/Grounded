@@ -97,17 +97,39 @@ const noMinifyTransformersPlugin = (): Plugin => {
               
               // CRITICAL FIX: Initialize ONNX with placeholder BEFORE any code uses it
               // This prevents "Cannot destructure property 'env' of 'ONNX' as it is undefined" errors
-              // Add initialization at the very top of the module
-              if (!restored.includes('var ONNX') && !restored.includes('let ONNX') && !restored.includes('const ONNX')) {
-                // Insert ONNX initialization at the beginning
-                const onnxInit = `// Initialize ONNX placeholder to prevent undefined errors
-                var ONNX = { env: {} };
-                `;
-                // Insert after 'use strict' if present, otherwise at the very beginning
+              // Check if ONNX is already declared - if not, add initialization at the very top
+              const hasOnnxDeclaration = /(?:var|let|const)\s+ONNX\s*[=;]/.test(restored);
+              if (!hasOnnxDeclaration) {
+                // Insert ONNX initialization at the absolute beginning, before any code
+                // Use 'var' at top level so it's accessible throughout the module
+                const onnxInit = `// CRITICAL: Initialize ONNX placeholder BEFORE any code uses it
+// This prevents "Cannot destructure property 'env' of 'ONNX' as it is undefined" errors
+var ONNX = { env: {} };
+`;
+                // Insert at the very beginning, even before 'use strict'
+                restored = onnxInit + restored;
+              } else {
+                // ONNX is declared but might be undefined - ensure it's initialized
+                // Replace any "let ONNX" or "const ONNX" declarations that don't initialize
+                restored = restored.replace(
+                  /(let|const)\s+ONNX\s*;/g,
+                  `$1 ONNX = { env: {} };`
+                );
+                // Also ensure any "var ONNX" without initialization gets initialized
+                if (restored.includes('var ONNX') && !restored.includes('var ONNX =')) {
+                  restored = restored.replace(/var\s+ONNX\s*;/g, 'var ONNX = { env: {} };');
+                }
+                // Add safeguard initialization at the top as well to ensure it's set before use
+                const safeguardInit = `// Safeguard: Ensure ONNX is initialized before any code uses it
+if (typeof ONNX === 'undefined' || !ONNX || !ONNX.env) {
+  var ONNX = { env: {} };
+}
+`;
+                // Insert at the beginning
                 if (restored.match(/^(['"]use strict['"];?\s*\n)/)) {
-                  restored = restored.replace(/^(['"]use strict['"];?\s*\n)/, `$1${onnxInit}`);
+                  restored = restored.replace(/^(['"]use strict['"];?\s*\n)/, `$1${safeguardInit}`);
                 } else {
-                  restored = onnxInit + restored;
+                  restored = safeguardInit + restored;
                 }
               }
               
