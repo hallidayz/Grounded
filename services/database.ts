@@ -42,7 +42,7 @@ interface DatabaseMetadata {
 class DatabaseService {
   // Database name: groundedDB - simple and descriptive
   private dbName = 'groundedDB';
-  private dbVersion = 5; // Incremented to add ruleBasedUsageLogs store
+  private dbVersion = 6; // Incremented to ensure feelingLogs store is created
   private db: IDBDatabase | null = null;
   private oldDbName = 'com.acminds.grounded.therapy.db'; // Old database name for migration detection
   
