@@ -3,6 +3,11 @@ export default {
   content: [
     './index.html',
     './src/**/*.{js,ts,jsx,tsx}',
+    './components/**/*.{js,ts,jsx,tsx}', // Add root components directory
+    './hooks/**/*.{js,ts,jsx,tsx}',      // Add hooks if they contain any classes
+    './services/**/*.{js,ts,jsx,tsx}',   // Add services if they contain any classes
+    './App.tsx',                          // Add App.tsx if it's in root
+    './main.tsx',                         // Add main.tsx if it's in root
   ],
   theme: {
     extend: {
