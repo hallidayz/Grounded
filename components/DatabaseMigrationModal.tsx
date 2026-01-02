@@ -43,17 +43,19 @@ const DatabaseMigrationModal: React.FC<DatabaseMigrationModalProps> = ({ onConfi
             </div>
 
             <div className="flex flex-col sm:flex-row gap-3 pt-4">
+              {/* Primary action: Skip and use existing database */}
               <button
                 onClick={onCancel}
-                className="flex-1 px-6 py-3 rounded-xl text-sm font-bold uppercase tracking-widest bg-bg-secondary dark:bg-dark-bg-secondary text-text-primary dark:text-white hover:opacity-90 transition-all"
-              >
-                Cancel
-              </button>
-              <button
-                onClick={onConfirm}
                 className="flex-1 px-6 py-3 rounded-xl text-sm font-black uppercase tracking-widest bg-yellow-warm text-text-primary hover:opacity-90 transition-all shadow-lg"
               >
-                Replace Database
+                Skip (Use Existing)
+              </button>
+              {/* Secondary action: Reset database */}
+              <button
+                onClick={onConfirm}
+                className="flex-1 px-6 py-3 rounded-xl text-sm font-bold uppercase tracking-widest bg-bg-secondary dark:bg-dark-bg-secondary text-text-primary dark:text-white hover:opacity-90 transition-all"
+              >
+                Reset Database
               </button>
             </div>
           </div>
