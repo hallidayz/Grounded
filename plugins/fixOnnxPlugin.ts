@@ -9,6 +9,11 @@ export function fixOnnxPlugin(): Plugin {
     transform(code, id) {
       // Target specific modules where ONNX issues are known to occur
       if (id.includes('@xenova/transformers') || id.includes('onnxruntime-web')) {
+        // Check if ONNX is already imported or declared (to avoid duplicate declaration)
+        const hasOnnxImport = /import\s+(?:\{[^}]*ONNX[^}]*\}|ONNX)\s+from/.test(code);
+        // Check for various ONNX declarations: const/let/var ONNX =, export let/const/var ONNX, export let ONNX;
+        const hasOnnxVar = /(?:export\s+)?(?:const|let|var)\s+ONNX(?:\s*[=;]|\s*$)/m.test(code);
+        
         // Patch ONNX destructure references to prevent undefined errors
         // This regex targets the specific pattern 'const { env } = ONNX'
         const patchedCode = code.replace(
@@ -33,9 +38,9 @@ export function fixOnnxPlugin(): Plugin {
             `$1 $2 = (typeof ONNX !== 'undefined' && ONNX && ONNX.env) ? ONNX.env : {};`
         );
 
-        // Additionally, ensure ONNX global is initialized at the very top of these specific chunks
-        // This is a failsafe to ensure ONNX exists even before any imports within the chunk are processed
-        if (!renamedPatch.includes('var ONNX = { env: {} };')) {
+        // Only inject ONNX initialization if it's not already imported or declared
+        // This prevents "Identifier ONNX has already been declared" errors
+        if (!hasOnnxImport && !hasOnnxVar && !renamedPatch.includes('var ONNX = { env: {} };')) {
             const finalCode = `var ONNX = { env: {} };\nif (typeof globalThis !== 'undefined') { globalThis.ONNX = globalThis.ONNX || { env: {} }; }\n` + renamedPatch;
             return { code: finalCode, map: null };
         }
