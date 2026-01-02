@@ -29,16 +29,19 @@ const Dashboard: React.FC<DashboardProps> = ({ values, onLog, goals, onUpdateGoa
   useEffect(() => {
     if (initialValueId) {
       dashboard.setActiveValueId(initialValueId);
+      // Clear initialValueId after it's been used (by calling a callback if provided)
+      // The parent component (App.tsx) should clear it after this effect runs
     } else {
       const handleReset = () => {
         dashboard.setActiveValueId(null);
       };
-    // Store reset handler for App.tsx to call
-    (window as any).__dashboardReset = handleReset;
-    return () => {
-      delete (window as any).__dashboardReset;
-    };
-  }, [dashboard]);
+      // Store reset handler for App.tsx to call
+      (window as any).__dashboardReset = handleReset;
+      return () => {
+        delete (window as any).__dashboardReset;
+      };
+    }
+  }, [initialValueId, dashboard]);
 
   // Get personalized greeting based on time of day
   const getGreeting = () => {

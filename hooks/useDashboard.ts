@@ -1,7 +1,7 @@
 import { useState, useEffect, useRef, useCallback } from 'react';
 import { ValueItem, LogEntry, Goal, GoalFrequency, LCSWConfig, FeelingLog, UserInteraction, Session } from '../types';
 import { EmotionalState, getEmotionalState } from '../services/emotionalStates';
-import { generateEncouragement, generateEmotionalEncouragement, generateValueMantra, suggestGoal, detectCrisis, analyzeReflection } from '../services/aiService';
+import { generateEncouragement, generateEmotionalEncouragement, generateValueMantra, suggestGoal, detectCrisis, analyzeReflection, generateFocusLens } from '../services/aiService';
 import { shareViaEmail, generateGoalsEmail } from '../services/emailService';
 import { useDebounce } from './useDebounce';
 import { getItem, setItem, removeItem } from '../services/storage';
@@ -283,18 +283,26 @@ export function useDashboard(
   }, [currentSessionId, sessionStartTime, emotionalState, reflectionText, saveInteraction]);
 
   // Track session start/end when activeValueId changes
+  // Use refs to avoid infinite loops from callback dependencies
+  const startSessionRef = useRef(startSession);
+  const endSessionRef = useRef(endSession);
+  startSessionRef.current = startSession;
+  endSessionRef.current = endSession;
+  
   useEffect(() => {
     if (activeValueId) {
       // Card opened - start session
-      startSession(activeValueId);
+      startSessionRef.current(activeValueId);
     } else if (currentSessionId) {
       // Card closed - end session
-      const valueId = values.find(v => v.id === activeValueId)?.id || '';
+      const valueId = values.find(v => v.id === activeValueId)?.id || sessionValueId || '';
       if (valueId) {
-        endSession(valueId, false);
+        endSessionRef.current(valueId, false);
       }
     }
-  }, [activeValueId, currentSessionId, startSession, endSession, values]);
+    // Only depend on activeValueId and currentSessionId to avoid infinite loops
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [activeValueId, currentSessionId]);
   
   // Load/save drafts
   useEffect(() => {
@@ -378,6 +386,15 @@ export function useDashboard(
       const activeValue = values.find(v => v.id === activeValueId);
       if (activeValue) {
         setLoading(true);
+        
+        // Compute recentJournalText from logs (similar to onEmotionalStateChange)
+        const recentJournalText = logsRef.current
+          .slice(0, 3)
+          .map(log => log.note || log.deepReflection || '')
+          .filter(Boolean)
+          .join(' ')
+          .substring(0, 500);
+        
         // Generate Focus Lens and Mantra
         Promise.all([
           generateFocusLens(emotionalState, activeValue, {

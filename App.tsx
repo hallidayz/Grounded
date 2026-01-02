@@ -187,6 +187,7 @@ const App: React.FC = () => {
   const [showDatabaseMigrationModal, setShowDatabaseMigrationModal] = useState(false);
   const [showMigrationScreen, setShowMigrationScreen] = useState(false);
   const [showUnlockScreen, setShowUnlockScreen] = useState(false);
+  const [initialValueIdForGoal, setInitialValueIdForGoal] = useState<string | null>(null);
   
   // Encryption and auth state
   let encryptionEnabled: boolean;
@@ -1380,7 +1381,13 @@ const App: React.FC = () => {
               onUpdateGoals={handleUpdateGoals}
               logs={logs}
               lcswConfig={settings.lcswConfig}
-              onNavigate={(view) => setView(view)}
+              onNavigate={(view) => {
+                setView(view);
+                // Clear initialValueId when navigating away from home
+                if (view !== 'home') {
+                  setInitialValueIdForGoal(null);
+                }
+              }}
               initialValueId={initialValueIdForGoal}
             />
           </Suspense>

@@ -58,5 +58,6 @@ export {
   generateCounselingGuidance,
   generateValueMantra,
   suggestGoal,
-  analyzeReflection
+  analyzeReflection,
+  generateFocusLens
 } from './ai/encouragement';
