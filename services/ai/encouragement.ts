@@ -75,19 +75,11 @@ export async function generateFocusLens(
     ? ` They specifically identify as feeling "${selectedFeeling}".`
     : '';
 
-  const prompt = `Generate a concise, empathetic "Focus Lens" message (2-3 sentences) for a user.
-
-Context: User is currently feeling ${emotionalState}.${feelingContext} They are reflecting on the value: "${value.name}" (${value.description}).${reflectionContext}
+  // Ultra-minimal prompt - just context, no instructions
+  const prompt = `User feeling: ${emotionalState}.${feelingContext} Reflecting on: "${value.name}" (${value.description}).${reflectionContext}
 ${protocolContext}
 
-Your Focus Lens should:
-- Acknowledge their specific emotional state (${emotionalState}${selectedFeeling ? ` and the feeling of "${selectedFeeling}"` : ''}).
-- Connect to their chosen value ("${value.name}").
-- Offer a gentle perspective or question to guide their reflection.
-- Be personalized to their current emotional experience.
-- Avoid giving direct advice or therapeutic interventions.
-
-Return ONLY the Focus Lens text. Do not repeat instructions or include placeholders.`;
+Write 2-3 sentences acknowledging their feeling and connecting to their value.`;
 
   if (counselingCoachModel) {
     try {
@@ -107,12 +99,18 @@ Return ONLY the Focus Lens text. Do not repeat instructions or include placehold
       extracted = extracted.replace(/^Return ONLY.*?$/im, '').trim();
       extracted = extracted.replace(/^Your Focus Lens should:.*?$/ims, '').trim();
       extracted = extracted.replace(/^Context:.*?$/ims, '').trim();
+      extracted = extracted.replace(/^Write 2-3 sentences.*?$/im, '').trim();
+      extracted = extracted.replace(/^Focus Lens.*?$/im, '').trim();
       
-      // Validate that it's not just placeholder text
+      // Remove literal "Focus Lens" text if it appears
+      extracted = extracted.replace(/^["']?Focus Lens["']?\s*:?\s*/i, '').trim();
+      
+      // Validate that it's not just placeholder text or literal "Focus Lens"
       const hasPlaceholder = /\[.*?\]|placeholder|example|template/i.test(extracted);
-      const hasInstructions = /acknowledge|connect|offer|avoid|should|must/i.test(extracted) && extracted.length < 100;
+      const isLiteralFocusLens = /^Focus Lens$/i.test(extracted.trim());
+      const hasInstructions = /acknowledge|connect|offer|avoid|should|must|Write 2-3/i.test(extracted) && extracted.length < 100;
       
-      if (extracted && extracted.length > 20 && !hasPlaceholder && !hasInstructions) {
+      if (extracted && extracted.length > 20 && !hasPlaceholder && !hasInstructions && !isLiteralFocusLens) {
         await setCachedResponse(cacheKey, { focusLens: extracted });
         console.log('✅ AI-generated Focus Lens:', extracted.substring(0, 100));
         return extracted;
@@ -750,17 +748,14 @@ export async function generateEmotionalEncouragement(
   // Use encouragement instruction from state config
   const baseInstruction = stateConfig.encouragementPrompt.instruction;
   
-  // Schema-Only prompt format to prevent instruction repetition
-  // This format gives the model the structure without repeating instructions
+  // Ultra-minimal prompt - just context and JSON example, no instructions
   const prompt = `User feeling: ${stateConfig.label.toLowerCase()}.${feelingContext}${timeContext}${journalContext}${patternContext}
 ${protocolContext}
 
-${baseInstruction}${connectionPrompt}
-
 {
-  "message": "Acknowledge ${selectedFeeling || stateConfig.shortLabel}. Provide 30-60 words of honest, realistic support. See possibilities without toxic positivity. Be genuine, warm, supportive.${isRepeated ? ' Strongly encourage reaching out for support.' : ''}",
+  "message": "30-60 words of warm, realistic support",
   "acknowledgeFeeling": "${selectedFeeling || stateConfig.shortLabel}",
-  "actionableStep": "optional small step"
+  "actionableStep": "optional"
 }`;
 
   // Build fallback response using fallback tables
@@ -832,14 +827,19 @@ ${baseInstruction}${connectionPrompt}
       extracted = extracted.replace(/^Provide encouragement and return.*?$/im, '').trim();
       extracted = extracted.replace(/^Return valid JSON only.*?$/im, '').trim();
       
-      // Check if the response contains requirements text (indicates model repeated the prompt)
-      const hasRequirements = /Requirements?:|Acknowledge:|Honest, realistic support|See possibilities without toxic/i.test(extracted);
+      // Check if the response contains requirements text or prompt repetition (indicates model repeated the prompt)
+      const hasRequirements = /Requirements?:|Acknowledge:|Honest, realistic support|See possibilities without toxic|The user has already chosen|The user has selected|Generate a balanced reflection/i.test(extracted);
       if (hasRequirements) {
-        console.warn('⚠️ AI returned requirements text instead of JSON, rejecting response');
+        console.warn('⚠️ AI returned requirements/prompt text instead of JSON, rejecting response');
         // Try to extract JSON that might come after the requirements
-        const afterRequirements = extracted.split(/Requirements?:/i)[1] || extracted;
+        const afterRequirements = extracted.split(/Requirements?:|The user has already chosen|The user has selected|Generate a balanced/i)[1] || extracted;
         extracted = afterRequirements.trim();
       }
+      
+      // Remove common prompt repetition patterns
+      extracted = extracted.replace(/The user is working with an LCSW.*?protocols?\./gi, '').trim();
+      extracted = extracted.replace(/The user has been feeling.*?frequently\./gi, '').trim();
+      extracted = extracted.replace(/It is (morning|afternoon|evening|night).*?momentum\./gi, '').trim();
       
       // Try to parse JSON from response
       const jsonMatch = extracted.match(/\{[\s\S]*\}/);
@@ -868,8 +868,8 @@ ${baseInstruction}${connectionPrompt}
       
       // If JSON parsing failed, check if raw response looks like requirements/prompt
       if (extracted && extracted.length > 20) {
-        // Reject if it looks like requirements text
-        if (hasRequirements || /Requirements?:|Acknowledge:|Return valid JSON/i.test(extracted)) {
+        // Reject if it looks like requirements text or contains "30-60 words"
+        if (hasRequirements || /Requirements?:|Acknowledge:|Return valid JSON|30-60 words/i.test(extracted)) {
           console.warn('⚠️ Rejecting response that looks like prompt requirements');
           // Don't return this - use fallback instead
         } else {
@@ -905,16 +905,17 @@ ${baseInstruction}${connectionPrompt}
             // Remove the prompt from the beginning if present
             let retryExtracted = retryText.replace(prompt, '').trim();
             
-            // Also remove common prompt artifacts
-            retryExtracted = retryExtracted.replace(/^Provide encouragement and return.*?$/im, '').trim();
-            retryExtracted = retryExtracted.replace(/^Return valid JSON only.*?$/im, '').trim();
+            // Also remove common prompt repetition patterns
+            retryExtracted = retryExtracted.replace(/The user is working with an LCSW.*?protocols?\./gi, '').trim();
+            retryExtracted = retryExtracted.replace(/The user has been feeling.*?frequently\./gi, '').trim();
+            retryExtracted = retryExtracted.replace(/It is (morning|afternoon|evening|night).*?momentum\./gi, '').trim();
             
-            // Check if the response contains requirements text
-            const retryHasRequirements = /Requirements?:|Acknowledge:|Honest, realistic support|See possibilities without toxic/i.test(retryExtracted);
+            // Check if the response contains requirements text or prompt repetition
+            const retryHasRequirements = /Requirements?:|Acknowledge:|Honest, realistic support|See possibilities without toxic|The user has already chosen|The user has selected|Generate a balanced reflection/i.test(retryExtracted);
             if (retryHasRequirements) {
-              console.warn('⚠️ Retry AI returned requirements text instead of JSON, rejecting response');
+              console.warn('⚠️ Retry AI returned requirements/prompt text instead of JSON, rejecting response');
               // Try to extract JSON that might come after the requirements
-              const afterRequirements = retryExtracted.split(/Requirements?:/i)[1] || retryExtracted;
+              const afterRequirements = retryExtracted.split(/Requirements?:|The user has already chosen|The user has selected|Generate a balanced/i)[1] || retryExtracted;
               retryExtracted = afterRequirements.trim();
             }
             
@@ -944,8 +945,8 @@ ${baseInstruction}${connectionPrompt}
             
             // If JSON parsing failed, check if raw response looks like requirements/prompt
             if (retryExtracted && retryExtracted.length > 20) {
-              // Reject if it looks like requirements text
-              if (retryHasRequirements || /Requirements?:|Acknowledge:|Return valid JSON/i.test(retryExtracted)) {
+              // Reject if it looks like requirements text or contains "30-60 words"
+              if (retryHasRequirements || /Requirements?:|Acknowledge:|Return valid JSON|30-60 words/i.test(retryExtracted)) {
                 console.warn('⚠️ Rejecting retry response that looks like prompt requirements');
                 // Don't return this - use fallback instead
               } else {
@@ -1117,17 +1118,18 @@ export async function suggestGoal(
       ? `Reflection Analysis:\nCore Themes: ${reflectionAnalysis.coreThemes.join(', ')}\nLCSW Lens: ${reflectionAnalysis.lcswLens}\n\n`
       : '';
     
-    // Ultra-minimal prompt - just show example JSON with minimal context
-    // Put context first, then show the JSON structure as an example
+    // Ultra-minimal prompt - SMART goal format explicitly requested
     const prompt = `${protocolContext}
 Value: ${value.name}
 ${feelingContext}${reflectionContext}Reflection: ${deepReflectionText.substring(0, 300)}
 
+Create a SMART goal (Specific, Measurable, Achievable, Relevant, Time-bound):
+
 {
-  "description": "action for ${frequency}",
-  "whatThisHelpsWith": "benefit",
-  "howToMeasureProgress": ["step 1", "step 2", "step 3"],
-  "inferenceAnalysis": "connection to reflection",
+  "description": "Specific action for ${frequency}",
+  "whatThisHelpsWith": "Why this matters",
+  "howToMeasureProgress": ["measurable step 1", "measurable step 2", "measurable step 3"],
+  "inferenceAnalysis": "How this connects to reflection",
   "lcsmInferences": {
     "encouragement": "encouragement",
     "guidance": "guidance"

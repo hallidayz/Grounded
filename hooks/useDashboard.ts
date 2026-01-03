@@ -361,7 +361,8 @@ export function useDashboard(
     
     // Validate we have emotional context for proper AI processing
     const hasEnoughReflection = reflectionText.trim().length > 20;
-    const hasFeeling = emotionalState && emotionalState !== 'mixed';
+    // Allow "mixed" emotion if a sub-feeling is selected (sub-feeling provides the specific context)
+    const hasFeeling = emotionalState && (emotionalState !== 'mixed' || selectedFeeling !== null);
     const hasSubFeeling = selectedFeeling !== null;
     
     if (!hasEnoughReflection) {
