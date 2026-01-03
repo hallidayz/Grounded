@@ -361,19 +361,19 @@ export function useDashboard(
     
     // Validate we have emotional context for proper AI processing
     const hasEnoughReflection = reflectionText.trim().length > 20;
-    // Allow "mixed" emotion if a sub-feeling is selected (sub-feeling provides the specific context)
-    const hasFeeling = emotionalState && (emotionalState !== 'mixed' || selectedFeeling !== null);
-    const hasSubFeeling = selectedFeeling !== null;
+    
+    // Check emotional state - allow saving if we have EITHER a basic state (for non-mixed) OR a sub-feeling (for mixed or specific)
+    const hasValidEmotion = emotionalState && emotionalState !== 'mixed';
+    const hasSubFeeling = selectedFeeling !== null && selectedFeeling !== '';
+    
+    // We need either a valid non-mixed emotion OR a specific sub-feeling
+    // If it's mixed, we MUST have a sub-feeling
+    if ((emotionalState === 'mixed' && !hasSubFeeling) || (!hasValidEmotion && !hasSubFeeling)) {
+      alert('Please select a specific feeling or sub-feeling to save.');
+      return;
+    }
     
     if (!hasEnoughReflection) {
-      console.warn('Reflection text is too short for analysis (minimum 20 characters)');
-      return;
-    }
-    
-    if (!hasFeeling || !hasSubFeeling) {
-      alert('Please select both feeling and sub-feeling before analyzing');
-      return;
-    }
     
     if (!activeValueId) {
       console.warn('No active value selected');

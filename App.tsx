@@ -562,7 +562,7 @@ const App: React.FC = () => {
                   // Set default AI model if not set (DistilBERT - first loaded and default)
                   // Also migrate legacy 'tinyllama' setting to 'distilbert'
                   if (!loadedSettings.aiModel || (loadedSettings.aiModel as any) === 'tinyllama') {
-                    loadedSettings.aiModel = 'distilbert';
+                    loadedSettings.aiModel = 'lamini'; // Default to LaMini for counseling features
                   }
                   setSettings(loadedSettings);
                   

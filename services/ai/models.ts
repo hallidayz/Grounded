@@ -81,8 +81,8 @@ export const MODEL_CONFIGS: Record<AIModelType, {
   }
 };
 
-// Default model: DistilBERT (faster, better for initial mood tracking)
-const DEFAULT_MODEL: AIModelType = 'distilbert';
+// Default model: LaMini (prioritize counseling features)
+const DEFAULT_MODEL: AIModelType = 'lamini';
 
 // Model loading state
 let moodTrackerModel: any = null;
@@ -503,21 +503,20 @@ export async function initializeModels(forceReload: boolean = false, modelType?:
         console.log('[MODEL_DEBUG] ⚠️ Using CPU fallback - WASM optimizations unavailable');
       }
       
-      // Models will be downloaded and cached locally on first use
+      // Determine model loading order based on user preference
+      // If LaMini is selected, load it FIRST (for counseling features)
+      // Otherwise load DistilBERT FIRST (for mood tracking)
+      const loadLaMiniFirst = targetModel === 'lamini';
+      console.log(`[MODEL_LOAD] Selected model: ${targetModel}, Loading order: ${loadLaMiniFirst ? 'LaMini -> DistilBERT' : 'DistilBERT -> LaMini'}`);
       
-      // Model A: Mental state tracker (mood/anxiety/depression assessment)
-      // ALWAYS load DistilBERT first (default and priority model)
-      // DistilBERT is faster, smaller, and more reliable for initial mood tracking
-      // If user selected DistilBERT, load it first. If they selected LaMini, still load DistilBERT first for mood tracking.
-      console.log('Loading DistilBERT for mood tracking (first priority)...');
-      
-      // Progress callback for model loading with throttling to prevent infinite re-renders
+      // Progress tracking variables
       let totalProgress = 0;
       let modelsLoaded = 0;
       const totalModels = 2; // moodTracker + counselingCoach
       let lastUpdateTime = 0;
       const THROTTLE_MS = 100; // Only update progress every 100ms
       
+      // Progress callback
       const progressCallback = (progress: any) => {
         const now = Date.now();
         const shouldUpdate = now - lastUpdateTime >= THROTTLE_MS;
@@ -548,357 +547,158 @@ export async function initializeModels(forceReload: boolean = false, modelType?:
             lastUpdateTime = now;
           }
         } else if (progress.status === 'done') {
-          // "done" means files are downloaded, but model initialization may still fail
-          // Don't increment modelsLoaded or set high progress until model is actually initialized
-          // Just log that files are downloaded - progress will be set when model successfully initializes
           const modelName = progress.name || 'model';
           console.log(`Model progress callback: ${modelName} reported done (files downloaded, initializing...)`);
           
-          // Keep progress at current level - don't jump to 90% until model is actually initialized
-          // The actual progress will be set when the pipeline() call succeeds
-          // This prevents showing 90% when the model is about to fail
           if (shouldUpdate) {
-            // Only update if we have meaningful progress, otherwise keep current state
-          setModelLoadingProgress(
-              Math.min(totalProgress, 85), // Cap at 85% for file download, reserve 15% for initialization
-            `Loading AI models...`,
+            setModelLoadingProgress(
+              Math.min(totalProgress, 85), 
+              `Loading AI models...`,
               `${modelName} files downloaded, initializing...`
-          );
-          lastUpdateTime = now;
+            );
+            lastUpdateTime = now;
           }
         }
       };
       
-      // Load the user-selected model (default: DistilBERT - first loaded and default)
-      const modelConfig = MODEL_CONFIGS[targetModel];
-      console.log(`Loading ${modelConfig.name} (${modelConfig.description})...`);
-      
-      // Determine model path - use HuggingFace model ID if local path fails
-      // HuggingFace model IDs for Xenova models
+      // HuggingFace model IDs
       const HUGGINGFACE_MODEL_IDS: Record<AIModelType, string> = {
         distilbert: 'Xenova/distilbert-base-uncased-finetuned-sst-2-english',
         lamini: 'Xenova/LaMini-Flan-T5-77M'
       };
       
-      // Try local path first, fallback to HuggingFace if local fails
-      let modelPath = modelConfig.path;
-      const huggingfaceModelId = HUGGINGFACE_MODEL_IDS[targetModel];
-      
-      // Check if we're in development mode (models might not be available locally)
       const isDev = import.meta.env.DEV;
-      // In web production (Vercel), we also want to use Hugging Face because models are not bundled
       const isWebProduction = !isDev && (typeof window !== 'undefined' && !('__TAURI__' in window));
       
-      if (isDev || isWebProduction) {
-        // In dev mode or web production, prefer HuggingFace to avoid 404 errors
-        // transformers.js will download and cache models automatically
-        // CRITICAL: Must use Xenova/ versions for browser compatibility (ONNX)
-        console.log(`[MODEL_DEBUG] ${isDev ? 'Development' : 'Web Production'} mode detected - using HuggingFace model (Xenova optimized): ${huggingfaceModelId}`);
-        modelPath = huggingfaceModelId;
-      } else {
-        // In Tauri production, try local first
-        console.log(`[MODEL_DEBUG] Production mode (Desktop) - trying local path: ${modelPath}`);
-      }
+      // --- MODEL LOADING FUNCTIONS ---
       
-      // Check memory constraints - warn if low memory and trying to load large model
-      const strategy = compatibilityReport?.suggestedStrategy || 'standard';
-      const useLowMemory = strategy === 'low-memory' || (compatibilityReport?.estimatedMemory !== null && compatibilityReport.estimatedMemory < 2048);
-      
-      // Load Model A: Mental state tracker (mood/anxiety/depression assessment)
-      // ALWAYS load DistilBERT first for mood tracking, regardless of user selection
-      // DistilBERT is the default and priority model for faster, more reliable mood assessment
-      const moodTrackingModelType: AIModelType = 'distilbert'; // Always use DistilBERT for mood tracking
-      const moodTrackingConfig = MODEL_CONFIGS[moodTrackingModelType];
-      const moodTrackingHuggingfaceId = HUGGINGFACE_MODEL_IDS[moodTrackingModelType];
-      
-      // Determine path for mood tracking model (always DistilBERT)
-      // Always use Xenova version for browser compatibility (ONNX optimized)
-      let moodTrackingModelPath = moodTrackingHuggingfaceId; // Use Xenova version directly
-      console.log(`[MODEL_DEBUG] Using Xenova DistilBERT for mood tracking: ${moodTrackingHuggingfaceId}`);
-      
-      try {
-        console.log(`Attempting to load ${moodTrackingConfig.name} for mood tracking (first priority)...`);
-        console.log(`[MODEL_DEBUG] Pipeline call: task=${moodTrackingConfig.task}, path=${moodTrackingModelPath}`);
+      // Load Model A: Mood Tracker (DistilBERT)
+      const loadMoodTracker = async () => {
+        const moodTrackingModelType: AIModelType = 'distilbert';
+        const moodTrackingConfig = MODEL_CONFIGS[moodTrackingModelType];
+        const moodTrackingHuggingfaceId = HUGGINGFACE_MODEL_IDS[moodTrackingModelType];
         
-        // Configure pipeline options - use CPU with ONNX Runtime WASM backend
-        // ONNX Runtime will automatically use WASM backend for optimal performance
-        const pipelineOptions: any = {
-          quantized: true,
-          progress_callback: progressCallback,
-          // device: preferredDevice // REMOVED: Explicit device setting can cause offset errors in some WASM environments
-        };
+        let moodTrackingModelPath = moodTrackingHuggingfaceId;
+        console.log(`[MODEL_DEBUG] Using Xenova DistilBERT for mood tracking: ${moodTrackingHuggingfaceId}`);
         
-        console.log(`[MODEL_DEBUG] Loading model with ${deviceReason}`);
-        
-        // Set timeout for model loading (30 seconds per model)
-        const modelLoadTimeout = new Promise((_, reject) => {
-          setTimeout(() => reject(new Error('Model loading timeout after 30 seconds')), 30000);
-        });
-        
-        // Try loading DistilBERT for mood tracking (always first)
         try {
-        moodTrackerModel = await Promise.race([
-            pipeline(moodTrackingConfig.task, moodTrackingModelPath, pipelineOptions),
-          modelLoadTimeout
-        ]) as any;
-        } catch (modelError: any) {
-          // We're always using Xenova path, so handle errors accordingly
-          const errorMsg = modelError?.message || String(modelError);
-          const isDev = import.meta.env.DEV;
+          console.log(`Attempting to load ${moodTrackingConfig.name} for mood tracking...`);
           
-          // Check if it's a CORS or network issue
-          if (errorMsg.includes('<!DOCTYPE') || errorMsg.includes('not valid JSON') || errorMsg.includes('CORS')) {
-            if (isDev) {
-              // In development, CORS errors are expected - suppress noisy error messages
-              console.warn(`[MODEL_DEBUG] Development mode: Xenova DistilBERT model unavailable (CORS expected). Using rule-based responses.`);
-            } else {
-              console.error(`[MODEL_DEBUG] Xenova DistilBERT model failed - possible CORS or network issue: ${errorMsg.substring(0, 100)}`);
-              console.error(`[MODEL_DEBUG] Check browser console for CORS errors. Models may be unavailable.`);
-            }
+          const pipelineOptions: any = {
+            quantized: true,
+            progress_callback: progressCallback,
+          };
+          
+          const modelLoadTimeout = new Promise((_, reject) => {
+            setTimeout(() => reject(new Error('Model loading timeout after 30 seconds')), 30000);
+          });
+          
+          moodTrackerModel = await Promise.race([
+            pipeline(moodTrackingConfig.task, moodTrackingModelPath, pipelineOptions),
+            modelLoadTimeout
+          ]) as any;
+          
+          console.log(`✓ ${moodTrackingConfig.name} model loaded successfully for mood tracking`);
+          
+          if (!moodTrackerModel) {
+            throw new Error('Model loaded but moodTrackerModel is null');
           }
-          throw modelError; // Re-throw to be handled by outer catch
-        }
-        
-        console.log(`[MODEL_DEBUG] Pipeline call completed successfully`);
-        console.log(`✓ ${moodTrackingConfig.name} model loaded successfully for mood tracking (first priority)`);
-        console.log(`[MODEL_DEBUG] Model task: ${moodTrackingConfig.task}, can be reused: ${moodTrackingConfig.task === 'text-generation'}`);
-        console.log(`[MODEL_DEBUG] moodTrackerModel is set: ${!!moodTrackerModel}, type: ${typeof moodTrackerModel}`);
-        
-        // Verify the model is actually usable before caching
-        if (!moodTrackerModel) {
-          throw new Error('Model loaded but moodTrackerModel is null');
-        }
-        
-        // Cache the DistilBERT model IMMEDIATELY after assignment
-        allModelsCache.set(moodTrackingModelType, moodTrackerModel);
-        console.log(`[MODEL_DEBUG] DistilBERT model cached: ${moodTrackingModelType}`);
-        
-        // NOW update progress - model is actually initialized successfully
-        // This is when we can safely increment modelsLoaded and show higher progress
-        modelsLoaded++;
-        const modelProgress = Math.round((modelsLoaded / totalModels) * 95); // 95% for first model initialized
-        totalProgress = Math.min(95, modelProgress);
-        currentDownloadProgress = totalProgress;
-        currentDownloadStatus = 'downloading';
-        currentDownloadLabel = 'Loading AI models...';
-        currentDownloadDetails = `${moodTrackingConfig.name} initialized`;
-        setModelLoadingProgress(
-          totalProgress,
-          `Loading AI models...`,
-          `${moodTrackingConfig.name} initialized (first priority)`
-        );
-      } catch (modelError: any) {
-        const errorMsg = modelError?.message || String(modelError);
-        const errorStack = modelError?.stack || '';
-        const isDev = import.meta.env.DEV;
-        
-        // In development, suppress noisy CORS/HTML error messages
-        if (isDev && (errorMsg.includes('<!DOCTYPE') || errorMsg.includes('not valid JSON') || errorMsg.includes('CORS'))) {
-          console.warn(`[MODEL_DEBUG] Development mode: Model loading failed (CORS expected). Using rule-based responses.`);
-        } else {
+          
+          allModelsCache.set(moodTrackingModelType, moodTrackerModel);
+          
+          modelsLoaded++;
+          const modelProgress = Math.round((modelsLoaded / totalModels) * 95); 
+          totalProgress = Math.min(95, modelProgress);
+          currentDownloadProgress = totalProgress;
+          
+          setModelLoadingProgress(
+            totalProgress,
+            `Loading AI models...`,
+            `${moodTrackingConfig.name} initialized`
+          );
+        } catch (modelError: any) {
+          const errorMsg = modelError?.message || String(modelError);
           console.error(`[MODEL_DEBUG] Pipeline call failed for ${moodTrackingConfig.name}:`, errorMsg);
-        if (errorStack) {
-          console.error(`[MODEL_DEBUG] Error stack:`, errorStack);
-          }
+          moodTrackerModel = null;
+          // Don't throw, allow partial loading
         }
+      };
+      
+      // Load Model B: Counseling Coach (LaMini)
+      const loadCounselingCoach = async () => {
+        // Determine which model to use for counseling (usually LaMini)
+        // Note: If user selected DistilBERT, we still need LaMini for generation
+        // But if LaMini is selected, we definitely use LaMini
         
-        // Categorize error
-        if (errorMsg.includes('memory') || errorMsg.includes('OOM') || errorMsg.includes('out of memory')) {
-          lastErrorCategory = 'memory';
-          console.warn('⚠️ Insufficient memory for model loading.');
-        } else if (errorMsg.includes('network') || errorMsg.includes('fetch') || errorMsg.includes('Failed to fetch') || 
-                   errorMsg.includes('Unexpected token') || errorMsg.includes('<!DOCTYPE') || errorMsg.includes('not valid JSON') ||
-                   errorMsg.includes('CORS') || errorMsg.includes('Cross-Origin')) {
-          lastErrorCategory = 'network';
-          if (isDev) {
-            // In development, suppress noisy CORS warnings - they're expected
-            console.info('ℹ️ Development mode: Models unavailable (CORS expected). Using rule-based responses.');
-          } else {
-            console.warn('⚠️ Network/CORS error during model loading.');
-            console.warn('⚠️ The model may not be accessible due to CORS restrictions or network issues.');
-            console.warn('⚠️ Models will retry in the background.');
-            console.warn('⚠️ The app will continue using rule-based responses (fully functional).');
-          }
-        } else {
-          lastErrorCategory = 'unknown';
-          console.warn('⚠️ Model loading failed for unknown reason.');
-        }
-        
-        console.warn('ℹ️ The app will continue using rule-based responses. AI features will not be available until models load.');
-        console.warn('ℹ️ Models will continue retrying in the background.');
-        moodTrackerModel = null;
-      }
-
-      // Model B: Counseling coach - Load based on user's model selection
-      // DistilBERT (default) loads first for mood tracking, but counseling needs text-generation
-      // If user selected LaMini, use it for counseling. If user selected DistilBERT (default), use LaMini for counseling.
-      console.log('Loading counseling coach model...');
-      
-      // IMPORTANT: Re-check cache right before reuse check - model might have been cached during loading
-      const cachedDistilBERT = allModelsCache.get('distilbert');
-      const cachedLaMini = allModelsCache.get('lamini');
-      
-      // Determine which model to use for counseling:
-      // - If user selected LaMini, try to use LaMini (if it's loaded/cached)
-      // - If user selected DistilBERT (default), use LaMini for counseling (since DistilBERT is classification-only)
-      let canReuseModel = false;
-      let counselingModelType: AIModelType = 'lamini'; // Always use LaMini for counseling (text-generation)
-      
-      if (targetModel === 'lamini') {
-        // User selected LaMini - check if it's already loaded/cached
-        if (cachedLaMini) {
-          counselingCoachModel = cachedLaMini;
-          canReuseModel = true;
-          console.log(`✓ Using cached LaMini for counseling (user selected LaMini)`);
-        } else {
-          // Need to load LaMini for counseling
-          console.log(`[MODEL_DEBUG] User selected LaMini - will load it for counseling`);
-        }
-      } else {
-        // User selected DistilBERT (default) - use LaMini for counseling (DistilBERT is classification-only)
-        console.log(`[MODEL_DEBUG] User selected DistilBERT (default) - will load LaMini for counseling`);
-      }
-      
-      // Only try to load a separate counseling model if we can't reuse
-      if (!canReuseModel) {
+        // We always use LaMini for counseling unless it's already cached/loaded
+        const counselingModelType: AIModelType = 'lamini';
         const counselingConfig = MODEL_CONFIGS[counselingModelType];
         
-        // Check if we already have this model cached
+        // Check cache first
         if (allModelsCache.has(counselingModelType)) {
           counselingCoachModel = allModelsCache.get(counselingModelType);
           console.log(`✓ Using cached ${counselingConfig.name} for counseling`);
-        } else {
-          try {
-            console.log(`Attempting to load ${counselingConfig.name} for counseling...`);
-            
-            // Determine model path for counseling - use HuggingFace in dev, local in prod
-            let counselingModelPath = counselingConfig.path;
-            const counselingHuggingfaceId = HUGGINGFACE_MODEL_IDS[counselingModelType];
-            
-            if (isDev || isWebProduction) {
-              console.log(`[MODEL_DEBUG] ${isDev ? 'Development' : 'Web Production'} mode - using HuggingFace for counseling: ${counselingHuggingfaceId}`);
-              counselingModelPath = counselingHuggingfaceId;
-            } else {
-              console.log(`[MODEL_DEBUG] Production mode (Desktop) - trying local path for counseling: ${counselingModelPath}`);
-            }
-            
-            // Configure pipeline options - use CPU with ONNX Runtime WASM backend
-            // ONNX Runtime will automatically use WASM backend for optimal performance
-            const counselingOptions: any = {
-              quantized: true,
-              progress_callback: progressCallback,
-              device: preferredDevice // Use best available device (gpu or cpu)
-            };
-            
-            console.log(`[MODEL_DEBUG] Loading counseling model with ${deviceReason}`);
-            
-            // Set timeout for model loading (30 seconds per model)
-            const counselingLoadTimeout = new Promise((_, reject) => {
-              setTimeout(() => reject(new Error('Counseling model loading timeout after 30 seconds')), 30000);
-            });
-            
-            // Try loading with current path, fallback to HuggingFace if it fails
-            try {
-            counselingCoachModel = await Promise.race([
-                pipeline(counselingConfig.task, counselingModelPath, counselingOptions),
-              counselingLoadTimeout
-            ]) as any;
-            } catch (localError: any) {
-              // If local path fails and we're not already using HuggingFace, try HuggingFace
-              if (counselingModelPath !== counselingHuggingfaceId && counselingHuggingfaceId) {
-                const errorMsg = localError?.message || String(localError);
-                if (errorMsg.includes('<!DOCTYPE') || errorMsg.includes('404') || errorMsg.includes('Not Found') || errorMsg.includes('not valid JSON')) {
-                  console.warn(`[MODEL_DEBUG] Local counseling model path failed (${errorMsg.substring(0, 50)}), falling back to HuggingFace: ${counselingHuggingfaceId}`);
-                  counselingModelPath = counselingHuggingfaceId;
-                  counselingCoachModel = await Promise.race([
-                    pipeline(counselingConfig.task, counselingModelPath, counselingOptions),
-                    counselingLoadTimeout
-                  ]) as any;
-                } else {
-                  throw localError; // Re-throw if it's not a 404/HTML error
-                }
-              } else {
-                throw localError; // Re-throw if we're already using HuggingFace or no fallback available
-              }
-            }
-            
-            console.log(`✓ ${counselingConfig.name} loaded successfully for counseling`);
-            
-            // Cache the model
-            allModelsCache.set(counselingModelType, counselingCoachModel);
-            
-            // Update progress - counseling model initialized successfully
-            modelsLoaded++;
-            const counselingProgress = Math.round((modelsLoaded / totalModels) * 100); // 100% when both models loaded
-            totalProgress = Math.min(100, counselingProgress);
-            currentDownloadProgress = totalProgress;
-            currentDownloadStatus = 'downloading';
-            currentDownloadLabel = 'Loading AI models...';
-            currentDownloadDetails = `${counselingConfig.name} initialized`;
-            setModelLoadingProgress(
-              totalProgress,
-              `Loading AI models...`,
-              `${counselingConfig.name} initialized`
-            );
-          } catch (counselingError: any) {
-            const counselingMsg = counselingError?.message || String(counselingError);
-            const counselingStack = counselingError?.stack || '';
-            
-            // Log the error for debugging
-            console.error(`[MODEL_DEBUG] Counseling model loading error:`, counselingMsg);
-            if (counselingStack) {
-              console.error(`[MODEL_DEBUG] Error stack:`, counselingStack);
-            }
-            
-            // Categorize error
-            if (counselingMsg.includes('memory') || counselingMsg.includes('OOM') || counselingMsg.includes('out of memory')) {
-              lastErrorCategory = 'memory';
-              console.warn('⚠️ Insufficient memory for counseling model loading.');
-            } else if (counselingMsg.includes('network') || counselingMsg.includes('fetch') || counselingMsg.includes('Failed to fetch') ||
-                       counselingMsg.includes('Unexpected token') || counselingMsg.includes('<!DOCTYPE') || counselingMsg.includes('not valid JSON') ||
-                       counselingMsg.includes('CORS') || counselingMsg.includes('Cross-Origin')) {
-              lastErrorCategory = 'network';
-              console.warn('⚠️ Network/CORS error during counseling model loading.');
-              console.warn('⚠️ This is common in development mode. Models will retry in the background.');
-              console.warn('⚠️ The app will continue using rule-based responses (fully functional).');
-            } else {
-              lastErrorCategory = 'unknown';
-              console.warn('⚠️ Counseling model loading failed for unknown reason.');
-            }
-            
-            console.warn('ℹ️ The app will continue using rule-based responses. AI features will not be available until models load.');
-            console.warn('ℹ️ Models will continue retrying in the background.');
-            counselingCoachModel = null;
-          }
+          modelsLoaded++; // Count as loaded
+          return;
         }
-      } else if (canReuseModel) {
-        // Reuse the text-generation model for both tasks
-        counselingCoachModel = moodTrackerModel;
-        console.log(`✓ Using ${modelConfig.name} for both mood tracking and counseling`);
         
-        // Update progress - both models ready (reused same model)
-        modelsLoaded = totalModels; // Both models are ready
-        totalProgress = 100;
-        currentDownloadProgress = totalProgress;
-        currentDownloadStatus = 'downloading';
-        currentDownloadLabel = 'Loading AI models...';
-        currentDownloadDetails = `${modelConfig.name} ready for both tasks`;
-        setModelLoadingProgress(
-          totalProgress,
-          `Loading AI models...`,
-          `${modelConfig.name} ready for both tasks`
-        );
-      } else {
-        // LaMini failed to load - can't reuse and shouldn't try again
-        // Set counselingCoachModel to null explicitly
-        counselingCoachModel = null;
-        console.log(`[MODEL_DEBUG] LaMini failed - skipping separate counseling model load (would fail again)`);
-      }
+        try {
+          console.log(`Attempting to load ${counselingConfig.name} for counseling...`);
+          
+          let counselingModelPath = counselingConfig.path;
+          const counselingHuggingfaceId = HUGGINGFACE_MODEL_IDS[counselingModelType];
+          
+          if (isDev || isWebProduction) {
+            counselingModelPath = counselingHuggingfaceId;
+          }
+          
+          const counselingOptions: any = {
+            quantized: true,
+            progress_callback: progressCallback,
+            device: preferredDevice
+          };
+          
+          const counselingLoadTimeout = new Promise((_, reject) => {
+            setTimeout(() => reject(new Error('Counseling model loading timeout after 30 seconds')), 30000);
+          });
+          
+          counselingCoachModel = await Promise.race([
+            pipeline(counselingConfig.task, counselingModelPath, counselingOptions),
+            counselingLoadTimeout
+          ]) as any;
+          
+          console.log(`✓ ${counselingConfig.name} loaded successfully for counseling`);
+          
+          allModelsCache.set(counselingModelType, counselingCoachModel);
+          
+          modelsLoaded++;
+          const counselingProgress = Math.round((modelsLoaded / totalModels) * 100);
+          totalProgress = Math.min(100, counselingProgress);
+          currentDownloadProgress = totalProgress;
+          
+          setModelLoadingProgress(
+            totalProgress,
+            `Loading AI models...`,
+            `${counselingConfig.name} initialized`
+          );
+        } catch (counselingError: any) {
+          const errorMsg = counselingError?.message || String(counselingError);
+          console.error(`[MODEL_DEBUG] Counseling model loading error:`, errorMsg);
+          counselingCoachModel = null;
+          // Don't throw, allow partial loading
+        }
+      };
       
-      if (counselingCoachModel) {
-        console.log('✓ Counseling coach model ready for guidance and encouragement');
+      // --- EXECUTE LOADING ORDER ---
+      
+      if (loadLaMiniFirst) {
+        // Priority: LaMini (Counseling) -> DistilBERT (Mood)
+        await loadCounselingCoach();
+        await loadMoodTracker();
       } else {
-        console.log('⚠️ Using rule-based counseling guidance (models unavailable)');
+        // Priority: DistilBERT (Mood) -> LaMini (Counseling)
+        await loadMoodTracker();
+        await loadCounselingCoach();
       }
 
       const modelsReady = moodTrackerModel !== null && counselingCoachModel !== null;
@@ -1521,4 +1321,3 @@ export function getModelStatus(): {
 export function getCompatibilityReport(): CompatibilityReport | null {
   return compatibilityReport;
 }
-

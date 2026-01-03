@@ -6,7 +6,7 @@
  */
 
 import { LogEntry, ValueItem, MentalStateAssessment, LCSWConfig, Goal } from "../types";
-import { initializeModels, getCounselingCoachModel, getIsModelLoading, getMoodTrackerModel } from "./models";
+import { initializeModels, getCounselingCoachModel, getIsModelLoading, getMoodTrackerModel, isTextGenerationModel } from "./models";
 import { detectCrisis } from "./crisis";
 
 /**
@@ -690,7 +690,7 @@ CRITICAL:
       }
     }
     
-    if (currentCounselingCoachModel) {
+    if (currentCounselingCoachModel && isTextGenerationModel(currentCounselingCoachModel)) {
       try {
         console.log('🤖 Using on-device AI model for report generation...');
         const startTime = performance.now();

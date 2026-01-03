@@ -6,7 +6,7 @@
  */
 
 import { ValueItem, GoalFrequency, LCSWConfig, ReflectionAnalysisResponse, GoalSuggestionResponse, EmotionalEncouragementResponse, CounselingGuidanceResponse, EmotionalState } from "../../types";
-import { initializeModels, getCounselingCoachModel, getIsModelLoading } from "./models";
+import { initializeModels, getCounselingCoachModel, getIsModelLoading, isTextGenerationModel } from "./models";
 import { detectCrisis, getCrisisResponse } from "./crisis";
 import { generateCacheKey, getCachedResponse, setCachedResponse, shouldInvalidateCache } from "./cache";
 import { emotionalEncouragementFallbacks, focusLensFallbacks, reflectionAnalysisFallbacks, goalSuggestionFallbacks, getFallbackResponse } from "./fallbackTables";
@@ -81,7 +81,7 @@ ${protocolContext}
 
 Write 2-3 sentences acknowledging their feeling and connecting to their value.`;
 
-  if (counselingCoachModel) {
+  if (counselingCoachModel && isTextGenerationModel(counselingCoachModel)) {
     try {
       console.log('🤖 Calling AI model for Focus Lens...');
       const result = await counselingCoachModel(prompt, {
@@ -104,6 +104,9 @@ Write 2-3 sentences acknowledging their feeling and connecting to their value.`;
       
       // Remove literal "Focus Lens" text if it appears
       extracted = extracted.replace(/^["']?Focus Lens["']?\s*:?\s*/i, '').trim();
+      extracted = extracted.replace(/^Focus Lens:\s*/i, '').trim();
+      extracted = extracted.replace(/^Focus Lens\s+/i, '').trim();
+      extracted = extracted.replace(/["']Focus Lens["'] message:?/i, '').trim();
       
       // Validate that it's not just placeholder text or literal "Focus Lens"
       const hasPlaceholder = /\[.*?\]|placeholder|example|template/i.test(extracted);
@@ -349,7 +352,7 @@ Return ONLY the sections above with actual counselor insights. Do not include in
       }
     }
 
-    if (counselingCoachModel) {
+    if (counselingCoachModel && isTextGenerationModel(counselingCoachModel)) {
       try {
         console.log('🤖 Calling AI model for reflection analysis (AI Counselor Analysis)...');
         const result = await counselingCoachModel(prompt, {
@@ -572,7 +575,7 @@ Remember: You are supporting therapy integration, not providing therapy. Keep re
     let response = "Your commitment to reflecting on your values is a meaningful step in your journey.";
     let usedAI = false;
     
-    if (counselingCoachModel) {
+    if (counselingCoachModel && isTextGenerationModel(counselingCoachModel)) {
       try {
         console.log('🤖 Using on-device AI model for counseling guidance...');
         const startTime = performance.now();
@@ -774,14 +777,6 @@ ${protocolContext}
   // PRIORITY: Try to use AI model FIRST if available
   // Check if any model is loaded (mood tracker or counseling coach)
   let counselingCoachModel = getCounselingCoachModel();
-  const { getMoodTrackerModel, areModelsLoaded } = await import('./models');
-  const moodTrackerModel = getMoodTrackerModel();
-  
-  // Use the first available model (mood tracker can also do text generation)
-  if (!counselingCoachModel && moodTrackerModel) {
-    console.log('✅ Using mood tracker model for Focus Lens (first available model)');
-    counselingCoachModel = moodTrackerModel;
-  }
   
   // If no model available, check if one is loading and wait briefly
   if (!counselingCoachModel) {
@@ -793,13 +788,7 @@ ${protocolContext}
       while (!counselingCoachModel && (Date.now() - startTime) < maxWaitTime) {
         await new Promise(resolve => setTimeout(resolve, 200));
         counselingCoachModel = getCounselingCoachModel();
-        if (!counselingCoachModel) {
-          const moodModel = getMoodTrackerModel();
-          if (moodModel) {
-            counselingCoachModel = moodModel;
-            break;
-          }
-        }
+        
         // Check if loading failed
         if (!getIsModelLoading() && !counselingCoachModel) {
           break;
@@ -809,7 +798,7 @@ ${protocolContext}
   }
   
   // If AI model is available, use it FIRST (JSON in/out)
-  if (counselingCoachModel) {
+  if (counselingCoachModel && isTextGenerationModel(counselingCoachModel)) {
     try {
       const result = await counselingCoachModel(prompt, {
         max_new_tokens: 200,
@@ -1150,6 +1139,13 @@ Create a SMART goal (Specific, Measurable, Achievable, Relevant, Time-bound):
         hasAnalysis: reflection.includes('Reflection Analysis:')
       });
       // Cache fallback
+      await setCachedResponse(cacheKey, { goalSuggestion: formatGoalSuggestionJSON(fallbackResponse) });
+      return formatGoalSuggestionJSON(fallbackResponse);
+    }
+
+    // Verify model type before use
+    if (!isTextGenerationModel(counselingCoachModel)) {
+      console.warn('⚠️ Model is not text-generation capable - using fallback');
       await setCachedResponse(cacheKey, { goalSuggestion: formatGoalSuggestionJSON(fallbackResponse) });
       return formatGoalSuggestionJSON(fallbackResponse);
     }
