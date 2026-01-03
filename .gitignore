@@ -132,3 +132,6 @@ release/Grounded-PWA-*.zip
 release/dist-for-hosting/models/
 public/models/
 dist/models/
+
+# Archives
+*.zip
