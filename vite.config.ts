@@ -91,7 +91,7 @@ export default defineConfig({
       jsxRuntime: 'automatic',
       fastRefresh: true,
     }),
-    fixOnnxPlugin(), // Add the new ONNX fix plugin
+    // fixOnnxPlugin(), // Temporarily disabled to debug initialization error
     noMinifyTransformersPlugin(), // Disable minification to prevent transformers initialization errors
     ...(isTauriBuild ? [Tauri()] : []),
     excludeModelsPlugin(),
@@ -132,7 +132,13 @@ export default defineConfig({
     dedupe: ['react', 'react-dom']
   },
   optimizeDeps: {
-    exclude: ['@xenova/transformers', '@tauri-apps/plugin-store', '@tauri-apps/plugin-notification'],
+    exclude: [
+      '@xenova/transformers', 
+      'onnxruntime-web', 
+      'onnxruntime', 
+      '@tauri-apps/plugin-store', 
+      '@tauri-apps/plugin-notification'
+    ],
     include: ['react', 'react-dom', 'dexie', 'dexie-react-hooks'], // Add Dexie to include
     entries: [
       'index.html',
