@@ -1,6 +1,6 @@
 
 import React, { useState, useMemo, useCallback } from 'react';
-import { LogEntry, ValueItem, LCSWConfig } from '../types';
+import { LogEntry, ValueItem, LCSWConfig, Goal } from '../types';
 import { generateHumanReports } from '../services/aiService';
 import { shareViaEmail, generateEmailReport, isWebShareAvailable } from '../services/emailService';
 import SkeletonCard from './SkeletonCard';
@@ -11,9 +11,10 @@ interface ReportViewProps {
   logs: LogEntry[];
   values: ValueItem[];
   lcswConfig?: LCSWConfig;
+  goals?: Goal[]; // Add goals prop
 }
 
-const ReportView: React.FC<ReportViewProps> = ({ logs, values, lcswConfig }) => {
+const ReportView: React.FC<ReportViewProps> = ({ logs, values, lcswConfig, goals }) => {
   const [selectedLogIds, setSelectedLogIds] = useState<Set<string>>(new Set(logs.map(l => l.id)));
   const [generatedReport, setGeneratedReport] = useState<string>('');
   const [loading, setLoading] = useState(false);
@@ -63,14 +64,14 @@ const ReportView: React.FC<ReportViewProps> = ({ logs, values, lcswConfig }) => 
     try {
       // Generate report using on-device AI with configuration
       // This will use rule-based fallback if AI models aren't available
-      const report = await generateHumanReports(filteredLogs, values, lcswConfig);
+      const report = await generateHumanReports(filteredLogs, values, lcswConfig, goals);
       setGeneratedReport(report);
       setMode('generate');
     } catch (error) {
       console.error("Report synthesis failed:", error);
       // Generate fallback report gracefully
       const { generateFallbackReport } = await import('../services/aiService');
-      const fallbackReport = generateFallbackReport(filteredLogs, values);
+      const fallbackReport = generateFallbackReport(filteredLogs, values, goals);
       const disclaimer = `\n\n---\n\n*This report was generated using rule-based analysis. All processing happens on your device for privacy.*`;
       setGeneratedReport(fallbackReport + disclaimer);
       setMode('generate');

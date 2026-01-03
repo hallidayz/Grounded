@@ -5,7 +5,7 @@
  * Synthesizes logs into structured formats for therapist review.
  */
 
-import { LogEntry, ValueItem, MentalStateAssessment, LCSWConfig } from "../types";
+import { LogEntry, ValueItem, MentalStateAssessment, LCSWConfig, Goal } from "../types";
 import { initializeModels, getCounselingCoachModel, getIsModelLoading, getMoodTrackerModel } from "./models";
 import { detectCrisis } from "./crisis";
 
@@ -242,7 +242,7 @@ export async function assessMentalState(
  * Fallback report generator (used when models aren't available)
  * Exported so UI components can use it directly when model loading fails
  */
-export function generateFallbackReport(logs: LogEntry[], values: ValueItem[]): string {
+export function generateFallbackReport(logs: LogEntry[], values: ValueItem[], goals?: Goal[]): string {
   const valueCounts: Record<string, number> = {};
   const moodCounts: Record<string, number> = {};
   
@@ -257,68 +257,130 @@ export function generateFallbackReport(logs: LogEntry[], values: ValueItem[]): s
   const topValue = Object.entries(valueCounts).sort((a, b) => b[1] - a[1])[0]?.[0] || 'N/A';
   const topMood = Object.entries(moodCounts).sort((a, b) => b[1] - a[1])[0]?.[0] || 'N/A';
 
-  // Build detailed entry summaries including deep reflection, committed actions, and next steps
-  let detailedEntries = '';
-  logs.slice(0, 10).forEach(log => {
-    const value = values.find(v => v.id === log.valueId);
-    detailedEntries += `\n\n**${new Date(log.date).toLocaleDateString()} - ${value?.name || 'General'}**\n`;
-    
-    if (log.deepReflection) {
-      detailedEntries += `\nDeep Reflection:\n${log.deepReflection}\n`;
+  // Organize logs by day for therapist review
+  const logsByDay: Record<string, LogEntry[]> = {};
+  logs.forEach(log => {
+    const dayKey = log.date.split('T')[0];
+    if (!logsByDay[dayKey]) {
+      logsByDay[dayKey] = [];
     }
-    
-    if (log.goalText) {
-      detailedEntries += `\nCommitted Action/Goal:\n${log.goalText}\n`;
-    }
-    
-    if (log.reflectionAnalysis) {
-      detailedEntries += `\nSuggested Next Steps:\n${formatAnalysisForReport(log.reflectionAnalysis)}\n`;
-    }
-    
-    if (log.emotionalState) {
-      detailedEntries += `\nEmotional State: ${log.emotionalState}`;
-      if (log.selectedFeeling) {
-        detailedEntries += ` (${log.selectedFeeling})`;
-      }
-      detailedEntries += '\n';
-    }
+    logsByDay[dayKey].push(log);
   });
 
-  return `# Clinical Summary
+  // Build detailed entry summaries organized by day
+  let detailedEntries = '';
+  const days = Object.keys(logsByDay).sort().reverse().slice(0, 14); // Last 14 days
+  
+  days.forEach(day => {
+    const dayLogs = logsByDay[day];
+    const date = new Date(day).toLocaleDateString('en-US', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' });
+    detailedEntries += `\n\n**${date}**\n`;
+    
+    dayLogs.forEach(log => {
+      const value = values.find(v => v.id === log.valueId);
+      detailedEntries += `\n*${value?.name || 'General'}*\n`;
+      
+      if (log.mood) detailedEntries += `Mood: ${log.mood} `;
+      if (log.emotionalState) detailedEntries += `Emotional State: ${log.emotionalState} `;
+      if (log.selectedFeeling) detailedEntries += `Feeling: ${log.selectedFeeling}`;
+      detailedEntries += '\n';
+      
+      if (log.deepReflection) {
+        detailedEntries += `\nDeep Reflection:\n${log.deepReflection}\n`;
+      }
+      
+      if (log.goalText) {
+        const isCompleted = log.type === 'goal-completion';
+        detailedEntries += `\n${isCompleted ? '✅ COMPLETED ' : ''}Committed Action/Goal:\n${log.goalText}\n`;
+      }
+      
+      if (log.reflectionAnalysis) {
+        detailedEntries += `\nSuggested Next Steps:\n${formatAnalysisForReport(log.reflectionAnalysis)}\n`;
+      }
+    });
+  });
 
-## SOAP Format
+  // Add goals summary if available
+  if (goals && goals.length > 0) {
+    const completedGoals = goals.filter(g => g.completed);
+    const activeGoals = goals.filter(g => !g.completed);
+    
+    detailedEntries += '\n\n**Goals Summary**\n';
+    if (completedGoals.length > 0) {
+      detailedEntries += `\nCompleted Goals (${completedGoals.length}):\n`;
+      completedGoals.forEach(goal => {
+        const valueName = values.find(v => v.id === goal.valueId)?.name || 'General';
+        detailedEntries += `  ✅ ${valueName}: ${goal.text}\n`;
+      });
+    }
+    if (activeGoals.length > 0) {
+      detailedEntries += `\nActive Goals (${activeGoals.length}):\n`;
+      activeGoals.forEach(goal => {
+        const valueName = values.find(v => v.id === goal.valueId)?.name || 'General';
+        detailedEntries += `  📋 ${valueName}: ${goal.text} (${goal.frequency})\n`;
+      });
+    }
+  }
 
-**Subjective**: Client has logged ${logs.length} reflection entries, with primary focus on ${topValue}. Most common mood indicator: ${topMood}.${detailedEntries}
+  const dateRange = logs.length > 0
+    ? `${new Date(logs[logs.length - 1]?.date || Date.now()).toLocaleDateString()} to ${new Date(logs[0]?.date || Date.now()).toLocaleDateString()}`
+    : 'No date range';
 
-**Objective**: Patterns show engagement with value-based reflection practice. Entries span ${new Date(logs[logs.length - 1]?.date || Date.now()).toLocaleDateString()} to ${new Date(logs[0]?.date || Date.now()).toLocaleDateString()}.
+  return `═══════════════════════════════════════════════════════════════
+# SOAP FORMAT REPORT
+═══════════════════════════════════════════════════════════════
 
-**Assessment**: Client is actively engaging in self-reflection and value alignment work.
+## Mood Trends Analysis
+Mood indicators show: ${topMood} as most common. Client has logged ${logs.length} reflection entries across ${Object.keys(valueCounts).length} values.
 
-**Plan**: Continue value-based reflection. Review patterns with LCSW in next session.
+## Subjective
+Client has logged ${logs.length} reflection entries, with primary focus on ${topValue}. Most common mood indicator: ${topMood}.${detailedEntries}
 
----
+## Objective
+Patterns show engagement with value-based reflection practice. Entries span ${dateRange}. Total entries: ${logs.length}, Values engaged: ${Object.keys(valueCounts).length}.
 
-## DAP Format
+## Assessment
+Client is actively engaging in self-reflection and value alignment work. Consistent practice observed with mood tracking and goal setting.
 
-**Data**: ${logs.length} entries, ${Object.keys(valueCounts).length} values engaged, mood tracking active.${detailedEntries}
+## Plan
+Continue value-based reflection. Review patterns with LCSW in next session. Maintain current engagement level.
 
-**Assessment**: Consistent engagement with reflection practice. Primary value focus: ${topValue}.
+═══════════════════════════════════════════════════════════════
+# DAP FORMAT REPORT
+═══════════════════════════════════════════════════════════════
 
-**Plan**: Maintain current practice. Discuss themes and patterns with LCSW.
+## Mood Trends Analysis
+Mood indicators show: ${topMood} as most common. Client has logged ${logs.length} reflection entries across ${Object.keys(valueCounts).length} values.
 
----
+## Data
+${logs.length} entries, ${Object.keys(valueCounts).length} values engaged, mood tracking active. Date range: ${dateRange}.${detailedEntries}
 
-## BIRP Format
+## Assessment
+Consistent engagement with reflection practice. Primary value focus: ${topValue}. Active mood monitoring and goal tracking observed.
 
-**Behavior**: Client consistently logs reflections and tracks mood states.${detailedEntries}
+## Plan
+Maintain current practice. Discuss themes and patterns with LCSW. Continue value-based reflection work.
 
-**Intervention**: Value-based reflection practice, self-monitoring.
+═══════════════════════════════════════════════════════════════
+# BIRP FORMAT REPORT
+═══════════════════════════════════════════════════════════════
 
-**Response**: Active engagement, ${logs.length} entries completed.
+## Mood Trends Analysis
+Mood indicators show: ${topMood} as most common. Client has logged ${logs.length} reflection entries across ${Object.keys(valueCounts).length} values.
 
-**Plan**: Continue practice, review with LCSW.
+## Behavior
+Client consistently logs reflections and tracks mood states. Engages with value-based practice regularly.${detailedEntries}
 
----
+## Intervention
+Value-based reflection practice, self-monitoring, mood tracking, goal setting and completion.
+
+## Response
+Active engagement, ${logs.length} entries completed. Consistent practice maintained. Positive engagement with therapeutic tools.
+
+## Plan
+Continue practice, review with LCSW. Maintain current engagement level. Monitor progress and adjust goals as needed.
+
+═══════════════════════════════════════════════════════════════
 
 *This is a basic summary. For detailed analysis, please review entries manually or discuss with your LCSW.*`;
 }
@@ -329,7 +391,8 @@ export function generateFallbackReport(logs: LogEntry[], values: ValueItem[]): s
 export async function generateHumanReports(
   logs: LogEntry[],
   values: ValueItem[],
-  lcswConfig?: LCSWConfig
+  lcswConfig?: LCSWConfig,
+  goals?: Goal[] // Add goals parameter
 ): Promise<string> {
   try {
     if (logs.length === 0) {
@@ -355,77 +418,257 @@ export async function generateHumanReports(
       const modelsLoaded = await initializeModels();
       if (!modelsLoaded) {
         // Model initialization failed - use rule-based fallback silently
-        const fallbackReport = generateFallbackReport(logs, values);
+        const fallbackReport = generateFallbackReport(logs, values, goals);
         const disclaimer = `\n\n---\n\n*This report was generated using rule-based analysis. All processing happens on your device for privacy.*`;
         return `${fallbackReport}${disclaimer}`;
       }
     }
 
-    // Calculate mood trends for context
+    // Calculate comprehensive mood trends
     const moodCounts: Record<string, number> = {};
+    const emotionalStateCounts: Record<string, number> = {};
+    const feelingCounts: Record<string, number> = {};
+    
     logs.forEach(l => {
-      const mood = l.mood || l.emotionalState || 'Unknown';
-      moodCounts[mood] = (moodCounts[mood] || 0) + 1;
-    });
-    const moodTrendText = Object.entries(moodCounts)
-      .map(([mood, count]) => `- ${mood}: ${count} entries`)
-      .join('\n');
-
-    const summary = logs.map(l => {
-      const vName = values.find(v => v.id === l.valueId)?.name || 'General';
-      let entry = `[${l.date.split('T')[0]}] Value: ${vName}, Mood: ${l.mood || 'N/A'}`;
-      
-      // Include deep reflection content
-      if (l.deepReflection) {
-        entry += `\n  Deep Reflection: ${l.deepReflection}`;
+      // Track mood emoji
+      if (l.mood) {
+        moodCounts[l.mood] = (moodCounts[l.mood] || 0) + 1;
       }
-      
-      // Include committed action (goalText)
-      if (l.goalText) {
-        entry += `\n  Committed Action/Goal: ${l.goalText}`;
-      }
-      
-      // Include suggested next steps (reflectionAnalysis)
-      if (l.reflectionAnalysis) {
-        entry += `\n  Suggested Next Steps: ${formatAnalysisForReport(l.reflectionAnalysis)}`;
-      }
-      
-      // Include emotional state and feeling if available
+      // Track emotional states
       if (l.emotionalState) {
-        entry += `\n  Emotional State: ${l.emotionalState}`;
+        emotionalStateCounts[l.emotionalState] = (emotionalStateCounts[l.emotionalState] || 0) + 1;
       }
+      // Track selected feelings
       if (l.selectedFeeling) {
-        entry += `\n  Selected Feeling: ${l.selectedFeeling}`;
+        feelingCounts[l.selectedFeeling] = (feelingCounts[l.selectedFeeling] || 0) + 1;
+      }
+    });
+    
+    // Build comprehensive mood trends text
+    let moodTrendText = 'Mood Indicators:\n';
+    if (Object.keys(moodCounts).length > 0) {
+      moodTrendText += Object.entries(moodCounts)
+        .sort((a, b) => b[1] - a[1])
+        .map(([mood, count]) => `  ${mood}: ${count} entries`)
+        .join('\n');
+    }
+    
+    if (Object.keys(emotionalStateCounts).length > 0) {
+      moodTrendText += '\n\nEmotional States:\n';
+      moodTrendText += Object.entries(emotionalStateCounts)
+        .sort((a, b) => b[1] - a[1])
+        .map(([state, count]) => `  ${state}: ${count} entries`)
+        .join('\n');
+    }
+    
+    if (Object.keys(feelingCounts).length > 0) {
+      moodTrendText += '\n\nSelected Feelings:\n';
+      moodTrendText += Object.entries(feelingCounts)
+        .sort((a, b) => b[1] - a[1])
+        .slice(0, 10) // Top 10 feelings
+        .map(([feeling, count]) => `  ${feeling}: ${count} entries`)
+        .join('\n');
+    }
+
+    // Organize logs by day for therapist review
+    const logsByDay: Record<string, LogEntry[]> = {};
+    logs.forEach(l => {
+      const dayKey = l.date.split('T')[0]; // YYYY-MM-DD
+      if (!logsByDay[dayKey]) {
+        logsByDay[dayKey] = [];
+      }
+      logsByDay[dayKey].push(l);
+    });
+
+    // Build summary organized by day
+    const days = Object.keys(logsByDay).sort().reverse(); // Most recent first
+    const summary = days.map(day => {
+      const dayLogs = logsByDay[day];
+      const date = new Date(day).toLocaleDateString('en-US', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' });
+      
+      let daySummary = `\n=== ${date} ===\n`;
+      
+      dayLogs.forEach(l => {
+        const vName = values.find(v => v.id === l.valueId)?.name || 'General';
+        daySummary += `\n[${l.date.split('T')[1]?.substring(0, 5) || 'Time unknown'}] Value: ${vName}`;
+        
+        // Mood and emotional state
+        if (l.mood) daySummary += `, Mood: ${l.mood}`;
+        if (l.emotionalState) daySummary += `, Emotional State: ${l.emotionalState}`;
+        if (l.selectedFeeling) daySummary += `, Feeling: ${l.selectedFeeling}`;
+        daySummary += '\n';
+        
+        // Deep reflection content
+        if (l.deepReflection) {
+          daySummary += `  Deep Reflection: ${l.deepReflection.substring(0, 500)}${l.deepReflection.length > 500 ? '...' : ''}\n`;
+        }
+        
+        // Committed action/goal
+        if (l.goalText) {
+          daySummary += `  Committed Action/Goal: ${l.goalText}\n`;
+        }
+        
+        // Check if this log represents a completed goal
+        if (l.type === 'goal-completion' && l.goalText) {
+          daySummary += `  ✅ GOAL COMPLETED: ${l.goalText}\n`;
+        }
+        
+        // Suggested next steps (reflectionAnalysis)
+        if (l.reflectionAnalysis) {
+          const analysis = formatAnalysisForReport(l.reflectionAnalysis);
+          daySummary += `  Suggested Next Steps: ${analysis.substring(0, 300)}${analysis.length > 300 ? '...' : ''}\n`;
+        }
+        
+        // Note as fallback
+        if (l.note && !l.deepReflection && l.type !== 'goal-completion') {
+          daySummary += `  Note: ${l.note.substring(0, 200)}${l.note.length > 200 ? '...' : ''}\n`;
+        }
+      });
+      
+      return daySummary;
+    }).join('\n');
+
+    // Include completed goals summary
+    let completedGoalsText = '';
+    if (goals && goals.length > 0) {
+      const completedGoals = goals.filter(g => g.completed);
+      const activeGoals = goals.filter(g => !g.completed);
+      
+      if (completedGoals.length > 0) {
+        completedGoalsText = '\n\nCompleted Goals:\n';
+        completedGoals.forEach(goal => {
+          const valueName = values.find(v => v.id === goal.valueId)?.name || 'General';
+          completedGoalsText += `  ✅ [${valueName}] ${goal.text} (Completed ${new Date(goal.createdAt).toLocaleDateString()})\n`;
+        });
       }
       
-      // Include note as fallback
-      if (l.note && !l.deepReflection) {
-        entry += `\n  Note: ${l.note}`;
+      if (activeGoals.length > 0) {
+        completedGoalsText += '\nActive Goals:\n';
+        activeGoals.forEach(goal => {
+          const valueName = values.find(v => v.id === goal.valueId)?.name || 'General';
+          completedGoalsText += `  📋 [${valueName}] ${goal.text} (${goal.frequency})\n`;
+        });
       }
-      
-      return entry;
-    }).join('\n\n');
+    }
 
-    const prompt = `You are a therapy integration assistant helping synthesize a client's reflection logs for review with their LCSW.
+    const prompt = `Generate a clinical report for therapist review. Format as THREE SEPARATE TEMPLATES: SOAP, DAP, and BIRP.
 
-Generate a comprehensive report in SOAP, DAP, and BIRP formats.
+MOOD TRENDS DATA:
+${moodTrendText}${completedGoalsText}
 
-Mood Trends Overview:
-${moodTrendText}
-      
-Logs:
-      ${summary}
-      
-IMPORTANT: For each log entry, include:
-1. Deep Reflection: The user's written reflection content
-2. Committed Action: Any goals or actions the user committed to
-3. Suggested Next Steps: AI-generated recommendations or analysis
+DAILY ACTIVITY LOGS (organized by date):
+${summary}
 
-Analyze the Mood Trends to provide perspective on the client's emotional state over this period.
+OUTPUT FORMAT REQUIREMENTS:
+Generate THREE separate, complete reports using these exact templates:
 
-Format your response with clear sections for each format. Keep the tone supportive, clinical yet human, and focused on patterns and themes that would be useful for therapy integration.`;
+═══════════════════════════════════════════════════════════════
+# SOAP FORMAT REPORT
+═══════════════════════════════════════════════════════════════
 
-    let report = generateFallbackReport(logs, values);
+## Mood Trends Analysis
+[Analyze the mood trends data provided above - include patterns, shifts, and insights]
+
+## Subjective
+[Client's reported experiences, feelings, reflections organized by day. Include:
+- Daily reflections and what they worked on
+- Emotional states and feelings
+- Goals committed to and completed
+- Patterns over time]
+
+## Objective
+[Observable data and patterns:
+- Number of entries, date range
+- Mood indicators and emotional state patterns
+- Goal completion rates
+- Engagement patterns]
+
+## Assessment
+[Clinical interpretation:
+- Themes and patterns identified
+- Progress observed
+- Areas of focus
+- Connection to treatment goals]
+
+## Plan
+[Recommendations for continued work:
+- Suggested focus areas
+- Goals to maintain or adjust
+- Therapeutic considerations]
+
+═══════════════════════════════════════════════════════════════
+# DAP FORMAT REPORT
+═══════════════════════════════════════════════════════════════
+
+## Mood Trends Analysis
+[Analyze the mood trends data provided above - include patterns, shifts, and insights]
+
+## Data
+[Factual information from logs:
+- Daily activities organized by date
+- Reflections, goals, emotional states
+- Completed goals and progress
+- Engagement metrics]
+
+## Assessment
+[Clinical assessment:
+- Patterns in mood and emotional states
+- Progress toward goals
+- Themes in reflections
+- Strengths and areas for growth]
+
+## Plan
+[Next steps and recommendations:
+- Continued focus areas
+- Goal adjustments if needed
+- Therapeutic interventions to consider]
+
+═══════════════════════════════════════════════════════════════
+# BIRP FORMAT REPORT
+═══════════════════════════════════════════════════════════════
+
+## Mood Trends Analysis
+[Analyze the mood trends data provided above - include patterns, shifts, and insights]
+
+## Behavior
+[Observed behaviors and activities:
+- Daily reflection practices
+- Goal-setting and completion behaviors
+- Engagement with values
+- Self-monitoring activities]
+
+## Intervention
+[Therapeutic interventions and strategies:
+- Value-based reflection practice
+- Goal-setting and tracking
+- Mood monitoring
+- Self-advocacy activities]
+
+## Response
+[Client's response to interventions:
+- Mood and emotional state changes
+- Goal completion rates
+- Engagement levels
+- Progress indicators]
+
+## Plan
+[Future planning:
+- Maintain current practices
+- Adjust goals as needed
+- Continue monitoring
+- Therapeutic considerations]
+
+═══════════════════════════════════════════════════════════════
+
+CRITICAL: 
+- Each format must be COMPLETE and STANDALONE
+- Include mood trends analysis in EACH format
+- Organize daily content clearly showing what client worked on each day
+- Mark completed goals clearly with ✅
+- Use clear headings and spacing for readability
+- Tone: Supportive, clinical, human`;
+
+    let report = generateFallbackReport(logs, values, goals);
     
     // If model is available, try to generate AI report
     let currentCounselingCoachModel = getCounselingCoachModel();
@@ -452,7 +695,7 @@ Format your response with clear sections for each format. Keep the tone supporti
         console.log('🤖 Using on-device AI model for report generation...');
         const startTime = performance.now();
         const result = await currentCounselingCoachModel(prompt, {
-          max_new_tokens: 1000,
+          max_new_tokens: 2000, // Increased for comprehensive three-format reports
           temperature: 0.3, // Lower temperature to reduce repetition
           do_sample: true,
           repetition_penalty: 1.3 // Penalize repetition
@@ -460,7 +703,16 @@ Format your response with clear sections for each format. Keep the tone supporti
         const endTime = performance.now();
 
         const generatedText = result[0]?.generated_text || '';
+        console.log('🔍 Raw AI report response (first 500 chars):', generatedText.substring(0, 500));
+        
+        // Remove prompt from beginning if present
         let extracted = generatedText.replace(prompt, '').trim();
+        
+        // If extraction is too short, the prompt might still be there - try more aggressive removal
+        if (extracted.length < 100) {
+          extracted = generatedText.split(/Generate a comprehensive report|You are a therapy integration/i)[1] || generatedText;
+          extracted = extracted.trim();
+        }
         
         // Remove repetitive patterns from the report
         // Detect if the same sentence/phrase repeats multiple times
@@ -491,11 +743,20 @@ Format your response with clear sections for each format. Keep the tone supporti
         // Additional cleanup: remove obvious repetitive patterns
         extracted = extracted.replace(/(The LCSW Lens is a ['"]LCSW Lens['"].*?)(?:\1){2,}/gi, (match, first) => first);
         
-        if (extracted && extracted.length > 50) {
+        // Ensure we have meaningful content - check for actual report sections
+        const hasReportContent = extracted.includes('SOAP') || 
+                                 extracted.includes('DAP') || 
+                                 extracted.includes('BIRP') ||
+                                 extracted.includes('Subjective') ||
+                                 extracted.includes('Assessment') ||
+                                 extracted.length > 200; // Allow shorter reports if they have structure
+        
+        if (extracted && extracted.length > 50 && hasReportContent) {
           report = extracted;
           console.log(`✅ On-device AI generated report (${Math.round(endTime - startTime)}ms)`);
         } else {
-          console.warn('⚠️ AI model returned empty or too short report, using fallback');
+          console.warn('⚠️ AI model returned insufficient report content, using fallback');
+          console.warn('Extracted length:', extracted.length, 'Has report content:', hasReportContent);
         }
       } catch (error) {
         console.error('❌ On-device AI report generation failed:', error);
@@ -509,7 +770,7 @@ Format your response with clear sections for each format. Keep the tone supporti
           if (reloadedModel) {
             try {
               const retryResult = await reloadedModel(prompt, {
-                max_new_tokens: 1000,
+                max_new_tokens: 2000, // Increased for comprehensive three-format reports
                 temperature: 0.3, // Lower temperature to reduce repetition
                 do_sample: true,
                 repetition_penalty: 1.3 // Penalize repetition
@@ -559,11 +820,11 @@ Format your response with clear sections for each format. Keep the tone supporti
 
     return report + disclaimer;
   } catch (error) {
-    // For any errors, log and return fallback report gracefully
-    console.error('Report generation error:', error);
-    const fallbackReport = generateFallbackReport(logs, values);
-    const disclaimer = `\n\n---\n\n*This report was generated using rule-based analysis. All processing happens on your device for privacy.*`;
-    return `${fallbackReport}${disclaimer}`;
+      // For any errors, log and return fallback report gracefully
+      console.error('Report generation error:', error);
+      const fallbackReport = generateFallbackReport(logs, values, goals);
+      const disclaimer = `\n\n---\n\n*This report was generated using rule-based analysis. All processing happens on your device for privacy.*`;
+      return `${fallbackReport}${disclaimer}`;
   }
 }
 

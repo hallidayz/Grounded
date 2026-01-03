@@ -1069,25 +1069,22 @@ export async function suggestGoal(
       ? `Reflection Analysis:\nCore Themes: ${reflectionAnalysis.coreThemes.join(', ')}\nLCSW Lens: ${reflectionAnalysis.lcswLens}\n\n`
       : '';
     
-    // Build a cleaner, more focused prompt that emphasizes SMART goals
-    const prompt = `Create a SMART Self-Advocacy Aim. Return ONLY this JSON structure:
+    // Ultra-minimal prompt - just show example JSON with minimal context
+    // Put context first, then show the JSON structure as an example
+    const prompt = `${protocolContext}
+Value: ${value.name}
+${feelingContext}${reflectionContext}Reflection: ${deepReflectionText.substring(0, 300)}
 
 {
-  "description": "One specific, measurable action the user will take ${frequency === 'daily' ? 'each day' : frequency === 'weekly' ? 'this week' : 'this month'}",
-  "whatThisHelpsWith": "Why this action supports their growth and aligns with their value",
-  "howToMeasureProgress": ["Step 1", "Step 2", "Step 3"],
-  "inferenceAnalysis": "How this aim addresses themes from their reflection",
+  "description": "action for ${frequency}",
+  "whatThisHelpsWith": "benefit",
+  "howToMeasureProgress": ["step 1", "step 2", "step 3"],
+  "inferenceAnalysis": "connection to reflection",
   "lcsmInferences": {
-    "encouragement": "Brief encouragement",
-    "guidance": "Brief guidance"
+    "encouragement": "encouragement",
+    "guidance": "guidance"
   }
-}
-
-Context:
-${protocolContext}
-Value: "${value.name}" (${value.description})
-${feelingContext}${reflectionContext}Reflection:
-${deepReflectionText.substring(0, 500)}`;
+}`;
 
     // Default fallback response (only used if AI model is unavailable)
     const fallbackResponse: GoalSuggestionResponse = await generateFallbackGoalSuggestion(
@@ -1118,30 +1115,72 @@ ${deepReflectionText.substring(0, 500)}`;
       });
 
       const generatedText = result[0]?.generated_text || '';
-      console.log('🔍 Raw AI response:', generatedText.substring(0, 200) + '...');
+      console.log('🔍 Raw AI goal response:', generatedText.substring(0, 400) + '...');
       
-      // Remove the prompt from the beginning if present
-      let extracted = generatedText.replace(prompt, '').trim();
+      // Try to find JSON anywhere in the response - don't rely on prompt removal
+      // Look for JSON object patterns with proper structure (has description, whatThisHelpsWith, etc.)
+      let jsonMatch = generatedText.match(/\{[^{]*"description"[^{]*"whatThisHelpsWith"[^{]*"howToMeasureProgress"[^{]*\}/s);
       
-      // Remove common prompt artifacts
-      extracted = extracted.replace(/^Create a SMART.*?$/im, '').trim();
-      extracted = extracted.replace(/^Analyze the Deep Reflection.*?$/im, '').trim();
-      extracted = extracted.replace(/^Return ONLY valid JSON.*?$/im, '').trim();
-      extracted = extracted.replace(/^Return valid JSON only.*?$/im, '').trim();
-      
-      // Check if response contains obvious prompt repetition (not just the word "specific" which could be in a valid goal)
-      const hasObviousPromptText = /The client's purpose is to help|help the client remember and practice therapy|provide structured reflection prompts aligned|provide psychoeducation and coping skills|support value-based living and goal achievement.*support value-based living/i.test(extracted);
-      
-      if (hasObviousPromptText) {
-        console.warn('⚠️ AI returned obvious prompt repetition, attempting to extract JSON after it');
-        // Try to extract JSON that might come after the prompt text
-        const afterPrompt = extracted.split(/The client's purpose|help the client remember/i)[1] || extracted;
-        extracted = afterPrompt.trim();
+      // If that doesn't work, try a more lenient match for any JSON object
+      if (!jsonMatch) {
+        jsonMatch = generatedText.match(/\{[\s\S]{100,}\}/);
       }
       
-      // Try to find JSON in the response - look for the first complete JSON object
-      // This handles cases where there's text before or after the JSON
-      const jsonMatch = extracted.match(/\{[\s\S]*\}/);
+      // If still no match, try to find JSON after common prompt phrases
+      if (!jsonMatch) {
+        const afterPrompt = generatedText.split(/Create a SMART|Return ONLY|Return valid JSON|Return only this JSON/i)[1] || generatedText;
+        jsonMatch = afterPrompt.match(/\{[\s\S]{50,}\}/);
+      }
+      
+      // Last resort: look for any JSON-like structure with description
+      if (!jsonMatch) {
+        jsonMatch = generatedText.match(/\{[^}]*"description"[^}]*\}/);
+      }
+      
+      // If still no match, try to extract individual fields and reconstruct JSON
+      // The model might return malformed JSON or mix prompt text with JSON
+      if (!jsonMatch) {
+        const descriptionMatch = generatedText.match(/"description"\s*:\s*"([^"]{15,})"/);
+        const whatHelpsMatch = generatedText.match(/"whatThisHelpsWith"\s*:\s*"([^"]{10,})"/);
+        const progressMatch = generatedText.match(/"howToMeasureProgress"\s*:\s*\[([^\]]+)\]/);
+        
+        if (descriptionMatch && whatHelpsMatch) {
+          // Reconstruct JSON from extracted fields
+          const progressText = progressMatch ? progressMatch[1] : '';
+          const progressArray = progressText
+            ? progressText.split(',').map(s => {
+                const cleaned = s.trim().replace(/^["']|["']$/g, '');
+                return cleaned.length > 0 ? cleaned : null;
+              }).filter(s => s !== null && s.length > 3)
+            : ["Track progress daily", "Note improvements", "Reflect on outcomes"];
+          
+          // Ensure we have at least 3 steps
+          while (progressArray.length < 3) {
+            progressArray.push(`Step ${progressArray.length + 1}`);
+          }
+          
+          const reconstructed: GoalSuggestionResponse = {
+            description: descriptionMatch[1],
+            whatThisHelpsWith: whatHelpsMatch[1],
+            howToMeasureProgress: progressArray.slice(0, 3),
+            inferenceAnalysis: generatedText.match(/"inferenceAnalysis"\s*:\s*"([^"]+)"/)?.[1] || "This aim addresses themes from your reflection",
+            lcsmInferences: {
+              encouragement: generatedText.match(/"encouragement"\s*:\s*"([^"]+)"/)?.[1] || "You're taking meaningful steps forward",
+              guidance: generatedText.match(/"guidance"\s*:\s*"([^"]+)"/)?.[1] || "Continue reflecting on your progress"
+            }
+          };
+          
+          // Validate reconstructed JSON
+          if (reconstructed.description.length > 15 && 
+              reconstructed.whatThisHelpsWith.length > 10 &&
+              reconstructed.howToMeasureProgress.length > 0) {
+            console.log('✅ Reconstructed JSON from malformed response');
+            await setCachedResponse(cacheKey, { goalSuggestion: formatGoalSuggestionJSON(reconstructed) });
+            return formatGoalSuggestionJSON(reconstructed);
+          }
+        }
+      }
+      
       if (jsonMatch) {
         try {
           const jsonResponse: GoalSuggestionResponse = JSON.parse(jsonMatch[0]);
@@ -1186,31 +1225,22 @@ ${deepReflectionText.substring(0, 500)}`;
           }
         } catch (parseError) {
           console.warn('❌ Failed to parse JSON response:', parseError);
-          console.warn('Extracted text:', extracted.substring(0, 200));
+          console.warn('JSON match text:', jsonMatch[0].substring(0, 200));
         }
       } else {
         console.warn('⚠️ No JSON object found in response');
-        console.warn('Extracted text:', extracted.substring(0, 200));
-      }
-      
-      // If JSON parsing failed, check if raw response looks like obvious prompt text
-      if (extracted && extracted.length > 20) {
-        // Only reject if it's clearly prompt text, not if it might be a valid goal description
-        if (hasObviousPromptText && !extracted.includes('{')) {
-          console.warn('⚠️ Rejecting response that looks like prompt text (no JSON found)');
-          // Don't return this - use fallback instead
-        } else if (extracted.includes('{')) {
-          // If there's a { but we didn't match JSON, try one more time with a more lenient match
-          const lenientMatch = extracted.match(/\{[\s\S]{20,}\}/);
-          if (lenientMatch) {
-            try {
-              const jsonResponse: GoalSuggestionResponse = JSON.parse(lenientMatch[0]);
-              console.log('✅ Parsed JSON with lenient matching');
-              await setCachedResponse(cacheKey, { goalSuggestion: formatGoalSuggestionJSON(jsonResponse) });
-              return formatGoalSuggestionJSON(jsonResponse);
-            } catch (e) {
-              console.warn('Lenient JSON parse also failed');
-            }
+        console.warn('Full generated text (first 500 chars):', generatedText.substring(0, 500));
+        
+        // Try one more time with a very lenient match - look for any { } structure
+        const lenientMatch = generatedText.match(/\{[\s\S]{30,}\}/);
+        if (lenientMatch) {
+          try {
+            const jsonResponse: GoalSuggestionResponse = JSON.parse(lenientMatch[0]);
+            console.log('✅ Parsed JSON with lenient matching');
+            await setCachedResponse(cacheKey, { goalSuggestion: formatGoalSuggestionJSON(jsonResponse) });
+            return formatGoalSuggestionJSON(jsonResponse);
+          } catch (e) {
+            console.warn('Lenient JSON parse also failed:', e);
           }
         }
       }

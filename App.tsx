@@ -1383,6 +1383,7 @@ const App: React.FC = () => {
               logs={logs} 
               values={selectedValues} 
               lcswConfig={settings.lcswConfig}
+              goals={goals}
             />
           </Suspense>
         )}
