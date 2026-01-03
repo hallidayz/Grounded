@@ -77,8 +77,8 @@ export const MODEL_CONFIGS: Record<AIModelType, {
   }
 };
 
-// Default model: TinyLlama (best for healthcare/psychology)
-const DEFAULT_MODEL: AIModelType = 'tinyllama';
+// Default model: DistilBERT (faster, better for initial mood tracking)
+const DEFAULT_MODEL: AIModelType = 'distilbert';
 
 // Model loading state
 let moodTrackerModel: any = null;
