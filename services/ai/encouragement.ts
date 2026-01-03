@@ -995,38 +995,30 @@ export async function suggestGoal(
       ? `The user is working with an LCSW using ${protocols.join(', ')} protocols.`
       : 'The user is working with a licensed clinical social worker.';
     
-    // Optimized JSON prompt for on-device LLM with inference analysis and LCSM inferences
-    const prompt = `Analyze the Deep Reflection and suggest a Self-Advocacy Aim. Return ONLY valid JSON (no markdown, no extra text):
+    // Schema-Only prompt format to prevent instruction repetition
+    // Focus on SMART goal structure: Specific, Measurable, Achievable, Relevant, Time-bound
+    const reflectionContext = reflectionAnalysis 
+      ? `Reflection Analysis:\nCore Themes: ${reflectionAnalysis.coreThemes.join(', ')}\nLCSW Lens: ${reflectionAnalysis.lcswLens}\n\n`
+      : '';
+    
+    const prompt = `Create a SMART Self-Advocacy Aim based on the reflection. Return ONLY valid JSON:
 
 {
-  "description": "what they'll do",
-  "whatThisHelpsWith": "why it matters",
-  "howToMeasureProgress": ["step1", "step2", "step3"],
-  "inferenceAnalysis": "analysis of how this aim addresses the reflection themes",
+  "description": "Specific, measurable action for ${frequency} (e.g., 'Practice 5 minutes of mindfulness daily' or 'Write one gratitude note each morning')",
+  "whatThisHelpsWith": "Why this specific action matters for their growth",
+  "howToMeasureProgress": ["Concrete step 1", "Concrete step 2", "Concrete step 3"],
+  "inferenceAnalysis": "How this aim connects to themes in their reflection",
   "lcsmInferences": {
-    "encouragement": "first LCSM inference providing encouragement based on the reflection",
-    "guidance": "second LCSM inference providing guidance for their personal journey"
+    "encouragement": "Encouragement recognizing their self-awareness",
+    "guidance": "Guidance for their personal journey"
   }
 }
 
 ${protocolContext}
-
 Value: "${value.name}" (${value.description})
 Frequency: ${frequency}
-${feelingContext}${counselingGuidance ? `Counseling Guidance: ${counselingGuidance}\n\n` : ''}${reflectionAnalysis ? `Reflection Analysis:\nCore Themes: ${reflectionAnalysis.coreThemes.join(', ')}\nLCSW Lens: ${reflectionAnalysis.lcswLens}\nReflective Inquiry: ${reflectionAnalysis.reflectiveInquiry.join('; ')}\nSession Prep: ${reflectionAnalysis.sessionPrep}\n\n` : ''}Deep Reflection:
-${deepReflectionText}
-${hasAnalysis ? `\nReflection Analysis:\n${reflection.split('Reflection Analysis:')[1] || ''}` : ''}
-
-Requirements:
-- Specific and achievable for ${frequency}
-- Aligned with value "${value.name}"
-- Directly addresses the Deep Reflection content
-- inferenceAnalysis: Explain how this aim connects to themes in their reflection
-- lcsmInferences.encouragement: Provide encouragement recognizing their self-awareness and progress
-- lcsmInferences.guidance: Offer guidance to support their personal journey and growth
-- Supports growth and success
-
-Return valid JSON only.`;
+${feelingContext}${reflectionContext}Deep Reflection:
+${deepReflectionText}`;
 
     // Default fallback response (only used if AI model is unavailable)
     const fallbackResponse: GoalSuggestionResponse = await generateFallbackGoalSuggestion(
@@ -1051,34 +1043,74 @@ Return valid JSON only.`;
       console.log('🤖 Calling AI model for goal suggestion (JSON)...');
       const result = await counselingCoachModel(prompt, {
         max_new_tokens: 400, // Increased for inference analysis and LCSM inferences
-        temperature: 0.8,
-        do_sample: true
+        temperature: 0.3, // Lower temperature for more focused, less repetitive output
+        do_sample: true,
+        repetition_penalty: 1.3 // Penalize repetition to prevent prompt text loops
       });
 
       const generatedText = result[0]?.generated_text || '';
-      const extracted = generatedText.replace(prompt, '').trim();
+      
+      // Remove the prompt from the beginning if present
+      let extracted = generatedText.replace(prompt, '').trim();
+      
+      // Remove common prompt artifacts
+      extracted = extracted.replace(/^Analyze the Deep Reflection.*?$/im, '').trim();
+      extracted = extracted.replace(/^Return ONLY valid JSON.*?$/im, '').trim();
+      extracted = extracted.replace(/^Return valid JSON only.*?$/im, '').trim();
+      
+      // Check if response contains prompt text (counseling guidance repetition, requirements, etc.)
+      const hasPromptText = /The client's purpose|help the client remember|provide structured reflection|provide psychoeducation|support value-based living|Requirements?:|Specific and achievable|Aligned with value/i.test(extracted);
+      if (hasPromptText) {
+        console.warn('⚠️ AI returned prompt text instead of goal, rejecting response');
+        // Try to extract JSON that might come after the prompt text
+        const afterPrompt = extracted.split(/Requirements?:|The client's purpose/i)[1] || extracted;
+        extracted = afterPrompt.trim();
+      }
       
       // Try to parse JSON from response
       const jsonMatch = extracted.match(/\{[\s\S]*\}/);
       if (jsonMatch) {
         try {
           const jsonResponse: GoalSuggestionResponse = JSON.parse(jsonMatch[0]);
-          console.log('✅ AI-generated JSON goal suggestion received');
-          // Format JSON to markdown for backward compatibility (React will handle formatting later)
-          return formatGoalSuggestionJSON(jsonResponse);
+          
+          // Validate that we got actual goal content, not placeholders or prompt text
+          const hasValidDescription = jsonResponse.description && 
+            jsonResponse.description.length > 20 && 
+            !jsonResponse.description.includes('[Summarize') &&
+            !jsonResponse.description.includes('what they\'ll do') &&
+            !jsonResponse.description.includes('The client') &&
+            !jsonResponse.description.includes('help the client remember');
+          
+          if (hasValidDescription && jsonResponse.whatThisHelpsWith && jsonResponse.howToMeasureProgress?.length > 0) {
+            console.log('✅ AI-generated JSON goal suggestion received');
+            // Cache the result
+            await setCachedResponse(cacheKey, { goalSuggestion: formatGoalSuggestionJSON(jsonResponse) });
+            // Format JSON to markdown for backward compatibility (React will handle formatting later)
+            return formatGoalSuggestionJSON(jsonResponse);
+          } else {
+            console.warn('⚠️ AI returned placeholder or invalid goal content in JSON');
+          }
         } catch (parseError) {
-          console.warn('Failed to parse JSON response, using fallback');
+          console.warn('Failed to parse JSON response:', parseError);
         }
       }
       
-      // If JSON parsing failed, try to use raw response if it looks reasonable
+      // If JSON parsing failed, check if raw response looks like prompt text
       if (extracted && extracted.length > 20) {
-        console.warn('⚠️ AI returned non-JSON response, using as-is');
-        return extracted;
-      } else {
-        console.warn('⚠️ AI model returned empty or invalid response, using fallback');
-        return fallbackResponse;
+        // Reject if it looks like prompt text
+        if (hasPromptText || /The client's purpose|help the client remember|Requirements?:/i.test(extracted)) {
+          console.warn('⚠️ Rejecting response that looks like prompt text');
+          // Don't return this - use fallback instead
+        } else {
+          console.warn('⚠️ AI returned non-JSON response, using as-is');
+          return extracted;
+        }
       }
+      
+      // Use fallback if all validation fails
+      console.warn('⚠️ AI model returned invalid response, using fallback');
+      await setCachedResponse(cacheKey, { goalSuggestion: formatGoalSuggestionJSON(fallbackResponse) });
+      return formatGoalSuggestionJSON(fallbackResponse);
     } catch (error) {
       console.error('❌ Goal suggestion inference failed:', error);
       
@@ -1095,27 +1127,63 @@ Return valid JSON only.`;
             console.log('✅ Model reloaded, retrying goal suggestion...');
             const retryResult = await reloadedModel(prompt, {
               max_new_tokens: 400, // Increased for inference analysis and LCSM inferences
-              temperature: 0.8,
-              do_sample: true
+              temperature: 0.3, // Lower temperature for more focused, less repetitive output
+              do_sample: true,
+              repetition_penalty: 1.3 // Penalize repetition to prevent prompt text loops
             });
               const retryText = retryResult[0]?.generated_text || '';
-              const retryExtracted = retryText.replace(prompt, '').trim();
+              
+              // Remove the prompt from the beginning if present
+              let retryExtracted = retryText.replace(prompt, '').trim();
+              
+              // Remove common prompt artifacts
+              retryExtracted = retryExtracted.replace(/^Analyze the Deep Reflection.*?$/im, '').trim();
+              retryExtracted = retryExtracted.replace(/^Return ONLY valid JSON.*?$/im, '').trim();
+              retryExtracted = retryExtracted.replace(/^Return valid JSON only.*?$/im, '').trim();
+              
+              // Check if response contains prompt text
+              const retryHasPromptText = /The client's purpose|help the client remember|provide structured reflection|Requirements?:|Specific and achievable/i.test(retryExtracted);
+              if (retryHasPromptText) {
+                console.warn('⚠️ Retry AI returned prompt text instead of goal, rejecting response');
+                const afterPrompt = retryExtracted.split(/Requirements?:|The client's purpose/i)[1] || retryExtracted;
+                retryExtracted = afterPrompt.trim();
+              }
               
               // Try to parse JSON from retry
               const retryJsonMatch = retryExtracted.match(/\{[\s\S]*\}/);
               if (retryJsonMatch) {
                 try {
                   const retryJsonResponse: GoalSuggestionResponse = JSON.parse(retryJsonMatch[0]);
-                  console.log('✅ AI-generated JSON goal suggestion received after reload');
-                  return formatGoalSuggestionJSON(retryJsonResponse);
+                  
+                  // Validate that we got actual goal content
+                  const retryHasValidDescription = retryJsonResponse.description && 
+                    retryJsonResponse.description.length > 20 && 
+                    !retryJsonResponse.description.includes('[Summarize') &&
+                    !retryJsonResponse.description.includes('what they\'ll do') &&
+                    !retryJsonResponse.description.includes('The client');
+                  
+                  if (retryHasValidDescription && retryJsonResponse.whatThisHelpsWith && retryJsonResponse.howToMeasureProgress?.length > 0) {
+                    console.log('✅ AI-generated JSON goal suggestion received after reload');
+                    await setCachedResponse(cacheKey, { goalSuggestion: formatGoalSuggestionJSON(retryJsonResponse) });
+                    return formatGoalSuggestionJSON(retryJsonResponse);
+                  } else {
+                    console.warn('⚠️ Retry AI returned placeholder or invalid goal content');
+                  }
                 } catch (parseError) {
-                  console.warn('Failed to parse retry JSON response');
+                  console.warn('Failed to parse retry JSON response:', parseError);
                 }
               }
               
+              // If JSON parsing failed, check if raw response looks like prompt text
               if (retryExtracted && retryExtracted.length > 20) {
-                console.log('✅ AI-generated goal suggestion received after reload (non-JSON)');
-                return retryExtracted;
+                // Reject if it looks like prompt text
+                if (retryHasPromptText || /The client's purpose|help the client remember|Requirements?:/i.test(retryExtracted)) {
+                  console.warn('⚠️ Rejecting retry response that looks like prompt text');
+                  // Don't return this - use fallback instead
+                } else {
+                  console.log('✅ AI-generated goal suggestion received after reload (non-JSON)');
+                  return retryExtracted;
+                }
               }
           }
         } catch (retryError) {
