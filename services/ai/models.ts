@@ -449,25 +449,26 @@ export async function initializeModels(forceReload: boolean = false, modelType?:
       
       // Configure transformers.js for browser use
       try {
-        env.allowLocalModels = true;
+        const isDev = import.meta.env.DEV;
+        const isWebProduction = !isDev && (typeof window !== 'undefined' && !('__TAURI__' in window));
+
         env.useBrowserCache = true;
         env.useCustomCache = false;
-        
-        // Configure model loading - use local bundled models in production, HuggingFace in dev
-        // Models are bundled in public/models/ during build for instant loading
-        // If local model not available, transformers.js will try HuggingFace as fallback
-        const isDev = import.meta.env.DEV;
         env.cacheDir = './models-cache'; // Virtual path - actual storage is IndexedDB
-        env.useBrowserCache = true; // Enable IndexedDB caching
-        env.allowRemoteModels = true; // Allow HuggingFace as fallback if local model not found
+        env.allowRemoteModels = true; // Allow HuggingFace as fallback
         
-        if (!isDev) {
-          // Only show this message in production
-        console.log('📦 Using local bundled models from /models/ directory');
-        console.log('📦 Will fallback to HuggingFace if local model not available');
+        if (isWebProduction) {
+          env.allowLocalModels = false; // Forces download from Hugging Face for web production
+          console.log('📦 Web Production: forcing HuggingFace download (allowLocalModels=false)');
         } else {
-          // In dev mode, we're using HuggingFace directly
-          console.log('📦 Development mode: Downloading models from HuggingFace');
+          env.allowLocalModels = true; // Allow local models for Tauri or Dev
+          if (!isDev) {
+            console.log('📦 Using local bundled models from /models/ directory');
+            console.log('📦 Will fallback to HuggingFace if local model not available');
+          } else {
+            // In dev mode, we're using HuggingFace directly
+            console.log('📦 Development mode: Downloading models from HuggingFace');
+          }
         }
       } catch (configError) {
         console.warn('Could not configure transformers environment, using defaults:', configError);
