@@ -123,6 +123,13 @@ export default defineConfig({
       // Mock Tauri APIs in web builds to prevent import errors
       ...(!isTauriBuild ? {
         '@tauri-apps/api/core': path.resolve(__dirname, 'src/mocks/empty-tauri.ts'),
+        '@tauri-apps/api/event': path.resolve(__dirname, 'src/mocks/empty-tauri.ts'),
+        '@tauri-apps/api/fs': path.resolve(__dirname, 'src/mocks/empty-tauri.ts'),
+        '@tauri-apps/api/path': path.resolve(__dirname, 'src/mocks/empty-tauri.ts'),
+        '@tauri-apps/api/shell': path.resolve(__dirname, 'src/mocks/empty-tauri.ts'),
+        '@tauri-apps/api/webview': path.resolve(__dirname, 'src/mocks/empty-tauri.ts'),
+        '@tauri-apps/api/webviewWindow': path.resolve(__dirname, 'src/mocks/empty-tauri.ts'),
+        '@tauri-apps/api/window': path.resolve(__dirname, 'src/mocks/empty-tauri.ts'),
         '@tauri-apps/api/cli': path.resolve(__dirname, 'src/mocks/empty-tauri.ts'),
         '@tauri-apps/plugin-store': path.resolve(__dirname, 'src/mocks/empty-tauri.ts'),
         '@tauri-apps/plugin-notification': path.resolve(__dirname, 'src/mocks/empty-tauri.ts'),
