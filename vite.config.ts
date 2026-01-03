@@ -120,6 +120,14 @@ export default defineConfig({
   resolve: {
     alias: {
       '@': path.resolve(__dirname, 'src'), // Alias @ to src directory
+      // Mock Tauri APIs in web builds to prevent import errors
+      ...(!isTauriBuild ? {
+        '@tauri-apps/api/core': path.resolve(__dirname, 'src/mocks/empty-tauri.ts'),
+        '@tauri-apps/api/cli': path.resolve(__dirname, 'src/mocks/empty-tauri.ts'),
+        '@tauri-apps/plugin-store': path.resolve(__dirname, 'src/mocks/empty-tauri.ts'),
+        '@tauri-apps/plugin-notification': path.resolve(__dirname, 'src/mocks/empty-tauri.ts'),
+        '@tauri-apps/plugin-deep-link': path.resolve(__dirname, 'src/mocks/empty-tauri.ts'),
+      } : {})
     },
     dedupe: ['react', 'react-dom']
   },
