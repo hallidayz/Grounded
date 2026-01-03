@@ -193,7 +193,7 @@ export default defineConfig({
       include: [/node_modules/],
       transformMixedEsModules: true
     },
-    minify: 'esbuild',
+    minify: false, // Explicitly disable minification to fix transformers initialization (ortWeb_min)
     target: 'es2020',
     cssCodeSplit: true, 
     rollupOptions: {
@@ -222,13 +222,16 @@ export default defineConfig({
         manualChunks: (id) => {
           // Keep critical chunking logic but simplify if necessary
           if (id.includes('node_modules')) {
-            // Put ONNX Runtime and related deps in vendor FIRST (must load before transformers)
-            if (id.includes('onnxruntime-web') || id.includes('onnxruntime') || id.includes('dexie') || id.includes('dexie-react-hooks')) {
-              return 'vendor'; 
+            // Put ONNX Runtime in its own chunk to prevent initialization errors
+            if (id.includes('onnxruntime-web') || id.includes('onnxruntime')) {
+              return 'onnx'; 
             }
             // Put transformers in its own chunk (loads after vendor)
             if (id.includes('@xenova/transformers')) {
               return 'transformers';
+            }
+            if (id.includes('dexie') || id.includes('dexie-react-hooks')) {
+              return 'db-vendor';
             }
             if (id.includes('react') || id.includes('react-dom')) return 'react-vendor';
             if (id.includes('framer-motion')) return 'animations';
