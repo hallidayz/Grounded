@@ -80,81 +80,27 @@ export default defineConfig({
     fixOnnxPlugin(), // Add the new ONNX fix plugin
     ...(isTauriBuild ? [Tauri()] : []),
     excludeModelsPlugin(),
-    VitePWA({
-      registerType: 'autoUpdate',
-      // Ensure all needed assets are included
-      includeAssets: ['favicon.svg', 'robots.txt', 'apple-touch-icon.png', 'mask-icon.svg'],
-      filename: 'manifest.js', 
-      strategies: 'generateSW',
-      injectRegister: 'script', // Changed from 'auto' to 'script' to simplify injection
-      manifest: {
-        name: 'Grounded',
-        short_name: 'Grounded',
-        theme_color: '#4F46E5',
-        background_color: '#F9FAFB',
-        display: 'standalone',
-        start_url: '/',
-        icons: [
-          { src: '/icons/icon-192x192.png', sizes: '192x192', type: 'image/png' },
-          { src: '/icons/icon-512x512.png', sizes: '512x512', type: 'image/png' },
-          { src: '/icons/apple-touch-icon.png', sizes: '180x180', type: 'image/png', purpose: 'apple touch icon' },
-          { src: '/icons/mask-icon.svg', sizes: 'any', purpose: 'maskable' },
-        ],
-      },
-      workbox: {
-        globPatterns: ['**/*.{js,css,html,ico,png,svg,woff2,json,webmanifest}'],
-        maximumFileSizeToCacheInBytes: 5 * 1024 * 1024,
-        skipWaiting: true,
-        clientsClaim: true,
-        runtimeCaching: [
-          {
-            urlPattern: /^https:\/\/esm\.sh\/.*/i,
-            handler: 'NetworkFirst',
-            options: {
-              cacheName: 'esm-cache',
-              expiration: {
-                maxEntries: 50,
-                maxAgeSeconds: 60 * 60 * 24 * 7,
-                purgeOnQuotaError: true
-              }
-            }
-          },
-          {
-            urlPattern: /^https:\/\/.*huggingface\.co\/.*/i,
-            handler: 'CacheFirst',
-            options: {
-              cacheName: 'huggingface-models-cache',
-              expiration: {
-                maxEntries: 100,
-                maxAgeSeconds: 60 * 60 * 24 * 365,
-                purgeOnQuotaError: true
-              },
-              cacheableResponse: {
-                statuses: [0, 200]
-              }
-            }
-          },
-          {
-            urlPattern: /\.(onnx|bin|safetensors|json|txt)$/i,
-            handler: 'CacheFirst',
-            options: {
-              cacheName: 'ai-models-cache',
-              expiration: {
-                maxEntries: 200,
-                maxAgeSeconds: 60 * 60 * 24 * 365,
-                purgeOnQuotaError: true
-              },
-              cacheableResponse: {
-                statuses: [0, 200]
-              }
-            }
-          }
-        ]
-      },
-      devOptions: {
-        enabled: false
-      }
-    })
+    // VitePWA({
+    //   registerType: 'autoUpdate',
+    //   injectRegister: 'auto',
+    //   strategies: 'injectManifest',
+    //   srcDir: 'src',
+    //   filename: 'sw.js',
+    //   manifest: {
+    //     name: 'Grounded',
+    //     short_name: 'Grounded',
+    //     theme_color: '#4F46E5',
+    //     background_color: '#F9FAFB',
+    //     display: 'standalone',
+    //     start_url: '/',
+    //     icons: [
+    //       { src: '/icons/icon-192x192.png', sizes: '192x192', type: 'image/png' },
+    //       { src: '/icons/icon-512x512.png', sizes: '512x512', type: 'image/png' },
+    //       { src: '/icons/apple-touch-icon.png', sizes: '180x180', type: 'image/png', purpose: 'apple touch icon' },
+    //       { src: '/icons/mask-icon.svg', sizes: 'any', purpose: 'maskable' },
+    //     ],
+    //   }
+    // })
   ],
   resolve: {
     alias: {

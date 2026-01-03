@@ -77,6 +77,13 @@
       // Keep the current app's service worker to enable PWA installation
       (function() {
         if ('serviceWorker' in navigator) {
+          // Register our service worker
+          navigator.serviceWorker.register('/sw.js').then(function(registration) {
+            console.log('Service Worker registered with scope:', registration.scope);
+          }).catch(function(err) {
+            console.error('Service Worker registration failed:', err);
+          });
+
           navigator.serviceWorker.getRegistrations().then(function(registrations) {
             const currentOrigin = window.location.origin;
             for(let registration of registrations) {
