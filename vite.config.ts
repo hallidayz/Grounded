@@ -213,11 +213,17 @@ export default defineConfig({
         warn(warning);
       },
       output: {
+        // Explicit file naming to avoid Rollup placeholder errors (!~{007}~)
+        entryFileNames: "assets/[name]-[hash].js",
+        chunkFileNames: "assets/[name]-[hash].js",
+        assetFileNames: "assets/[name]-[hash].[ext]",
+        
         manualChunks: (id) => {
+          // Keep critical chunking logic but simplify if necessary
           if (id.includes('node_modules')) {
             // Put ONNX Runtime and related deps in vendor FIRST (must load before transformers)
             if (id.includes('onnxruntime-web') || id.includes('onnxruntime') || id.includes('dexie') || id.includes('dexie-react-hooks')) {
-              return 'vendor'; // Added dexie and dexie-react-hooks to vendor
+              return 'vendor'; 
             }
             // Put transformers in its own chunk (loads after vendor)
             if (id.includes('@xenova/transformers')) {
@@ -225,14 +231,14 @@ export default defineConfig({
             }
             if (id.includes('react') || id.includes('react-dom')) return 'react-vendor';
             if (id.includes('framer-motion')) return 'animations';
+            
+            // Allow other modules to be chunked automatically by Rollup/Vite
+            // Returning 'vendor' for everything else can sometimes cause circular deps if not careful
+            // But we'll keep it for now as it was working before the placeholders appeared
             return 'vendor';
           }
           if (id.includes('services/ai/')) return 'ai-services';
-        },
-        chunkFileNames: (chunkInfo) =>
-          chunkInfo.name === 'transformers'
-            ? 'assets/transformers-[hash].js'
-            : 'assets/[name]-[hash].js'
+        }
       }
     },
     chunkSizeWarningLimit: 1000,
