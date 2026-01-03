@@ -273,7 +273,11 @@ const ReflectionForm: React.FC<ReflectionFormProps> = ({
                     analysisText = '';
                   }
                   
-                  return <MarkdownRenderer>{analysisText}</MarkdownRenderer>;
+                  return (
+                    <div className="whitespace-pre-wrap leading-relaxed">
+                      {analysisText}
+                    </div>
+                  );
                 })()}
               </div>
             </div>

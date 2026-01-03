@@ -609,7 +609,7 @@ export async function initializeModels(forceReload: boolean = false, modelType?:
         const pipelineOptions: any = {
           quantized: true,
           progress_callback: progressCallback,
-          device: preferredDevice // Use best available device (gpu or cpu)
+          // device: preferredDevice // REMOVED: Explicit device setting can cause offset errors in some WASM environments
         };
         
         console.log(`[MODEL_DEBUG] Loading model with ${deviceReason}`);
