@@ -129,10 +129,10 @@ export default defineConfig({
     cssCodeSplit: true, 
     rollupOptions: {
       external: isTauriBuild ? [] : [
-        '@tauri-apps/api/core',
-        '@tauri-apps/api/cli',
-        '@tauri-apps/plugin-store',
-        '@tauri-apps/plugin-notification'
+        // '@tauri-apps/api/core', // Do not externalize, let code handling deal with it
+        // '@tauri-apps/api/cli',
+        // '@tauri-apps/plugin-store',
+        // '@tauri-apps/plugin-notification'
       ],
       onwarn(warning, warn) {
         if (warning.code === 'EVAL' && warning.id?.includes('onnxruntime-web')) return;
