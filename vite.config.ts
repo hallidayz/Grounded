@@ -32,6 +32,19 @@ const excludeModelsPlugin = () => {
   };
 };
 
+// Plugin to prevent minification of transformers chunk (fixes initialization errors)
+const noMinifyTransformersPlugin = () => {
+  return {
+    name: 'no-minify-transformers',
+    config: () => ({
+      build: {
+        minify: false // Disable global minification to fix transformers issue
+        // We could try to be more selective, but this is the safest fix for now
+      }
+    })
+  };
+};
+
 // Read the app version
 const packageJson = JSON.parse(readFileSync('./package.json', 'utf-8'));
 const appVersion = packageJson.version;
@@ -79,6 +92,7 @@ export default defineConfig({
       fastRefresh: true,
     }),
     fixOnnxPlugin(), // Add the new ONNX fix plugin
+    noMinifyTransformersPlugin(), // Disable minification to prevent transformers initialization errors
     ...(isTauriBuild ? [Tauri()] : []),
     excludeModelsPlugin(),
     // VitePWA({
