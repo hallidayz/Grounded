@@ -278,9 +278,21 @@ export async function analyzeReflection(
       return JSON.parse(cached.reflectionAnalysis); // Return parsed JSON
     }
 
+    // Build protocol context for prompt
+    const protocolContext = protocols.length > 0 
+      ? `The user is working with an LCSW using ${protocols.join(', ')} protocols.`
+      : 'The user is working with a licensed clinical social worker.';
+    
+    // Build previous analysis context if refreshing
+    const previousContext = previousAnalysis
+      ? `\nPrevious analysis context (user wants a fresh perspective):\nCore Themes: ${previousAnalysis.coreThemes.join(', ')}\nLCSW Lens: ${previousAnalysis.lcswLens}\n\nProvide a different perspective or deeper insight.`
+      : '';
+
     // Optimized Prompt for LaMini-Flan-T5 (Schema-Only)
     const prompt = `User Reflection: "${reflection}"
 Mood: ${emotionalState || 'unknown'} (${selectedFeeling || 'general'})
+Goal Frequency: ${frequency}
+${protocolContext}${previousContext}
 
 Analyze the reflection above and output the following sections:
 
@@ -922,6 +934,11 @@ export async function suggestGoal(
       ? reflection.split('Deep Reflection:')[1]?.split('Reflection Analysis:')[0]?.trim() || reflection
       : reflection;
     
+    // Build protocol context for prompt
+    const protocolContext = protocols.length > 0 
+      ? `The user is working with an LCSW using ${protocols.join(', ')} protocols.`
+      : 'The user is working with a licensed clinical social worker.';
+    
     // Optimized JSON prompt for on-device LLM with inference analysis and LCSM inferences
     const prompt = `Analyze the Deep Reflection and suggest a Self-Advocacy Aim. Return ONLY valid JSON (no markdown, no extra text):
 
@@ -935,6 +952,8 @@ export async function suggestGoal(
     "guidance": "second LCSM inference providing guidance for their personal journey"
   }
 }
+
+${protocolContext}
 
 Value: "${value.name}" (${value.description})
 Frequency: ${frequency}

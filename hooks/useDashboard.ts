@@ -730,6 +730,27 @@ export function useDashboard(
   const handleCommit = useCallback(async (valueId: string) => {
     if (!reflectionText.trim() && !goalText.trim()) return;
 
+    // Ensure analysis exists (auto-generate if user skipped "Save/Analyze")
+    let finalAnalysisObj = rawReflectionAnalysis;
+    let finalAnalysisString = reflectionAnalysis;
+
+    if (!finalAnalysisObj && reflectionText.trim()) {
+      try {
+        console.log('🤖 Auto-generating analysis for commit...');
+        finalAnalysisObj = await analyzeReflection(
+          reflectionText,
+          goalFreq,
+          lcswConfig,
+          emotionalState,
+          selectedFeeling,
+          null
+        );
+        finalAnalysisString = JSON.stringify(finalAnalysisObj);
+      } catch (error) {
+        console.warn('Auto-analysis error:', error);
+      }
+    }
+
     const combinedText = `${reflectionText} ${goalText}`.trim();
     const crisisCheck = detectCrisis(combinedText, lcswConfig);
     
@@ -771,7 +792,7 @@ export function useDashboard(
       mood: guideMood,
       type: goalText.trim() ? 'goal-update' : 'standard',
       deepReflection: reflectionText.trim() || undefined,
-      reflectionAnalysis: reflectionAnalysis ? JSON.stringify(reflectionAnalysis) : undefined,
+      reflectionAnalysis: finalAnalysisString || undefined,
       emotionalState: emotionalState,
       selectedFeeling: selectedFeeling || undefined,
       selfAdvocacy: goalText.trim() || undefined,
@@ -796,7 +817,7 @@ export function useDashboard(
         const jsonOut = JSON.stringify({
           encouragement: encouragementText || '',
           focusLens: coachInsight || '',
-          reflectionAnalysis: reflectionAnalysis || null,
+          reflectionAnalysis: finalAnalysisObj || null,
           goalSuggestion: goalText.trim() || null
         });
         
@@ -811,7 +832,7 @@ export function useDashboard(
           reflection: reflectionText.trim(),
           selfAdvocacy: goalText.trim(),
           frequency: goalFreq,
-          jsonAssessment: reflectionAnalysis ? JSON.stringify(reflectionAnalysis) : '',
+          jsonAssessment: finalAnalysisObj ? JSON.stringify(finalAnalysisObj) : '',
           // Legacy fields
           emotionalState: emotionalState as any,
           selectedFeeling: selectedFeeling || null,

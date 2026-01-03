@@ -111,3 +111,35 @@ npm run download:models
 
 This downloads models to `public/models/` without building.
 
+## AI Interaction Lifecycle (User Workflow)
+
+The application follows a specific "scaffolding" sequence designed to mirror a therapeutic session, moving from broad emotional support to specific actionable outcomes.
+
+### 1. Emotional Check-in (The "Hello")
+*   **Trigger**: User taps an emotion (e.g., "Heavy", "Energized").
+*   **AI Action**: `generateEmotionalEncouragement`
+*   **Output**: A brief, validating message (e.g., "It's okay to feel this way. Take a moment to breathe.") to acknowledge the user's state.
+
+### 2. Focus Lens (The "Context")
+*   **Trigger**: User selects a Core Value (e.g., "Integrity", "Health").
+*   **AI Action**: `generateFocusLens`
+*   **Output**: A contextual prompt connecting their current mood to the chosen value (e.g., "How does [Value] look when you are feeling [Mood]?").
+
+### 3. Deep Reflection (The "Work")
+*   **Trigger**: User types their reflection and clicks **Save** (or the AI analyzes automatically on Commit).
+*   **AI Action**: `analyzeReflection` (Using "Schema-Only" prompt)
+*   **Output**: A structured analysis providing:
+    *   **Core Themes**: Key topics identified.
+    *   **LCSW Lens**: A therapeutic perspective.
+    *   **Reflective Inquiry**: A question to deepen thinking.
+    *   **Session Prep**: What to bring to therapy.
+
+### 4. Self-Advocacy Aim (The "Plan")
+*   **Trigger**: User clicks **"Suggest"** on the Goal card.
+*   **AI Action**: `suggestGoal` (Contextualized by `generateCounselingGuidance`)
+*   **Output**: A specific, measurable micro-goal (The "Aim") derived directly from their reflection and analysis.
+
+### 5. Clinical Reporting (The "Synthesis")
+*   **Trigger**: User clicks **"Generate Report"** in the Reports tab.
+*   **AI Action**: `generateHumanReports`
+*   **Output**: A comprehensive summary (SOAP, DAP, BIRP formats) aggregating all the individual reflections and goals into a clinical narrative for the therapist.

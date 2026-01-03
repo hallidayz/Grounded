@@ -10,6 +10,64 @@ import { initializeModels, getCounselingCoachModel, getIsModelLoading, getMoodTr
 import { detectCrisis } from "./crisis";
 
 /**
+ * Helper to format analysis data for reports
+ * Handles both JSON objects (new) and Markdown strings (old)
+ * Cleans up formatting issues
+ */
+function formatAnalysisForReport(analysis: any): string {
+  if (!analysis) return '';
+  
+  let content = analysis;
+  
+  // Try to parse if it's a JSON string
+  if (typeof content === 'string') {
+    if (content.trim().startsWith('{') || content.trim().startsWith('[')) {
+      try {
+        content = JSON.parse(content);
+      } catch (e) {
+        // Not valid JSON, treat as string
+      }
+    }
+  }
+  
+  // If it's an object (new format), format as structured text
+  if (typeof content === 'object' && content !== null) {
+    const { coreThemes, lcswLens, reflectiveInquiry, sessionPrep } = content;
+    let text = '';
+    
+    if (coreThemes && Array.isArray(coreThemes) && coreThemes.length > 0) {
+      text += `Core Themes: ${coreThemes.join(', ')}\n`;
+    }
+    
+    if (lcswLens) {
+      text += `LCSW Lens: ${lcswLens}\n`;
+    }
+    
+    if (reflectiveInquiry && Array.isArray(reflectiveInquiry) && reflectiveInquiry.length > 0) {
+      text += `Inquiry: ${reflectiveInquiry.join(' ')}\n`;
+    }
+    
+    if (sessionPrep) {
+      text += `Session Prep: ${sessionPrep}\n`;
+    }
+    
+    return text.trim();
+  }
+  
+  // If it's a string (old Markdown format), clean it up
+  if (typeof content === 'string') {
+    // Fix common formatting corruptions (e.g. 'n-' instead of '\n-')
+    return content
+      .replace(/\\n/g, '\n') // Fix escaped newlines
+      .replace(/([a-z0-9])n-/gi, '$1\n-') // Fix 'textn-' -> 'text\n-'
+      .replace(/n##/g, '\n##') // Fix 'n##' -> '\n##'
+      .replace(/nn##/g, '\n\n##'); // Fix 'nn##' -> '\n\n##'
+  }
+  
+  return String(content);
+}
+
+/**
  * Model A: Mental State Tracker
  * Analyzes journals and reflections to assess mood, anxiety, depression severity
  * Returns structured assessment similar to MoPHES framework
@@ -172,7 +230,7 @@ export function generateFallbackReport(logs: LogEntry[], values: ValueItem[]): s
     }
     
     if (log.reflectionAnalysis) {
-      detailedEntries += `\nSuggested Next Steps:\n${log.reflectionAnalysis}\n`;
+      detailedEntries += `\nSuggested Next Steps:\n${formatAnalysisForReport(log.reflectionAnalysis)}\n`;
     }
     
     if (log.emotionalState) {
@@ -287,7 +345,7 @@ export async function generateHumanReports(
       
       // Include suggested next steps (reflectionAnalysis)
       if (l.reflectionAnalysis) {
-        entry += `\n  Suggested Next Steps: ${l.reflectionAnalysis}`;
+        entry += `\n  Suggested Next Steps: ${formatAnalysisForReport(l.reflectionAnalysis)}`;
       }
       
       // Include emotional state and feeling if available
