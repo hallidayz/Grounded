@@ -585,7 +585,8 @@ export async function initializeModels(forceReload: boolean = false, modelType?:
       if (isDev || isWebProduction) {
         // In dev mode or web production, prefer HuggingFace to avoid 404 errors
         // transformers.js will download and cache models automatically
-        console.log(`[MODEL_DEBUG] ${isDev ? 'Development' : 'Web Production'} mode detected - using HuggingFace model: ${huggingfaceModelId}`);
+        // CRITICAL: Must use Xenova/ versions for browser compatibility (ONNX)
+        console.log(`[MODEL_DEBUG] ${isDev ? 'Development' : 'Web Production'} mode detected - using HuggingFace model (Xenova optimized): ${huggingfaceModelId}`);
         modelPath = huggingfaceModelId;
       } else {
         // In Tauri production, try local first
