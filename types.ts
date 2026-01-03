@@ -19,6 +19,7 @@ export interface LogEntry {
   goalText?: string;
   deepReflection?: string; // The user's deep reflection text
   reflectionAnalysis?: string; // The AI-generated analysis
+  selfAdvocacy?: string; // The AI-generated self-advocacy goal
   emotionalState?: 'drained' | 'heavy' | 'overwhelmed' | 'mixed' | 'calm' | 'hopeful' | 'positive' | 'energized'; // 8 emotional states
   selectedFeeling?: string; // Specific feeling word selected
 }
@@ -112,6 +113,7 @@ export interface LCSWConfig {
   emergencyContact?: {
     name: string;
     phone: string;
+    email?: string; // Added email
     notes?: string;
   };
   // Custom homework/worksheets
@@ -162,13 +164,14 @@ export interface FeelingLog {
   timestamp: string; // ISO datetime
   emotion: string; // emotionalState (renamed for consistency)
   subEmotion: string | null; // selectedFeeling (renamed for consistency)
-  jsonIn: string; // JSON string of input to AI
-  jsonOut: string; // JSON string of AI response
-  focusLens: string; // AI-generated focus lens text
-  reflection: string; // User's deep reflection text
-  selfAdvocacy: string; // Self-advocacy aim/goal text
-  frequency: GoalFrequency; // 'daily' | 'weekly' | 'monthly'
-  jsonAssessment: string; // JSON string of reflection analysis
+  jsonIn?: string; // JSON string of input to AI
+  jsonOut?: string; // JSON string of AI response
+  focusLens?: string; // AI-generated focus lens text
+  reflection?: string; // User's deep reflection text
+  selfAdvocacy?: string; // Self-advocacy aim/goal text
+  frequency?: GoalFrequency; // 'daily' | 'weekly' | 'monthly'
+  frequency?: GoalFrequency; // 'daily' | 'weekly' | 'monthly'
+  jsonAssessment?: string; // JSON string of reflection analysis
   // Legacy fields for backward compatibility
   emotionalState?: 'drained' | 'heavy' | 'overwhelmed' | 'mixed' | 'calm' | 'hopeful' | 'positive' | 'energized';
   selectedFeeling?: string | null;

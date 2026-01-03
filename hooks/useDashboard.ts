@@ -1,5 +1,5 @@
 import { useState, useEffect, useRef, useCallback } from 'react';
-import { ValueItem, LogEntry, Goal, GoalFrequency, LCSWConfig, FeelingLog, UserInteraction, Session } from '../types';
+import { ValueItem, LogEntry, Goal, GoalFrequency, LCSWConfig, FeelingLog, UserInteraction, Session, ReflectionAnalysisResponse } from '../types';
 import { EmotionalState, getEmotionalState } from '../services/emotionalStates';
 import { generateEncouragement, generateEmotionalEncouragement, generateValueMantra, suggestGoal, detectCrisis, analyzeReflection, generateFocusLens, generateCounselingGuidance } from '../services/aiService';
 // Force update check - fix stale cache issues
@@ -374,6 +374,9 @@ export function useDashboard(
     }
     
     if (!hasEnoughReflection) {
+      alert('Please share a bit more detail (at least 20 characters) for better AI insights.');
+      return;
+    }
     
     if (!activeValueId) {
       console.warn('No active value selected');
@@ -777,6 +780,8 @@ export function useDashboard(
       const feelingLog: FeelingLog = {
         id: Date.now().toString() + '-feeling',
         timestamp: new Date().toISOString(),
+        emotion: state,
+        subEmotion: selectedFeeling || null,
         emotionalState: state,
         selectedFeeling: selectedFeeling,
         aiResponse: encouragement,
@@ -800,6 +805,8 @@ export function useDashboard(
       const feelingLog: FeelingLog = {
         id: Date.now().toString() + '-feeling',
         timestamp: new Date().toISOString(),
+        emotion: state,
+        subEmotion: selectedFeeling || null,
         emotionalState: state,
         selectedFeeling: selectedFeeling,
         aiResponse: fallbackResponse,

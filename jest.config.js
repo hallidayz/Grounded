@@ -20,6 +20,5 @@ export default {
   ],
   maxWorkers: '50%',
   coverageDirectory: './coverage',
-  collectCoverageFrom: ['src/**/*.{ts,tsx}', '!src/**/*.d.ts'],
   verbose: false,
-
+};
