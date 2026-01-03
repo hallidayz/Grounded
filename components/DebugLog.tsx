@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { generateDebugLog, formatDebugLogForEmail, createEmailWithDebugLog } from '../services/debugLog';
+import { generateDebugLog, formatDebugLogForEmail, createEmailWithDebugLog, clearDebugLog } from '../services/debugLog';
 import type { DebugLog } from '../services/debugLog';
 
 interface DebugLogProps {
@@ -10,6 +10,7 @@ const DebugLogComponent: React.FC<DebugLogProps> = ({ onClose }) => {
   const [log, setLog] = useState<DebugLog | null>(null);
   const [loading, setLoading] = useState(true);
   const [copied, setCopied] = useState(false);
+  const [emailed, setEmailed] = useState(false);
   const [expandedSections, setExpandedSections] = useState<Set<string>>(new Set(['errors', 'warnings']));
 
   useEffect(() => {
@@ -55,6 +56,20 @@ const DebugLogComponent: React.FC<DebugLogProps> = ({ onClose }) => {
     
     const emailLink = createEmailWithDebugLog(log);
     window.location.href = emailLink;
+    setEmailed(true);
+  };
+
+  const handleClear = () => {
+    if (window.confirm("Warning: This will permanently delete all captured debug logs. Are you sure?")) {
+      clearDebugLog();
+      setLoading(true);
+      generateDebugLog().then((debugLog) => {
+        setLog(debugLog);
+        setLoading(false);
+        setCopied(false);
+        setEmailed(false);
+      });
+    }
   };
 
   if (loading) {
@@ -259,6 +274,14 @@ const DebugLogComponent: React.FC<DebugLogProps> = ({ onClose }) => {
             >
               📧 Email Support
             </button>
+            {(copied || emailed) && (
+              <button
+                onClick={handleClear}
+                className="px-4 py-3 bg-red-50 dark:bg-red-900/20 text-red-600 dark:text-red-400 rounded-xl text-xs font-black uppercase tracking-widest hover:bg-red-100 dark:hover:bg-red-900/30"
+              >
+                🗑️ Clear
+              </button>
+            )}
           </div>
           <p className="text-xs text-text-tertiary dark:text-text-tertiary text-center">
             Click "Email Support" to open your email client with the debug log attached

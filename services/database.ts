@@ -1168,6 +1168,31 @@ class DatabaseService {
       request.onerror = () => reject(request.error);
     });
   }
+
+  /**
+   * Export all data for debugging/inspection
+   */
+  async exportAllData(): Promise<any> {
+    const db = await this.ensureDB();
+    const exportData: any = {};
+    const objectStoreNames = Array.from(db.objectStoreNames);
+
+    for (const storeName of objectStoreNames) {
+      try {
+        exportData[storeName] = await new Promise((resolve, reject) => {
+          const transaction = db.transaction([storeName], 'readonly');
+          const store = transaction.objectStore(storeName);
+          const request = store.getAll();
+          request.onsuccess = () => resolve(request.result);
+          request.onerror = () => reject(request.error);
+        });
+      } catch (error) {
+        console.warn(`Failed to export store ${storeName}:`, error);
+        exportData[storeName] = { error: String(error) };
+      }
+    }
+    return exportData;
+  }
 }
 
 export const dbService = new DatabaseService();

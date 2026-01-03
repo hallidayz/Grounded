@@ -1421,6 +1421,7 @@ const App: React.FC = () => {
                 handleUpdateGoals(goals.map(g => g.id === goal.id ? completedGoal : g));
               }}
               onDeleteGoal={(goalId) => handleUpdateGoals(goals.filter(g => g.id !== goalId))}
+              onEditGoal={(goalId, newText) => handleUpdateGoals(goals.map(g => g.id === goalId ? { ...g, text: newText } : g))}
             />
           </Suspense>
         )}

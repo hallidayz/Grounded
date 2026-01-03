@@ -5,6 +5,7 @@ import { generateHumanReports } from '../services/aiService';
 import { shareViaEmail, generateEmailReport, isWebShareAvailable } from '../services/emailService';
 import SkeletonCard from './SkeletonCard';
 import MarkdownRenderer from './MarkdownRenderer';
+import VirtualList from './VirtualList';
 
 interface ReportViewProps {
   logs: LogEntry[];

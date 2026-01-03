@@ -18,6 +18,7 @@ if (typeof globalThis !== 'undefined') {
   
   // Set up the environment configuration
   globalOrt.env = globalOrt.env || {};
+  globalOrt.env.logLevel = 'error'; // Suppress benign warnings
   globalOrt.env.wasm = globalOrt.env.wasm || {};
   
   // Configure WASM backend settings
@@ -454,6 +455,7 @@ export async function initializeModels(forceReload: boolean = false, modelType?:
 
         env.useBrowserCache = true;
         env.useCustomCache = false;
+        env.logLevel = 'error'; // Suppress benign warnings
         env.cacheDir = './models-cache'; // Virtual path - actual storage is IndexedDB
         env.allowRemoteModels = true; // Allow HuggingFace as fallback
         

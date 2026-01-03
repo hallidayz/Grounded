@@ -12,6 +12,7 @@ interface GoalsUpdateViewProps {
   onUpdateGoal: (goalId: string, update: GoalUpdate) => void;
   onCompleteGoal: (goal: Goal) => void;
   onDeleteGoal: (goalId: string) => void;
+  onEditGoal: (goalId: string, newText: string) => void;
 }
 
 const GoalsUpdateView: React.FC<GoalsUpdateViewProps> = ({
@@ -21,9 +22,12 @@ const GoalsUpdateView: React.FC<GoalsUpdateViewProps> = ({
   onUpdateGoal,
   onCompleteGoal,
   onDeleteGoal,
+  onEditGoal,
 }) => {
   const [selectedGoalId, setSelectedGoalId] = useState<string | null>(null);
   const [updateNote, setUpdateNote] = useState('');
+  const [isEditingText, setIsEditingText] = useState(false);
+  const [editedText, setEditedText] = useState('');
   const [selectedMood, setSelectedMood] = useState<'🌱' | '🔥' | '✨' | '🧗' | undefined>(undefined);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [showSuccess, setShowSuccess] = useState(false);
@@ -108,7 +112,7 @@ const GoalsUpdateView: React.FC<GoalsUpdateViewProps> = ({
               return (
                 <button
                   key={goal.id}
-                  onClick={() => setSelectedGoalId(goal.id)}
+                  onClick={() => { setSelectedGoalId(goal.id); setIsEditingText(false); }}
                   className={`
                     bg-white dark:bg-dark-bg-primary p-3 sm:p-4 rounded-xl sm:rounded-2xl border transition-all text-left relative
                     ${isSelected 
@@ -172,13 +176,56 @@ const GoalsUpdateView: React.FC<GoalsUpdateViewProps> = ({
               </button>
             </div>
 
-            <div className="bg-bg-secondary dark:bg-dark-bg-primary/50 rounded-lg sm:rounded-xl p-3 sm:p-4">
-              <div className="text-sm sm:text-base font-bold text-text-primary dark:text-white mb-1">
-                <MarkdownRenderer>{selectedGoal.text}</MarkdownRenderer>
-              </div>
-              <p className="text-xs sm:text-sm text-text-secondary dark:text-white/60">
-                {values.find(v => v.id === selectedGoal.valueId)?.name} • {selectedGoal.frequency}
-              </p>
+            <div className="bg-bg-secondary dark:bg-dark-bg-primary/50 rounded-lg sm:rounded-xl p-3 sm:p-4 relative group">
+              {isEditingText ? (
+                <div className="space-y-2">
+                  <textarea
+                    value={editedText}
+                    onChange={(e) => setEditedText(e.target.value)}
+                    className="w-full p-2 rounded-lg bg-white dark:bg-dark-bg-primary border border-border-soft dark:border-dark-border/30 focus:ring-2 focus:ring-yellow-warm/30 outline-none text-text-primary dark:text-white min-h-[100px] text-sm"
+                  />
+                  <div className="flex gap-2 justify-end">
+                    <button
+                      onClick={() => setIsEditingText(false)}
+                      className="px-3 py-1.5 text-xs font-bold uppercase tracking-wider text-text-secondary hover:text-text-primary"
+                    >
+                      Cancel
+                    </button>
+                    <button
+                      onClick={() => {
+                        if (editedText.trim()) {
+                          onEditGoal(selectedGoal.id, editedText.trim());
+                          setIsEditingText(false);
+                        }
+                      }}
+                      className="px-3 py-1.5 text-xs font-bold uppercase tracking-wider bg-yellow-warm text-text-primary rounded-lg hover:opacity-90"
+                    >
+                      Save Text
+                    </button>
+                  </div>
+                </div>
+              ) : (
+                <>
+                  <button
+                    onClick={() => {
+                      setEditedText(selectedGoal.text);
+                      setIsEditingText(true);
+                    }}
+                    className="absolute top-2 right-2 p-1.5 rounded-full bg-white/50 dark:bg-black/20 text-text-tertiary hover:text-navy-primary dark:hover:text-white opacity-0 group-hover:opacity-100 transition-all"
+                    title="Edit text"
+                  >
+                    <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z" />
+                    </svg>
+                  </button>
+                  <div className="text-sm sm:text-base font-bold text-text-primary dark:text-white mb-1 pr-6">
+                    <MarkdownRenderer>{selectedGoal.text}</MarkdownRenderer>
+                  </div>
+                  <p className="text-xs sm:text-sm text-text-secondary dark:text-white/60">
+                    {values.find(v => v.id === selectedGoal.valueId)?.name} • {selectedGoal.frequency}
+                  </p>
+                </>
+              )}
             </div>
 
             <div className="space-y-4 sm:space-y-6">

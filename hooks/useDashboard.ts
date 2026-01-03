@@ -1,7 +1,8 @@
 import { useState, useEffect, useRef, useCallback } from 'react';
 import { ValueItem, LogEntry, Goal, GoalFrequency, LCSWConfig, FeelingLog, UserInteraction, Session } from '../types';
 import { EmotionalState, getEmotionalState } from '../services/emotionalStates';
-import { generateEncouragement, generateEmotionalEncouragement, generateValueMantra, suggestGoal, detectCrisis, analyzeReflection, generateFocusLens } from '../services/aiService';
+import { generateEncouragement, generateEmotionalEncouragement, generateValueMantra, suggestGoal, detectCrisis, analyzeReflection, generateFocusLens, generateCounselingGuidance } from '../services/aiService';
+// Force update check - fix stale cache issues
 import { shareViaEmail, generateGoalsEmail } from '../services/emailService';
 import { useDebounce } from './useDebounce';
 import { getItem, setItem, removeItem } from '../services/storage';
@@ -33,6 +34,7 @@ export function useDashboard(
   const [coachInsight, setCoachInsight] = useState<string | null>(null);
   const [valueMantra, setValueMantra] = useState<string | null>(null);
   const [reflectionAnalysis, setReflectionAnalysis] = useState<string | null>(null);
+  const [rawReflectionAnalysis, setRawReflectionAnalysis] = useState<ReflectionAnalysisResponse | null>(null);
   const [analyzingReflection, setAnalyzingReflection] = useState(false);
   
   // Encourage section state
@@ -404,7 +406,7 @@ export function useDashboard(
     }
     
     if (!hasFeeling || !hasSubFeeling) {
-      console.warn('Please select both feeling and sub-feeling before analyzing');
+      alert('Please select both feeling and sub-feeling before analyzing');
       return;
     }
     
@@ -426,8 +428,9 @@ export function useDashboard(
         lcswConfig,
         emotionalState,
         selectedFeeling,
-        reflectionAnalysis ? (typeof reflectionAnalysis === 'string' ? JSON.parse(reflectionAnalysis) : reflectionAnalysis) : null // Pass previous analysis as context
+        rawReflectionAnalysis
       );
+      setRawReflectionAnalysis(analysis);
       // Format the analysis response as a string for display
       const formattedAnalysis = `## Core Themes\n${analysis.coreThemes.map(t => `- ${t}`).join('\n')}\n\n## The 'LCSW Lens'\n${analysis.lcswLens}\n\n## Reflective Inquiry\n${analysis.reflectiveInquiry.map(q => `- ${q}`).join('\n')}\n\n## Session Prep\n${analysis.sessionPrep}`;
       setReflectionAnalysis(formattedAnalysis);
@@ -570,8 +573,8 @@ export function useDashboard(
       
       // Always include deep reflection if it exists
       const deepReflectionContext = reflectionText.trim() 
-        ? `${feelingContext}Deep Reflection:\n${reflectionText}\n\n${reflectionAnalysis ? `Reflection Analysis:\n${JSON.stringify(reflectionAnalysis, null, 2)}` : ''}`
-        : feelingContext + (reflectionAnalysis ? JSON.stringify(reflectionAnalysis, null, 2) : '');
+        ? `${feelingContext}Deep Reflection:\n${reflectionText}`
+        : feelingContext;
       
       // Generate counseling guidance to inform goal suggestion
       const counselingGuidance = await generateCounselingGuidance(
@@ -581,8 +584,8 @@ export function useDashboard(
         lcswConfig
       );
       
-      // Parse reflection analysis if it's a string (stored in state as string, but suggestGoal expects object)
-      const parsedAnalysis = reflectionAnalysis ? (typeof reflectionAnalysis === 'string' ? JSON.parse(reflectionAnalysis) : reflectionAnalysis) : null;
+      // Use raw analysis object directly
+      const parsedAnalysis = rawReflectionAnalysis;
       
       const suggestion = await suggestGoal(value, goalFreq, deepReflectionContext, counselingGuidance, lcswConfig, emotionalState, selectedFeeling, parsedAnalysis);
       setGoalText(suggestion);
@@ -841,6 +844,9 @@ export function useDashboard(
     setGoalText('');
     setCoachInsight(null);
     setValueMantra(null);
+    // Clear AI analysis state to prevent stale data
+    setReflectionAnalysis(null);
+    setRawReflectionAnalysis(null);
     setActiveValueId(null);
   }, [reflectionText, goalText, goalFreq, emotionalState, selectedFeeling, guideMood, reflectionAnalysis, lcswConfig, goals, onLog, onUpdateGoals, saveInteraction, endSession]);
 

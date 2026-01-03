@@ -124,6 +124,14 @@ export function initializeDebugLogging() {
 }
 
 /**
+ * Clear all debug logs
+ */
+export function clearDebugLog() {
+  logEntries.length = 0;
+  logEntry('info', 'Debug log cleared by user');
+}
+
+/**
  * Add a log entry
  */
 export function logEntry(level: 'error' | 'warning' | 'info', message: string, details?: any) {

@@ -278,58 +278,16 @@ export async function analyzeReflection(
       return JSON.parse(cached.reflectionAnalysis); // Return parsed JSON
     }
 
-    // Canonical Input Envelope for LaMini-Flan-T5
-    const sessionContext = {
-      mood: emotionalState || undefined,
-      sub_mood: selectedFeeling || undefined,
-      user_reflection: reflection,
-      feedback_request_count: previousAnalysis ? 1 : 0,
-    };
+    // Optimized Prompt for LaMini-Flan-T5 (Schema-Only)
+    const prompt = `User Reflection: "${reflection}"
+Mood: ${emotionalState || 'unknown'} (${selectedFeeling || 'general'})
 
-    // Optimized Prompt for LaMini-Flan-T5 (Orchestrator Pattern)
-    const prompt = `You are a supportive, non-clinical reflection assistant helping users understand their day and practice self-advocacy.
-You are NOT a therapist, you do NOT give diagnoses, treatment, or crisis advice.
+Analyze the reflection above and output the following sections:
 
-You will receive a JSON object named SESSION_CONTEXT.
-Fields may appear in any order and some may be missing.
-Respond ONLY based on the information provided and your general language ability.
-If information is missing, work with what you have; do not invent facts.
-
-SESSION_CONTEXT:
-${JSON.stringify(sessionContext, null, 2)}
-
-Your tasks:
-1. Brief reflection
-   - In 2–3 sentences, reflect back what the user seems to be experiencing, using neutral, non-judgmental language.
-2. Emotion labeling
-   - Name up to 3 emotions you infer from the reflection and mood fields, if present.
-   - If you are unsure, say you are unsure.
-3. Self-advocacy support
-   - Suggest 1–2 gentle questions the user could ask themselves or their clinician.
-4. Feedback pacing
-   - Keep the response short and gently invite the user to reflect more if they want.
-
-Safety and scope:
-- Do NOT provide crisis instructions, diagnosis, or medication advice.
-- If the reflection mentions self-harm, suicidal thoughts, or severe distress, do NOT give advice.
-  Instead, say you are not able to help with crises and encourage them to reach out to their existing supports or crisis resources.
-
-Output format (MUST follow this structure, no extra sections):
-
-REFLECTION:
-<2–3 sentence reflection>
-
-EMOTIONS:
-- emotion_1
-- emotion_2
-- emotion_3
-
-SELF_ADVOCACY:
-<1 short paragraph or 2 short bullet-style sentences>
-
-PACE_NOTE:
-<one sentence about pacing/next step>
-`;
+REFLECTION: [Summarize the user's experience in 2 sentences]
+EMOTIONS: [List 2-3 emotions inferred]
+SELF_ADVOCACY: [Ask 1 gentle question]
+PACE_NOTE: [Give 1 sentence of pacing advice]`;
 
     // Try to get AI model for JSON response
     let counselingCoachModel = getCounselingCoachModel();
@@ -354,11 +312,12 @@ PACE_NOTE:
 
     if (counselingCoachModel) {
       try {
-        console.log('🤖 Calling AI model for reflection analysis (Canonical Envelope)...');
+        console.log('🤖 Calling AI model for reflection analysis (Schema-Only v2 - Forced Update)...');
         const result = await counselingCoachModel(prompt, {
           max_new_tokens: 250,
-          temperature: 0.3,
-          do_sample: true
+          temperature: 0.1,
+          do_sample: true,
+          repetition_penalty: 1.2
         });
 
         const generatedText = result[0]?.generated_text || '';
@@ -395,12 +354,14 @@ PACE_NOTE:
         const paceMatch = generatedText.match(/PACE_NOTE:\s*([\s\S]*?)(?=$)/i);
         if (paceMatch) sections.sessionPrep = paceMatch[1].trim();
 
-        // Validate extraction - if completely empty, something went wrong
-        if (sections.lcswLens || sections.coreThemes.length > 0) {
+        // Validate extraction - check for placeholders or empty content
+        const isPlaceholder = sections.lcswLens.includes('[Summarize') || sections.lcswLens.includes('[List');
+        
+        if (!isPlaceholder && (sections.lcswLens || sections.coreThemes.length > 0)) {
           await setCachedResponse(cacheKey, { reflectionAnalysis: JSON.stringify(sections) });
           return sections;
         } else {
-          console.warn('Failed to parse canonical response, text was:', generatedText);
+          console.warn('Failed to parse canonical response (or detected placeholders), text was:', generatedText);
         }
       } catch (error) {
         console.warn('AI reflection analysis failed:', error);

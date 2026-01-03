@@ -1,6 +1,7 @@
 
 import React, { useState } from 'react';
 import DebugLogComponent from './DebugLog';
+import DatabaseViewer from './DatabaseViewer';
 
 interface HelpOverlayProps {
   onClose: () => void;
@@ -8,6 +9,7 @@ interface HelpOverlayProps {
 
 const HelpOverlay: React.FC<HelpOverlayProps> = ({ onClose }) => {
   const [showDebugLog, setShowDebugLog] = useState(false);
+  const [showDatabaseViewer, setShowDatabaseViewer] = useState(false);
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4 sm:p-6 bg-navy-dark/60 backdrop-blur-sm animate-fade-in">
@@ -128,6 +130,15 @@ const HelpOverlay: React.FC<HelpOverlayProps> = ({ onClose }) => {
                     </svg>
                     Generate Debug Log
                   </button>
+                  <button
+                    onClick={() => setShowDatabaseViewer(true)}
+                    className="w-full mt-2 px-4 py-2 bg-transparent text-navy-primary dark:text-white border-2 border-navy-primary/10 dark:border-white/10 rounded-xl text-xs font-black uppercase tracking-widest hover:bg-navy-primary/5 dark:hover:bg-white/5 flex items-center justify-center gap-2"
+                  >
+                    <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 7v10c0 2.21 3.582 4 8 4s8-1.79 8-4V7M4 7c0 2.21 3.582 4 8 4s8-1.79 8-4M4 7c0-2.21 3.582-4 8-4s8 1.79 8 4m0 5c0 2.21-3.582 4-8 4s-8-1.79-8-4" />
+                    </svg>
+                    View Database
+                  </button>
                 </div>
               </div>
             </div>
@@ -189,6 +200,7 @@ const HelpOverlay: React.FC<HelpOverlayProps> = ({ onClose }) => {
       </div>
       <div className="absolute inset-0 -z-10" onClick={onClose} />
       {showDebugLog && <DebugLogComponent onClose={() => setShowDebugLog(false)} />}
+      {showDatabaseViewer && <DatabaseViewer onClose={() => setShowDatabaseViewer(false)} />}
     </div>
   );
 };
