@@ -45,7 +45,7 @@ const LCSWConfigComponent: React.FC<LCSWConfigProps> = ({ config, onUpdate, onCl
   // AI Model status
   const [modelStatus, setModelStatus] = useState<{ loaded: boolean; loading: boolean; moodTracker: boolean; counselingCoach: boolean } | null>(null);
   const [updatingModel, setUpdatingModel] = useState(false);
-  const [selectedAIModel, setSelectedAIModel] = useState<AIModelType>(settings?.aiModel || 'tinyllama');
+  const [selectedAIModel, setSelectedAIModel] = useState<AIModelType>(settings?.aiModel || 'distilbert');
   
   // Sync selected model with settings when they change
   useEffect(() => {
@@ -1167,7 +1167,7 @@ const LCSWConfigComponent: React.FC<LCSWConfigProps> = ({ config, onUpdate, onCl
                   {updatingModel ? '⏳ Updating...' : modelStatus?.loading ? '⏳ Loading...' : 'Update AI Model'}
                 </button>
                 <p className="text-xs sm:text-sm text-text-tertiary dark:text-text-tertiary text-center">
-                  Recommended: TinyLlama-1.1B (quantized for mobile, publicly available)
+                  Recommended: DistilBERT (faster, specialized for emotion analysis)
                 </p>
                 {!modelStatus?.loaded && !modelStatus?.loading && (
                   <p className="text-xs sm:text-sm text-text-tertiary dark:text-text-tertiary text-center italic">

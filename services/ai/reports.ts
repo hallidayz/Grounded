@@ -261,6 +261,16 @@ export async function generateHumanReports(
       }
     }
 
+    // Calculate mood trends for context
+    const moodCounts: Record<string, number> = {};
+    logs.forEach(l => {
+      const mood = l.mood || l.emotionalState || 'Unknown';
+      moodCounts[mood] = (moodCounts[mood] || 0) + 1;
+    });
+    const moodTrendText = Object.entries(moodCounts)
+      .map(([mood, count]) => `- ${mood}: ${count} entries`)
+      .join('\n');
+
     const summary = logs.map(l => {
       const vName = values.find(v => v.id === l.valueId)?.name || 'General';
       let entry = `[${l.date.split('T')[0]}] Value: ${vName}, Mood: ${l.mood || 'N/A'}`;
@@ -299,6 +309,9 @@ export async function generateHumanReports(
     const prompt = `You are a therapy integration assistant helping synthesize a client's reflection logs for review with their LCSW.
 
 Generate a comprehensive report in SOAP, DAP, and BIRP formats.
+
+Mood Trends Overview:
+${moodTrendText}
       
 Logs:
       ${summary}
@@ -307,6 +320,8 @@ IMPORTANT: For each log entry, include:
 1. Deep Reflection: The user's written reflection content
 2. Committed Action: Any goals or actions the user committed to
 3. Suggested Next Steps: AI-generated recommendations or analysis
+
+Analyze the Mood Trends to provide perspective on the client's emotional state over this period.
 
 Format your response with clear sections for each format. Keep the tone supportive, clinical yet human, and focused on patterns and themes that would be useful for therapy integration.`;
 

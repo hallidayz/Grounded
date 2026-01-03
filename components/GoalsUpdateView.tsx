@@ -3,6 +3,7 @@ import { Goal, ValueItem, GoalUpdate } from '../types';
 import { shareViaEmail, generateGoalsEmail } from '../services/emailService';
 import { LCSWConfig } from '../types';
 import StatusIndicator from './StatusIndicator';
+import MarkdownRenderer from './MarkdownRenderer';
 
 interface GoalsUpdateViewProps {
   goals: Goal[];
@@ -135,9 +136,9 @@ const GoalsUpdateView: React.FC<GoalsUpdateViewProps> = ({
                       size="sm"
                     />
                   </div>
-                  <p className="text-sm sm:text-base font-bold text-text-primary dark:text-white mb-2 sm:mb-3 leading-snug pr-12">
-                    {goal.text}
-                  </p>
+                  <div className="text-sm sm:text-base font-bold text-text-primary dark:text-white mb-2 sm:mb-3 leading-snug pr-12">
+                    <MarkdownRenderer>{goal.text}</MarkdownRenderer>
+                  </div>
                   {goal.updates.length > 0 && (
                     <p className="text-xs text-text-secondary dark:text-white/60">
                       {goal.updates.length} update{goal.updates.length !== 1 ? 's' : ''}
@@ -172,9 +173,9 @@ const GoalsUpdateView: React.FC<GoalsUpdateViewProps> = ({
             </div>
 
             <div className="bg-bg-secondary dark:bg-dark-bg-primary/50 rounded-lg sm:rounded-xl p-3 sm:p-4">
-              <p className="text-sm sm:text-base font-bold text-text-primary dark:text-white mb-1">
-                {selectedGoal.text}
-              </p>
+              <div className="text-sm sm:text-base font-bold text-text-primary dark:text-white mb-1">
+                <MarkdownRenderer>{selectedGoal.text}</MarkdownRenderer>
+              </div>
               <p className="text-xs sm:text-sm text-text-secondary dark:text-white/60">
                 {values.find(v => v.id === selectedGoal.valueId)?.name} • {selectedGoal.frequency}
               </p>
@@ -203,7 +204,7 @@ const GoalsUpdateView: React.FC<GoalsUpdateViewProps> = ({
                       key={mood}
                       onClick={() => setSelectedMood(selectedMood === mood ? undefined : mood)}
                       className={`
-                        p-2 sm:p-3 rounded-lg sm:rounded-xl border-2 transition-all active:scale-95
+                        p-2 sm:p-3 rounded-lg sm:rounded-xl border-2 transition-all active:scale-95 flex flex-col items-center justify-center
                         ${selectedMood === mood
                           ? 'border-yellow-warm bg-yellow-warm/20 dark:bg-yellow-warm/20 shadow-sm scale-105'
                           : 'border-border-soft dark:border-dark-border/30 hover:border-yellow-warm/50 bg-white dark:bg-dark-bg-primary'
@@ -211,6 +212,9 @@ const GoalsUpdateView: React.FC<GoalsUpdateViewProps> = ({
                       `}
                     >
                       <span className="text-xl sm:text-2xl">{mood}</span>
+                      <span className="text-[10px] sm:text-xs font-bold uppercase tracking-wide mt-1 opacity-70 text-text-primary dark:text-white">
+                        {mood === '🌱' ? 'Calm' : mood === '🔥' ? 'Energized' : mood === '✨' ? 'Magical' : 'Hanging on'}
+                      </span>
                     </button>
                   ))}
                 </div>

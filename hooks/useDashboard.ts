@@ -581,7 +581,10 @@ export function useDashboard(
         lcswConfig
       );
       
-      const suggestion = await suggestGoal(value, goalFreq, deepReflectionContext, counselingGuidance, lcswConfig, emotionalState, selectedFeeling, reflectionAnalysis);
+      // Parse reflection analysis if it's a string (stored in state as string, but suggestGoal expects object)
+      const parsedAnalysis = reflectionAnalysis ? (typeof reflectionAnalysis === 'string' ? JSON.parse(reflectionAnalysis) : reflectionAnalysis) : null;
+      
+      const suggestion = await suggestGoal(value, goalFreq, deepReflectionContext, counselingGuidance, lcswConfig, emotionalState, selectedFeeling, parsedAnalysis);
       setGoalText(suggestion);
     } catch (error) {
       console.error("AI Goal Error:", error);

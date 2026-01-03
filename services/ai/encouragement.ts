@@ -263,9 +263,9 @@ export async function analyzeReflection(
 
     const protocols = lcswConfig?.protocols || [];
     
-    // Check cache first
+    // Check cache first - append timestamp if refreshing to bypass cache
     const cacheKey = generateCacheKey(
-      reflection,
+      reflection + (previousAnalysis ? `|refresh-${Date.now()}` : ''),
       emotionalState || null,
       selectedFeeling || null,
       frequency,

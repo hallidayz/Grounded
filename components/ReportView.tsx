@@ -4,7 +4,7 @@ import { LogEntry, ValueItem, LCSWConfig } from '../types';
 import { generateHumanReports } from '../services/aiService';
 import { shareViaEmail, generateEmailReport, isWebShareAvailable } from '../services/emailService';
 import SkeletonCard from './SkeletonCard';
-import VirtualList from './VirtualList';
+import MarkdownRenderer from './MarkdownRenderer';
 
 interface ReportViewProps {
   logs: LogEntry[];
@@ -17,6 +17,33 @@ const ReportView: React.FC<ReportViewProps> = ({ logs, values, lcswConfig }) => 
   const [generatedReport, setGeneratedReport] = useState<string>('');
   const [loading, setLoading] = useState(false);
   const [mode, setMode] = useState<'review' | 'generate'>('review');
+  const [dateRange, setDateRange] = useState<{ type: '7days' | '30days' | 'custom'; start?: string; end?: string }>({ type: '7days' });
+
+  // Effect to auto-select logs when date range changes
+  React.useEffect(() => {
+    const now = new Date();
+    let start = new Date();
+    let end = new Date();
+    start.setHours(0, 0, 0, 0);
+    end.setHours(23, 59, 59, 999);
+    
+    if (dateRange.type === '7days') {
+      start.setDate(now.getDate() - 7);
+    } else if (dateRange.type === '30days') {
+      start.setDate(now.getDate() - 30);
+    } else if (dateRange.type === 'custom' && dateRange.start && dateRange.end) {
+      start = new Date(dateRange.start);
+      end = new Date(dateRange.end);
+      end.setHours(23, 59, 59, 999);
+    }
+
+    const idsInRange = logs.filter(l => {
+      const logDate = new Date(l.date);
+      return logDate >= start && logDate <= end;
+    }).map(l => l.id);
+    
+    setSelectedLogIds(new Set(idsInRange));
+  }, [dateRange, logs]);
 
   const filteredLogs = useMemo(() => {
     return logs.filter(l => selectedLogIds.has(l.id));
@@ -76,6 +103,61 @@ const ReportView: React.FC<ReportViewProps> = ({ logs, values, lcswConfig }) => 
 
       {mode === 'review' ? (
         <div className="grid lg:grid-cols-3 gap-4 sm:gap-6 lg:gap-8">
+          <div className="lg:col-span-3">
+            <div className="flex flex-col sm:flex-row gap-4 p-4 bg-white dark:bg-dark-bg-secondary rounded-2xl border border-border-soft dark:border-dark-border shadow-sm items-center">
+              <div className="flex gap-2 flex-wrap">
+                <button
+                  onClick={() => setDateRange({ type: '7days' })}
+                  className={`px-4 py-2 rounded-xl text-xs font-black uppercase tracking-widest transition-all ${
+                    dateRange.type === '7days' 
+                      ? 'bg-yellow-warm text-navy-primary' 
+                      : 'bg-bg-tertiary dark:bg-dark-bg-tertiary text-text-primary dark:text-white hover:bg-yellow-warm/20'
+                  }`}
+                >
+                  Past 7 Days
+                </button>
+                <button
+                  onClick={() => setDateRange({ type: '30days' })}
+                  className={`px-4 py-2 rounded-xl text-xs font-black uppercase tracking-widest transition-all ${
+                    dateRange.type === '30days' 
+                      ? 'bg-yellow-warm text-navy-primary' 
+                      : 'bg-bg-tertiary dark:bg-dark-bg-tertiary text-text-primary dark:text-white hover:bg-yellow-warm/20'
+                  }`}
+                >
+                  Past 30 Days
+                </button>
+                <button
+                  onClick={() => setDateRange(prev => ({ ...prev, type: 'custom' }))}
+                  className={`px-4 py-2 rounded-xl text-xs font-black uppercase tracking-widest transition-all ${
+                    dateRange.type === 'custom' 
+                      ? 'bg-yellow-warm text-navy-primary' 
+                      : 'bg-bg-tertiary dark:bg-dark-bg-tertiary text-text-primary dark:text-white hover:bg-yellow-warm/20'
+                  }`}
+                >
+                  Custom
+                </button>
+              </div>
+              
+              {dateRange.type === 'custom' && (
+                <div className="flex items-center gap-2">
+                  <input
+                    type="date"
+                    value={dateRange.start || ''}
+                    onChange={(e) => setDateRange(prev => ({ ...prev, start: e.target.value }))}
+                    className="px-3 py-2 rounded-lg bg-bg-tertiary dark:bg-dark-bg-tertiary border border-border-soft dark:border-dark-border text-xs font-medium text-text-primary dark:text-white outline-none focus:ring-2 focus:ring-yellow-warm"
+                  />
+                  <span className="text-text-secondary dark:text-text-secondary text-xs">to</span>
+                  <input
+                    type="date"
+                    value={dateRange.end || ''}
+                    onChange={(e) => setDateRange(prev => ({ ...prev, end: e.target.value }))}
+                    className="px-3 py-2 rounded-lg bg-bg-tertiary dark:bg-dark-bg-tertiary border border-border-soft dark:border-dark-border text-xs font-medium text-text-primary dark:text-white outline-none focus:ring-2 focus:ring-yellow-warm"
+                  />
+                </div>
+              )}
+            </div>
+          </div>
+
           <div className="lg:col-span-2 space-y-3 sm:space-y-4">
             <div className="flex items-center justify-between px-2 mb-2">
               <h3 className="text-xs sm:text-sm font-black text-text-secondary dark:text-text-secondary uppercase tracking-widest">Select your records</h3>
@@ -173,8 +255,8 @@ const ReportView: React.FC<ReportViewProps> = ({ logs, values, lcswConfig }) => 
                 </button>
                 </div>
               </div>
-              <div className="whitespace-pre-wrap font-sans text-text-primary dark:text-white leading-relaxed text-sm sm:text-base lg:text-lg prose prose-slate dark:prose-invert max-w-none clinical-report">
-                {generatedReport}
+              <div className="font-sans text-text-primary dark:text-white leading-relaxed text-sm sm:text-base lg:text-lg prose prose-slate dark:prose-invert max-w-none clinical-report">
+                <MarkdownRenderer>{generatedReport}</MarkdownRenderer>
               </div>
            </div>
            <p className="text-center text-text-tertiary dark:text-text-tertiary text-xs font-medium">These reports are generated on-device using local AI for your personal review. All processing happens on your device for privacy.</p>

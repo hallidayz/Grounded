@@ -64,6 +64,8 @@ export interface EmailSchedule {
   enabled: boolean;
   frequency: 'daily' | 'weekly' | 'monthly';
   time: string; // HH:mm format
+  dayOfWeek?: number; // 0-6 for weekly (0 = Sunday)
+  dayOfMonth?: number; // 1-31 for monthly
   recipientEmails: string[];
   lastSent?: string;
   sendGoalCompletions: boolean;

@@ -1,5 +1,6 @@
 import React, { useCallback } from 'react';
 import { Goal, ValueItem } from '../types';
+import MarkdownRenderer from './MarkdownRenderer';
 
 interface GoalsSectionProps {
   goals: Goal[];
@@ -36,7 +37,7 @@ const GoalsSection: React.FC<GoalsSectionProps> = ({
                 <div className="w-1.5 h-1.5 rounded-full bg-yellow-warm" />
                 <span className="text-xs sm:text-sm font-black text-text-primary/50 dark:text-white/50 uppercase tracking-widest">{val?.name}</span>
               </div>
-              <div className="text-sm sm:text-base font-bold text-text-primary dark:text-white mb-3 sm:mb-4 leading-snug pr-12">{goal.text}</div>
+              <div className="text-sm sm:text-base font-bold text-text-primary dark:text-white mb-3 sm:mb-4 leading-snug pr-12"><MarkdownRenderer>{goal.text}</MarkdownRenderer></div>
               <div className="flex gap-2">
                 <button 
                   onClick={() => onCompleteGoal(goal)}

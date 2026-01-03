@@ -25,6 +25,8 @@ const EmailScheduleComponent: React.FC<EmailScheduleProps> = ({
   const [enabled, setEnabled] = useState(schedule?.enabled || false);
   const [frequency, setFrequency] = useState<EmailSchedule['frequency']>(schedule?.frequency || 'weekly');
   const [time, setTime] = useState(schedule?.time || '09:00');
+  const [dayOfWeek, setDayOfWeek] = useState(schedule?.dayOfWeek ?? 0);
+  const [dayOfMonth, setDayOfMonth] = useState(schedule?.dayOfMonth ?? 1);
   const [recipientEmails, setRecipientEmails] = useState(schedule?.recipientEmails?.join('\n') || '');
   const [sendGoalCompletions, setSendGoalCompletions] = useState(schedule?.sendGoalCompletions ?? true);
   const [sendReports, setSendReports] = useState(schedule?.sendReports ?? true);
@@ -38,6 +40,8 @@ const EmailScheduleComponent: React.FC<EmailScheduleProps> = ({
       enabled,
       frequency,
       time,
+      dayOfWeek,
+      dayOfMonth,
       recipientEmails: emailList,
       sendGoalCompletions,
       sendReports,
@@ -145,17 +149,56 @@ const EmailScheduleComponent: React.FC<EmailScheduleProps> = ({
                   </div>
                 </div>
 
-                {/* Time */}
-                <div>
-                  <label className="block text-xs font-black text-text-primary dark:text-white uppercase tracking-widest mb-3">
-                    Send Time
-                  </label>
-                  <input
-                    type="time"
-                    value={time}
-                    onChange={(e) => setTime(e.target.value)}
-                    className="w-full px-4 py-3 rounded-xl bg-bg-secondary dark:bg-dark-bg-secondary border border-border-soft dark:border-dark-border focus:ring-2 focus:ring-navy-primary/30 dark:focus:ring-navy-primary/50 outline-none text-text-primary dark:text-white font-bold"
-                  />
+                {/* Time, Day, Date */}
+                <div className="space-y-4">
+                  <div>
+                    <label className="block text-xs font-black text-text-primary dark:text-white uppercase tracking-widest mb-3">
+                      Send Time
+                    </label>
+                    <input
+                      type="time"
+                      value={time}
+                      onChange={(e) => setTime(e.target.value)}
+                      className="w-full px-4 py-3 rounded-xl bg-bg-secondary dark:bg-dark-bg-secondary border border-border-soft dark:border-dark-border focus:ring-2 focus:ring-navy-primary/30 dark:focus:ring-navy-primary/50 outline-none text-text-primary dark:text-white font-bold"
+                    />
+                  </div>
+
+                  {frequency === 'weekly' && (
+                    <div>
+                      <label className="block text-xs font-black text-text-primary dark:text-white uppercase tracking-widest mb-3">
+                        Day of Week
+                      </label>
+                      <select
+                        value={dayOfWeek}
+                        onChange={(e) => setDayOfWeek(parseInt(e.target.value))}
+                        className="w-full px-4 py-3 rounded-xl bg-bg-secondary dark:bg-dark-bg-secondary border border-border-soft dark:border-dark-border focus:ring-2 focus:ring-navy-primary/30 dark:focus:ring-navy-primary/50 outline-none text-text-primary dark:text-white font-bold"
+                      >
+                        <option value={0}>Sunday</option>
+                        <option value={1}>Monday</option>
+                        <option value={2}>Tuesday</option>
+                        <option value={3}>Wednesday</option>
+                        <option value={4}>Thursday</option>
+                        <option value={5}>Friday</option>
+                        <option value={6}>Saturday</option>
+                      </select>
+                    </div>
+                  )}
+
+                  {frequency === 'monthly' && (
+                    <div>
+                      <label className="block text-xs font-black text-text-primary dark:text-white uppercase tracking-widest mb-3">
+                        Day of Month (1-31)
+                      </label>
+                      <input
+                        type="number"
+                        min="1"
+                        max="31"
+                        value={dayOfMonth}
+                        onChange={(e) => setDayOfMonth(parseInt(e.target.value))}
+                        className="w-full px-4 py-3 rounded-xl bg-bg-secondary dark:bg-dark-bg-secondary border border-border-soft dark:border-dark-border focus:ring-2 focus:ring-navy-primary/30 dark:focus:ring-navy-primary/50 outline-none text-text-primary dark:text-white font-bold"
+                      />
+                    </div>
+                  )}
                 </div>
 
                 {/* Recipient Emails */}

@@ -12,7 +12,6 @@ import ErrorBoundary from './components/ErrorBoundary';
 import SkeletonCard from './components/SkeletonCard';
 import PWAInstallPrompt from './components/PWAInstallPrompt';
 import FeedbackButton from './components/FeedbackButton';
-import DatabaseMigrationModal from './components/DatabaseMigrationModal';
 
 // Code splitting: Lazy load heavy components
 const Dashboard = lazy(() => import('./components/Dashboard'));
@@ -184,7 +183,6 @@ const App: React.FC = () => {
   const [view, setView] = useState<'onboarding' | 'home' | 'report' | 'values' | 'vault' | 'goals'>('onboarding');
   const [showHelp, setShowHelp] = useState(false);
   const [showLCSWConfig, setShowLCSWConfig] = useState(false);
-  const [showDatabaseMigrationModal, setShowDatabaseMigrationModal] = useState(false);
   const [showMigrationScreen, setShowMigrationScreen] = useState(false);
   const [showUnlockScreen, setShowUnlockScreen] = useState(false);
   const [initialValueIdForGoal, setInitialValueIdForGoal] = useState<string | null>(null);
@@ -488,29 +486,37 @@ const App: React.FC = () => {
         // Check for old database (only in legacy mode) - with timeout
         if (!encryptionEnabled) {
           try {
-            // Only check if user hasn't dismissed it
-            const dismissed = localStorage.getItem('old_db_migration_dismissed') === 'true';
-            if (!dismissed) {
+            // Check if we already handled this
+            const migrationDismissed = localStorage.getItem('old_db_migration_dismissed') === 'true';
+            
+            if (!migrationDismissed) {
               const hasOldDatabase = await Promise.race([
                 dbService.checkForOldDatabase(),
                 new Promise<boolean>((resolve) => setTimeout(() => resolve(false), 2000)) // 2 second timeout
               ]).catch(() => false);
               
               if (hasOldDatabase) {
-                // Check if we already have data in the NEW database (using the adapter we just initialized)
-                // If we have data, we shouldn't prompt to migrate (user is already using new app)
-                try {
-                  // Rough check - if we can get app data, we assume user is active
-                  // Note: userId might not be set yet, so this is a heuristic
-                  // If we can't easily check, we rely on the user dismissing the modal
-                  setShowDatabaseMigrationModal(true);
-                } catch (e) {
-                  setShowDatabaseMigrationModal(true);
-                }
+                console.log('[MIGRATION] Old database detected - performing auto-cleanup...');
+                
+                // Delete the old database immediately
+                await dbService.deleteOldDatabase();
+                
+                // Mark as done so we don't check again
+                localStorage.setItem('old_db_migration_dismissed', 'true');
+                
+                // Show simple alert as requested by user
+                // Use setTimeout to ensure it doesn't block the init flow significantly
+                setTimeout(() => {
+                  alert("Database has been updated to the new secure format.");
+                }, 500);
+                
+                // Ensure new adapter is initialized
+                const adapter = getDatabaseAdapter();
+                await adapter.init();
               }
             }
           } catch (error) {
-            console.warn('[INIT] Old database check failed (non-critical):', error);
+            console.warn('[INIT] Old database cleanup failed:', error);
           }
         }
         
@@ -1466,36 +1472,6 @@ const App: React.FC = () => {
 
       {showHelp && <HelpOverlay onClose={() => setShowHelp(false)} />}
 
-      {showDatabaseMigrationModal && (
-        <DatabaseMigrationModal
-          onConfirm={async () => {
-            setShowDatabaseMigrationModal(false);
-            try {
-              await dbService.deleteOldDatabase();
-              // Retry database initialization after deleting old database
-              const dbAdapter = getDatabaseAdapter();
-              await dbAdapter.init();
-              console.log('✅ Database migration completed successfully');
-            } catch (error) {
-              console.error('Error during database migration:', error);
-              // Continue anyway - new database will be created
-            }
-          }}
-          onCancel={() => {
-            setShowDatabaseMigrationModal(false);
-            // User cancelled - remember this choice so we don't annoy them again
-            localStorage.setItem('old_db_migration_dismissed', 'true');
-            
-            // User cancelled - proceed anyway but log the warning
-            console.warn('User cancelled database migration - old database may still exist');
-            // Try to initialize new database anyway
-            const dbAdapter = getDatabaseAdapter();
-            dbAdapter.init().catch(error => {
-              console.warn('Database initialization after cancel:', error);
-            });
-          }}
-        />
-      )}
 
       {/* Encryption Migration Screen (OPT-IN, dismissible) */}
       {showMigrationScreen && (

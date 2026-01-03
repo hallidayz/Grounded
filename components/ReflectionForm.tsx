@@ -3,6 +3,7 @@ import { EmotionalState, EMOTIONAL_STATES, getEmotionalState } from '../services
 import { GoalFrequency, ValueItem, LCSWConfig } from '../types';
 import SkeletonLoader from './SkeletonLoader';
 import StatusIndicator, { StatusType } from './StatusIndicator';
+import MarkdownRenderer from './MarkdownRenderer';
 
 interface ReflectionFormProps {
   value: ValueItem;
@@ -260,30 +261,19 @@ const ReflectionForm: React.FC<ReflectionFormProps> = ({
                   🔄 Refresh
                 </button>
               </div>
-              <div className="text-sm sm:text-base text-text-primary dark:text-white whitespace-pre-line leading-relaxed space-y-2">
+              <div className="text-sm sm:text-base text-text-primary dark:text-white leading-relaxed">
                 {(() => {
-                  // Handle both string and object formats (for backward compatibility)
                   let analysisText: string;
                   if (typeof reflectionAnalysis === 'string') {
                     analysisText = reflectionAnalysis;
                   } else if (reflectionAnalysis && typeof reflectionAnalysis === 'object') {
-                    // Format object as string
                     const analysis = reflectionAnalysis as any;
                     analysisText = `## Core Themes\n${(analysis.coreThemes || []).map((t: string) => `- ${t}`).join('\n')}\n\n## The 'LCSW Lens'\n${analysis.lcswLens || ''}\n\n## Reflective Inquiry\n${(analysis.reflectiveInquiry || []).map((q: string) => `- ${q}`).join('\n')}\n\n## Session Prep\n${analysis.sessionPrep || ''}`;
                   } else {
                     analysisText = '';
                   }
                   
-                  return analysisText.split('\n').map((line, idx) => {
-                  if (line.startsWith('##')) {
-                    return <div key={idx} className="font-black text-yellow-warm mt-3 first:mt-0">{line.replace('##', '').trim()}</div>;
-                  } else if (line.startsWith('-') || /^\d+\./.test(line.trim())) {
-                    return <div key={idx} className="ml-2">{line}</div>;
-                  } else if (line.trim()) {
-                    return <div key={idx}>{line}</div>;
-                  }
-                  return <br key={idx} />;
-                  });
+                  return <MarkdownRenderer>{analysisText}</MarkdownRenderer>;
                 })()}
               </div>
             </div>
