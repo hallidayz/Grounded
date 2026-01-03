@@ -82,4 +82,4 @@ This package includes AI models bundled directly:
 See `INSTALLATION_GUIDE.md` for detailed troubleshooting.
 
 ---
-Generated: 2026-01-01T17:27:34.465Z
+Generated: 2026-01-03T00:08:02.955Z
