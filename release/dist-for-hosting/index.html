@@ -46,13 +46,13 @@
         }
       }
     </style>
-    <script type="module" crossorigin src="/assets/index-rY5DbNcP.js"></script>
-    <link rel="modulepreload" crossorigin href="/assets/transformers-cJLoZuBt.js">
-    <link rel="modulepreload" crossorigin href="/assets/vendor-Dfov_G5I.js">
-    <link rel="modulepreload" crossorigin href="/assets/react-vendor-C3J-WWQD.js">
-    <link rel="modulepreload" crossorigin href="/assets/ai-services-BeY8le4t.js">
-    <link rel="stylesheet" crossorigin href="/assets/index-D7-BrRKi.css">
-  <link rel="manifest" href="/manifest.webmanifest"><script id="vite-plugin-pwa:register-sw" src="/registerSW.js"></script></head>
+    <script type="module" crossorigin src="/assets/index-WGdxYKHL.js"></script>
+    <link rel="modulepreload" crossorigin href="/assets/transformers-CgLRIXTl.js">
+    <link rel="modulepreload" crossorigin href="/assets/vendor-CFU3Mex3.js">
+    <link rel="modulepreload" crossorigin href="/assets/react-vendor-ByHOp49b.js">
+    <link rel="modulepreload" crossorigin href="/assets/ai-services-4hnf0_d4.js">
+    <link rel="stylesheet" crossorigin href="/assets/index-CXd8JJcB.css">
+  </head>
   <body>
     <div id="root"></div>
     <script>
@@ -83,6 +83,13 @@
       // Keep the current app's service worker to enable PWA installation
       (function() {
         if ('serviceWorker' in navigator) {
+          // Register our service worker
+          navigator.serviceWorker.register('/sw.js').then(function(registration) {
+            console.log('Service Worker registered with scope:', registration.scope);
+          }).catch(function(err) {
+            console.error('Service Worker registration failed:', err);
+          });
+
           navigator.serviceWorker.getRegistrations().then(function(registrations) {
             const currentOrigin = window.location.origin;
             for(let registration of registrations) {

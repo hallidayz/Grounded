@@ -1,6 +1,6 @@
 # Grounded - On-Device Therapy Integration App
 
-**Grounded by AC MiNDS** - Version 1.13.4
+**Grounded by AC MiNDS** - Version 1.13.5
 
 Privacy-first therapy integration app for values-based reflection and mental health support.
 
@@ -231,7 +231,7 @@ See the in-app Help screen (click the ? icon) for detailed navigation instructio
 
 - **Email**: ac.minds.ai@gmail.com
 - **Debug Log**: Available in Help screen for troubleshooting
-- **Version**: 1.13.4
+- **Version**: 1.13.5
 
 ## License
 
