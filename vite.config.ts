@@ -143,27 +143,27 @@ export default defineConfig({
     noMinifyTransformersPlugin(), // Disable minification to prevent transformers initialization errors
     ...(isTauriBuild ? [Tauri()] : []),
     excludeModelsPlugin(),
-    // VitePWA({
-    //   registerType: 'autoUpdate',
-    //   injectRegister: 'auto',
-    //   strategies: 'injectManifest',
-    //   srcDir: 'src',
-    //   filename: 'sw.js',
-    //   manifest: {
-    //     name: 'Grounded',
-    //     short_name: 'Grounded',
-    //     theme_color: '#4F46E5',
-    //     background_color: '#F9FAFB',
-    //     display: 'standalone',
-    //     start_url: '/',
-    //     icons: [
-    //       { src: '/icons/icon-192x192.png', sizes: '192x192', type: 'image/png' },
-    //       { src: '/icons/icon-512x512.png', sizes: '512x512', type: 'image/png' },
-    //       { src: '/icons/apple-touch-icon.png', sizes: '180x180', type: 'image/png', purpose: 'apple touch icon' },
-    //       { src: '/icons/mask-icon.svg', sizes: 'any', purpose: 'maskable' },
-    //     ],
-    //   }
-    // })
+    VitePWA({
+      registerType: 'autoUpdate',
+      injectRegister: 'auto',
+      strategies: 'injectManifest',
+      srcDir: 'src',
+      filename: 'sw.js',
+      manifest: {
+        name: 'Grounded',
+        short_name: 'Grounded',
+        theme_color: '#4F46E5',
+        background_color: '#F9FAFB',
+        display: 'standalone',
+        start_url: '/',
+        icons: [
+          { src: '/icons/icon-192x192.png', sizes: '192x192', type: 'image/png' },
+          { src: '/icons/icon-512x512.png', sizes: '512x512', type: 'image/png' },
+          { src: '/icons/apple-touch-icon.png', sizes: '180x180', type: 'image/png', purpose: 'apple touch icon' },
+          { src: '/icons/mask-icon.svg', sizes: 'any', purpose: 'maskable' },
+        ],
+      }
+    })
   ],
   resolve: {
     alias: {
