@@ -40,7 +40,49 @@ function formatAnalysisForReport(analysis: any): string {
     }
     
     if (lcswLens) {
-      text += `LCSW Lens: ${lcswLens}\n`;
+      // Remove repetitive patterns - detect if the same phrase repeats multiple times
+      let cleanedLens = lcswLens;
+      
+      // Detect repetitive patterns like "The LCSW Lens is a 'LCSW Lens'" repeating
+      const repetitivePattern = /(The LCSW Lens is a ['"]LCSW Lens['"].*?)(?:\1){2,}/gi;
+      if (repetitivePattern.test(cleanedLens)) {
+        // Extract just the first occurrence
+        const match = cleanedLens.match(/(The LCSW Lens is a ['"]LCSW Lens['"].*?)(?:\1)/i);
+        if (match) {
+          cleanedLens = match[1].trim();
+        } else {
+          // Fallback: remove obvious repetition
+          cleanedLens = cleanedLens.split(/The LCSW Lens is a ['"]LCSW Lens['"]/i)[0] + 
+                       cleanedLens.match(/The LCSW Lens is a ['"]LCSW Lens['"]([^T]*?)(?=The LCSW Lens|$)/i)?.[1] || '';
+        }
+      }
+      
+      // Additional cleanup: remove any remaining repetitive phrases
+      const phrases = cleanedLens.split(/\.\s+/);
+      const uniquePhrases: string[] = [];
+      const seenPhrases = new Set<string>();
+      
+      for (const phrase of phrases) {
+        const normalized = phrase.trim().toLowerCase();
+        // Only add if we haven't seen a very similar phrase (allowing for minor variations)
+        const isDuplicate = Array.from(seenPhrases).some(seen => {
+          const similarity = normalized.length > 0 && seen.length > 0 
+            ? (normalized.split(' ').filter(w => seen.includes(w)).length / Math.max(normalized.split(' ').length, seen.split(' ').length))
+            : 0;
+          return similarity > 0.8; // 80% similarity threshold
+        });
+        
+        if (!isDuplicate && phrase.trim().length > 10) {
+          uniquePhrases.push(phrase.trim());
+          seenPhrases.add(normalized);
+        }
+      }
+      
+      cleanedLens = uniquePhrases.join('. ').trim();
+      
+      if (cleanedLens.length > 20) {
+        text += `LCSW Lens: ${cleanedLens}\n`;
+      }
     }
     
     if (reflectiveInquiry && Array.isArray(reflectiveInquiry) && reflectiveInquiry.length > 0) {
@@ -411,13 +453,44 @@ Format your response with clear sections for each format. Keep the tone supporti
         const startTime = performance.now();
         const result = await currentCounselingCoachModel(prompt, {
           max_new_tokens: 1000,
-          temperature: 0.7,
-          do_sample: true
+          temperature: 0.3, // Lower temperature to reduce repetition
+          do_sample: true,
+          repetition_penalty: 1.3 // Penalize repetition
         });
         const endTime = performance.now();
 
         const generatedText = result[0]?.generated_text || '';
-        const extracted = generatedText.replace(prompt, '').trim();
+        let extracted = generatedText.replace(prompt, '').trim();
+        
+        // Remove repetitive patterns from the report
+        // Detect if the same sentence/phrase repeats multiple times
+        const sentences = extracted.split(/[.!?]\s+/);
+        const uniqueSentences: string[] = [];
+        const seenSentences = new Set<string>();
+        
+        for (const sentence of sentences) {
+          const normalized = sentence.trim().toLowerCase();
+          // Check for high similarity with already seen sentences
+          const isDuplicate = Array.from(seenSentences).some(seen => {
+            if (normalized.length < 20) return false; // Skip short sentences
+            const words1 = normalized.split(/\s+/);
+            const words2 = seen.split(/\s+/);
+            const commonWords = words1.filter(w => words2.includes(w)).length;
+            const similarity = commonWords / Math.max(words1.length, words2.length);
+            return similarity > 0.7; // 70% word overlap = likely duplicate
+          });
+          
+          if (!isDuplicate && sentence.trim().length > 10) {
+            uniqueSentences.push(sentence.trim());
+            seenSentences.add(normalized);
+          }
+        }
+        
+        extracted = uniqueSentences.join('. ').trim();
+        
+        // Additional cleanup: remove obvious repetitive patterns
+        extracted = extracted.replace(/(The LCSW Lens is a ['"]LCSW Lens['"].*?)(?:\1){2,}/gi, (match, first) => first);
+        
         if (extracted && extracted.length > 50) {
           report = extracted;
           console.log(`✅ On-device AI generated report (${Math.round(endTime - startTime)}ms)`);
@@ -437,12 +510,39 @@ Format your response with clear sections for each format. Keep the tone supporti
             try {
               const retryResult = await reloadedModel(prompt, {
                 max_new_tokens: 1000,
-                temperature: 0.7,
-                do_sample: true
+                temperature: 0.3, // Lower temperature to reduce repetition
+                do_sample: true,
+                repetition_penalty: 1.3 // Penalize repetition
               });
               const retryText = retryResult[0]?.generated_text || '';
-              const retryExtracted = retryText.replace(prompt, '').trim();
-              if (retryExtracted) {
+              let retryExtracted = retryText.replace(prompt, '').trim();
+              
+              // Apply same repetition removal to retry
+              const retrySentences = retryExtracted.split(/[.!?]\s+/);
+              const retryUniqueSentences: string[] = [];
+              const retrySeenSentences = new Set<string>();
+              
+              for (const sentence of retrySentences) {
+                const normalized = sentence.trim().toLowerCase();
+                const isDuplicate = Array.from(retrySeenSentences).some(seen => {
+                  if (normalized.length < 20) return false;
+                  const words1 = normalized.split(/\s+/);
+                  const words2 = seen.split(/\s+/);
+                  const commonWords = words1.filter(w => words2.includes(w)).length;
+                  const similarity = commonWords / Math.max(words1.length, words2.length);
+                  return similarity > 0.7;
+                });
+                
+                if (!isDuplicate && sentence.trim().length > 10) {
+                  retryUniqueSentences.push(sentence.trim());
+                  retrySeenSentences.add(normalized);
+                }
+              }
+              
+              retryExtracted = retryUniqueSentences.join('. ').trim();
+              retryExtracted = retryExtracted.replace(/(The LCSW Lens is a ['"]LCSW Lens['"].*?)(?:\1){2,}/gi, (match, first) => first);
+              
+              if (retryExtracted && retryExtracted.length > 50) {
                 report = retryExtracted;
               }
             } catch (retryError) {

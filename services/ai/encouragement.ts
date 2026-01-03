@@ -288,18 +288,18 @@ export async function analyzeReflection(
       ? `\nPrevious analysis context (user wants a fresh perspective):\nCore Themes: ${previousAnalysis.coreThemes.join(', ')}\nLCSW Lens: ${previousAnalysis.lcswLens}\n\nProvide a different perspective or deeper insight.`
       : '';
 
-    // Optimized Prompt for LaMini-Flan-T5 (Schema-Only)
-    const prompt = `User Reflection: "${reflection}"
+    // Schema-Only prompt format - no placeholders in brackets to prevent copying
+    const prompt = `Analyze this reflection and provide analysis. Return ONLY the sections below with actual content:
+
+REFLECTION: Summarize the user's experience in 2 sentences
+EMOTIONS: List 2-3 emotions inferred from the reflection
+SELF_ADVOCACY: Ask 1 gentle question for self-reflection
+PACE_NOTE: Give 1 sentence of pacing advice
+
+User Reflection: "${reflection.substring(0, 500)}"
 Mood: ${emotionalState || 'unknown'} (${selectedFeeling || 'general'})
 Goal Frequency: ${frequency}
-${protocolContext}${previousContext}
-
-Analyze the reflection above and output the following sections:
-
-REFLECTION: [Summarize the user's experience in 2 sentences]
-EMOTIONS: [List 2-3 emotions inferred]
-SELF_ADVOCACY: [Ask 1 gentle question]
-PACE_NOTE: [Give 1 sentence of pacing advice]`;
+${protocolContext}${previousContext}`;
 
     // Try to get AI model for JSON response
     let counselingCoachModel = getCounselingCoachModel();
@@ -333,7 +333,10 @@ PACE_NOTE: [Give 1 sentence of pacing advice]`;
         });
 
         const generatedText = result[0]?.generated_text || '';
-        console.log('✅ AI-generated text received:', generatedText.substring(0, 100) + '...');
+        console.log('🔍 Raw AI reflection analysis response:', generatedText.substring(0, 300) + '...');
+        
+        // Remove prompt from beginning if present
+        let extracted = generatedText.replace(prompt, '').trim();
         
         // Parse Canonical Output
         const sections: ReflectionAnalysisResponse = {
@@ -343,37 +346,102 @@ PACE_NOTE: [Give 1 sentence of pacing advice]`;
           sessionPrep: ''
         };
 
-        // Extract sections using regex
-        const reflectionMatch = generatedText.match(/REFLECTION:\s*([\s\S]*?)(?=(?:EMOTIONS:|SELF_ADVOCACY:|PACE_NOTE:|$))/i);
-        if (reflectionMatch) sections.lcswLens = reflectionMatch[1].trim();
-
-        const emotionsMatch = generatedText.match(/EMOTIONS:\s*([\s\S]*?)(?=(?:SELF_ADVOCACY:|PACE_NOTE:|$))/i);
-        if (emotionsMatch) {
-          sections.coreThemes = emotionsMatch[1]
-            .split('\n')
-            .map((line: string) => line.replace(/^-\s*/, '').trim())
-            .filter((line: string) => line.length > 0 && !line.toLowerCase().includes('emotion_'));
+        // Extract sections using regex - be more lenient with matching
+        // Try to find REFLECTION section
+        const reflectionMatch = extracted.match(/REFLECTION:\s*([\s\S]*?)(?=(?:EMOTIONS:|SELF_ADVOCACY:|PACE_NOTE:|$))/i) ||
+                                extracted.match(/REFLECTION[:\s]+([\s\S]*?)(?=(?:EMOTIONS|SELF_ADVOCACY|PACE_NOTE|$))/i);
+        if (reflectionMatch && reflectionMatch[1]) {
+          sections.lcswLens = reflectionMatch[1].trim();
+          // Remove any remaining prompt artifacts
+          sections.lcswLens = sections.lcswLens
+            .replace(/User Reflection:.*$/im, '')
+            .replace(/Mood:.*$/im, '')
+            .replace(/Goal Frequency:.*$/im, '')
+            .trim();
         }
 
-        const advocacyMatch = generatedText.match(/SELF_ADVOCACY:\s*([\s\S]*?)(?=(?:PACE_NOTE:|$))/i);
-        if (advocacyMatch) {
-          sections.reflectiveInquiry = advocacyMatch[1]
-            .split('\n')
-            .map((line: string) => line.replace(/^-\s*/, '').trim())
-            .filter((line: string) => line.length > 0);
+        // Try to find EMOTIONS section
+        const emotionsMatch = extracted.match(/EMOTIONS:\s*([\s\S]*?)(?=(?:SELF_ADVOCACY:|PACE_NOTE:|$))/i) ||
+                             extracted.match(/EMOTIONS[:\s]+([\s\S]*?)(?=(?:SELF_ADVOCACY|PACE_NOTE|$))/i);
+        if (emotionsMatch && emotionsMatch[1]) {
+          const emotionsText = emotionsMatch[1].trim();
+          sections.coreThemes = emotionsText
+            .split(/[,\n]/)
+            .map((line: string) => line.replace(/^-\s*/, '').replace(/^\d+\.\s*/, '').replace(/^•\s*/, '').trim())
+            .filter((line: string) => 
+              line.length > 2 && 
+              line.length < 100 &&
+              !line.toLowerCase().includes('emotion_') &&
+              !line.includes('[') &&
+              !line.toLowerCase().includes('list 2-3') &&
+              !line.toLowerCase().includes('list emotions'));
         }
 
-        const paceMatch = generatedText.match(/PACE_NOTE:\s*([\s\S]*?)(?=$)/i);
-        if (paceMatch) sections.sessionPrep = paceMatch[1].trim();
+        // Try to find SELF_ADVOCACY section
+        const advocacyMatch = extracted.match(/SELF_ADVOCACY:\s*([\s\S]*?)(?=(?:PACE_NOTE:|$))/i) ||
+                             extracted.match(/SELF_ADVOCACY[:\s]+([\s\S]*?)(?=(?:PACE_NOTE|$))/i);
+        if (advocacyMatch && advocacyMatch[1]) {
+          const advocacyText = advocacyMatch[1].trim();
+          // Split by newlines or keep as single question
+          if (advocacyText.includes('\n')) {
+            sections.reflectiveInquiry = advocacyText
+              .split('\n')
+              .map((line: string) => line.replace(/^-\s*/, '').replace(/^\d+\.\s*/, '').replace(/^•\s*/, '').trim())
+              .filter((line: string) => 
+                line.length > 5 && 
+                !line.includes('[') &&
+                !line.toLowerCase().includes('ask 1') &&
+                !line.toLowerCase().includes('gentle question'));
+          } else {
+            sections.reflectiveInquiry = [advocacyText].filter(q => 
+              q.length > 5 && 
+              !q.includes('[') &&
+              !q.toLowerCase().includes('ask 1'));
+          }
+        }
 
-        // Validate extraction - check for placeholders or empty content
-        const isPlaceholder = sections.lcswLens.includes('[Summarize') || sections.lcswLens.includes('[List');
+        // Try to find PACE_NOTE section
+        const paceMatch = extracted.match(/PACE_NOTE:\s*([\s\S]*?)(?=$)/i) ||
+                         extracted.match(/PACE_NOTE[:\s]+([\s\S]*?)(?=$)/i);
+        if (paceMatch && paceMatch[1]) {
+          sections.sessionPrep = paceMatch[1].trim();
+          // Remove any remaining prompt artifacts
+          sections.sessionPrep = sections.sessionPrep
+            .replace(/Goal Frequency:.*$/im, '')
+            .replace(/Mood:.*$/im, '')
+            .replace(/User Reflection:.*$/im, '')
+            .trim();
+        }
+
+        // Validate extraction - check for placeholders, empty content, or prompt text
+        const hasPlaceholders = 
+          sections.lcswLens.includes('[') || 
+          sections.lcswLens.includes('Summarize the user') ||
+          sections.sessionPrep.includes('[') ||
+          sections.sessionPrep.includes('Give 1 sentence') ||
+          sections.coreThemes.some(t => t.includes('[') || t.includes('List')) ||
+          sections.reflectiveInquiry.some(q => q.includes('[') || q.includes('Ask 1'));
         
-        if (!isPlaceholder && (sections.lcswLens || sections.coreThemes.length > 0)) {
+        const hasContent = 
+          sections.lcswLens.length > 20 && 
+          (sections.coreThemes.length > 0 || sections.reflectiveInquiry.length > 0);
+        
+        console.log('🔍 Parsed sections:', {
+          lcswLens: sections.lcswLens.substring(0, 50),
+          coreThemesCount: sections.coreThemes.length,
+          reflectiveInquiryCount: sections.reflectiveInquiry.length,
+          sessionPrep: sections.sessionPrep.substring(0, 50),
+          hasPlaceholders,
+          hasContent
+        });
+        
+        if (!hasPlaceholders && hasContent) {
+          console.log('✅ Valid reflection analysis extracted');
           await setCachedResponse(cacheKey, { reflectionAnalysis: JSON.stringify(sections) });
           return sections;
         } else {
-          console.warn('Failed to parse canonical response (or detected placeholders), text was:', generatedText);
+          console.warn('⚠️ Failed to parse reflection analysis - placeholders detected or insufficient content');
+          console.warn('Full generated text:', generatedText);
         }
       } catch (error) {
         console.warn('AI reflection analysis failed:', error);
@@ -1001,24 +1069,25 @@ export async function suggestGoal(
       ? `Reflection Analysis:\nCore Themes: ${reflectionAnalysis.coreThemes.join(', ')}\nLCSW Lens: ${reflectionAnalysis.lcswLens}\n\n`
       : '';
     
-    const prompt = `Create a SMART Self-Advocacy Aim based on the reflection. Return ONLY valid JSON:
+    // Build a cleaner, more focused prompt that emphasizes SMART goals
+    const prompt = `Create a SMART Self-Advocacy Aim. Return ONLY this JSON structure:
 
 {
-  "description": "Specific, measurable action for ${frequency} (e.g., 'Practice 5 minutes of mindfulness daily' or 'Write one gratitude note each morning')",
-  "whatThisHelpsWith": "Why this specific action matters for their growth",
-  "howToMeasureProgress": ["Concrete step 1", "Concrete step 2", "Concrete step 3"],
-  "inferenceAnalysis": "How this aim connects to themes in their reflection",
+  "description": "One specific, measurable action the user will take ${frequency === 'daily' ? 'each day' : frequency === 'weekly' ? 'this week' : 'this month'}",
+  "whatThisHelpsWith": "Why this action supports their growth and aligns with their value",
+  "howToMeasureProgress": ["Step 1", "Step 2", "Step 3"],
+  "inferenceAnalysis": "How this aim addresses themes from their reflection",
   "lcsmInferences": {
-    "encouragement": "Encouragement recognizing their self-awareness",
-    "guidance": "Guidance for their personal journey"
+    "encouragement": "Brief encouragement",
+    "guidance": "Brief guidance"
   }
 }
 
+Context:
 ${protocolContext}
 Value: "${value.name}" (${value.description})
-Frequency: ${frequency}
-${feelingContext}${reflectionContext}Deep Reflection:
-${deepReflectionText}`;
+${feelingContext}${reflectionContext}Reflection:
+${deepReflectionText.substring(0, 500)}`;
 
     // Default fallback response (only used if AI model is unavailable)
     const fallbackResponse: GoalSuggestionResponse = await generateFallbackGoalSuggestion(
@@ -1049,66 +1118,106 @@ ${deepReflectionText}`;
       });
 
       const generatedText = result[0]?.generated_text || '';
+      console.log('🔍 Raw AI response:', generatedText.substring(0, 200) + '...');
       
       // Remove the prompt from the beginning if present
       let extracted = generatedText.replace(prompt, '').trim();
       
       // Remove common prompt artifacts
+      extracted = extracted.replace(/^Create a SMART.*?$/im, '').trim();
       extracted = extracted.replace(/^Analyze the Deep Reflection.*?$/im, '').trim();
       extracted = extracted.replace(/^Return ONLY valid JSON.*?$/im, '').trim();
       extracted = extracted.replace(/^Return valid JSON only.*?$/im, '').trim();
       
-      // Check if response contains prompt text (counseling guidance repetition, requirements, etc.)
-      const hasPromptText = /The client's purpose|help the client remember|provide structured reflection|provide psychoeducation|support value-based living|Requirements?:|Specific and achievable|Aligned with value/i.test(extracted);
-      if (hasPromptText) {
-        console.warn('⚠️ AI returned prompt text instead of goal, rejecting response');
+      // Check if response contains obvious prompt repetition (not just the word "specific" which could be in a valid goal)
+      const hasObviousPromptText = /The client's purpose is to help|help the client remember and practice therapy|provide structured reflection prompts aligned|provide psychoeducation and coping skills|support value-based living and goal achievement.*support value-based living/i.test(extracted);
+      
+      if (hasObviousPromptText) {
+        console.warn('⚠️ AI returned obvious prompt repetition, attempting to extract JSON after it');
         // Try to extract JSON that might come after the prompt text
-        const afterPrompt = extracted.split(/Requirements?:|The client's purpose/i)[1] || extracted;
+        const afterPrompt = extracted.split(/The client's purpose|help the client remember/i)[1] || extracted;
         extracted = afterPrompt.trim();
       }
       
-      // Try to parse JSON from response
+      // Try to find JSON in the response - look for the first complete JSON object
+      // This handles cases where there's text before or after the JSON
       const jsonMatch = extracted.match(/\{[\s\S]*\}/);
       if (jsonMatch) {
         try {
           const jsonResponse: GoalSuggestionResponse = JSON.parse(jsonMatch[0]);
+          console.log('✅ Parsed JSON response:', {
+            hasDescription: !!jsonResponse.description,
+            descriptionLength: jsonResponse.description?.length || 0,
+            hasWhatThisHelpsWith: !!jsonResponse.whatThisHelpsWith,
+            hasProgressSteps: jsonResponse.howToMeasureProgress?.length > 0
+          });
           
-          // Validate that we got actual goal content, not placeholders or prompt text
+          // Validate that we got actual goal content
+          // Be more lenient - only reject obvious placeholders or prompt text
           const hasValidDescription = jsonResponse.description && 
-            jsonResponse.description.length > 20 && 
+            jsonResponse.description.length > 15 && // Reduced from 20 to be more lenient
             !jsonResponse.description.includes('[Summarize') &&
             !jsonResponse.description.includes('what they\'ll do') &&
-            !jsonResponse.description.includes('The client') &&
+            !jsonResponse.description.includes('The client\'s purpose') &&
             !jsonResponse.description.includes('help the client remember');
           
-          if (hasValidDescription && jsonResponse.whatThisHelpsWith && jsonResponse.howToMeasureProgress?.length > 0) {
-            console.log('✅ AI-generated JSON goal suggestion received');
+          const hasValidWhatThisHelpsWith = jsonResponse.whatThisHelpsWith && 
+            jsonResponse.whatThisHelpsWith.length > 10 &&
+            !jsonResponse.whatThisHelpsWith.includes('The client\'s purpose');
+          
+          const hasValidProgressSteps = jsonResponse.howToMeasureProgress && 
+            Array.isArray(jsonResponse.howToMeasureProgress) &&
+            jsonResponse.howToMeasureProgress.length > 0 &&
+            jsonResponse.howToMeasureProgress.every(step => step && step.length > 5);
+          
+          if (hasValidDescription && hasValidWhatThisHelpsWith && hasValidProgressSteps) {
+            console.log('✅ AI-generated valid SMART goal suggestion');
             // Cache the result
             await setCachedResponse(cacheKey, { goalSuggestion: formatGoalSuggestionJSON(jsonResponse) });
             // Format JSON to markdown for backward compatibility (React will handle formatting later)
             return formatGoalSuggestionJSON(jsonResponse);
           } else {
-            console.warn('⚠️ AI returned placeholder or invalid goal content in JSON');
+            console.warn('⚠️ AI returned JSON but validation failed:', {
+              hasValidDescription,
+              hasValidWhatThisHelpsWith,
+              hasValidProgressSteps,
+              description: jsonResponse.description?.substring(0, 50)
+            });
           }
         } catch (parseError) {
-          console.warn('Failed to parse JSON response:', parseError);
+          console.warn('❌ Failed to parse JSON response:', parseError);
+          console.warn('Extracted text:', extracted.substring(0, 200));
         }
+      } else {
+        console.warn('⚠️ No JSON object found in response');
+        console.warn('Extracted text:', extracted.substring(0, 200));
       }
       
-      // If JSON parsing failed, check if raw response looks like prompt text
+      // If JSON parsing failed, check if raw response looks like obvious prompt text
       if (extracted && extracted.length > 20) {
-        // Reject if it looks like prompt text
-        if (hasPromptText || /The client's purpose|help the client remember|Requirements?:/i.test(extracted)) {
-          console.warn('⚠️ Rejecting response that looks like prompt text');
+        // Only reject if it's clearly prompt text, not if it might be a valid goal description
+        if (hasObviousPromptText && !extracted.includes('{')) {
+          console.warn('⚠️ Rejecting response that looks like prompt text (no JSON found)');
           // Don't return this - use fallback instead
-        } else {
-          console.warn('⚠️ AI returned non-JSON response, using as-is');
-          return extracted;
+        } else if (extracted.includes('{')) {
+          // If there's a { but we didn't match JSON, try one more time with a more lenient match
+          const lenientMatch = extracted.match(/\{[\s\S]{20,}\}/);
+          if (lenientMatch) {
+            try {
+              const jsonResponse: GoalSuggestionResponse = JSON.parse(lenientMatch[0]);
+              console.log('✅ Parsed JSON with lenient matching');
+              await setCachedResponse(cacheKey, { goalSuggestion: formatGoalSuggestionJSON(jsonResponse) });
+              return formatGoalSuggestionJSON(jsonResponse);
+            } catch (e) {
+              console.warn('Lenient JSON parse also failed');
+            }
+          }
         }
       }
       
       // Use fallback if all validation fails
       console.warn('⚠️ AI model returned invalid response, using fallback');
+      console.warn('Full generated text (first 500 chars):', generatedText.substring(0, 500));
       await setCachedResponse(cacheKey, { goalSuggestion: formatGoalSuggestionJSON(fallbackResponse) });
       return formatGoalSuggestionJSON(fallbackResponse);
     } catch (error) {
@@ -1131,60 +1240,75 @@ ${deepReflectionText}`;
               do_sample: true,
               repetition_penalty: 1.3 // Penalize repetition to prevent prompt text loops
             });
-              const retryText = retryResult[0]?.generated_text || '';
-              
-              // Remove the prompt from the beginning if present
-              let retryExtracted = retryText.replace(prompt, '').trim();
-              
-              // Remove common prompt artifacts
-              retryExtracted = retryExtracted.replace(/^Analyze the Deep Reflection.*?$/im, '').trim();
-              retryExtracted = retryExtracted.replace(/^Return ONLY valid JSON.*?$/im, '').trim();
-              retryExtracted = retryExtracted.replace(/^Return valid JSON only.*?$/im, '').trim();
-              
-              // Check if response contains prompt text
-              const retryHasPromptText = /The client's purpose|help the client remember|provide structured reflection|Requirements?:|Specific and achievable/i.test(retryExtracted);
-              if (retryHasPromptText) {
-                console.warn('⚠️ Retry AI returned prompt text instead of goal, rejecting response');
-                const afterPrompt = retryExtracted.split(/Requirements?:|The client's purpose/i)[1] || retryExtracted;
-                retryExtracted = afterPrompt.trim();
-              }
-              
-              // Try to parse JSON from retry
-              const retryJsonMatch = retryExtracted.match(/\{[\s\S]*\}/);
-              if (retryJsonMatch) {
-                try {
-                  const retryJsonResponse: GoalSuggestionResponse = JSON.parse(retryJsonMatch[0]);
-                  
-                  // Validate that we got actual goal content
-                  const retryHasValidDescription = retryJsonResponse.description && 
-                    retryJsonResponse.description.length > 20 && 
-                    !retryJsonResponse.description.includes('[Summarize') &&
-                    !retryJsonResponse.description.includes('what they\'ll do') &&
-                    !retryJsonResponse.description.includes('The client');
-                  
-                  if (retryHasValidDescription && retryJsonResponse.whatThisHelpsWith && retryJsonResponse.howToMeasureProgress?.length > 0) {
-                    console.log('✅ AI-generated JSON goal suggestion received after reload');
-                    await setCachedResponse(cacheKey, { goalSuggestion: formatGoalSuggestionJSON(retryJsonResponse) });
-                    return formatGoalSuggestionJSON(retryJsonResponse);
-                  } else {
-                    console.warn('⚠️ Retry AI returned placeholder or invalid goal content');
-                  }
-                } catch (parseError) {
-                  console.warn('Failed to parse retry JSON response:', parseError);
-                }
-              }
-              
-              // If JSON parsing failed, check if raw response looks like prompt text
-              if (retryExtracted && retryExtracted.length > 20) {
-                // Reject if it looks like prompt text
-                if (retryHasPromptText || /The client's purpose|help the client remember|Requirements?:/i.test(retryExtracted)) {
-                  console.warn('⚠️ Rejecting retry response that looks like prompt text');
-                  // Don't return this - use fallback instead
+            const retryText = retryResult[0]?.generated_text || '';
+            console.log('🔍 Retry raw AI response:', retryText.substring(0, 200) + '...');
+            
+            // Remove the prompt from the beginning if present
+            let retryExtracted = retryText.replace(prompt, '').trim();
+            
+            // Remove common prompt artifacts
+            retryExtracted = retryExtracted.replace(/^Create a SMART.*?$/im, '').trim();
+            retryExtracted = retryExtracted.replace(/^Analyze the Deep Reflection.*?$/im, '').trim();
+            retryExtracted = retryExtracted.replace(/^Return ONLY valid JSON.*?$/im, '').trim();
+            retryExtracted = retryExtracted.replace(/^Return valid JSON only.*?$/im, '').trim();
+            
+            // Check if response contains obvious prompt repetition
+            const retryHasObviousPromptText = /The client's purpose is to help|help the client remember and practice therapy|provide structured reflection prompts aligned/i.test(retryExtracted);
+            if (retryHasObviousPromptText) {
+              console.warn('⚠️ Retry AI returned obvious prompt repetition, attempting to extract JSON after it');
+              const afterPrompt = retryExtracted.split(/The client's purpose|help the client remember/i)[1] || retryExtracted;
+              retryExtracted = afterPrompt.trim();
+            }
+            
+            // Try to find JSON in the retry response
+            const retryJsonMatch = retryExtracted.match(/\{[\s\S]*\}/);
+            if (retryJsonMatch) {
+              try {
+                const retryJsonResponse: GoalSuggestionResponse = JSON.parse(retryJsonMatch[0]);
+                
+                // Validate with same lenient criteria
+                const retryHasValidDescription = retryJsonResponse.description && 
+                  retryJsonResponse.description.length > 15 &&
+                  !retryJsonResponse.description.includes('[Summarize') &&
+                  !retryJsonResponse.description.includes('what they\'ll do') &&
+                  !retryJsonResponse.description.includes('The client\'s purpose') &&
+                  !retryJsonResponse.description.includes('help the client remember');
+                
+                const retryHasValidWhatThisHelpsWith = retryJsonResponse.whatThisHelpsWith && 
+                  retryJsonResponse.whatThisHelpsWith.length > 10 &&
+                  !retryJsonResponse.whatThisHelpsWith.includes('The client\'s purpose');
+                
+                const retryHasValidProgressSteps = retryJsonResponse.howToMeasureProgress && 
+                  Array.isArray(retryJsonResponse.howToMeasureProgress) &&
+                  retryJsonResponse.howToMeasureProgress.length > 0 &&
+                  retryJsonResponse.howToMeasureProgress.every(step => step && step.length > 5);
+                
+                if (retryHasValidDescription && retryHasValidWhatThisHelpsWith && retryHasValidProgressSteps) {
+                  console.log('✅ Retry AI-generated valid SMART goal suggestion');
+                  await setCachedResponse(cacheKey, { goalSuggestion: formatGoalSuggestionJSON(retryJsonResponse) });
+                  return formatGoalSuggestionJSON(retryJsonResponse);
                 } else {
-                  console.log('✅ AI-generated goal suggestion received after reload (non-JSON)');
-                  return retryExtracted;
+                  console.warn('⚠️ Retry AI returned JSON but validation failed');
+                }
+              } catch (parseError) {
+                console.warn('Failed to parse retry JSON response:', parseError);
+              }
+            }
+            
+            // If JSON parsing failed, try lenient matching
+            if (retryExtracted && retryExtracted.includes('{')) {
+              const retryLenientMatch = retryExtracted.match(/\{[\s\S]{20,}\}/);
+              if (retryLenientMatch) {
+                try {
+                  const retryJsonResponse: GoalSuggestionResponse = JSON.parse(retryLenientMatch[0]);
+                  console.log('✅ Parsed retry JSON with lenient matching');
+                  await setCachedResponse(cacheKey, { goalSuggestion: formatGoalSuggestionJSON(retryJsonResponse) });
+                  return formatGoalSuggestionJSON(retryJsonResponse);
+                } catch (e) {
+                  console.warn('Retry lenient JSON parse also failed');
                 }
               }
+            }
           }
         } catch (retryError) {
           console.error('❌ Retry goal suggestion failed:', retryError);

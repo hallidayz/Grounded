@@ -184,7 +184,7 @@ const ReflectionForm: React.FC<ReflectionFormProps> = ({
             <SkeletonLoader width="50%" height="0.625rem" className="bg-yellow-warm/30" />
           </div>
         ) : (
-          <p className="text-white dark:text-white font-medium italic text-xs sm:text-sm leading-relaxed relative z-10">"{coachInsight}"</p>
+          <p className="text-white dark:text-white font-medium italic text-xs sm:text-sm leading-relaxed relative z-10">{coachInsight}</p>
         )}
         <div className="absolute bottom-2 right-3 sm:right-4 text-xs sm:text-sm font-black text-yellow-warm/60 uppercase opacity-60">{valueMantra}</div>
       </div>
