@@ -29,7 +29,7 @@ async function main() {
         if (stderr) console.error(`[${target.name} ERR]`, stderr);
         console.log(`[${target.name} OUT]`, stdout);
         console.log(`✅ ${target.name} completed successfully.`);
-      } catch (error: any) {
+      } catch (error) {
         console.error(`❌ ${target.name} failed:`, error.message);
         throw error; // Re-throw to fail Promise.all if any build fails
       }
