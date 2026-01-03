@@ -108,7 +108,7 @@ const FeedbackButton: React.FC<FeedbackButtonProps> = ({ className = '' }) => {
 
   return (
     <>
-      {/* Floating Feedback Button */}
+      {/* Floating Feedback Button - Always visible on all screens, above all other elements */}
       <button
         onClick={() => setShowModal(true)}
         className={`
@@ -121,7 +121,7 @@ const FeedbackButton: React.FC<FeedbackButtonProps> = ({ className = '' }) => {
           flex items-center justify-center
           hover:scale-110 active:scale-95
           transition-all duration-200
-          z-40
+          z-[60]
           ${className}
         `}
         aria-label="Send Feedback"

@@ -184,9 +184,17 @@ export async function loginUser(data: LoginData): Promise<AuthResult> {
       lastLogin: new Date().toISOString(),
     });
 
-    // Store session
+    // Store session in both sessionStorage (for current session) and localStorage (for persistence)
     sessionStorage.setItem('userId', user.id);
     sessionStorage.setItem('username', user.username);
+    // Also store in localStorage so it persists across cache/history clears
+    try {
+      localStorage.setItem('userId', user.id);
+      localStorage.setItem('username', user.username);
+    } catch (error) {
+      console.warn('Could not store userId in localStorage:', error);
+      // Continue anyway - sessionStorage will work for current session
+    }
 
     // Note: Database unlock happens separately in useAuth.login() using the same password
     // This ensures authentication happens first, then database unlock
@@ -202,19 +210,77 @@ export async function loginUser(data: LoginData): Promise<AuthResult> {
 export function logoutUser(): void {
   sessionStorage.removeItem('userId');
   sessionStorage.removeItem('username');
+  // Also clear from localStorage on explicit logout
+  localStorage.removeItem('userId');
+  localStorage.removeItem('username');
 }
 
 // Get current user
 // Always uses auth store (separate, unencrypted) for user data
+// Falls back to localStorage if sessionStorage is empty (e.g., after cache clear)
 export async function getCurrentUser() {
-  const userId = sessionStorage.getItem('userId');
+  // Try sessionStorage first (current session)
+  let userId = sessionStorage.getItem('userId');
+  
+  // If sessionStorage is empty, try localStorage (persisted across cache clears)
+  if (!userId) {
+    userId = localStorage.getItem('userId');
+    // If found in localStorage, restore to sessionStorage for current session
+    if (userId) {
+      const username = localStorage.getItem('username');
+      sessionStorage.setItem('userId', userId);
+      if (username) {
+        sessionStorage.setItem('username', username);
+      }
+    }
+  }
+  
+  // If still no userId, try to find any existing user in the database (fallback)
+  if (!userId) {
+    try {
+      // Get all users from auth store and use the most recent one
+      const allUsers = await authStore.getAllUsers();
+      if (allUsers && allUsers.length > 0) {
+        // Sort by lastLogin or createdAt to get most recent
+        const sortedUsers = allUsers.sort((a, b) => {
+          const aTime = a.lastLogin ? new Date(a.lastLogin).getTime() : new Date(a.createdAt).getTime();
+          const bTime = b.lastLogin ? new Date(b.lastLogin).getTime() : new Date(b.createdAt).getTime();
+          return bTime - aTime;
+        });
+        userId = sortedUsers[0].id;
+        // Restore to both storages
+        sessionStorage.setItem('userId', userId);
+        sessionStorage.setItem('username', sortedUsers[0].username);
+        try {
+          localStorage.setItem('userId', userId);
+          localStorage.setItem('username', sortedUsers[0].username);
+        } catch (error) {
+          console.warn('Could not store userId in localStorage:', error);
+        }
+      }
+    } catch (error) {
+      console.error('Error finding existing user:', error);
+    }
+  }
+  
   if (!userId) return null;
   return await authStore.getUserById(userId);
 }
 
 // Check if user is logged in
+// Checks both sessionStorage and localStorage (for persistence across cache clears)
 export function isLoggedIn(): boolean {
-  return !!sessionStorage.getItem('userId');
+  // Check sessionStorage first (current session)
+  if (sessionStorage.getItem('userId')) {
+    return true;
+  }
+  // Fall back to localStorage (persisted across cache clears)
+  try {
+    return !!localStorage.getItem('userId');
+  } catch (error) {
+    // localStorage might be disabled or full
+    return false;
+  }
 }
 
 // Request password reset

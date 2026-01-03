@@ -18,8 +18,11 @@ if (typeof globalThis !== 'undefined') {
   
   // Set up the environment configuration
   globalOrt.env = globalOrt.env || {};
-  globalOrt.env.logLevel = 'error'; // Suppress benign warnings
+  globalOrt.env.logLevel = 'error'; // Suppress benign warnings (only show errors)
   globalOrt.env.wasm = globalOrt.env.wasm || {};
+  
+  // Note: ONNX Runtime warnings are filtered in debugLog.ts to avoid cluttering debug logs
+  // The logLevel='error' setting above should suppress most warnings, but some may still come through
   
   // Configure WASM backend settings
   if (!globalOrt.env.wasm.numThreads) {
@@ -58,13 +61,13 @@ import { AIModelType } from '../../types';
 export const MODEL_CONFIGS: Record<AIModelType, { 
   name: string; 
   path: string; 
-  task: 'text-classification' | 'text-generation';
+  task: 'text-classification' | 'text-generation' | 'text2text-generation';
   description: string;
   size: string;
 }> = {
   distilbert: {
     name: 'DistilBERT',
-    path: '/models/distilbert-base-uncased-finetuned-sst-2-english', // Use local bundled model
+    path: 'Xenova/distilbert-base-uncased-finetuned-sst-2-english', // Use Xenova optimized model (browser-compatible)
     task: 'text-classification',
     description: 'Fast sentiment analysis and mood classification',
     size: '~67MB'
@@ -211,7 +214,7 @@ export async function clearModels(): Promise<void> {
 /**
  * Initialize on-device models
  * Uses @xenova/transformers for browser-based inference
- * Loads the user-selected model (default: LaMini for healthcare/psychology)
+ * Loads the user-selected model (default: DistilBERT - first loaded and default)
  * @param forceReload - If true, clears existing models and reloads
  * @param modelType - Optional model type override (uses selected model if not provided)
  * @returns true if models loaded successfully, false if fallback mode is used
@@ -503,9 +506,10 @@ export async function initializeModels(forceReload: boolean = false, modelType?:
       // Models will be downloaded and cached locally on first use
       
       // Model A: Mental state tracker (mood/anxiety/depression assessment)
-      // Start with a simpler, more reliable model that works better in browsers
-      // Use text-classification models first as they're more stable than text-generation
-      console.log('Loading psychology-centric AI model...');
+      // ALWAYS load DistilBERT first (default and priority model)
+      // DistilBERT is faster, smaller, and more reliable for initial mood tracking
+      // If user selected DistilBERT, load it first. If they selected LaMini, still load DistilBERT first for mood tracking.
+      console.log('Loading DistilBERT for mood tracking (first priority)...');
       
       // Progress callback for model loading with throttling to prevent infinite re-renders
       let totalProgress = 0;
@@ -565,7 +569,7 @@ export async function initializeModels(forceReload: boolean = false, modelType?:
         }
       };
       
-      // Load the user-selected model (default: LaMini for healthcare/psychology)
+      // Load the user-selected model (default: DistilBERT - first loaded and default)
       const modelConfig = MODEL_CONFIGS[targetModel];
       console.log(`Loading ${modelConfig.name} (${modelConfig.description})...`);
       
@@ -601,10 +605,20 @@ export async function initializeModels(forceReload: boolean = false, modelType?:
       const useLowMemory = strategy === 'low-memory' || (compatibilityReport?.estimatedMemory !== null && compatibilityReport.estimatedMemory < 2048);
       
       // Load Model A: Mental state tracker (mood/anxiety/depression assessment)
-      // For DistilBERT, use text-classification; for others, use text-generation
+      // ALWAYS load DistilBERT first for mood tracking, regardless of user selection
+      // DistilBERT is the default and priority model for faster, more reliable mood assessment
+      const moodTrackingModelType: AIModelType = 'distilbert'; // Always use DistilBERT for mood tracking
+      const moodTrackingConfig = MODEL_CONFIGS[moodTrackingModelType];
+      const moodTrackingHuggingfaceId = HUGGINGFACE_MODEL_IDS[moodTrackingModelType];
+      
+      // Determine path for mood tracking model (always DistilBERT)
+      // Always use Xenova version for browser compatibility (ONNX optimized)
+      let moodTrackingModelPath = moodTrackingHuggingfaceId; // Use Xenova version directly
+      console.log(`[MODEL_DEBUG] Using Xenova DistilBERT for mood tracking: ${moodTrackingHuggingfaceId}`);
+      
       try {
-        console.log(`Attempting to load ${modelConfig.name} for mood tracking...`);
-        console.log(`[MODEL_DEBUG] Pipeline call: task=${modelConfig.task}, path=${modelPath}`);
+        console.log(`Attempting to load ${moodTrackingConfig.name} for mood tracking (first priority)...`);
+        console.log(`[MODEL_DEBUG] Pipeline call: task=${moodTrackingConfig.task}, path=${moodTrackingModelPath}`);
         
         // Configure pipeline options - use CPU with ONNX Runtime WASM backend
         // ONNX Runtime will automatically use WASM backend for optimal performance
@@ -621,65 +635,33 @@ export async function initializeModels(forceReload: boolean = false, modelType?:
           setTimeout(() => reject(new Error('Model loading timeout after 30 seconds')), 30000);
         });
         
-        // Try loading with current path, fallback to HuggingFace if it fails
+        // Try loading DistilBERT for mood tracking (always first)
         try {
         moodTrackerModel = await Promise.race([
-            pipeline(modelConfig.task, modelPath, pipelineOptions),
+            pipeline(moodTrackingConfig.task, moodTrackingModelPath, pipelineOptions),
           modelLoadTimeout
         ]) as any;
-        } catch (localError: any) {
-          // If local path fails and we're not already using HuggingFace, try HuggingFace
-          if (modelPath !== huggingfaceModelId && huggingfaceModelId) {
-            const errorMsg = localError?.message || String(localError);
-            const errorStack = localError?.stack || '';
-            // Check for HTML/404 errors or JSON parse errors (which indicate HTML response)
-            if (errorMsg.includes('<!DOCTYPE') || errorMsg.includes('404') || errorMsg.includes('Not Found') || 
-                errorMsg.includes('not valid JSON') || errorMsg.includes('Unexpected token')) {
-              console.warn(`[MODEL_DEBUG] Local model path failed (${errorMsg.substring(0, 50)}), falling back to HuggingFace: ${huggingfaceModelId}`);
-              modelPath = huggingfaceModelId;
-              try {
-                moodTrackerModel = await Promise.race([
-                  pipeline(modelConfig.task, modelPath, pipelineOptions),
-                  modelLoadTimeout
-                ]) as any;
-              } catch (huggingfaceError: any) {
-                // If HuggingFace also fails, check if it's a CORS issue
-                const hfErrorMsg = huggingfaceError?.message || String(huggingfaceError);
-                const isDev = import.meta.env.DEV;
-                if (hfErrorMsg.includes('<!DOCTYPE') || hfErrorMsg.includes('not valid JSON') || hfErrorMsg.includes('CORS')) {
-                  if (isDev) {
-                    // In development, CORS errors are expected - suppress noisy error messages
-                    console.warn(`[MODEL_DEBUG] Development mode: HuggingFace model unavailable (CORS expected). Using rule-based responses.`);
-                  } else {
-                    console.error(`[MODEL_DEBUG] HuggingFace model also failed - possible CORS issue: ${hfErrorMsg.substring(0, 100)}`);
-                    console.error(`[MODEL_DEBUG] This might be a CORS configuration issue. Models will be unavailable.`);
-                  }
-                }
-                throw huggingfaceError; // Re-throw to be handled by outer catch
-              }
+        } catch (modelError: any) {
+          // We're always using Xenova path, so handle errors accordingly
+          const errorMsg = modelError?.message || String(modelError);
+          const isDev = import.meta.env.DEV;
+          
+          // Check if it's a CORS or network issue
+          if (errorMsg.includes('<!DOCTYPE') || errorMsg.includes('not valid JSON') || errorMsg.includes('CORS')) {
+            if (isDev) {
+              // In development, CORS errors are expected - suppress noisy error messages
+              console.warn(`[MODEL_DEBUG] Development mode: Xenova DistilBERT model unavailable (CORS expected). Using rule-based responses.`);
             } else {
-              throw localError; // Re-throw if it's not a 404/HTML error
+              console.error(`[MODEL_DEBUG] Xenova DistilBERT model failed - possible CORS or network issue: ${errorMsg.substring(0, 100)}`);
+              console.error(`[MODEL_DEBUG] Check browser console for CORS errors. Models may be unavailable.`);
             }
-            } else {
-              // Already using HuggingFace - check if it's a CORS or network issue
-              const errorMsg = localError?.message || String(localError);
-              const isDev = import.meta.env.DEV;
-              if (errorMsg.includes('<!DOCTYPE') || errorMsg.includes('not valid JSON')) {
-                if (isDev) {
-                  // In development, CORS errors are expected - suppress noisy error messages
-                  console.warn(`[MODEL_DEBUG] Development mode: HuggingFace model unavailable (CORS expected). Using rule-based responses.`);
-                } else {
-                  console.error(`[MODEL_DEBUG] HuggingFace model failed with HTML response - possible CORS or network issue: ${errorMsg.substring(0, 100)}`);
-                  console.error(`[MODEL_DEBUG] Check browser console for CORS errors. Models may be unavailable.`);
-                }
-              }
-              throw localError; // Re-throw if we're already using HuggingFace or no fallback available
-            }
+          }
+          throw modelError; // Re-throw to be handled by outer catch
         }
         
         console.log(`[MODEL_DEBUG] Pipeline call completed successfully`);
-        console.log(`✓ ${modelConfig.name} model loaded successfully for mood tracking`);
-        console.log(`[MODEL_DEBUG] Model task: ${modelConfig.task}, can be reused: ${modelConfig.task === 'text-generation'}`);
+        console.log(`✓ ${moodTrackingConfig.name} model loaded successfully for mood tracking (first priority)`);
+        console.log(`[MODEL_DEBUG] Model task: ${moodTrackingConfig.task}, can be reused: ${moodTrackingConfig.task === 'text-generation'}`);
         console.log(`[MODEL_DEBUG] moodTrackerModel is set: ${!!moodTrackerModel}, type: ${typeof moodTrackerModel}`);
         
         // Verify the model is actually usable before caching
@@ -687,9 +669,9 @@ export async function initializeModels(forceReload: boolean = false, modelType?:
           throw new Error('Model loaded but moodTrackerModel is null');
         }
         
-        // Cache the model IMMEDIATELY after assignment
-        allModelsCache.set(targetModel, moodTrackerModel);
-        console.log(`[MODEL_DEBUG] Model cached: ${targetModel}`);
+        // Cache the DistilBERT model IMMEDIATELY after assignment
+        allModelsCache.set(moodTrackingModelType, moodTrackerModel);
+        console.log(`[MODEL_DEBUG] DistilBERT model cached: ${moodTrackingModelType}`);
         
         // NOW update progress - model is actually initialized successfully
         // This is when we can safely increment modelsLoaded and show higher progress
@@ -699,11 +681,11 @@ export async function initializeModels(forceReload: boolean = false, modelType?:
         currentDownloadProgress = totalProgress;
         currentDownloadStatus = 'downloading';
         currentDownloadLabel = 'Loading AI models...';
-        currentDownloadDetails = `${modelConfig.name} initialized`;
+        currentDownloadDetails = `${moodTrackingConfig.name} initialized`;
         setModelLoadingProgress(
           totalProgress,
           `Loading AI models...`,
-          `${modelConfig.name} initialized`
+          `${moodTrackingConfig.name} initialized (first priority)`
         );
       } catch (modelError: any) {
         const errorMsg = modelError?.message || String(modelError);
@@ -714,7 +696,7 @@ export async function initializeModels(forceReload: boolean = false, modelType?:
         if (isDev && (errorMsg.includes('<!DOCTYPE') || errorMsg.includes('not valid JSON') || errorMsg.includes('CORS'))) {
           console.warn(`[MODEL_DEBUG] Development mode: Model loading failed (CORS expected). Using rule-based responses.`);
         } else {
-          console.error(`[MODEL_DEBUG] Pipeline call failed for ${modelConfig.name}:`, errorMsg);
+          console.error(`[MODEL_DEBUG] Pipeline call failed for ${moodTrackingConfig.name}:`, errorMsg);
         if (errorStack) {
           console.error(`[MODEL_DEBUG] Error stack:`, errorStack);
           }
@@ -747,63 +729,38 @@ export async function initializeModels(forceReload: boolean = false, modelType?:
         moodTrackerModel = null;
       }
 
-      // Model B: Counseling coach - Use same model if it's text-generation, otherwise load LaMini
+      // Model B: Counseling coach - Load based on user's model selection
+      // DistilBERT (default) loads first for mood tracking, but counseling needs text-generation
+      // If user selected LaMini, use it for counseling. If user selected DistilBERT (default), use LaMini for counseling.
       console.log('Loading counseling coach model...');
       
       // IMPORTANT: Re-check cache right before reuse check - model might have been cached during loading
-      // The progress callback fires when files download, but pipeline() might still be initializing
-      // So we need to check cache again in case the model was cached but moodTrackerModel isn't set yet
-      const cachedModel = allModelsCache.get(targetModel);
-      if (cachedModel && !moodTrackerModel) {
-        console.log(`[MODEL_DEBUG] Found cached model, assigning to moodTrackerModel`);
-        moodTrackerModel = cachedModel;
-      }
+      const cachedDistilBERT = allModelsCache.get('distilbert');
+      const cachedLaMini = allModelsCache.get('lamini');
       
-      // Check if we can reuse the mood tracker model for counseling
-      // If the model is text-generation type, we can reuse it for both tasks
+      // Determine which model to use for counseling:
+      // - If user selected LaMini, try to use LaMini (if it's loaded/cached)
+      // - If user selected DistilBERT (default), use LaMini for counseling (since DistilBERT is classification-only)
       let canReuseModel = false;
-      console.log(`[MODEL_DEBUG] Checking model reuse: moodTrackerModel=${!!moodTrackerModel}, modelConfig.task=${modelConfig.task}, targetModel=${targetModel}`);
+      let counselingModelType: AIModelType = 'lamini'; // Always use LaMini for counseling (text-generation)
       
-      // For text-generation models, we can always reuse the same model instance
-      // Check both the modelConfig.task and verify moodTrackerModel exists
-      const modelToReuse = moodTrackerModel || cachedModel;
-      
-      // CRITICAL: If targetModel is text-generation (LaMini) and moodTrackerModel failed to load,
-      // we should NOT try to load it again for counseling - it will fail again
-      // Only reuse if the model actually loaded successfully
-      if (modelToReuse && (modelConfig.task === 'text-generation' || modelConfig.task === 'text2text-generation')) {
-            canReuseModel = true;
-        // Use the model from cache if moodTrackerModel is null
-        if (!moodTrackerModel && cachedModel) {
-          moodTrackerModel = cachedModel;
-          console.log(`[MODEL_DEBUG] Using cached model for mood tracking`);
+      if (targetModel === 'lamini') {
+        // User selected LaMini - check if it's already loaded/cached
+        if (cachedLaMini) {
+          counselingCoachModel = cachedLaMini;
+          canReuseModel = true;
+          console.log(`✓ Using cached LaMini for counseling (user selected LaMini)`);
+        } else {
+          // Need to load LaMini for counseling
+          console.log(`[MODEL_DEBUG] User selected LaMini - will load it for counseling`);
         }
-        counselingCoachModel = moodTrackerModel;
-            console.log(`✓ Reusing ${modelConfig.name} for counseling (text-generation model)`);
-        console.log(`[MODEL_DEBUG] Model reuse check passed - will reuse moodTrackerModel for counseling`);
       } else {
-        console.log(`[MODEL_DEBUG] Model reuse check failed: moodTrackerModel=${!!moodTrackerModel}, cachedModel=${!!cachedModel}, task=${modelConfig.task}`);
-        // If moodTrackerModel exists but task check failed, log why
-        if (modelToReuse && modelConfig.task !== 'text-generation' && modelConfig.task !== 'text2text-generation') {
-          console.log(`[MODEL_DEBUG] Cannot reuse: model is ${modelConfig.task}, need text-generation for counseling`);
-        } else if (!modelToReuse) {
-          console.log(`[MODEL_DEBUG] Cannot reuse: moodTrackerModel is null and no cached model`);
-          // If targetModel is LaMini and it failed to load, don't try to load it again
-          if (targetModel === 'lamini' && (modelConfig.task === 'text-generation' || modelConfig.task === 'text2text-generation')) {
-            console.log(`[MODEL_DEBUG] Skipping counseling model load - LaMini already failed, would fail again`);
-            canReuseModel = false; // Explicitly set to false to skip loading
-        }
-      }
+        // User selected DistilBERT (default) - use LaMini for counseling (DistilBERT is classification-only)
+        console.log(`[MODEL_DEBUG] User selected DistilBERT (default) - will load LaMini for counseling`);
       }
       
-      // Only try to load a separate counseling model if:
-      // 1. We can't reuse the mood tracker model AND
-      // 2. The targetModel is NOT LaMini (or if it is, it must have loaded successfully)
-      if (!canReuseModel && !(targetModel === 'lamini' && !moodTrackerModel && !cachedModel)) {
-        // Need to load a separate counseling model (user selected DistilBERT, need LaMini for counseling)
-        // Need a text-generation model for counseling
-        // If user selected DistilBERT (classification), load LaMini for counseling
-        const counselingModelType = targetModel === 'distilbert' ? 'lamini' : targetModel;
+      // Only try to load a separate counseling model if we can't reuse
+      if (!canReuseModel) {
         const counselingConfig = MODEL_CONFIGS[counselingModelType];
         
         // Check if we already have this model cached

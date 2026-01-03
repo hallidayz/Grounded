@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { generateDebugLog, formatDebugLogForEmail, createEmailWithDebugLog, clearDebugLog } from '../services/debugLog';
+import { generateDebugLog, formatDebugLogForEmail, createEmailWithDebugLog, clearDebugLog, clearLogEntriesByLevel, clearLogEntry } from '../services/debugLog';
 import type { DebugLog } from '../services/debugLog';
 
 interface DebugLogProps {
@@ -249,9 +249,25 @@ const DebugLogComponent: React.FC<DebugLogProps> = ({ onClose }) => {
             >
               <div className="space-y-3 text-sm">
                 {log.warnings.map((warning, index) => (
-                  <div key={index} className="bg-yellow-50 dark:bg-yellow-900/20 p-3 rounded-lg border border-yellow-200 dark:border-yellow-800">
-                    <p className="font-semibold text-yellow-800 dark:text-yellow-200">{warning.message}</p>
-                    <p className="text-xs text-yellow-600 dark:text-yellow-400 mt-1">{warning.timestamp}</p>
+                  <div key={index} className="bg-yellow-50 dark:bg-yellow-900/20 p-3 rounded-lg border border-yellow-200 dark:border-yellow-800 flex items-start justify-between gap-3">
+                    <div className="flex-1">
+                      <p className="font-semibold text-yellow-800 dark:text-yellow-200">{warning.message}</p>
+                      <p className="text-xs text-yellow-600 dark:text-yellow-400 mt-1">{warning.timestamp}</p>
+                    </div>
+                    <button
+                      onClick={() => {
+                        if (clearLogEntry(warning.timestamp, warning.message, 'warning')) {
+                          // Regenerate log to update display
+                          generateDebugLog().then((debugLog) => {
+                            setLog(debugLog);
+                          });
+                        }
+                      }}
+                      className="text-xs text-yellow-600 dark:text-yellow-400 hover:text-yellow-800 dark:hover:text-yellow-200 px-2 py-1 rounded hover:bg-yellow-100 dark:hover:bg-yellow-900/30 transition-colors flex-shrink-0"
+                      title="Clear this warning"
+                    >
+                      ✕
+                    </button>
                   </div>
                 ))}
               </div>
@@ -261,7 +277,7 @@ const DebugLogComponent: React.FC<DebugLogProps> = ({ onClose }) => {
 
         {/* Footer Actions */}
         <div className="p-6 border-t border-border-soft dark:border-dark-border space-y-3">
-          <div className="flex gap-3">
+          <div className="flex gap-3 flex-wrap">
             <button
               onClick={handleCopy}
               className="flex-1 px-4 py-3 bg-bg-secondary dark:bg-dark-bg-secondary text-text-primary dark:text-white rounded-xl text-xs font-black uppercase tracking-widest hover:bg-bg-tertiary dark:hover:bg-dark-bg-tertiary"
@@ -274,12 +290,25 @@ const DebugLogComponent: React.FC<DebugLogProps> = ({ onClose }) => {
             >
               📧 Email Support
             </button>
-            {(copied || emailed) && (
+            <button
+              onClick={handleClear}
+              className="px-4 py-3 bg-red-50 dark:bg-red-900/20 text-red-600 dark:text-red-400 rounded-xl text-xs font-black uppercase tracking-widest hover:bg-red-100 dark:hover:bg-red-900/30"
+            >
+              🗑️ Clear All
+            </button>
+            {log.warnings.length > 0 && (
               <button
-                onClick={handleClear}
-                className="px-4 py-3 bg-red-50 dark:bg-red-900/20 text-red-600 dark:text-red-400 rounded-xl text-xs font-black uppercase tracking-widest hover:bg-red-100 dark:hover:bg-red-900/30"
+                onClick={() => {
+                  if (window.confirm(`Clear all ${log.warnings.length} warning(s)?`)) {
+                    clearLogEntriesByLevel('warning');
+                    generateDebugLog().then((debugLog) => {
+                      setLog(debugLog);
+                    });
+                  }
+                }}
+                className="px-4 py-3 bg-yellow-50 dark:bg-yellow-900/20 text-yellow-600 dark:text-yellow-400 rounded-xl text-xs font-black uppercase tracking-widest hover:bg-yellow-100 dark:hover:bg-yellow-900/30"
               >
-                🗑️ Clear
+                ⚠️ Clear Warnings
               </button>
             )}
           </div>

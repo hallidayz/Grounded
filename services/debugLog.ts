@@ -112,7 +112,27 @@ export function initializeDebugLogging() {
 
   // Wrap console.warn
   console.warn = (...args: any[]) => {
-    logEntry('warning', args.join(' '), { args });
+    const message = args.join(' ');
+    
+    // Filter out benign ONNX Runtime warnings that are not actionable
+    const isOnnxRuntimeWarning = 
+      message.includes('onnxruntime') ||
+      message.includes('ONNX Runtime') ||
+      message.includes('CleanUnusedInitializersAndNodeArgs') ||
+      message.includes('Removing initializer') ||
+      message.includes('It is not used by any node');
+    
+    // Filter out other known benign warnings
+    const isBenignWarning =
+      message.includes('[W:onnxruntime:') ||
+      message.includes('graph.cc:') ||
+      message.includes('should be removed from the model');
+    
+    // Only log warnings that are actionable (not ONNX Runtime internal messages)
+    if (!isOnnxRuntimeWarning && !isBenignWarning) {
+      logEntry('warning', message, { args });
+    }
+    // Still output to console so developers can see them if needed
     originalWarn.apply(console, args);
   };
 
@@ -129,6 +149,42 @@ export function initializeDebugLogging() {
 export function clearDebugLog() {
   logEntries.length = 0;
   logEntry('info', 'Debug log cleared by user');
+}
+
+/**
+ * Clear specific log entries by level
+ */
+export function clearLogEntriesByLevel(level: 'error' | 'warning' | 'info') {
+  const initialLength = logEntries.length;
+  for (let i = logEntries.length - 1; i >= 0; i--) {
+    if (logEntries[i].level === level) {
+      logEntries.splice(i, 1);
+    }
+  }
+  if (logEntries.length < initialLength) {
+    logEntry('info', `Cleared ${level} entries from debug log`);
+  }
+}
+
+/**
+ * Clear a specific log entry by matching timestamp and message
+ */
+export function clearLogEntry(timestamp: string, message: string, level: 'error' | 'warning' | 'info') {
+  const index = logEntries.findIndex(
+    e => e.timestamp === timestamp && e.message === message && e.level === level
+  );
+  if (index !== -1) {
+    logEntries.splice(index, 1);
+    return true;
+  }
+  return false;
+}
+
+/**
+ * Get log entries (for UI components that need direct access)
+ */
+export function getLogEntries(): DebugLogEntry[] {
+  return [...logEntries]; // Return a copy to prevent direct mutation
 }
 
 /**

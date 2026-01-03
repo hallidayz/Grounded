@@ -148,6 +148,27 @@ class AuthStore {
   }
 
   /**
+   * Get all users (for fallback when session is lost)
+   */
+  async getAllUsers(): Promise<AuthUserData[]> {
+    await this.init();
+    if (!this.db) {
+      throw new Error('Database not initialized');
+    }
+
+    return new Promise((resolve, reject) => {
+      const transaction = this.db!.transaction(['users'], 'readonly');
+      const store = transaction.objectStore('users');
+      const request = store.getAll();
+
+      request.onsuccess = () => {
+        resolve(request.result || []);
+      };
+      request.onerror = () => reject(request.error);
+    });
+  }
+
+  /**
    * Get user by ID
    */
   async getUserById(userId: string): Promise<AuthUserData | null> {
