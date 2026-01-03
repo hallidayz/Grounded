@@ -6,7 +6,7 @@ This document describes where AI models can be downloaded from and how to config
 
 All models used by this app are publicly available and do not require authentication:
 - **DistilBERT**: Publicly available on HuggingFace
-- **TinyLlama**: Publicly available on HuggingFace
+- **LaMini-Flan-T5**: Publicly available on HuggingFace
 
 No authentication or gated access is required for any models.
 
@@ -89,13 +89,15 @@ Each model needs these files:
 - `vocab.txt`
 - `onnx/model_quantized.onnx`
 
-### TinyLlama
+### LaMini-Flan-T5
 - `config.json`
 - `tokenizer.json`
 - `tokenizer_config.json`
 - `special_tokens_map.json`
 - `generation_config.json`
-- `onnx/model_quantized.onnx`
+- `onnx/encoder_model_quantized.onnx`
+- `onnx/decoder_model_quantized.onnx`
+- `onnx/decoder_with_past_model_quantized.onnx`
 
 
 ## Setting Up Custom Hosting
@@ -131,7 +133,7 @@ You can set up a script to periodically mirror models from HuggingFace to your C
 
 MODELS=(
   "distilbert-base-uncased-finetuned-sst-2-english"
-  "TinyLlama-1.1B-Chat-v1.0"
+  "LaMini-Flan-T5-77M"
 )
 
 for model in "${MODELS[@]}"; do
@@ -200,7 +202,7 @@ public/models/
 │   ├── tokenizer_config.json
 │   ├── vocab.txt
 │   └── model_quantized.onnx
-└── TinyLlama-1.1B-Chat-v1.0/
+└── LaMini-Flan-T5-77M/
     ├── config.json
     ├── tokenizer.json
     ├── tokenizer_config.json

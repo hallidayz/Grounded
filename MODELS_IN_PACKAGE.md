@@ -34,11 +34,11 @@ This single command:
 ## Package Size
 
 **Without models**: ~3-5 MB**
-**With models**: ~700-800 MB**
+**With models**: ~370-400 MB**
 
 The models are:
 - DistilBERT: ~67MB (emotion classification)
-- TinyLlama: ~637MB (text generation)
+- LaMini-Flan-T5: ~300MB (text generation)
 
 ## What Gets Included
 
@@ -47,7 +47,7 @@ Grounded-Install/
 ├── dist/
 │   ├── models/              ← AI models (NEW!)
 │   │   ├── distilbert-base-uncased-finetuned-sst-2-english/
-│   │   └── TinyLlama-1.1B-Chat-v1.0/
+│   │   └── LaMini-Flan-T5-77M/
 │   ├── assets/
 │   ├── index.html
 │   └── ...
@@ -95,7 +95,7 @@ The package will be much smaller (~3-5MB), but users will need to download model
 3. Verify models are in `public/models/` before building
 
 ### Package too large?
-- Models add ~700MB to the package
+- Models add ~370MB to the package
 - If size is an issue, build without models (users download on first use)
 - Or use a CDN to host models separately
 

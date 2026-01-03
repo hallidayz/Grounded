@@ -112,7 +112,7 @@ The app uses quantized transformer models that run efficiently in the browser:
 ### Model Selection
 The app uses publicly available models:
 - **DistilBERT**: Fast text classification for mood tracking (~67MB)
-- **TinyLlama**: Balanced text generation for healthcare/psychology (~637MB, default)
+- **LaMini**: Fast, lightweight counseling assistant (~300MB, default)
 
 ## Development
 

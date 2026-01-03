@@ -5,7 +5,7 @@
  * Uses @xenova/transformers for browser-based inference.
  * 
  * Model Selection:
- * - 'tinyllama' (default): Best for healthcare/psychology - balanced quality and performance
+ * - 'lamini': Fast, lightweight counseling assistant (~300MB)
  * - 'distilbert': Fast classification, good for mood assessment
  */
 
@@ -68,12 +68,12 @@ export const MODEL_CONFIGS: Record<AIModelType, {
     description: 'Fast sentiment analysis and mood classification',
     size: '~67MB'
   },
-  tinyllama: {
-    name: 'TinyLlama',
-    path: '/models/TinyLlama-1.1B-Chat-v1.0', // Use local bundled model
-    task: 'text-generation',
-    description: 'Best for healthcare/psychology - balanced quality and performance',
-    size: '~637MB'
+  lamini: {
+    name: 'LaMini-Flan-T5',
+    path: 'Xenova/LaMini-Flan-T5-77M', // Use local bundled model or HF
+    task: 'text2text-generation',
+    description: 'Fast, lightweight counseling assistant (~300MB)',
+    size: '~300MB'
   }
 };
 
@@ -141,7 +141,7 @@ export function isTextGenerationModel(model: any): boolean {
   
   try {
     // Check if model has task property indicating text-generation
-    if (model.task === 'text-generation') {
+    if (model.task === 'text-generation' || model.task === 'text2text-generation') {
       return true;
     }
     
@@ -210,7 +210,7 @@ export async function clearModels(): Promise<void> {
 /**
  * Initialize on-device models
  * Uses @xenova/transformers for browser-based inference
- * Loads the user-selected model (default: TinyLlama for healthcare/psychology)
+ * Loads the user-selected model (default: LaMini for healthcare/psychology)
  * @param forceReload - If true, clears existing models and reloads
  * @param modelType - Optional model type override (uses selected model if not provided)
  * @returns true if models loaded successfully, false if fallback mode is used
@@ -563,7 +563,7 @@ export async function initializeModels(forceReload: boolean = false, modelType?:
         }
       };
       
-      // Load the user-selected model (default: TinyLlama for healthcare/psychology)
+      // Load the user-selected model (default: LaMini for healthcare/psychology)
       const modelConfig = MODEL_CONFIGS[targetModel];
       console.log(`Loading ${modelConfig.name} (${modelConfig.description})...`);
       
@@ -571,7 +571,7 @@ export async function initializeModels(forceReload: boolean = false, modelType?:
       // HuggingFace model IDs for Xenova models
       const HUGGINGFACE_MODEL_IDS: Record<AIModelType, string> = {
         distilbert: 'Xenova/distilbert-base-uncased-finetuned-sst-2-english',
-        tinyllama: 'Xenova/TinyLlama-1.1B-Chat-v1.0'
+        lamini: 'Xenova/LaMini-Flan-T5-77M'
       };
       
       // Try local path first, fallback to HuggingFace if local fails
@@ -745,7 +745,7 @@ export async function initializeModels(forceReload: boolean = false, modelType?:
         moodTrackerModel = null;
       }
 
-      // Model B: Counseling coach - Use same model if it's text-generation, otherwise load TinyLlama
+      // Model B: Counseling coach - Use same model if it's text-generation, otherwise load LaMini
       console.log('Loading counseling coach model...');
       
       // IMPORTANT: Re-check cache right before reuse check - model might have been cached during loading
@@ -766,10 +766,10 @@ export async function initializeModels(forceReload: boolean = false, modelType?:
       // Check both the modelConfig.task and verify moodTrackerModel exists
       const modelToReuse = moodTrackerModel || cachedModel;
       
-      // CRITICAL: If targetModel is text-generation (TinyLlama) and moodTrackerModel failed to load,
+      // CRITICAL: If targetModel is text-generation (LaMini) and moodTrackerModel failed to load,
       // we should NOT try to load it again for counseling - it will fail again
       // Only reuse if the model actually loaded successfully
-      if (modelToReuse && modelConfig.task === 'text-generation') {
+      if (modelToReuse && (modelConfig.task === 'text-generation' || modelConfig.task === 'text2text-generation')) {
             canReuseModel = true;
         // Use the model from cache if moodTrackerModel is null
         if (!moodTrackerModel && cachedModel) {
@@ -782,13 +782,13 @@ export async function initializeModels(forceReload: boolean = false, modelType?:
       } else {
         console.log(`[MODEL_DEBUG] Model reuse check failed: moodTrackerModel=${!!moodTrackerModel}, cachedModel=${!!cachedModel}, task=${modelConfig.task}`);
         // If moodTrackerModel exists but task check failed, log why
-        if (modelToReuse && modelConfig.task !== 'text-generation') {
+        if (modelToReuse && modelConfig.task !== 'text-generation' && modelConfig.task !== 'text2text-generation') {
           console.log(`[MODEL_DEBUG] Cannot reuse: model is ${modelConfig.task}, need text-generation for counseling`);
         } else if (!modelToReuse) {
           console.log(`[MODEL_DEBUG] Cannot reuse: moodTrackerModel is null and no cached model`);
-          // If targetModel is TinyLlama and it failed to load, don't try to load it again
-          if (targetModel === 'tinyllama' && modelConfig.task === 'text-generation') {
-            console.log(`[MODEL_DEBUG] Skipping counseling model load - TinyLlama already failed, would fail again`);
+          // If targetModel is LaMini and it failed to load, don't try to load it again
+          if (targetModel === 'lamini' && (modelConfig.task === 'text-generation' || modelConfig.task === 'text2text-generation')) {
+            console.log(`[MODEL_DEBUG] Skipping counseling model load - LaMini already failed, would fail again`);
             canReuseModel = false; // Explicitly set to false to skip loading
         }
       }
@@ -796,12 +796,12 @@ export async function initializeModels(forceReload: boolean = false, modelType?:
       
       // Only try to load a separate counseling model if:
       // 1. We can't reuse the mood tracker model AND
-      // 2. The targetModel is NOT TinyLlama (or if it is, it must have loaded successfully)
-      if (!canReuseModel && !(targetModel === 'tinyllama' && !moodTrackerModel && !cachedModel)) {
-        // Need to load a separate counseling model (user selected DistilBERT, need TinyLlama for counseling)
+      // 2. The targetModel is NOT LaMini (or if it is, it must have loaded successfully)
+      if (!canReuseModel && !(targetModel === 'lamini' && !moodTrackerModel && !cachedModel)) {
+        // Need to load a separate counseling model (user selected DistilBERT, need LaMini for counseling)
         // Need a text-generation model for counseling
-        // If user selected DistilBERT (classification), load TinyLlama for counseling
-        const counselingModelType = targetModel === 'distilbert' ? 'tinyllama' : targetModel;
+        // If user selected DistilBERT (classification), load LaMini for counseling
+        const counselingModelType = targetModel === 'distilbert' ? 'lamini' : targetModel;
         const counselingConfig = MODEL_CONFIGS[counselingModelType];
         
         // Check if we already have this model cached
@@ -841,7 +841,7 @@ export async function initializeModels(forceReload: boolean = false, modelType?:
             // Try loading with current path, fallback to HuggingFace if it fails
             try {
             counselingCoachModel = await Promise.race([
-                pipeline('text-generation', counselingModelPath, counselingOptions),
+                pipeline(counselingConfig.task, counselingModelPath, counselingOptions),
               counselingLoadTimeout
             ]) as any;
             } catch (localError: any) {
@@ -852,7 +852,7 @@ export async function initializeModels(forceReload: boolean = false, modelType?:
                   console.warn(`[MODEL_DEBUG] Local counseling model path failed (${errorMsg.substring(0, 50)}), falling back to HuggingFace: ${counselingHuggingfaceId}`);
                   counselingModelPath = counselingHuggingfaceId;
                   counselingCoachModel = await Promise.race([
-                    pipeline('text-generation', counselingModelPath, counselingOptions),
+                    pipeline(counselingConfig.task, counselingModelPath, counselingOptions),
                     counselingLoadTimeout
                   ]) as any;
                 } else {
@@ -930,10 +930,10 @@ export async function initializeModels(forceReload: boolean = false, modelType?:
           `${modelConfig.name} ready for both tasks`
         );
       } else {
-        // TinyLlama failed to load - can't reuse and shouldn't try again
+        // LaMini failed to load - can't reuse and shouldn't try again
         // Set counselingCoachModel to null explicitly
         counselingCoachModel = null;
-        console.log(`[MODEL_DEBUG] TinyLlama failed - skipping separate counseling model load (would fail again)`);
+        console.log(`[MODEL_DEBUG] LaMini failed - skipping separate counseling model load (would fail again)`);
       }
       
       if (counselingCoachModel) {

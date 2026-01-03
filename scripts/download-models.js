@@ -53,23 +53,25 @@ const models = [
     get baseUrl() { return getBaseUrl(this.name); }
   },
   {
-    name: 'TinyLlama-1.1B-Chat-v1.0',
-    type: 'text-generation',
+    name: 'LaMini-Flan-T5-77M',
+    type: 'text2text-generation',
     files: [
       'config.json',
       'tokenizer.json',
       'tokenizer_config.json',
       'special_tokens_map.json',
       'generation_config.json',
-      'onnx/model_quantized.onnx'
+      'onnx/encoder_model_quantized.onnx',
+      'onnx/decoder_model_quantized.onnx',
+      'onnx/decoder_with_past_model_quantized.onnx'
     ],
     get baseUrl() { return getBaseUrl(this.name); }
   }
 ];
 
-// Estimated total size: ~700MB (models are quantized)
+// Estimated total size: ~370MB (models are quantized)
 // - DistilBERT: ~67MB
-// - TinyLlama: ~637MB
+// - LaMini-Flan-T5: ~300MB
 
 function downloadFile(url, dest) {
   return new Promise((resolve, reject) => {

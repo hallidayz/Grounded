@@ -40,7 +40,7 @@ import { runAIWorker } from './aiService';
 
 export async function generateEmotionalEncouragement(prompt: string): Promise<string> {
   try {
-    const response = await runAIWorker(prompt, 'text-generation', 'Xenova/TinyLlama-1.1B-Chat-v1.0');
+    const response = await runAIWorker(prompt, 'text2text-generation', 'Xenova/LaMini-Flan-T5-77M');
     // Process response as needed
     return response.generated_text || "Thank you for sharing your emotions.";
   } catch (error) {

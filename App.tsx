@@ -562,9 +562,10 @@ const App: React.FC = () => {
                   if (loadedSettings.reminders && !loadedSettings.reminders.frequency) {
                     loadedSettings.reminders.frequency = 'daily';
                   }
-                  // Set default AI model if not set (TinyLlama for healthcare/psychology)
-                  if (!loadedSettings.aiModel) {
-                    loadedSettings.aiModel = 'tinyllama';
+                  // Set default AI model if not set (LaMini for healthcare/psychology)
+                  // Also migrate legacy 'tinyllama' setting to 'lamini'
+                  if (!loadedSettings.aiModel || (loadedSettings.aiModel as any) === 'tinyllama') {
+                    loadedSettings.aiModel = 'lamini';
                   }
                   setSettings(loadedSettings);
                   

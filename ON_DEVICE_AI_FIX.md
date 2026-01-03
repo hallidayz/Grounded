@@ -32,7 +32,7 @@
 
 ### Model Loading Flow:
 1. **First Visit**: 
-   - Models download from HuggingFace (~50-100MB for TinyLlama)
+   - Models download from HuggingFace (~100MB for LaMini)
    - Stored in browser IndexedDB (automatic, managed by transformers.js)
    - Service Worker caches the downloads for faster subsequent loads
 
@@ -71,8 +71,8 @@ Then models aren't working (check SharedArrayBuffer availability).
 ### 2. Check Model Loading
 On app startup, check console for:
 ```
-✓ TinyLlama model loaded successfully for mood tracking
-✓ TinyLlama model loaded successfully for counseling coach
+✓ LaMini-Flan-T5 model loaded successfully for mood tracking
+✓ LaMini-Flan-T5 model loaded successfully for counseling coach
 ```
 
 ### 3. Test Offline
@@ -109,7 +109,7 @@ Open DevTools → Application → IndexedDB:
 
 ### Models Loading But Not Working?
 1. **Check Console Errors**: Look for `❌ On-device AI inference failed`
-2. **Check Model Type**: Ensure correct model is selected (TinyLlama recommended)
+2. **Check Model Type**: Ensure correct model is selected (LaMini recommended)
 3. **Check Memory**: Ensure sufficient memory for model loading
 
 ### Fallback Being Used?
@@ -121,14 +121,14 @@ If you see `ℹ️ Using rule-based fallback`, check:
 ## Performance Expectations
 
 ### First Load (Models Download):
-- TinyLlama: ~30-60 seconds (downloads ~637MB)
+- LaMini: ~15-30 seconds (downloads ~300MB)
 - DistilBERT: ~5-10 seconds (downloads ~67MB)
 
 ### Subsequent Loads (From Cache):
 - All models: < 5 seconds (loads from IndexedDB)
 
 ### Inference Speed:
-- TinyLlama: ~200-500ms per response
+- LaMini: ~100-300ms per response
 - DistilBERT: ~50-100ms per classification
 
 ## Next Steps

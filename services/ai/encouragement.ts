@@ -278,45 +278,58 @@ export async function analyzeReflection(
       return JSON.parse(cached.reflectionAnalysis); // Return parsed JSON
     }
 
-    const protocolContext = protocols.length > 0 
-      ? `The user is working with an LCSW using ${protocols.join(', ')} protocols.`
-      : 'The user is working with a licensed clinical social worker.';
+    // Canonical Input Envelope for LaMini-Flan-T5
+    const sessionContext = {
+      mood: emotionalState || undefined,
+      sub_mood: selectedFeeling || undefined,
+      user_reflection: reflection,
+      feedback_request_count: previousAnalysis ? 1 : 0,
+    };
 
-    const frequencyLabel = frequency === 'quarterly' ? 'monthly' : frequency;
-    
-    // Check if this is a refresh request (prompt chain)
-    const isRefresh = !!previousAnalysis;
-    const refreshContext = isRefresh 
-      ? `\n\nIMPORTANT: This is a refresh request. The user wants a different perspective on the same reflection. Previous analysis:\n${JSON.stringify(previousAnalysis, null, 2)}\n\nProvide a NEW perspective that offers different insights while staying true to what the user actually wrote.`
-      : '';
-    
-    // Optimized JSON prompt for on-device LLM - Human-centered, relatable, no assumptions
-    const prompt = `Analyze this ${frequencyLabel} reflection and return ONLY valid JSON (no markdown, no extra text) conforming to the ReflectionAnalysisResponse type:
+    // Optimized Prompt for LaMini-Flan-T5 (Orchestrator Pattern)
+    const prompt = `You are a supportive, non-clinical reflection assistant helping users understand their day and practice self-advocacy.
+You are NOT a therapist, you do NOT give diagnoses, treatment, or crisis advice.
 
-interface ReflectionAnalysisResponse {
-  coreThemes: string[];
-  lcswLens: string;
-  reflectiveInquiry: string[];
-  sessionPrep: string;
-}
+You will receive a JSON object named SESSION_CONTEXT.
+Fields may appear in any order and some may be missing.
+Respond ONLY based on the information provided and your general language ability.
+If information is missing, work with what you have; do not invent facts.
 
-CRITICAL GUIDELINES:
-- Use the user's ACTUAL WORDS from their reflection. Don't assume context they didn't provide.
-- If the user doesn't mention "work", "job", "career", or "office", DO NOT assume work-related themes.
-- Focus on the PERSON - their feelings, their journey, their human experience.
-- Be relatable and use language that connects to what they actually wrote.
-- This is about the human making efforts, not external circumstances unless explicitly mentioned.
-${isRefresh ? '- This is a refresh - provide a DIFFERENT perspective while staying true to their words.' : ''}
+SESSION_CONTEXT:
+${JSON.stringify(sessionContext, null, 2)}
 
-Context: ${protocolContext}
-${emotionalState ? `Current Emotional State: ${emotionalState}` : ''}
-${selectedFeeling ? `Specific Feeling: ${selectedFeeling}` : ''}
-${refreshContext}
+Your tasks:
+1. Brief reflection
+   - In 2–3 sentences, reflect back what the user seems to be experiencing, using neutral, non-judgmental language.
+2. Emotion labeling
+   - Name up to 3 emotions you infer from the reflection and mood fields, if present.
+   - If you are unsure, say you are unsure.
+3. Self-advocacy support
+   - Suggest 1–2 gentle questions the user could ask themselves or their clinician.
+4. Feedback pacing
+   - Keep the response short and gently invite the user to reflect more if they want.
 
-Reflection:
-${reflection}
+Safety and scope:
+- Do NOT provide crisis instructions, diagnosis, or medication advice.
+- If the reflection mentions self-harm, suicidal thoughts, or severe distress, do NOT give advice.
+  Instead, say you are not able to help with crises and encourage them to reach out to their existing supports or crisis resources.
 
-Return valid JSON only.`;
+Output format (MUST follow this structure, no extra sections):
+
+REFLECTION:
+<2–3 sentence reflection>
+
+EMOTIONS:
+- emotion_1
+- emotion_2
+- emotion_3
+
+SELF_ADVOCACY:
+<1 short paragraph or 2 short bullet-style sentences>
+
+PACE_NOTE:
+<one sentence about pacing/next step>
+`;
 
     // Try to get AI model for JSON response
     let counselingCoachModel = getCounselingCoachModel();
@@ -341,27 +354,53 @@ Return valid JSON only.`;
 
     if (counselingCoachModel) {
       try {
-        console.log('🤖 Calling AI model for reflection analysis (JSON)...');
+        console.log('🤖 Calling AI model for reflection analysis (Canonical Envelope)...');
         const result = await counselingCoachModel(prompt, {
-          max_new_tokens: 300,
-          temperature: 0.7,
+          max_new_tokens: 250,
+          temperature: 0.3,
           do_sample: true
         });
 
         const generatedText = result[0]?.generated_text || '';
-        const extracted = generatedText.replace(prompt, '').trim();
+        console.log('✅ AI-generated text received:', generatedText.substring(0, 100) + '...');
         
-        // Try to parse JSON from response
-        const jsonMatch = extracted.match(/{\s*[\s\S]*?}/);
-        if (jsonMatch) {
-          try {
-            const jsonResponse: ReflectionAnalysisResponse = JSON.parse(jsonMatch[0]);
-            console.log('✅ AI-generated JSON reflection analysis received');
-            await setCachedResponse(cacheKey, { reflectionAnalysis: JSON.stringify(jsonResponse) });
-            return jsonResponse;
-          } catch (parseError) {
-            console.warn('Failed to parse JSON response, using fallback', parseError);
-          }
+        // Parse Canonical Output
+        const sections: ReflectionAnalysisResponse = {
+          coreThemes: [],
+          lcswLens: '',
+          reflectiveInquiry: [],
+          sessionPrep: ''
+        };
+
+        // Extract sections using regex
+        const reflectionMatch = generatedText.match(/REFLECTION:\s*([\s\S]*?)(?=(?:EMOTIONS:|SELF_ADVOCACY:|PACE_NOTE:|$))/i);
+        if (reflectionMatch) sections.lcswLens = reflectionMatch[1].trim();
+
+        const emotionsMatch = generatedText.match(/EMOTIONS:\s*([\s\S]*?)(?=(?:SELF_ADVOCACY:|PACE_NOTE:|$))/i);
+        if (emotionsMatch) {
+          sections.coreThemes = emotionsMatch[1]
+            .split('\n')
+            .map((line: string) => line.replace(/^-\s*/, '').trim())
+            .filter((line: string) => line.length > 0 && !line.toLowerCase().includes('emotion_'));
+        }
+
+        const advocacyMatch = generatedText.match(/SELF_ADVOCACY:\s*([\s\S]*?)(?=(?:PACE_NOTE:|$))/i);
+        if (advocacyMatch) {
+          sections.reflectiveInquiry = advocacyMatch[1]
+            .split('\n')
+            .map((line: string) => line.replace(/^-\s*/, '').trim())
+            .filter((line: string) => line.length > 0);
+        }
+
+        const paceMatch = generatedText.match(/PACE_NOTE:\s*([\s\S]*?)(?=$)/i);
+        if (paceMatch) sections.sessionPrep = paceMatch[1].trim();
+
+        // Validate extraction - if completely empty, something went wrong
+        if (sections.lcswLens || sections.coreThemes.length > 0) {
+          await setCachedResponse(cacheKey, { reflectionAnalysis: JSON.stringify(sections) });
+          return sections;
+        } else {
+          console.warn('Failed to parse canonical response, text was:', generatedText);
         }
       } catch (error) {
         console.warn('AI reflection analysis failed:', error);

@@ -44,7 +44,7 @@ export function useDashboard() {
     // ... existing logic to prepare prompt ...
     try {
       // Use the new AI Worker interface
-      const aiResponse = await runAIWorker(`Analyze this reflection: ${reflectionText}`, 'text-generation', 'Xenova/TinyLlama-1.1B-Chat-v1.0');
+      const aiResponse = await runAIWorker(`Analyze this reflection: ${reflectionText}`, 'text2text-generation', 'Xenova/LaMini-Flan-T5-77M');
       // ... process aiResponse ...
       return aiResponse;
     } catch (error) {
