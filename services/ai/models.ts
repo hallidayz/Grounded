@@ -579,14 +579,17 @@ export async function initializeModels(forceReload: boolean = false, modelType?:
       
       // Check if we're in development mode (models might not be available locally)
       const isDev = import.meta.env.DEV;
-      if (isDev) {
-        // In dev mode, prefer HuggingFace to avoid 404 errors
+      // In web production (Vercel), we also want to use Hugging Face because models are not bundled
+      const isWebProduction = !isDev && (typeof window !== 'undefined' && !('__TAURI__' in window));
+      
+      if (isDev || isWebProduction) {
+        // In dev mode or web production, prefer HuggingFace to avoid 404 errors
         // transformers.js will download and cache models automatically
-        console.log(`[MODEL_DEBUG] Development mode detected - using HuggingFace model: ${huggingfaceModelId}`);
+        console.log(`[MODEL_DEBUG] ${isDev ? 'Development' : 'Web Production'} mode detected - using HuggingFace model: ${huggingfaceModelId}`);
         modelPath = huggingfaceModelId;
       } else {
-        // In production, try local first, but have fallback ready
-        console.log(`[MODEL_DEBUG] Production mode - trying local path: ${modelPath}`);
+        // In Tauri production, try local first
+        console.log(`[MODEL_DEBUG] Production mode (Desktop) - trying local path: ${modelPath}`);
       }
       
       // Check memory constraints - warn if low memory and trying to load large model
@@ -811,11 +814,11 @@ export async function initializeModels(forceReload: boolean = false, modelType?:
             let counselingModelPath = counselingConfig.path;
             const counselingHuggingfaceId = HUGGINGFACE_MODEL_IDS[counselingModelType];
             
-            if (isDev) {
-              console.log(`[MODEL_DEBUG] Development mode - using HuggingFace for counseling: ${counselingHuggingfaceId}`);
+            if (isDev || isWebProduction) {
+              console.log(`[MODEL_DEBUG] ${isDev ? 'Development' : 'Web Production'} mode - using HuggingFace for counseling: ${counselingHuggingfaceId}`);
               counselingModelPath = counselingHuggingfaceId;
             } else {
-              console.log(`[MODEL_DEBUG] Production mode - trying local path for counseling: ${counselingModelPath}`);
+              console.log(`[MODEL_DEBUG] Production mode (Desktop) - trying local path for counseling: ${counselingModelPath}`);
             }
             
             // Configure pipeline options - use CPU with ONNX Runtime WASM backend
