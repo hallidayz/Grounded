@@ -741,7 +741,8 @@ const LCSWConfigComponent: React.FC<LCSWConfigProps> = ({ config, onUpdate, onCl
                           e.preventDefault();
                           toggleReminders();
                         }}
-                        className={`w-14 h-8 rounded-full transition-all relative ${settings.reminders.enabled ? 'bg-yellow-warm' : 'bg-border-soft dark:bg-dark-bg-primary'}`}
+                        /* PREV: bg-yellow-warm */
+                        className={`w-14 h-8 rounded-full transition-all relative ${settings.reminders.enabled ? 'bg-brand dark:bg-brand-light' : 'bg-border-soft dark:bg-dark-bg-primary'}`}
                       >
                         <div className={`absolute top-1 w-6 h-6 bg-white rounded-full shadow-md transition-all ${settings.reminders.enabled ? 'right-1' : 'left-1'}`} />
                       </button>
@@ -769,8 +770,9 @@ const LCSWConfigComponent: React.FC<LCSWConfigProps> = ({ config, onUpdate, onCl
                           onClick={() => handleFrequencyChange(freq)}
                           className={`px-4 py-3 rounded-xl font-black text-xs uppercase tracking-widest transition-all ${
                             (settings.reminders.frequency || 'daily') === freq
-                              ? 'bg-yellow-warm text-text-primary shadow-lg scale-105'
-                              : 'bg-bg-secondary dark:bg-dark-bg-primary/50 text-text-primary/60 dark:text-white/60 hover:bg-yellow-warm/20 dark:hover:bg-yellow-warm/20'
+                              /* PREV: bg-yellow-warm text-text-primary ... hover:bg-yellow-warm/20 */
+                              ? 'bg-brand dark:bg-brand-light text-white dark:text-navy-dark shadow-lg scale-105'
+                              : 'bg-bg-secondary dark:bg-dark-bg-primary/50 text-text-primary/60 dark:text-white/60 hover:bg-brand/10 dark:hover:bg-brand/20'
                           }`}
                         >
                           {freq}
@@ -790,7 +792,8 @@ const LCSWConfigComponent: React.FC<LCSWConfigProps> = ({ config, onUpdate, onCl
                           type="time" 
                           value={settings.reminders.time}
                           onChange={handleTimeChange}
-                          className="w-full bg-bg-secondary dark:bg-dark-bg-primary/50 border border-border-soft dark:border-dark-border/30 rounded-xl p-3 font-black text-text-primary dark:text-white focus:ring-2 focus:ring-yellow-warm transition-all outline-none"
+                          /* PREV: focus:ring-yellow-warm */
+                          className="w-full bg-bg-secondary dark:bg-dark-bg-primary/50 border border-border-soft dark:border-dark-border/30 rounded-xl p-3 font-black text-text-primary dark:text-white focus:ring-2 focus:ring-brand dark:focus:ring-brand-light transition-all outline-none"
                         />
                       </div>
                     )}
@@ -803,7 +806,8 @@ const LCSWConfigComponent: React.FC<LCSWConfigProps> = ({ config, onUpdate, onCl
                         <select
                           value={settings.reminders.dayOfWeek ?? 0}
                           onChange={handleDayOfWeekChange}
-                          className="w-full bg-bg-secondary dark:bg-dark-bg-primary/50 border border-border-soft dark:border-dark-border/30 rounded-xl p-3 font-black text-text-primary dark:text-white focus:ring-2 focus:ring-yellow-warm transition-all outline-none"
+                          /* PREV: focus:ring-yellow-warm */
+                          className="w-full bg-bg-secondary dark:bg-dark-bg-primary/50 border border-border-soft dark:border-dark-border/30 rounded-xl p-3 font-black text-text-primary dark:text-white focus:ring-2 focus:ring-brand dark:focus:ring-brand-light transition-all outline-none"
                         >
                           <option value={0}>Sunday</option>
                           <option value={1}>Monday</option>
@@ -827,7 +831,8 @@ const LCSWConfigComponent: React.FC<LCSWConfigProps> = ({ config, onUpdate, onCl
                           max="31"
                           value={settings.reminders.dayOfMonth ?? 1}
                           onChange={handleDayOfMonthChange}
-                          className="w-full bg-bg-secondary dark:bg-dark-bg-primary/50 border border-border-soft dark:border-dark-border/30 rounded-xl p-3 font-black text-text-primary dark:text-white focus:ring-2 focus:ring-yellow-warm transition-all outline-none"
+                          /* PREV: focus:ring-yellow-warm */
+                          className="w-full bg-bg-secondary dark:bg-dark-bg-primary/50 border border-border-soft dark:border-dark-border/30 rounded-xl p-3 font-black text-text-primary dark:text-white focus:ring-2 focus:ring-brand dark:focus:ring-brand-light transition-all outline-none"
                         />
                       </div>
                     )}
@@ -846,9 +851,10 @@ const LCSWConfigComponent: React.FC<LCSWConfigProps> = ({ config, onUpdate, onCl
                       </div>
                       <button
                         onClick={handleCalendarToggle}
+                        /* PREV: bg-yellow-warm */
                         className={`w-14 h-8 rounded-full transition-all relative ${
                           settings.reminders.useDeviceCalendar
-                            ? 'bg-yellow-warm'
+                            ? 'bg-brand dark:bg-brand-light'
                             : 'bg-border-soft dark:bg-dark-bg-primary'
                         }`}
                       >
@@ -872,7 +878,8 @@ const LCSWConfigComponent: React.FC<LCSWConfigProps> = ({ config, onUpdate, onCl
                       </div>
                       <button
                         onClick={handleNtfyToggle}
-                        className={`w-14 h-8 rounded-full transition-all relative ${settings.reminders.useNtfyPush ? 'bg-yellow-warm' : 'bg-border-soft dark:bg-dark-bg-primary'}`}
+                        /* PREV: bg-yellow-warm */
+                        className={`w-14 h-8 rounded-full transition-all relative ${settings.reminders.useNtfyPush ? 'bg-brand dark:bg-brand-light' : 'bg-border-soft dark:bg-dark-bg-primary'}`}
                       >
                         <div className={`absolute top-1 w-6 h-6 bg-white rounded-full shadow-md transition-all ${settings.reminders.useNtfyPush ? 'right-1' : 'left-1'}`} />
                       </button>
@@ -881,21 +888,24 @@ const LCSWConfigComponent: React.FC<LCSWConfigProps> = ({ config, onUpdate, onCl
                     {settings.reminders.useNtfyPush && (
                       <div className="space-y-4 pt-3 border-t border-border-soft dark:border-dark-border/30">
                         {/* Topic Display */}
-                        <div className="bg-white dark:bg-dark-bg-primary rounded-xl p-4 border-2 border-yellow-warm/30 space-y-3">
+                        {/* PREV: border-yellow-warm/30 */}
+                        <div className="bg-white dark:bg-dark-bg-primary rounded-xl p-4 border-2 border-brand/20 dark:border-brand/30 space-y-3">
                           <div className="flex items-center justify-between">
                             <p className="text-xs sm:text-sm font-black text-text-primary dark:text-white uppercase tracking-widest">
                               Your Subscription Topic
                             </p>
                             <button
                               onClick={handleResetTopic}
-                              className="px-2 py-1 bg-border-soft dark:bg-dark-bg-secondary text-text-primary dark:text-white rounded-lg text-xs font-black uppercase tracking-widest hover:bg-yellow-warm/20 dark:hover:bg-yellow-warm/20 transition-all"
+                              /* PREV: hover:bg-yellow-warm/20 */
+                              className="px-2 py-1 bg-border-soft dark:bg-dark-bg-secondary text-text-primary dark:text-white rounded-lg text-xs font-black uppercase tracking-widest hover:bg-brand/10 dark:hover:bg-brand/20 transition-all"
                               title="Generate new topic"
                             >
                               🔄 Reset
                             </button>
                           </div>
                           <div className="bg-bg-secondary dark:bg-dark-bg-secondary rounded-lg p-3 border border-border-soft dark:border-dark-border/30">
-                            <code className="text-sm font-black text-navy-primary dark:text-yellow-warm break-all">
+                            {/* PREV: text-navy-primary dark:text-yellow-warm */}
+                            <code className="text-sm font-black text-navy-primary dark:text-brand-light break-all">
                               {settings.reminders.ntfyTopic || 'Loading...'}
                             </code>
                           </div>
@@ -908,6 +918,7 @@ const LCSWConfigComponent: React.FC<LCSWConfigProps> = ({ config, onUpdate, onCl
                         <button
                           onClick={handleTestNtfy}
                           disabled={testStatus === 'sending'}
+                          /* PREV: bg-yellow-warm */
                           className={`w-full px-4 py-3 rounded-xl text-xs sm:text-sm font-black uppercase tracking-widest transition-all shadow-md ${
                             testStatus === 'success' 
                               ? 'bg-calm-sage text-white' 
@@ -915,7 +926,7 @@ const LCSWConfigComponent: React.FC<LCSWConfigProps> = ({ config, onUpdate, onCl
                               ? 'bg-warm-coral text-white'
                               : testStatus === 'sending'
                               ? 'bg-border-soft dark:bg-dark-bg-tertiary text-text-primary dark:text-white opacity-50 cursor-not-allowed'
-                              : 'bg-yellow-warm text-text-primary hover:opacity-90'
+                              : 'bg-brand dark:bg-brand-light text-white dark:text-navy-dark hover:opacity-90'
                           }`}
                         >
                           {testStatus === 'sending' && '⏳ Sending...'}
@@ -939,7 +950,8 @@ const LCSWConfigComponent: React.FC<LCSWConfigProps> = ({ config, onUpdate, onCl
                                 value={settings.reminders.ntfyTopic || ''}
                                 onChange={handleNtfyTopicChange}
                                 placeholder="grounded-abc123xyz"
-                                className="w-full p-2 rounded-lg bg-white dark:bg-dark-bg-primary border border-border-soft dark:border-dark-border/30 text-xs font-medium text-text-primary dark:text-white focus:ring-2 focus:ring-yellow-warm transition-all outline-none"
+                                /* PREV: focus:ring-yellow-warm */
+                                className="w-full p-2 rounded-lg bg-white dark:bg-dark-bg-primary border border-border-soft dark:border-dark-border/30 text-xs font-medium text-text-primary dark:text-white focus:ring-2 focus:ring-brand dark:focus:ring-brand-light transition-all outline-none"
                               />
                               <p className="text-xs text-text-primary/50 dark:text-white/50">
                                 Use only letters, numbers, dashes, and underscores
@@ -958,7 +970,8 @@ const LCSWConfigComponent: React.FC<LCSWConfigProps> = ({ config, onUpdate, onCl
                                   reminders: { ...settings.reminders, ntfyServer: e.target.value.trim() || undefined }
                                 })}
                                 placeholder="https://ntfy.sh (default)"
-                                className="w-full p-2 rounded-lg bg-white dark:bg-dark-bg-primary border border-border-soft dark:border-dark-border/30 text-xs font-medium text-text-primary dark:text-white focus:ring-2 focus:ring-yellow-warm transition-all outline-none"
+                                /* PREV: focus:ring-yellow-warm */
+                                className="w-full p-2 rounded-lg bg-white dark:bg-dark-bg-primary border border-border-soft dark:border-dark-border/30 text-xs font-medium text-text-primary dark:text-white focus:ring-2 focus:ring-brand dark:focus:ring-brand-light transition-all outline-none"
                               />
                               <p className="text-xs text-text-primary/50 dark:text-white/50">
                                 Leave empty to use the free public server
@@ -971,12 +984,14 @@ const LCSWConfigComponent: React.FC<LCSWConfigProps> = ({ config, onUpdate, onCl
                   </div>
 
                   {/* Next Reminder Preview */}
-                  <div className="bg-yellow-warm/10 dark:bg-yellow-warm/20 rounded-xl p-4 border border-yellow-warm/30">
+                  {/* PREV: bg-yellow-warm/10 ... border-yellow-warm/30 */}
+                  <div className="bg-brand/5 dark:bg-brand/10 rounded-xl p-4 border border-brand/20 dark:border-brand/30">
                     <div className="flex justify-between items-center">
                       <span className="text-xs sm:text-sm font-black text-text-primary dark:text-white uppercase tracking-widest">
                         Next Reminder
                       </span>
-                      <span className="text-sm font-black text-yellow-warm animate-pulse">
+                      {/* PREV: text-yellow-warm */}
+                      <span className="text-sm font-black text-brand dark:text-brand-light animate-pulse">
                         {nextPulseInfo}
                       </span>
                     </div>
@@ -986,7 +1001,8 @@ const LCSWConfigComponent: React.FC<LCSWConfigProps> = ({ config, onUpdate, onCl
                     {notifPermission !== 'granted' ? (
                       <button 
                         onClick={requestPermission}
-                        className="w-full px-6 py-4 bg-yellow-warm/20 dark:bg-yellow-warm/20 text-yellow-warm dark:text-yellow-warm rounded-2xl text-xs sm:text-sm font-black uppercase tracking-widest hover:bg-yellow-warm/30 dark:hover:bg-yellow-warm/30 transition-colors flex items-center justify-center gap-2"
+                        /* PREV: bg-yellow-warm/20 ... text-yellow-warm ... hover:bg-yellow-warm/30 */
+                        className="w-full px-6 py-4 bg-brand/10 dark:bg-brand/20 text-brand dark:text-brand-light rounded-2xl text-xs sm:text-sm font-black uppercase tracking-widest hover:bg-brand/20 dark:hover:bg-brand/30 transition-colors flex items-center justify-center gap-2"
                       >
                         <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={3} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" /></svg>
                         Enable Browser Permissions

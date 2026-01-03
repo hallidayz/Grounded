@@ -232,7 +232,8 @@ const Login: React.FC<LoginProps> = ({ onLogin }) => {
           )}
 
           {resetLink && mode === 'forgot' && (
-            <div className="bg-yellow-warm/20 dark:bg-yellow-warm/30 border border-yellow-warm/50 rounded-lg p-4 space-y-3">
+            /* PREV: bg-yellow-warm/20 ... border-yellow-warm/50 */
+            <div className="bg-brand/10 dark:bg-brand/20 border border-brand/30 dark:border-brand-light/30 rounded-lg p-4 space-y-3">
               <p className="text-sm font-bold text-text-primary dark:text-white">
                 Reset Link Generated
               </p>
@@ -248,7 +249,8 @@ const Login: React.FC<LoginProps> = ({ onLogin }) => {
                 />
                 <button
                   onClick={copyResetLink}
-                  className="px-4 py-2 bg-yellow-warm text-text-primary rounded-lg text-xs font-bold uppercase tracking-widest hover:opacity-90"
+                  /* PREV: bg-yellow-warm text-text-primary */
+                  className="px-4 py-2 bg-brand dark:bg-brand-light text-white dark:text-navy-dark rounded-lg text-xs font-bold uppercase tracking-widest hover:opacity-90"
                 >
                   Copy
                 </button>
@@ -267,7 +269,8 @@ const Login: React.FC<LoginProps> = ({ onLogin }) => {
                   value={username}
                   onChange={(e) => setUsername(e.target.value)}
                   required
-                  className="w-full px-4 py-3 rounded-lg bg-bg-primary dark:bg-dark-bg-primary/50 border border-border-soft dark:border-dark-border/30 text-text-primary dark:text-white focus:ring-2 focus:ring-yellow-warm/50 outline-none"
+                  /* PREV: focus:ring-yellow-warm/50 */
+                  className="w-full px-4 py-3 rounded-lg bg-bg-primary dark:bg-dark-bg-primary/50 border border-border-soft dark:border-dark-border/30 text-text-primary dark:text-white focus:ring-2 focus:ring-brand/50 dark:focus:ring-brand-light/50 outline-none"
                   placeholder="Enter your username"
                 />
               </div>
@@ -281,7 +284,8 @@ const Login: React.FC<LoginProps> = ({ onLogin }) => {
                     value={password}
                     onChange={(e) => setPassword(e.target.value)}
                     required
-                    className="w-full px-4 py-3 pr-12 rounded-lg bg-bg-primary dark:bg-dark-bg-primary/50 border border-border-soft dark:border-dark-border/30 text-text-primary dark:text-white focus:ring-2 focus:ring-yellow-warm/50 outline-none"
+                    /* PREV: focus:ring-yellow-warm/50 */
+                    className="w-full px-4 py-3 pr-12 rounded-lg bg-bg-primary dark:bg-dark-bg-primary/50 border border-border-soft dark:border-dark-border/30 text-text-primary dark:text-white focus:ring-2 focus:ring-brand/50 dark:focus:ring-brand-light/50 outline-none"
                     placeholder="Enter your password"
                   />
                   <button
@@ -306,7 +310,8 @@ const Login: React.FC<LoginProps> = ({ onLogin }) => {
               <button
                 type="submit"
                 disabled={loading}
-                className="w-full py-3 sm:py-4 bg-yellow-warm text-text-primary rounded-lg sm:rounded-xl font-black uppercase tracking-widest text-sm sm:text-base hover:opacity-90 transition-all disabled:opacity-50 shadow-lg"
+                /* PREV: bg-yellow-warm text-text-primary */
+                className="w-full py-3 sm:py-4 bg-brand dark:bg-brand-light text-white dark:text-navy-dark rounded-lg sm:rounded-xl font-black uppercase tracking-widest text-sm sm:text-base hover:opacity-90 transition-all disabled:opacity-50 shadow-lg"
               >
                 {loading ? 'Signing in...' : 'Sign In'}
               </button>
@@ -314,7 +319,8 @@ const Login: React.FC<LoginProps> = ({ onLogin }) => {
                 <button
                   type="button"
                   onClick={() => setMode('register')}
-                  className="text-xs sm:text-sm text-yellow-warm hover:underline"
+                  /* PREV: text-yellow-warm */
+                  className="text-xs sm:text-sm text-brand dark:text-brand-light hover:underline"
                 >
                   Create Account
                 </button>
@@ -341,7 +347,8 @@ const Login: React.FC<LoginProps> = ({ onLogin }) => {
                   onChange={(e) => setUsername(e.target.value)}
                   required
                   minLength={3}
-                  className="w-full px-4 py-3 rounded-lg bg-bg-primary dark:bg-dark-bg-primary/50 border border-border-soft dark:border-dark-border/30 text-text-primary dark:text-white focus:ring-2 focus:ring-yellow-warm/50 outline-none"
+                  /* PREV: focus:ring-yellow-warm/50 */
+                  className="w-full px-4 py-3 rounded-lg bg-bg-primary dark:bg-dark-bg-primary/50 border border-border-soft dark:border-dark-border/30 text-text-primary dark:text-white focus:ring-2 focus:ring-brand/50 dark:focus:ring-brand-light/50 outline-none"
                   placeholder="Choose a username (min 3 characters)"
                 />
               </div>
@@ -354,7 +361,8 @@ const Login: React.FC<LoginProps> = ({ onLogin }) => {
                   value={email}
                   onChange={(e) => setEmail(e.target.value)}
                   required
-                  className="w-full px-4 py-3 rounded-lg bg-bg-primary dark:bg-dark-bg-primary/50 border border-border-soft dark:border-dark-border/30 text-text-primary dark:text-white focus:ring-2 focus:ring-yellow-warm/50 outline-none"
+                  /* PREV: focus:ring-yellow-warm/50 */
+                  className="w-full px-4 py-3 rounded-lg bg-bg-primary dark:bg-dark-bg-primary/50 border border-border-soft dark:border-dark-border/30 text-text-primary dark:text-white focus:ring-2 focus:ring-brand/50 dark:focus:ring-brand-light/50 outline-none"
                   placeholder="your.email@example.com"
                 />
               </div>
@@ -369,7 +377,8 @@ const Login: React.FC<LoginProps> = ({ onLogin }) => {
                     onChange={(e) => setPassword(e.target.value)}
                     required
                     minLength={6}
-                    className="w-full px-4 py-3 pr-12 rounded-lg bg-bg-primary dark:bg-dark-bg-primary/50 border border-border-soft dark:border-dark-border/30 text-text-primary dark:text-white focus:ring-2 focus:ring-yellow-warm/50 outline-none"
+                    /* PREV: focus:ring-yellow-warm/50 */
+                    className="w-full px-4 py-3 pr-12 rounded-lg bg-bg-primary dark:bg-dark-bg-primary/50 border border-border-soft dark:border-dark-border/30 text-text-primary dark:text-white focus:ring-2 focus:ring-brand/50 dark:focus:ring-brand-light/50 outline-none"
                     placeholder="Choose a password (min 6 characters)"
                   />
                   <button
@@ -402,7 +411,8 @@ const Login: React.FC<LoginProps> = ({ onLogin }) => {
                     onChange={(e) => setConfirmPassword(e.target.value)}
                     required
                     minLength={6}
-                    className="w-full px-4 py-3 pr-12 rounded-lg bg-bg-primary dark:bg-dark-bg-primary/50 border border-border-soft dark:border-dark-border/30 text-text-primary dark:text-white focus:ring-2 focus:ring-yellow-warm/50 outline-none"
+                    /* PREV: focus:ring-yellow-warm/50 */
+                    className="w-full px-4 py-3 pr-12 rounded-lg bg-bg-primary dark:bg-dark-bg-primary/50 border border-border-soft dark:border-dark-border/30 text-text-primary dark:text-white focus:ring-2 focus:ring-brand/50 dark:focus:ring-brand-light/50 outline-none"
                     placeholder="Confirm your password"
                   />
                   <button
@@ -427,7 +437,8 @@ const Login: React.FC<LoginProps> = ({ onLogin }) => {
               <button
                 type="submit"
                 disabled={loading}
-                className="w-full py-3 sm:py-4 bg-yellow-warm text-text-primary rounded-lg sm:rounded-xl font-black uppercase tracking-widest text-sm sm:text-base hover:opacity-90 transition-all disabled:opacity-50 shadow-lg"
+                /* PREV: bg-yellow-warm text-text-primary */
+                className="w-full py-3 sm:py-4 bg-brand dark:bg-brand-light text-white dark:text-navy-dark rounded-lg sm:rounded-xl font-black uppercase tracking-widest text-sm sm:text-base hover:opacity-90 transition-all disabled:opacity-50 shadow-lg"
               >
                 {loading ? 'Creating Account...' : 'Create Account'}
               </button>
@@ -435,7 +446,8 @@ const Login: React.FC<LoginProps> = ({ onLogin }) => {
                 <button
                   type="button"
                   onClick={() => setMode('login')}
-                  className="text-xs sm:text-sm text-yellow-warm hover:underline"
+                  /* PREV: text-yellow-warm */
+                  className="text-xs sm:text-sm text-brand dark:text-brand-light hover:underline"
                 >
                   Already have an account? Sign In
                 </button>
@@ -454,7 +466,8 @@ const Login: React.FC<LoginProps> = ({ onLogin }) => {
                   value={email}
                   onChange={(e) => setEmail(e.target.value)}
                   required
-                  className="w-full px-4 py-3 rounded-lg bg-bg-primary dark:bg-dark-bg-primary/50 border border-border-soft dark:border-dark-border/30 text-text-primary dark:text-white focus:ring-2 focus:ring-yellow-warm/50 outline-none"
+                  /* PREV: focus:ring-yellow-warm/50 */
+                  className="w-full px-4 py-3 rounded-lg bg-bg-primary dark:bg-dark-bg-primary/50 border border-border-soft dark:border-dark-border/30 text-text-primary dark:text-white focus:ring-2 focus:ring-brand/50 dark:focus:ring-brand-light/50 outline-none"
                   placeholder="Enter your email address"
                 />
               </div>
@@ -464,7 +477,8 @@ const Login: React.FC<LoginProps> = ({ onLogin }) => {
               <button
                 type="submit"
                 disabled={loading}
-                className="w-full py-3 sm:py-4 bg-yellow-warm text-text-primary rounded-lg sm:rounded-xl font-black uppercase tracking-widest text-sm sm:text-base hover:opacity-90 transition-all disabled:opacity-50 shadow-lg"
+                /* PREV: bg-yellow-warm text-text-primary */
+                className="w-full py-3 sm:py-4 bg-brand dark:bg-brand-light text-white dark:text-navy-dark rounded-lg sm:rounded-xl font-black uppercase tracking-widest text-sm sm:text-base hover:opacity-90 transition-all disabled:opacity-50 shadow-lg"
               >
                 {loading ? 'Generating Link...' : 'Generate Reset Link'}
               </button>
@@ -476,7 +490,8 @@ const Login: React.FC<LoginProps> = ({ onLogin }) => {
                     setEmail('');
                     setResetLink('');
                   }}
-                  className="text-xs sm:text-sm text-yellow-warm hover:underline"
+                  /* PREV: text-yellow-warm */
+                  className="text-xs sm:text-sm text-brand dark:text-brand-light hover:underline"
                 >
                   Back to Sign In
                 </button>
@@ -497,7 +512,8 @@ const Login: React.FC<LoginProps> = ({ onLogin }) => {
                     onChange={(e) => setNewPassword(e.target.value)}
                     required
                     minLength={6}
-                    className="w-full px-4 py-3 pr-12 rounded-lg bg-bg-primary dark:bg-dark-bg-primary/50 border border-border-soft dark:border-dark-border/30 text-text-primary dark:text-white focus:ring-2 focus:ring-yellow-warm/50 outline-none"
+                    /* PREV: focus:ring-yellow-warm/50 */
+                    className="w-full px-4 py-3 pr-12 rounded-lg bg-bg-primary dark:bg-dark-bg-primary/50 border border-border-soft dark:border-dark-border/30 text-text-primary dark:text-white focus:ring-2 focus:ring-brand/50 dark:focus:ring-brand-light/50 outline-none"
                     placeholder="Enter new password (min 6 characters)"
                   />
                   <button
@@ -530,7 +546,8 @@ const Login: React.FC<LoginProps> = ({ onLogin }) => {
                     onChange={(e) => setConfirmPassword(e.target.value)}
                     required
                     minLength={6}
-                    className="w-full px-4 py-3 pr-12 rounded-lg bg-bg-primary dark:bg-dark-bg-primary/50 border border-border-soft dark:border-dark-border/30 text-text-primary dark:text-white focus:ring-2 focus:ring-yellow-warm/50 outline-none"
+                    /* PREV: focus:ring-yellow-warm/50 */
+                    className="w-full px-4 py-3 pr-12 rounded-lg bg-bg-primary dark:bg-dark-bg-primary/50 border border-border-soft dark:border-dark-border/30 text-text-primary dark:text-white focus:ring-2 focus:ring-brand/50 dark:focus:ring-brand-light/50 outline-none"
                     placeholder="Confirm new password"
                   />
                   <button
@@ -555,7 +572,8 @@ const Login: React.FC<LoginProps> = ({ onLogin }) => {
               <button
                 type="submit"
                 disabled={loading}
-                className="w-full py-3 sm:py-4 bg-yellow-warm text-text-primary rounded-lg sm:rounded-xl font-black uppercase tracking-widest text-sm sm:text-base hover:opacity-90 transition-all disabled:opacity-50 shadow-lg"
+                /* PREV: bg-yellow-warm text-text-primary */
+                className="w-full py-3 sm:py-4 bg-brand dark:bg-brand-light text-white dark:text-navy-dark rounded-lg sm:rounded-xl font-black uppercase tracking-widest text-sm sm:text-base hover:opacity-90 transition-all disabled:opacity-50 shadow-lg"
               >
                 {loading ? 'Resetting Password...' : 'Reset Password'}
               </button>

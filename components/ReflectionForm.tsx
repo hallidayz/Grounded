@@ -139,7 +139,8 @@ const ReflectionForm: React.FC<ReflectionFormProps> = ({
                         className={`p-3 sm:p-4 rounded-xl sm:rounded-2xl border-2 transition-all active:scale-95 ${
                           selectedFeeling === feeling
                             ? 'border-navy-primary dark:border-white font-bold text-white dark:text-text-primary'
-                            : 'border-border-soft dark:border-dark-border/30 bg-bg-secondary dark:bg-dark-bg-primary/50 text-text-primary dark:text-white hover:border-yellow-warm/50'
+                            /* PREV: hover:border-yellow-warm/50 */
+                            : 'border-border-soft dark:border-dark-border/30 bg-bg-secondary dark:bg-dark-bg-primary/50 text-text-primary dark:text-white hover:border-brand/50 dark:hover:border-brand-light/50'
                         }`}
                         style={selectedFeeling === feeling ? {
                           backgroundColor: currentStateConfig.color
@@ -151,7 +152,8 @@ const ReflectionForm: React.FC<ReflectionFormProps> = ({
                   </div>
                   
                   {selectedFeeling && (
-                    <div className="mt-4 p-3 bg-yellow-warm/10 dark:bg-yellow-warm/20 rounded-xl border border-yellow-warm/30">
+                    /* PREV: bg-yellow-warm/10 ... border-yellow-warm/30 */
+                    <div className="mt-4 p-3 bg-brand/5 dark:bg-brand/10 rounded-xl border border-brand/20 dark:border-brand/30">
                       <p className="text-xs text-text-primary dark:text-white">
                         <span className="font-bold">Selected:</span> {selectedFeeling}
                       </p>
@@ -167,7 +169,8 @@ const ReflectionForm: React.FC<ReflectionFormProps> = ({
           const currentStateConfig = getEmotionalState(emotionalState);
           if (!currentStateConfig) return null;
           return (
-            <div className="mt-2 p-2 sm:p-3 bg-yellow-warm/10 dark:bg-yellow-warm/20 rounded-lg border border-yellow-warm/30">
+            /* PREV: bg-yellow-warm/10 ... border-yellow-warm/30 */
+            <div className="mt-2 p-2 sm:p-3 bg-brand/5 dark:bg-brand/10 rounded-lg border border-brand/20 dark:border-brand/30">
               <p className="text-xs sm:text-sm text-text-primary dark:text-white">
                 <span className="font-bold">Feeling:</span> {selectedFeeling} ({currentStateConfig.shortLabel})
               </p>
@@ -177,16 +180,19 @@ const ReflectionForm: React.FC<ReflectionFormProps> = ({
       </div>
 
       <div className="bg-navy-primary dark:bg-navy-primary rounded-xl sm:rounded-2xl p-3 sm:p-4 shadow-md border border-navy-primary/20 dark:border-dark-border/50 relative overflow-hidden group">
-        <p className="text-xs sm:text-sm font-black text-yellow-warm/80 uppercase tracking-widest mb-1.5">Focus Lens</p>
+        {/* PREV: text-yellow-warm/80 */}
+        <p className="text-xs sm:text-sm font-black text-brand/80 dark:text-brand-light/80 uppercase tracking-widest mb-1.5">Focus Lens</p>
         {loading ? (
           <div className="space-y-1.5">
-            <SkeletonLoader width="75%" height="0.625rem" className="bg-yellow-warm/30" />
-            <SkeletonLoader width="50%" height="0.625rem" className="bg-yellow-warm/30" />
+            {/* PREV: bg-yellow-warm/30 */}
+            <SkeletonLoader width="75%" height="0.625rem" className="bg-brand/10 dark:bg-brand/20" />
+            <SkeletonLoader width="50%" height="0.625rem" className="bg-brand/10 dark:bg-brand/20" />
           </div>
         ) : (
           <p className="text-white dark:text-white font-medium italic text-xs sm:text-sm leading-relaxed relative z-10">{coachInsight}</p>
         )}
-        <div className="absolute bottom-2 right-3 sm:right-4 text-xs sm:text-sm font-black text-yellow-warm/60 uppercase opacity-60">{valueMantra}</div>
+        {/* PREV: text-yellow-warm/60 */}
+        <div className="absolute bottom-2 right-3 sm:right-4 text-xs sm:text-sm font-black text-brand/60 dark:text-brand-light/60 uppercase opacity-60">{valueMantra}</div>
       </div>
 
       {/* Selected Feeling Heading */}
@@ -194,11 +200,12 @@ const ReflectionForm: React.FC<ReflectionFormProps> = ({
         const stateConfig = getEmotionalState(emotionalState);
         if (!stateConfig) return null;
         return (
-          <div className="bg-yellow-warm/10 dark:bg-yellow-warm/20 rounded-xl sm:rounded-2xl p-3 sm:p-4 border-2 border-yellow-warm/30">
+          /* PREV: bg-yellow-warm/10 ... border-yellow-warm/30 ... text-yellow-warm */
+          <div className="bg-brand/5 dark:bg-brand/10 rounded-xl sm:rounded-2xl p-3 sm:p-4 border-2 border-brand/20 dark:border-brand/30">
             <h3 className="text-base sm:text-lg font-black text-text-primary dark:text-white flex items-center gap-2">
               <span className="text-xl sm:text-2xl">{stateConfig.emoji}</span>
               <span className="capitalize">{selectedFeeling}</span>
-              <span className="text-yellow-warm">—</span>
+              <span className="text-brand dark:text-brand-light">—</span>
               <span className="text-text-primary/70 dark:text-white/70">{stateConfig.shortLabel}</span>
             </h3>
           </div>
@@ -209,13 +216,15 @@ const ReflectionForm: React.FC<ReflectionFormProps> = ({
         <div className="space-y-2">
           <div className="flex items-center justify-between px-1">
             <label className="text-xs sm:text-sm font-black text-text-primary/50 dark:text-white/50 uppercase tracking-widest">1. Deep Reflection</label>
-            <span className="text-xs sm:text-sm font-bold text-yellow-warm uppercase tracking-widest">Systemic Focus</span>
+            {/* PREV: text-yellow-warm */}
+            <span className="text-xs sm:text-sm font-bold text-brand dark:text-brand-light uppercase tracking-widest">Systemic Focus</span>
           </div>
           <textarea 
             value={reflectionText}
             onChange={(e) => onReflectionTextChange(e.target.value)}
             placeholder={getReflectionPlaceholder(goalFreq, selectedFeeling)}
-            className="w-full p-3 sm:p-4 rounded-xl sm:rounded-2xl bg-bg-secondary dark:bg-dark-bg-primary/50 border-none focus:ring-2 focus:ring-yellow-warm/30 outline-none text-text-primary dark:text-white min-h-[140px] sm:min-h-[160px] resize-none text-sm sm:text-base leading-relaxed shadow-inner"
+            /* PREV: focus:ring-yellow-warm/30 */
+            className="w-full p-3 sm:p-4 rounded-xl sm:rounded-2xl bg-bg-secondary dark:bg-dark-bg-primary/50 border-none focus:ring-2 focus:ring-brand/30 dark:focus:ring-brand-light/30 outline-none text-text-primary dark:text-white min-h-[140px] sm:min-h-[160px] resize-none text-sm sm:text-base leading-relaxed shadow-inner"
           />
           <button
             onClick={async () => {
@@ -227,7 +236,8 @@ const ReflectionForm: React.FC<ReflectionFormProps> = ({
               }
             }}
             disabled={analyzingReflection || !reflectionText.trim()}
-            className="w-full py-2 sm:py-2.5 bg-yellow-warm text-text-primary rounded-lg sm:rounded-xl font-black uppercase tracking-widest text-xs sm:text-sm shadow-sm hover:opacity-90 transition-all active:scale-[0.98] disabled:opacity-30 disabled:cursor-not-allowed"
+            /* PREV: bg-yellow-warm text-text-primary */
+            className="w-full py-2 sm:py-2.5 bg-brand dark:bg-brand-light text-white dark:text-navy-dark rounded-lg sm:rounded-xl font-black uppercase tracking-widest text-xs sm:text-sm shadow-sm hover:opacity-90 transition-all active:scale-[0.98] disabled:opacity-30 disabled:cursor-not-allowed"
           >
             {analyzingReflection ? (
               <span className="flex items-center justify-center gap-2">
@@ -240,15 +250,18 @@ const ReflectionForm: React.FC<ReflectionFormProps> = ({
             ) : '💾 Save'}
           </button>
           {analyzingReflection && (
-            <div className="text-xs sm:text-sm text-yellow-warm font-bold uppercase tracking-widest animate-pulse">
+            /* PREV: text-yellow-warm */
+            <div className="text-xs sm:text-sm text-brand dark:text-brand-light font-bold uppercase tracking-widest animate-pulse">
               Analyzing reflection...
             </div>
           )}
           {reflectionAnalysis && !analyzingReflection && (
-            <div className="mt-3 p-3 sm:p-4 bg-yellow-warm/10 dark:bg-yellow-warm/20 rounded-xl border border-yellow-warm/30 space-y-3">
+            /* PREV: bg-yellow-warm/10 ... border-yellow-warm/30 */
+            <div className="mt-3 p-3 sm:p-4 bg-brand/5 dark:bg-brand/10 rounded-xl border border-brand/20 dark:border-brand/30 space-y-3">
               <div className="flex items-center justify-between">
                 <div className="flex items-center gap-2">
-                  <div className="text-xs sm:text-sm font-black text-yellow-warm uppercase tracking-widest">Reflection Analysis</div>
+                  {/* PREV: text-yellow-warm */}
+                  <div className="text-xs sm:text-sm font-black text-brand dark:text-brand-light uppercase tracking-widest">Reflection Analysis</div>
                   <StatusIndicator
                     status={
                       analyzingReflection
@@ -262,10 +275,11 @@ const ReflectionForm: React.FC<ReflectionFormProps> = ({
                 </div>
                 <button
                   onClick={onTriggerReflectionAnalysis}
-                  disabled={analyzingReflection || !reflectionText.trim() || !emotionalState || emotionalState === 'mixed' || !selectedFeeling}
-                  className="text-xs sm:text-sm font-black text-yellow-warm uppercase tracking-widest hover:underline disabled:opacity-30 disabled:cursor-not-allowed flex items-center gap-1.5"
-                  title="Refresh analysis"
-                >
+                disabled={analyzingReflection || !reflectionText.trim() || !emotionalState || emotionalState === 'mixed' || !selectedFeeling}
+                /* PREV: text-yellow-warm */
+                className="text-xs sm:text-sm font-black text-brand dark:text-brand-light uppercase tracking-widest hover:underline disabled:opacity-30 disabled:cursor-not-allowed flex items-center gap-1.5"
+                title="Refresh analysis"
+              >
                   {analyzingReflection ? (
                     <>
                       <svg className="animate-spin h-3 w-3" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
@@ -305,7 +319,8 @@ const ReflectionForm: React.FC<ReflectionFormProps> = ({
           <div className="flex justify-between items-center px-1">
             <label className="text-xs sm:text-sm font-black text-text-primary/50 dark:text-white/50 uppercase tracking-widest">2. Self-Advocacy Aim</label>
             <div className="flex items-center gap-2">
-              <button onClick={onSuggestGoal} disabled={aiGoalLoading} className="text-xs sm:text-sm font-black text-yellow-warm uppercase tracking-widest hover:underline disabled:opacity-50 flex items-center gap-1.5">
+              {/* PREV: text-yellow-warm */}
+              <button onClick={onSuggestGoal} disabled={aiGoalLoading} className="text-xs sm:text-sm font-black text-brand dark:text-brand-light uppercase tracking-widest hover:underline disabled:opacity-50 flex items-center gap-1.5">
                 {aiGoalLoading ? (
                   <>
                     <svg className="animate-spin h-3 w-3" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
@@ -333,14 +348,16 @@ const ReflectionForm: React.FC<ReflectionFormProps> = ({
           <div className="space-y-1.5">
             <div className="flex gap-1">
               {(['daily', 'weekly', 'monthly'] as GoalFrequency[]).map(f => (
-                <button key={f} onClick={() => onGoalFreqChange(f)} className={`flex-1 py-1 rounded-lg text-xs sm:text-sm font-black uppercase tracking-widest transition-all ${goalFreq === f ? 'bg-yellow-warm text-text-primary shadow-sm' : 'bg-bg-secondary dark:bg-dark-bg-primary/50 text-text-primary/40 dark:text-white/40'}`}>{f}</button>
+                /* PREV: bg-yellow-warm */
+                <button key={f} onClick={() => onGoalFreqChange(f)} className={`flex-1 py-1 rounded-lg text-xs sm:text-sm font-black uppercase tracking-widest transition-all ${goalFreq === f ? 'bg-brand dark:bg-brand-light text-white dark:text-navy-dark shadow-sm' : 'bg-bg-secondary dark:bg-dark-bg-primary/50 text-text-primary/40 dark:text-white/40'}`}>{f}</button>
               ))}
             </div>
             <textarea 
               value={goalText}
               onChange={(e) => onGoalTextChange(e.target.value)}
               placeholder="Define one tool or boundary to implement next."
-              className="w-full p-3 sm:p-4 rounded-xl sm:rounded-2xl bg-bg-secondary dark:bg-dark-bg-primary/50 border-none focus:ring-2 focus:ring-yellow-warm/30 outline-none text-text-primary dark:text-white min-h-[160px] sm:min-h-[180px] resize-y text-sm sm:text-base leading-relaxed shadow-inner"
+              /* PREV: focus:ring-yellow-warm/30 */
+              className="w-full p-3 sm:p-4 rounded-xl sm:rounded-2xl bg-bg-secondary dark:bg-dark-bg-primary/50 border-none focus:ring-2 focus:ring-brand/30 dark:focus:ring-brand-light/30 outline-none text-text-primary dark:text-white min-h-[160px] sm:min-h-[180px] resize-y text-sm sm:text-base leading-relaxed shadow-inner"
               style={{ minHeight: '160px' }}
             />
           </div>
@@ -350,7 +367,8 @@ const ReflectionForm: React.FC<ReflectionFormProps> = ({
       <button
         onClick={onCommit}
         disabled={!reflectionText.trim() && !goalText.trim()}
-        className="w-full py-3 sm:py-4 bg-yellow-warm text-text-primary rounded-xl sm:rounded-2xl font-black uppercase tracking-[0.2em] shadow-lg hover:opacity-90 transition-all active:scale-[0.98] disabled:opacity-20 text-xs sm:text-sm"
+        /* PREV: bg-yellow-warm text-text-primary */
+        className="w-full py-3 sm:py-4 bg-brand dark:bg-brand-light text-white dark:text-navy-dark rounded-xl sm:rounded-2xl font-black uppercase tracking-[0.2em] shadow-lg hover:opacity-90 transition-all active:scale-[0.98] disabled:opacity-20 text-xs sm:text-sm"
       >
         Archive & Commit
       </button>

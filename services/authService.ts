@@ -120,6 +120,16 @@ export async function registerUser(data: RegisterData): Promise<AuthResult> {
         email: data.email,
         termsAccepted: false,
       });
+      
+      // Auto-login: Store session immediately after creation
+      sessionStorage.setItem('userId', userId);
+      sessionStorage.setItem('username', data.username);
+      try {
+        localStorage.setItem('userId', userId);
+        localStorage.setItem('username', data.username);
+      } catch (error) {
+        console.warn('Could not store userId in localStorage:', error);
+      }
     } catch (error) {
       console.error('Error creating user:', error);
       const errorMessage = error instanceof Error ? error.message : String(error);

@@ -88,7 +88,8 @@ const VaultControl: React.FC<VaultControlProps> = ({ logs, goals, settings, onUp
               </button>
               <button 
                 onClick={handleEmailExport} 
-                className="flex-1 sm:flex-none px-4 sm:px-6 py-3 bg-yellow-warm text-text-primary rounded-xl sm:rounded-2xl text-xs sm:text-sm font-black uppercase tracking-widest hover:opacity-90 transition-colors"
+                /* PREV: bg-yellow-warm text-text-primary */
+                className="flex-1 sm:flex-none px-4 sm:px-6 py-3 bg-brand dark:bg-brand-light text-white dark:text-navy-dark rounded-xl sm:rounded-2xl text-xs sm:text-sm font-black uppercase tracking-widest hover:opacity-90 transition-colors"
               >
                 {isWebShareAvailable() ? '📧 Share' : '📧 Email'}
               </button>
@@ -137,7 +138,8 @@ const VaultControl: React.FC<VaultControlProps> = ({ logs, goals, settings, onUp
                   </button>
                   <button
                     onClick={() => setShowDateRangePicker(false)}
-                    className="flex-1 px-3 py-2 bg-yellow-warm text-text-primary rounded-lg text-xs sm:text-sm font-black uppercase tracking-widest"
+                    /* PREV: bg-yellow-warm text-text-primary */
+                    className="flex-1 px-3 py-2 bg-brand dark:bg-brand-light text-white dark:text-navy-dark rounded-lg text-xs sm:text-sm font-black uppercase tracking-widest"
                   >
                     Done
                   </button>
@@ -202,7 +204,8 @@ const VaultControl: React.FC<VaultControlProps> = ({ logs, goals, settings, onUp
                             isGoalAchieved 
                               ? 'bg-calm-sage text-white dark:text-white' 
                               : isCommitment 
-                              ? 'bg-yellow-warm text-text-primary dark:text-text-primary'
+                              /* PREV: bg-yellow-warm text-text-primary dark:text-text-primary */
+                              ? 'bg-brand/10 dark:bg-brand/20 text-brand dark:text-brand-light'
                               : 'bg-bg-tertiary dark:bg-dark-bg-tertiary text-text-secondary dark:text-text-secondary'
                           }`}>
                             {goalStatus}
@@ -231,8 +234,9 @@ const VaultControl: React.FC<VaultControlProps> = ({ logs, goals, settings, onUp
 
                       {/* Deep Reflection */}
                       {log.deepReflection && (
-                        <div className="p-3 sm:p-4 bg-yellow-warm/10 dark:bg-yellow-warm/20 rounded-lg border border-yellow-warm/30">
-                          <p className="text-xs sm:text-sm font-black text-yellow-warm uppercase tracking-widest mb-2">Deep Reflection</p>
+                        /* PREV: bg-yellow-warm/10 ... border-yellow-warm/30 ... text-yellow-warm */
+                        <div className="p-3 sm:p-4 bg-brand/5 dark:bg-brand/10 rounded-lg border border-brand/20 dark:border-brand/30">
+                          <p className="text-xs sm:text-sm font-black text-brand dark:text-brand-light uppercase tracking-widest mb-2">Deep Reflection</p>
                           <p className="text-xs sm:text-sm text-text-primary/80 dark:text-white/80 leading-relaxed">{log.deepReflection}</p>
                         </div>
                       )}
@@ -252,10 +256,12 @@ const VaultControl: React.FC<VaultControlProps> = ({ logs, goals, settings, onUp
                         <div className={`p-3 sm:p-4 rounded-lg border ${
                           isGoalAchieved 
                             ? 'bg-calm-sage/10 dark:bg-calm-sage/20 border-calm-sage/30' 
-                            : 'bg-yellow-warm/10 dark:bg-yellow-warm/20 border-yellow-warm/30'
+                            /* PREV: bg-yellow-warm/10 ... border-yellow-warm/30 */
+                            : 'bg-brand/5 dark:bg-brand/10 border-brand/20 dark:border-brand/30'
                         }`}>
                           <p className={`text-xs sm:text-sm font-black uppercase tracking-widest mb-2 ${
-                            isGoalAchieved ? 'text-calm-sage' : 'text-yellow-warm'
+                            /* PREV: text-yellow-warm */
+                            isGoalAchieved ? 'text-calm-sage' : 'text-brand dark:text-brand-light'
                           }`}>
                             {isGoalAchieved ? 'Accomplished Target' : 'Commitment Target'}
                           </p>

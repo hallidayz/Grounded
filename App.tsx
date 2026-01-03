@@ -310,12 +310,9 @@ const App: React.FC = () => {
         setModelLoadingProgress(10, 'Initializing app...', 'Setting up core services');
         console.log('[INIT] Progress updated to 10%');
         
-        // Set auth state to login quickly - don't wait for everything
-        // This allows user to start using app immediately
-        if (authState === 'checking') {
-          console.log('[INIT] Setting authState to login (non-blocking initialization)');
-          setAuthState('login');
-        }
+        // REMOVED: Premature setAuthState('login')
+        // We must check if user is logged in (session/local storage) BEFORE showing login screen
+        // otherwise we force a login even if session exists
         
         // Initialize debug logging first
         try {
@@ -1157,12 +1154,12 @@ const App: React.FC = () => {
   }, [authState]);
 
   // Show loading state while checking auth
-  // Auto-navigate to login after 5 seconds when checking
+  // Auto-navigate to login after 10 seconds when checking (extended from 5s to avoid race with init)
   useEffect(() => {
     if (authState === 'checking') {
       const timer = setTimeout(() => {
         setAuthState('login');
-      }, 5000);
+      }, 10000);
       
       return () => clearTimeout(timer);
     }
@@ -1253,7 +1250,8 @@ const App: React.FC = () => {
               <span className={`text-xs font-medium px-2 py-0.5 rounded-full border ${
                 aiStatusText === 'AI Ready' 
                   ? 'bg-green-500/20 dark:bg-green-500/30 text-green-600 dark:text-green-400 border-green-500/30'
-                  : 'bg-yellow-warm/20 dark:bg-yellow-warm/30 text-yellow-warm dark:text-yellow-warm border-yellow-warm/30'
+                  /* PREV: bg-yellow-warm/20 dark:bg-yellow-warm/30 text-yellow-warm dark:text-yellow-warm border-yellow-warm/30 */
+                  : 'bg-brand/10 dark:bg-brand/20 text-brand dark:text-brand-light border-brand/30'
               }`}>
                 {aiStatusText}
               </span>
@@ -1273,35 +1271,40 @@ const App: React.FC = () => {
                     // Scroll to top when navigating to home
                     window.scrollTo({ top: 0, behavior: 'smooth' });
                   }}
-                  className={`px-2 sm:px-3 py-1.5 rounded-lg text-xs sm:text-sm font-bold transition-colors ${view === 'home' ? 'bg-yellow-warm/20 dark:bg-yellow-warm/30 text-yellow-warm dark:text-yellow-warm' : 'text-text-secondary dark:text-text-secondary hover:text-text-primary dark:hover:text-white hover:bg-bg-secondary dark:hover:bg-dark-bg-secondary'}`}
+                  /* PREV: bg-yellow-warm/20 dark:bg-yellow-warm/30 text-yellow-warm dark:text-yellow-warm */
+                  className={`px-2 sm:px-3 py-1.5 rounded-lg text-xs sm:text-sm font-bold transition-colors ${view === 'home' ? 'bg-brand/10 dark:bg-brand/20 text-brand dark:text-brand-light' : 'text-text-secondary dark:text-text-secondary hover:text-text-primary dark:hover:text-white hover:bg-bg-secondary dark:hover:bg-dark-bg-secondary'}`}
                 >
                   <span className="hidden sm:inline">Home</span>
                   <span className="sm:hidden">H</span>
                 </button>
                 <button 
                   onClick={() => setView('values')}
-                  className={`px-2 sm:px-3 py-1.5 rounded-lg text-xs sm:text-sm font-bold transition-colors ${view === 'values' ? 'bg-yellow-warm/20 dark:bg-yellow-warm/30 text-yellow-warm dark:text-yellow-warm' : 'text-text-secondary dark:text-text-secondary hover:text-text-primary dark:hover:text-white hover:bg-bg-secondary dark:hover:bg-dark-bg-secondary'}`}
+                  /* PREV: bg-yellow-warm/20 dark:bg-yellow-warm/30 text-yellow-warm dark:text-yellow-warm */
+                  className={`px-2 sm:px-3 py-1.5 rounded-lg text-xs sm:text-sm font-bold transition-colors ${view === 'values' ? 'bg-brand/10 dark:bg-brand/20 text-brand dark:text-brand-light' : 'text-text-secondary dark:text-text-secondary hover:text-text-primary dark:hover:text-white hover:bg-bg-secondary dark:hover:bg-dark-bg-secondary'}`}
                 >
                   <span className="hidden sm:inline">Values</span>
                   <span className="sm:hidden">V</span>
                 </button>
                 <button 
                   onClick={() => setView('goals')}
-                  className={`px-2 sm:px-3 py-1.5 rounded-lg text-xs sm:text-sm font-bold transition-colors ${view === 'goals' ? 'bg-yellow-warm/20 dark:bg-yellow-warm/30 text-yellow-warm dark:text-yellow-warm' : 'text-text-secondary dark:text-text-secondary hover:text-text-primary dark:hover:text-white hover:bg-bg-secondary dark:hover:bg-dark-bg-secondary'}`}
+                  /* PREV: bg-yellow-warm/20 dark:bg-yellow-warm/30 text-yellow-warm dark:text-yellow-warm */
+                  className={`px-2 sm:px-3 py-1.5 rounded-lg text-xs sm:text-sm font-bold transition-colors ${view === 'goals' ? 'bg-brand/10 dark:bg-brand/20 text-brand dark:text-brand-light' : 'text-text-secondary dark:text-text-secondary hover:text-text-primary dark:hover:text-white hover:bg-bg-secondary dark:hover:bg-dark-bg-secondary'}`}
                 >
                   <span className="hidden sm:inline">Goals</span>
                   <span className="sm:hidden">G</span>
                 </button>
                 <button 
                   onClick={() => setView('report')}
-                  className={`px-2 sm:px-3 py-1.5 rounded-lg text-xs sm:text-sm font-bold transition-colors ${view === 'report' ? 'bg-yellow-warm/20 dark:bg-yellow-warm/30 text-yellow-warm dark:text-yellow-warm' : 'text-text-secondary dark:text-text-secondary hover:text-text-primary dark:hover:text-white hover:bg-bg-secondary dark:hover:bg-dark-bg-secondary'}`}
+                  /* PREV: bg-yellow-warm/20 dark:bg-yellow-warm/30 text-yellow-warm dark:text-yellow-warm */
+                  className={`px-2 sm:px-3 py-1.5 rounded-lg text-xs sm:text-sm font-bold transition-colors ${view === 'report' ? 'bg-brand/10 dark:bg-brand/20 text-brand dark:text-brand-light' : 'text-text-secondary dark:text-text-secondary hover:text-text-primary dark:hover:text-white hover:bg-bg-secondary dark:hover:bg-dark-bg-secondary'}`}
                 >
                   <span className="hidden sm:inline">Reports</span>
                   <span className="sm:hidden">R</span>
                 </button>
                 <button 
                   onClick={() => setView('vault')}
-                  className={`px-2 sm:px-3 py-1.5 rounded-lg text-xs sm:text-sm font-bold transition-colors ${view === 'vault' ? 'bg-yellow-warm/20 dark:bg-yellow-warm/30 text-yellow-warm dark:text-yellow-warm' : 'text-text-secondary dark:text-text-secondary hover:text-text-primary dark:hover:text-white hover:bg-bg-secondary dark:hover:bg-dark-bg-secondary'}`}
+                  /* PREV: bg-yellow-warm/20 dark:bg-yellow-warm/30 text-yellow-warm dark:text-yellow-warm */
+                  className={`px-2 sm:px-3 py-1.5 rounded-lg text-xs sm:text-sm font-bold transition-colors ${view === 'vault' ? 'bg-brand/10 dark:bg-brand/20 text-brand dark:text-brand-light' : 'text-text-secondary dark:text-text-secondary hover:text-text-primary dark:hover:text-white hover:bg-bg-secondary dark:hover:bg-dark-bg-secondary'}`}
                 >
                   <span className="hidden sm:inline">Vault</span>
                   <span className="sm:hidden">V</span>
@@ -1311,7 +1314,8 @@ const App: React.FC = () => {
             {showNav && (
               <button 
                 onClick={() => setShowLCSWConfig(true)}
-                className="w-8 h-8 flex items-center justify-center rounded-full text-text-secondary dark:text-text-secondary hover:text-yellow-warm dark:hover:text-yellow-warm hover:bg-yellow-warm/10 dark:hover:bg-yellow-warm/20 transition-all"
+                /* PREV: hover:text-yellow-warm dark:hover:text-yellow-warm hover:bg-yellow-warm/10 dark:hover:bg-yellow-warm/20 */
+                className="w-8 h-8 flex items-center justify-center rounded-full text-text-secondary dark:text-text-secondary hover:text-brand dark:hover:text-brand-light hover:bg-brand/10 dark:hover:bg-brand/20 transition-all"
                 aria-label="Configuration"
                 title="Configuration"
               >
@@ -1321,7 +1325,8 @@ const App: React.FC = () => {
             <ThemeToggle />
             <button 
               onClick={() => setShowHelp(true)}
-              className="w-8 h-8 flex items-center justify-center rounded-full text-text-secondary dark:text-text-secondary hover:text-yellow-warm dark:hover:text-yellow-warm hover:bg-yellow-warm/10 dark:hover:bg-yellow-warm/20 transition-all"
+              /* PREV: hover:text-yellow-warm dark:hover:text-yellow-warm hover:bg-yellow-warm/10 dark:hover:bg-yellow-warm/20 */
+              className="w-8 h-8 flex items-center justify-center rounded-full text-text-secondary dark:text-text-secondary hover:text-brand dark:hover:text-brand-light hover:bg-brand/10 dark:hover:bg-brand/20 transition-all"
               aria-label="Help"
             >
               <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M8.228 9c.549-1.165 2.03-2 3.772-2 2.21 0 4 1.343 4 3 0 1.4-1.278 2.575-3.006 2.907-.542.104-.994.54-.994 1.093m0 3h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>

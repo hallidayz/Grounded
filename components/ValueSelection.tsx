@@ -88,19 +88,22 @@ const ValueSelection: React.FC<ValueSelectionProps> = ({ initialSelected, onComp
     <div className="max-w-2xl mx-auto space-y-3 sm:space-y-4 animate-fade-in pb-20 sm:pb-24">
       <div className="text-center space-y-2 px-3 sm:px-0">
         <h1 className="text-lg sm:text-xl font-black text-text-primary dark:text-white tracking-tight">
-          {viewMode === 'pick' ? 'Define Your ' : 'Rank Your '}<span className="text-yellow-warm">Compass</span>
+          {/* PREV: text-yellow-warm */}
+          {viewMode === 'pick' ? 'Define Your ' : 'Rank Your '}<span className="text-brand dark:text-brand-light">Compass</span>
         </h1>
         <div className="flex justify-center gap-1 mt-1">
            <button 
              onClick={() => setViewMode('pick')}
-             className={`px-3 py-1 rounded-lg font-bold text-xs sm:text-sm uppercase tracking-widest transition-all ${viewMode === 'pick' ? 'bg-yellow-warm text-text-primary shadow-sm' : 'bg-white dark:bg-dark-bg-primary text-text-primary/60 dark:text-white/60 border border-border-soft dark:border-dark-border/30'}`}
+             /* PREV: bg-yellow-warm */
+             className={`px-3 py-1 rounded-lg font-bold text-xs sm:text-sm uppercase tracking-widest transition-all ${viewMode === 'pick' ? 'bg-brand dark:bg-brand-light text-white dark:text-navy-dark shadow-sm' : 'bg-white dark:bg-dark-bg-primary text-text-primary/60 dark:text-white/60 border border-border-soft dark:border-dark-border/30'}`}
            >
              Selection
            </button>
            <button 
              onClick={() => setViewMode('sort')}
              disabled={selected.length === 0}
-             className={`px-3 py-1 rounded-lg font-bold text-xs sm:text-sm uppercase tracking-widest transition-all ${viewMode === 'sort' ? 'bg-yellow-warm text-text-primary shadow-sm' : 'bg-white dark:bg-dark-bg-primary text-text-primary/60 dark:text-white/60 border border-border-soft dark:border-dark-border/30'} disabled:opacity-30`}
+             /* PREV: bg-yellow-warm */
+             className={`px-3 py-1 rounded-lg font-bold text-xs sm:text-sm uppercase tracking-widest transition-all ${viewMode === 'sort' ? 'bg-brand dark:bg-brand-light text-white dark:text-navy-dark shadow-sm' : 'bg-white dark:bg-dark-bg-primary text-text-primary/60 dark:text-white/60 border border-border-soft dark:border-dark-border/30'} disabled:opacity-30`}
            >
              Priority
            </button>
@@ -122,7 +125,8 @@ const ValueSelection: React.FC<ValueSelectionProps> = ({ initialSelected, onComp
                   <div className="flex items-center gap-2">
                     <h2 className="text-xs sm:text-sm font-black text-text-primary dark:text-white uppercase tracking-widest">{category}</h2>
                     {selectedInCategory > 0 && (
-                      <span className="bg-yellow-warm text-text-primary text-xs font-black px-1.5 py-0.5 rounded uppercase">
+                      /* PREV: bg-yellow-warm text-text-primary */
+                      <span className="bg-brand dark:bg-brand-light text-white dark:text-navy-dark text-xs font-black px-1.5 py-0.5 rounded uppercase">
                         {selectedInCategory}
                       </span>
                     )}
@@ -138,7 +142,8 @@ const ValueSelection: React.FC<ValueSelectionProps> = ({ initialSelected, onComp
                         <button
                           key={value.id}
                           onClick={() => toggleValue(value.id)}
-                          className={`p-2 sm:p-3 rounded-lg sm:rounded-xl border text-left transition-all ${isSelected ? 'border-yellow-warm bg-yellow-warm/10 dark:bg-yellow-warm/20 shadow-sm' : 'border-border-soft dark:border-dark-border/30 bg-white dark:bg-dark-bg-primary/50 hover:border-yellow-warm/50'} ${shakeId === value.id ? 'animate-shake' : ''}`}
+                          /* PREV: border-yellow-warm bg-yellow-warm/10 dark:bg-yellow-warm/20 ... hover:border-yellow-warm/50 */
+                          className={`p-2 sm:p-3 rounded-lg sm:rounded-xl border text-left transition-all ${isSelected ? 'border-brand dark:border-brand-light bg-brand/10 dark:bg-brand/20 shadow-sm' : 'border-border-soft dark:border-dark-border/30 bg-white dark:bg-dark-bg-primary/50 hover:border-brand/50 dark:hover:border-brand-light/50'} ${shakeId === value.id ? 'animate-shake' : ''}`}
                         >
                           <h3 className={`font-black text-xs sm:text-sm tracking-tight ${isSelected ? 'text-text-primary dark:text-white' : 'text-text-primary dark:text-white'}`}>{value.name}</h3>
                           <p className={`text-xs leading-tight font-medium mt-0.5 ${isSelected ? 'text-text-primary/70 dark:text-white/70' : 'text-text-primary/50 dark:text-white/50'}`}>{value.description.substring(0, 45)}...</p>
@@ -168,14 +173,17 @@ const ValueSelection: React.FC<ValueSelectionProps> = ({ initialSelected, onComp
                 onDragOver={(e) => handleDragOver(e, index)}
                 onDragLeave={() => setDragOverIndex(null)}
                 onDrop={() => handleDrop(index)}
-                className={`relative flex items-center gap-2 sm:gap-3 bg-white dark:bg-dark-bg-primary p-2 sm:p-2.5 rounded-lg sm:rounded-xl border transition-all cursor-grab active:cursor-grabbing ${isDragging ? 'opacity-30 scale-95 border-dashed border-yellow-warm/50' : 'border-border-soft dark:border-dark-border/30 shadow-sm'} ${isDragOver ? 'border-yellow-warm' : ''}`}
+                /* PREV: border-dashed border-yellow-warm/50 ... border-yellow-warm */
+                className={`relative flex items-center gap-2 sm:gap-3 bg-white dark:bg-dark-bg-primary p-2 sm:p-2.5 rounded-lg sm:rounded-xl border transition-all cursor-grab active:cursor-grabbing ${isDragging ? 'opacity-30 scale-95 border-dashed border-brand/50 dark:border-brand-light/50' : 'border-border-soft dark:border-dark-border/30 shadow-sm'} ${isDragOver ? 'border-brand dark:border-brand-light' : ''}`}
               >
                 <div className="flex flex-col gap-0.5 items-center bg-bg-secondary dark:bg-dark-bg-primary/50 p-1 rounded-md">
-                  <button onClick={(e) => { e.stopPropagation(); moveValue(index, 'up'); }} disabled={index === 0} className="text-text-primary/30 dark:text-white/30 hover:text-yellow-warm disabled:opacity-0"><svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={3} d="M5 15l7-7 7 7" /></svg></button>
-                  <button onClick={(e) => { e.stopPropagation(); moveValue(index, 'down'); }} disabled={index === selected.length - 1} className="text-text-primary/30 dark:text-white/30 hover:text-yellow-warm disabled:opacity-0"><svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={3} d="M19 9l-7 7-7-7" /></svg></button>
+                  {/* PREV: hover:text-yellow-warm */}
+                  <button onClick={(e) => { e.stopPropagation(); moveValue(index, 'up'); }} disabled={index === 0} className="text-text-primary/30 dark:text-white/30 hover:text-brand dark:hover:text-brand-light disabled:opacity-0"><svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={3} d="M5 15l7-7 7 7" /></svg></button>
+                  <button onClick={(e) => { e.stopPropagation(); moveValue(index, 'down'); }} disabled={index === selected.length - 1} className="text-text-primary/30 dark:text-white/30 hover:text-brand dark:hover:text-brand-light disabled:opacity-0"><svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={3} d="M19 9l-7 7-7-7" /></svg></button>
                 </div>
                 <div className="flex-grow select-none flex items-center gap-2 min-w-0">
-                  <span className={`text-xs font-black w-4 h-4 rounded-full flex items-center justify-center flex-shrink-0 ${index === 0 ? 'bg-yellow-warm text-text-primary' : 'bg-navy-primary dark:bg-navy-primary text-white dark:text-white'}`}>{index + 1}</span>
+                  {/* PREV: bg-yellow-warm text-text-primary */}
+                  <span className={`text-xs font-black w-4 h-4 rounded-full flex items-center justify-center flex-shrink-0 ${index === 0 ? 'bg-brand dark:bg-brand-light text-white dark:text-navy-dark' : 'bg-navy-primary dark:bg-navy-primary text-white dark:text-white'}`}>{index + 1}</span>
                   <div className="min-w-0 flex-1">
                     <h4 className="font-black text-text-primary dark:text-white text-sm sm:text-base tracking-tight truncate">{value.name}</h4>
                     <p className="text-xs text-text-primary/50 dark:text-white/50 font-bold uppercase tracking-widest">{value.category}</p>
@@ -188,7 +196,8 @@ const ValueSelection: React.FC<ValueSelectionProps> = ({ initialSelected, onComp
                       e.stopPropagation();
                       onAddGoal(value.id);
                     }}
-                    className="w-6 h-6 sm:w-7 sm:h-7 flex items-center justify-center rounded-lg bg-yellow-warm text-text-primary hover:opacity-90 transition-all shadow-sm active:scale-95 flex-shrink-0"
+                    /* PREV: bg-yellow-warm text-text-primary */
+                    className="w-6 h-6 sm:w-7 sm:h-7 flex items-center justify-center rounded-lg bg-brand dark:bg-brand-light text-white dark:text-navy-dark hover:opacity-90 transition-all shadow-sm active:scale-95 flex-shrink-0"
                     title="Add goal"
                     aria-label="Add goal"
                   >
@@ -213,7 +222,8 @@ const ValueSelection: React.FC<ValueSelectionProps> = ({ initialSelected, onComp
           <button
             onClick={() => onComplete(selected)}
             disabled={selected.length === 0}
-            className={`px-6 sm:px-8 py-2 sm:py-2.5 rounded-lg sm:rounded-xl font-black text-xs sm:text-sm uppercase tracking-widest transition-all ${selected.length > 0 ? 'bg-yellow-warm text-text-primary hover:opacity-90' : 'bg-bg-secondary dark:bg-dark-bg-primary/50 text-text-primary/30 dark:text-white/30'}`}
+            /* PREV: bg-yellow-warm text-text-primary */
+            className={`px-6 sm:px-8 py-2 sm:py-2.5 rounded-lg sm:rounded-xl font-black text-xs sm:text-sm uppercase tracking-widest transition-all ${selected.length > 0 ? 'bg-brand dark:bg-brand-light text-white dark:text-navy-dark hover:opacity-90' : 'bg-bg-secondary dark:bg-dark-bg-primary/50 text-text-primary/30 dark:text-white/30'}`}
           >
             <span className="hidden sm:inline">Confirm Compass</span>
             <span className="sm:hidden">Confirm</span>

@@ -139,7 +139,8 @@ const EmailScheduleComponent: React.FC<EmailScheduleProps> = ({
                         onClick={() => setFrequency(freq)}
                         className={`flex-1 py-3 rounded-xl text-sm font-black uppercase tracking-widest transition-all border ${
                           frequency === freq
-                            ? 'bg-yellow-warm text-navy-primary shadow-sm border-yellow-warm'
+                            /* PREV: bg-yellow-warm text-navy-primary ... border-yellow-warm */
+                            ? 'bg-brand dark:bg-brand-light text-white dark:text-navy-dark shadow-sm border-brand dark:border-brand-light'
                             : 'bg-bg-secondary dark:bg-dark-bg-secondary text-text-primary dark:text-white border-border-soft dark:border-dark-border hover:bg-bg-tertiary dark:hover:bg-dark-bg-tertiary'
                         }`}
                       >
@@ -235,7 +236,8 @@ const EmailScheduleComponent: React.FC<EmailScheduleProps> = ({
                       type="checkbox"
                       checked={sendReports}
                       onChange={(e) => setSendReports(e.target.checked)}
-                      className="mt-1 w-5 h-5 rounded border-2 border-text-primary/30 dark:border-white/30 text-yellow-warm focus:ring-2 focus:ring-yellow-warm/50 cursor-pointer"
+                      /* PREV: text-yellow-warm focus:ring-yellow-warm/50 */
+                      className="mt-1 w-5 h-5 rounded border-2 border-text-primary/30 dark:border-white/30 text-brand dark:text-brand-light focus:ring-2 focus:ring-brand/50 cursor-pointer"
                     />
                     <div className="flex-1">
                       <span className="text-sm font-bold text-text-primary dark:text-white block">
@@ -252,7 +254,8 @@ const EmailScheduleComponent: React.FC<EmailScheduleProps> = ({
                       type="checkbox"
                       checked={sendGoalCompletions}
                       onChange={(e) => setSendGoalCompletions(e.target.checked)}
-                      className="mt-1 w-5 h-5 rounded border-2 border-text-primary/30 dark:border-white/30 text-yellow-warm focus:ring-2 focus:ring-yellow-warm/50 cursor-pointer"
+                      /* PREV: text-yellow-warm focus:ring-yellow-warm/50 */
+                      className="mt-1 w-5 h-5 rounded border-2 border-text-primary/30 dark:border-white/30 text-brand dark:text-brand-light focus:ring-2 focus:ring-brand/50 cursor-pointer"
                     />
                     <div className="flex-1">
                       <span className="text-sm font-bold text-text-primary dark:text-white block">
@@ -268,7 +271,8 @@ const EmailScheduleComponent: React.FC<EmailScheduleProps> = ({
                 {/* Test Email */}
                 <button
                   onClick={handleTestEmail}
-                  className="w-full py-3 bg-yellow-warm/20 dark:bg-yellow-warm/30 text-yellow-warm dark:text-yellow-warm rounded-xl text-sm font-black uppercase tracking-widest hover:bg-yellow-warm/30 dark:hover:bg-yellow-warm/40 border border-yellow-warm/30 dark:border-yellow-warm/50"
+                  /* PREV: bg-yellow-warm/20 ... text-yellow-warm */
+                  className="w-full py-3 bg-brand/10 dark:bg-brand/20 text-brand dark:text-brand-light rounded-xl text-sm font-black uppercase tracking-widest hover:bg-brand/20 dark:hover:bg-brand/30 border border-brand/30 dark:border-brand/50"
                 >
                   Send Test Email
                 </button>

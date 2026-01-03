@@ -118,19 +118,27 @@ const Dashboard: React.FC<DashboardProps> = ({ values, onLog, goals, onUpdateGoa
 
   return (
     <div className="space-y-4 sm:space-y-6 animate-fade-in pb-20 lg:pb-12">
-      {/* Personalized Greeting */}
-      <div className="space-y-2">
-        <h1 className="text-2xl sm:text-3xl font-black text-text-primary dark:text-white">
-          {getGreeting()} {getTimeEmoji()}
-        </h1>
-        <p className="text-text-secondary dark:text-white/70">
-          How are you feeling today?
-        </p>
+      {/* Personalized Greeting & Active Focus */}
+      <div className="flex flex-col sm:flex-row justify-between items-start sm:items-end gap-3 sm:gap-0">
+        <div className="space-y-2">
+          <h1 className="text-2xl sm:text-3xl font-black text-text-primary dark:text-white">
+            {getGreeting()} {getTimeEmoji()}
+          </h1>
+          <p className="text-text-secondary dark:text-white/70">
+            How are you feeling today?
+          </p>
+        </div>
+        <div className="text-left sm:text-right">
+          {/* PREV: text-yellow-warm */}
+          <p className="text-xs sm:text-sm font-black text-brand dark:text-brand-light uppercase tracking-widest">Active Focus</p>
+          <p className="text-sm sm:text-base font-black text-text-primary dark:text-white leading-tight">{values.length} Core Values</p>
+        </div>
       </div>
 
       {/* Today's Focus Section - Moved to top and made compact */}
       {topValue && (
-        <div className="bg-gradient-to-br from-yellow-warm/20 to-yellow-light/20 dark:from-yellow-warm/10 dark:to-yellow-light/10 rounded-xl sm:rounded-2xl p-3 sm:p-4">
+        /* PREV: from-yellow-warm/20 to-yellow-light/20 dark:from-yellow-warm/10 dark:to-yellow-light/10 */
+        <div className="bg-gradient-to-br from-brand/10 to-brand-light/10 dark:from-brand/20 dark:to-brand-light/20 rounded-xl sm:rounded-2xl p-3 sm:p-4">
           <div className="flex items-center justify-between gap-2 sm:gap-3">
             <div className="flex items-center gap-2 sm:gap-3 flex-1 min-w-0">
               <span className="text-xl sm:text-2xl flex-shrink-0">🎯</span>
@@ -155,10 +163,6 @@ const Dashboard: React.FC<DashboardProps> = ({ values, onLog, goals, onUpdateGoa
       <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3 sm:gap-0">
         <div>
           {/* Removed "Compass Engine" heading and "Observe & Document" subtitle */}
-        </div>
-        <div className="text-left sm:text-right">
-          <p className="text-xs sm:text-sm font-black text-yellow-warm uppercase tracking-widest">Active Focus</p>
-          <p className="text-sm sm:text-base font-black text-text-primary dark:text-white leading-tight">{values.length} Core Values</p>
         </div>
       </div>
 

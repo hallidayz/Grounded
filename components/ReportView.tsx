@@ -97,7 +97,8 @@ const ReportView: React.FC<ReportViewProps> = ({ logs, values, lcswConfig, goals
           <p className="text-text-secondary dark:text-text-secondary text-sm sm:text-lg mt-1">Human-first insights for professional sharing.</p>
         </div>
         {mode === 'generate' && (
-          <button onClick={() => setMode('review')} className="text-yellow-warm dark:text-yellow-warm font-black uppercase text-xs sm:text-sm tracking-widest hover:underline">
+          /* PREV: text-yellow-warm dark:text-yellow-warm */
+          <button onClick={() => setMode('review')} className="text-brand dark:text-brand-light font-black uppercase text-xs sm:text-sm tracking-widest hover:underline">
             ← Edit Selection
           </button>
         )}
@@ -110,30 +111,33 @@ const ReportView: React.FC<ReportViewProps> = ({ logs, values, lcswConfig, goals
               <div className="flex gap-2 flex-wrap">
                 <button
                   onClick={() => setDateRange({ type: '7days' })}
+                  /* PREV: bg-yellow-warm text-navy-primary ... hover:bg-yellow-warm/20 */
                   className={`px-4 py-2 rounded-xl text-xs font-black uppercase tracking-widest transition-all ${
                     dateRange.type === '7days' 
-                      ? 'bg-yellow-warm text-navy-primary' 
-                      : 'bg-bg-tertiary dark:bg-dark-bg-tertiary text-text-primary dark:text-white hover:bg-yellow-warm/20'
+                      ? 'bg-brand dark:bg-brand-light text-white dark:text-navy-dark' 
+                      : 'bg-bg-tertiary dark:bg-dark-bg-tertiary text-text-primary dark:text-white hover:bg-brand/10 dark:hover:bg-brand/20'
                   }`}
                 >
                   Past 7 Days
                 </button>
                 <button
                   onClick={() => setDateRange({ type: '30days' })}
+                  /* PREV: bg-yellow-warm text-navy-primary ... hover:bg-yellow-warm/20 */
                   className={`px-4 py-2 rounded-xl text-xs font-black uppercase tracking-widest transition-all ${
                     dateRange.type === '30days' 
-                      ? 'bg-yellow-warm text-navy-primary' 
-                      : 'bg-bg-tertiary dark:bg-dark-bg-tertiary text-text-primary dark:text-white hover:bg-yellow-warm/20'
+                      ? 'bg-brand dark:bg-brand-light text-white dark:text-navy-dark' 
+                      : 'bg-bg-tertiary dark:bg-dark-bg-tertiary text-text-primary dark:text-white hover:bg-brand/10 dark:hover:bg-brand/20'
                   }`}
                 >
                   Past 30 Days
                 </button>
                 <button
                   onClick={() => setDateRange(prev => ({ ...prev, type: 'custom' }))}
+                  /* PREV: bg-yellow-warm text-navy-primary ... hover:bg-yellow-warm/20 */
                   className={`px-4 py-2 rounded-xl text-xs font-black uppercase tracking-widest transition-all ${
                     dateRange.type === 'custom' 
-                      ? 'bg-yellow-warm text-navy-primary' 
-                      : 'bg-bg-tertiary dark:bg-dark-bg-tertiary text-text-primary dark:text-white hover:bg-yellow-warm/20'
+                      ? 'bg-brand dark:bg-brand-light text-white dark:text-navy-dark' 
+                      : 'bg-bg-tertiary dark:bg-dark-bg-tertiary text-text-primary dark:text-white hover:bg-brand/10 dark:hover:bg-brand/20'
                   }`}
                 >
                   Custom
@@ -146,14 +150,16 @@ const ReportView: React.FC<ReportViewProps> = ({ logs, values, lcswConfig, goals
                     type="date"
                     value={dateRange.start || ''}
                     onChange={(e) => setDateRange(prev => ({ ...prev, start: e.target.value }))}
-                    className="px-3 py-2 rounded-lg bg-bg-tertiary dark:bg-dark-bg-tertiary border border-border-soft dark:border-dark-border text-xs font-medium text-text-primary dark:text-white outline-none focus:ring-2 focus:ring-yellow-warm"
+                    /* PREV: focus:ring-yellow-warm */
+                    className="px-3 py-2 rounded-lg bg-bg-tertiary dark:bg-dark-bg-tertiary border border-border-soft dark:border-dark-border text-xs font-medium text-text-primary dark:text-white outline-none focus:ring-2 focus:ring-brand dark:focus:ring-brand-light"
                   />
                   <span className="text-text-secondary dark:text-text-secondary text-xs">to</span>
                   <input
                     type="date"
                     value={dateRange.end || ''}
                     onChange={(e) => setDateRange(prev => ({ ...prev, end: e.target.value }))}
-                    className="px-3 py-2 rounded-lg bg-bg-tertiary dark:bg-dark-bg-tertiary border border-border-soft dark:border-dark-border text-xs font-medium text-text-primary dark:text-white outline-none focus:ring-2 focus:ring-yellow-warm"
+                    /* PREV: focus:ring-yellow-warm */
+                    className="px-3 py-2 rounded-lg bg-bg-tertiary dark:bg-dark-bg-tertiary border border-border-soft dark:border-dark-border text-xs font-medium text-text-primary dark:text-white outline-none focus:ring-2 focus:ring-brand dark:focus:ring-brand-light"
                   />
                 </div>
               )}
@@ -163,7 +169,8 @@ const ReportView: React.FC<ReportViewProps> = ({ logs, values, lcswConfig, goals
           <div className="lg:col-span-2 space-y-3 sm:space-y-4">
             <div className="flex items-center justify-between px-2 mb-2">
               <h3 className="text-xs sm:text-sm font-black text-text-secondary dark:text-text-secondary uppercase tracking-widest">Select your records</h3>
-              <span className="text-xs sm:text-sm font-bold text-yellow-warm bg-yellow-warm/20 dark:bg-yellow-warm/30 px-2 sm:px-3 py-1 rounded-full uppercase">{selectedLogIds.size} Ready</span>
+              {/* PREV: text-yellow-warm bg-yellow-warm/20 dark:bg-yellow-warm/30 */}
+              <span className="text-xs sm:text-sm font-bold text-brand dark:text-brand-light bg-brand/10 dark:bg-brand/20 px-2 sm:px-3 py-1 rounded-full uppercase">{selectedLogIds.size} Ready</span>
             </div>
             {sortedLogs.length === 0 ? (
               <div className="text-center py-16 sm:py-24 bg-white dark:bg-dark-bg-primary rounded-2xl sm:rounded-[40px] border border-dashed border-border-soft dark:border-dark-border text-text-tertiary dark:text-text-tertiary">
@@ -184,10 +191,11 @@ const ReportView: React.FC<ReportViewProps> = ({ logs, values, lcswConfig, goals
                     <button 
                       key={log.id} 
                       onClick={() => toggleLog(log.id)}
-                      className={`w-full text-left bg-white dark:bg-dark-bg-primary p-4 sm:p-6 lg:p-8 rounded-2xl sm:rounded-[32px] border-2 transition-all flex gap-3 sm:gap-6 ${isSelected ? 'border-yellow-warm shadow-xl' : 'border-border-soft dark:border-dark-border opacity-50'}`}
+                      /* PREV: border-yellow-warm ... bg-yellow-warm border-yellow-warm */
+                      className={`w-full text-left bg-white dark:bg-dark-bg-primary p-4 sm:p-6 lg:p-8 rounded-2xl sm:rounded-[32px] border-2 transition-all flex gap-3 sm:gap-6 ${isSelected ? 'border-brand dark:border-brand-light shadow-xl' : 'border-border-soft dark:border-dark-border opacity-50'}`}
                     >
-                      <div className={`w-6 h-6 sm:w-8 sm:h-8 rounded-full border-2 flex items-center justify-center transition-colors flex-shrink-0 mt-1 ${isSelected ? 'bg-yellow-warm border-yellow-warm' : 'border-border-soft dark:border-dark-border'}`}>
-                        {isSelected && <svg className="w-3 h-3 sm:w-4 sm:h-4 text-navy-primary" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={4} d="M5 13l4 4L19 7" /></svg>}
+                      <div className={`w-6 h-6 sm:w-8 sm:h-8 rounded-full border-2 flex items-center justify-center transition-colors flex-shrink-0 mt-1 ${isSelected ? 'bg-brand dark:bg-brand-light border-brand dark:border-brand-light' : 'border-border-soft dark:border-dark-border'}`}>
+                        {isSelected && <svg className="w-3 h-3 sm:w-4 sm:h-4 text-white dark:text-navy-dark" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={4} d="M5 13l4 4L19 7" /></svg>}
                       </div>
                       <div className="flex-grow min-w-0">
                         <div className="flex justify-between mb-2">
@@ -227,16 +235,18 @@ const ReportView: React.FC<ReportViewProps> = ({ logs, values, lcswConfig, goals
         </div>
       ) : (
         <div className="space-y-6 sm:space-y-8 animate-pop">
-           <div className="bg-white dark:bg-dark-bg-primary p-6 sm:p-8 lg:p-12 rounded-2xl sm:rounded-[56px] shadow-2xl border border-yellow-warm/20 dark:border-yellow-warm/30 max-w-4xl mx-auto prose prose-slate dark:prose-invert">
+           <div className="bg-white dark:bg-dark-bg-primary p-6 sm:p-8 lg:p-12 rounded-2xl sm:rounded-[56px] shadow-2xl border border-brand/20 dark:border-brand/30 max-w-4xl mx-auto prose prose-slate dark:prose-invert">
               <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3 sm:gap-0 mb-6 sm:mb-10 pb-4 sm:pb-6 border-b border-border-soft dark:border-dark-border">
-                <p className="text-xs sm:text-sm font-black text-yellow-warm uppercase tracking-[0.3em]">Confidential Clinical Summary</p>
+                {/* PREV: text-yellow-warm */}
+                <p className="text-xs sm:text-sm font-black text-brand dark:text-brand-light uppercase tracking-[0.3em]">Confidential Clinical Summary</p>
                 <div className="flex flex-wrap gap-2">
                 <button 
                   onClick={() => {
                     navigator.clipboard.writeText(generatedReport);
                     alert("All formats copied to clipboard!");
                   }}
-                    className="px-4 sm:px-6 py-2 bg-yellow-warm/20 dark:bg-yellow-warm/30 text-yellow-warm rounded-full text-xs sm:text-sm font-black uppercase tracking-widest hover:bg-yellow-warm/30 dark:hover:bg-yellow-warm/40"
+                    /* PREV: bg-yellow-warm/20 ... text-yellow-warm ... hover:bg-yellow-warm/30 ... */
+                    className="px-4 sm:px-6 py-2 bg-brand/10 dark:bg-brand/20 text-brand dark:text-brand-light rounded-full text-xs sm:text-sm font-black uppercase tracking-widest hover:bg-brand/20 dark:hover:bg-brand/30"
                 >
                     Copy
                   </button>
@@ -251,7 +261,8 @@ const ReportView: React.FC<ReportViewProps> = ({ logs, values, lcswConfig, goals
                         alert("Could not open email. Please copy the report and send manually.");
                       }
                     }}
-                    className="px-4 sm:px-6 py-2 bg-yellow-warm text-navy-primary rounded-full text-xs sm:text-sm font-black uppercase tracking-widest hover:opacity-90"
+                    /* PREV: bg-yellow-warm */
+                    className="px-4 sm:px-6 py-2 bg-brand dark:bg-brand-light text-white dark:text-navy-dark rounded-full text-xs sm:text-sm font-black uppercase tracking-widest hover:opacity-90"
                   >
                     {isWebShareAvailable() ? '📧 Share' : '📧 Email'}
                 </button>

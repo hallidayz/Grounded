@@ -40,7 +40,8 @@ const HelpOverlay: React.FC<HelpOverlayProps> = ({ onClose }) => {
             </div>
 
             <div className="flex gap-6">
-              <div className="w-12 h-12 rounded-2xl bg-yellow-warm dark:bg-yellow-warm flex items-center justify-center text-navy-primary dark:text-navy-primary font-black shrink-0 shadow-lg">2</div>
+              {/* PREV: bg-yellow-warm ... text-navy-primary */}
+              <div className="w-12 h-12 rounded-2xl bg-brand dark:bg-brand-light flex items-center justify-center text-white dark:text-navy-dark font-black shrink-0 shadow-lg">2</div>
               <div>
                 <h4 className="font-black text-text-primary dark:text-white text-lg">Embody Daily</h4>
                 <p className="text-text-secondary dark:text-text-secondary text-sm leading-relaxed">In the <b>Dashboard</b>, open a value to reflect on your progress. Log a win or set a "Next Aim" (micro-goal) to build momentum.</p>
@@ -111,7 +112,8 @@ const HelpOverlay: React.FC<HelpOverlayProps> = ({ onClose }) => {
             <h3 className="text-lg font-black text-text-primary dark:text-white">Support & Troubleshooting</h3>
             
             {/* Debug Log - Prominent */}
-            <div className="bg-yellow-warm/10 dark:bg-yellow-warm/20 p-6 rounded-3xl border-2 border-yellow-warm/30 space-y-3">
+            {/* PREV: bg-yellow-warm/10 ... border-yellow-warm/30 */}
+            <div className="bg-brand/10 dark:bg-brand/20 p-6 rounded-3xl border-2 border-brand/30 space-y-3">
               <div className="flex items-start gap-3">
                 <div className="text-2xl">🔧</div>
                 <div className="flex-1">
@@ -149,12 +151,14 @@ const HelpOverlay: React.FC<HelpOverlayProps> = ({ onClose }) => {
                 Need help or have questions? We're here to assist you.
               </p>
               <div className="flex items-center gap-3 pt-2">
-                <svg className="w-5 h-5 text-navy-primary dark:text-yellow-warm flex-shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                {/* PREV: text-navy-primary dark:text-yellow-warm */}
+                <svg className="w-5 h-5 text-navy-primary dark:text-brand-light flex-shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z" />
                 </svg>
                 <a 
                   href="mailto:ac.minds.ai@gmail.com?subject=Grounded App Support"
-                  className="text-sm font-bold text-navy-primary dark:text-yellow-warm hover:underline"
+                  /* PREV: text-navy-primary dark:text-yellow-warm */
+                  className="text-sm font-bold text-navy-primary dark:text-brand-light hover:underline"
                 >
                   ac.minds.ai@gmail.com
                 </a>
@@ -177,7 +181,8 @@ const HelpOverlay: React.FC<HelpOverlayProps> = ({ onClose }) => {
                   href="http://www.apache.org/licenses/LICENSE-2.0"
                   target="_blank"
                   rel="noopener noreferrer"
-                  className="text-navy-primary dark:text-yellow-warm hover:underline break-all"
+                  /* PREV: text-navy-primary dark:text-yellow-warm */
+                  className="text-navy-primary dark:text-brand-light hover:underline break-all"
                 >
                   http://www.apache.org/licenses/LICENSE-2.0
                 </a>

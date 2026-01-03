@@ -40,7 +40,8 @@ const BottomNavigation: React.FC<BottomNavigationProps> = ({ currentView, onView
                   flex flex-col items-center justify-center py-3 px-4 min-w-[60px] min-h-[60px]
                   transition-all duration-200
                   ${isActive 
-                    ? 'text-navy-primary dark:text-yellow-warm' 
+                    /* PREV: text-navy-primary dark:text-yellow-warm */
+                    ? 'text-navy-primary dark:text-brand-light' 
                     : 'text-text-secondary dark:text-white/60'
                   }
                   active:scale-95

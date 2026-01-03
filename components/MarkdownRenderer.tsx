@@ -57,7 +57,8 @@ const parseInline = (text: string): React.ReactNode[] => {
   const parts = text.split(/(\*\*.*?\*\*|\*.*?\*)/g);
   return parts.map((part, i) => {
     if (part.startsWith('**') && part.endsWith('**')) {
-      return <strong key={i} className="font-bold text-navy-primary dark:text-yellow-warm">{part.slice(2, -2)}</strong>;
+      /* PREV: text-navy-primary dark:text-yellow-warm */
+      return <strong key={i} className="font-bold text-navy-primary dark:text-brand-light">{part.slice(2, -2)}</strong>;
     }
     if (part.startsWith('*') && part.endsWith('*')) {
       return <em key={i} className="italic">{part.slice(1, -1)}</em>;

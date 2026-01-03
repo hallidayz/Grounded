@@ -32,9 +32,11 @@ const GoalsSection: React.FC<GoalsSectionProps> = ({
           const val = values.find(v => v.id === goal.valueId);
           return (
             <div key={goal.id} className="bg-white dark:bg-dark-bg-primary p-3 sm:p-4 rounded-xl sm:rounded-2xl border border-border-soft dark:border-dark-border/30 shadow-sm relative">
-              <span className="absolute top-2 sm:top-3 right-3 sm:right-4 px-1.5 py-0.5 bg-yellow-warm/20 dark:bg-yellow-warm/30 text-yellow-warm rounded-md text-xs font-black uppercase tracking-widest">{goal.frequency}</span>
+              {/* PREV: bg-yellow-warm/20 ... text-yellow-warm */}
+              <span className="absolute top-2 sm:top-3 right-3 sm:right-4 px-1.5 py-0.5 bg-brand/10 dark:bg-brand/20 text-brand dark:text-brand-light rounded-md text-xs font-black uppercase tracking-widest">{goal.frequency}</span>
               <div className="flex items-center gap-1.5 mb-2">
-                <div className="w-1.5 h-1.5 rounded-full bg-yellow-warm" />
+                {/* PREV: bg-yellow-warm */}
+                <div className="w-1.5 h-1.5 rounded-full bg-brand dark:bg-brand-light" />
                 <span className="text-xs sm:text-sm font-black text-text-primary/50 dark:text-white/50 uppercase tracking-widest">{val?.name}</span>
               </div>
               <div className="text-sm sm:text-base font-bold text-text-primary dark:text-white mb-3 sm:mb-4 leading-snug pr-12"><MarkdownRenderer>{goal.text}</MarkdownRenderer></div>

@@ -57,7 +57,8 @@ const DatabaseViewer: React.FC<DatabaseViewerProps> = ({ onClose }) => {
             <div className="space-y-6">
               {Object.keys(data).map(storeName => (
                 <div key={storeName} className="space-y-2">
-                  <h3 className="text-sm font-bold text-navy-primary dark:text-yellow-warm uppercase tracking-wider sticky top-0 bg-bg-secondary dark:bg-dark-bg-secondary p-2 rounded-lg border border-border-soft dark:border-dark-border/50">
+                  {/* PREV: text-navy-primary dark:text-yellow-warm */}
+                  <h3 className="text-sm font-bold text-navy-primary dark:text-brand-light uppercase tracking-wider sticky top-0 bg-bg-secondary dark:bg-dark-bg-secondary p-2 rounded-lg border border-border-soft dark:border-dark-border/50">
                     {storeName} <span className="opacity-50">({data[storeName].length} items)</span>
                   </h3>
                   <div className="pl-2 border-l-2 border-border-soft dark:border-dark-border ml-2">

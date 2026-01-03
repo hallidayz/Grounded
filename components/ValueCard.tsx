@@ -75,12 +75,14 @@ const ValueCard: React.FC<ValueCardProps> = ({
   return (
     <div 
       ref={cardRef}
-      className={`bg-white dark:bg-dark-bg-primary rounded-xl sm:rounded-2xl border transition-all duration-300 ${isActive ? 'border-yellow-warm shadow-lg dark:shadow-xl' : 'border-border-soft dark:border-dark-border/30 shadow-sm hover:border-yellow-warm/50 dark:hover:border-yellow-warm/50'} ${isSuccess ? 'border-calm-sage dark:border-calm-sage ring-2 ring-calm-sage/20 dark:ring-calm-sage/30' : ''}`}
+      /* PREV: border-yellow-warm ... hover:border-yellow-warm/50 */
+      className={`bg-white dark:bg-dark-bg-primary rounded-xl sm:rounded-2xl border transition-all duration-300 ${isActive ? 'border-brand dark:border-brand-light shadow-lg dark:shadow-xl' : 'border-border-soft dark:border-dark-border/30 shadow-sm hover:border-brand/50 dark:hover:border-brand-light/50'} ${isSuccess ? 'border-calm-sage dark:border-calm-sage ring-2 ring-calm-sage/20 dark:ring-calm-sage/30' : ''}`}
     >
       <div className="p-3 sm:p-4 md:p-5">
         <div className="flex items-center justify-between gap-2 sm:gap-3">
           <div className="flex items-center gap-2 sm:gap-3 flex-grow min-w-0">
-            <div className={`w-7 h-7 sm:w-8 sm:h-8 rounded-lg flex items-center justify-center text-xs sm:text-sm font-black shadow-sm flex-shrink-0 ${index === 0 ? 'bg-yellow-warm text-text-primary' : 'bg-bg-secondary dark:bg-dark-bg-primary/50 text-text-primary/40 dark:text-white/40'}`}>
+            {/* PREV: bg-yellow-warm text-text-primary */}
+            <div className={`w-7 h-7 sm:w-8 sm:h-8 rounded-lg flex items-center justify-center text-xs sm:text-sm font-black shadow-sm flex-shrink-0 ${index === 0 ? 'bg-brand dark:bg-brand-light text-white dark:text-navy-dark' : 'bg-bg-secondary dark:bg-dark-bg-primary/50 text-text-primary/40 dark:text-white/40'}`}>
               {index + 1}
             </div>
             <div className="min-w-0 flex-1">
@@ -90,7 +92,8 @@ const ValueCard: React.FC<ValueCardProps> = ({
                   const stateConfig = getEmotionalState(emotionalState as any);
                   const emoji = stateConfig?.emoji || '';
                   return (
-                    <span className="ml-2 text-yellow-warm font-bold">
+                    /* PREV: text-yellow-warm */
+                    <span className="ml-2 text-brand dark:text-brand-light font-bold">
                       — {emoji} {selectedFeeling}
                     </span>
                   );
@@ -102,7 +105,8 @@ const ValueCard: React.FC<ValueCardProps> = ({
 
           <button 
             onClick={onToggleActive}
-            className={`px-3 sm:px-4 py-1.5 sm:py-2 rounded-lg sm:rounded-xl font-black text-xs sm:text-sm uppercase tracking-widest transition-all shadow-sm active:scale-95 flex-shrink-0 ${isActive ? 'bg-navy-primary dark:bg-navy-primary text-white' : 'bg-yellow-warm text-text-primary hover:opacity-90'}`}
+            /* PREV: bg-yellow-warm text-text-primary */
+            className={`px-3 sm:px-4 py-1.5 sm:py-2 rounded-lg sm:rounded-xl font-black text-xs sm:text-sm uppercase tracking-widest transition-all shadow-sm active:scale-95 flex-shrink-0 ${isActive ? 'bg-navy-primary dark:bg-navy-primary text-white' : 'bg-brand dark:bg-brand-light text-white dark:text-navy-dark hover:opacity-90'}`}
           >
             {isActive ? 'Close' : 'Check-in'}
           </button>
@@ -126,7 +130,8 @@ const ValueCard: React.FC<ValueCardProps> = ({
         {!isActive && valueGoals.length === 0 && onNavigateToHome && (
           <div className="mt-3 pt-3 border-t border-border-soft dark:border-dark-border/30">
             <p className="text-xs sm:text-sm text-text-primary/60 dark:text-white/60 text-center">
-              No goals yet. Start with <button onClick={onNavigateToHome} className="text-yellow-warm underline font-bold hover:opacity-90">reflections</button> to create your first goal.
+              {/* PREV: text-yellow-warm */}
+              No goals yet. Start with <button onClick={onNavigateToHome} className="text-brand dark:text-brand-light underline font-bold hover:opacity-90">reflections</button> to create your first goal.
             </p>
           </div>
         )}

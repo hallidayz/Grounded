@@ -116,16 +116,20 @@ const GoalsUpdateView: React.FC<GoalsUpdateViewProps> = ({
                   className={`
                     bg-white dark:bg-dark-bg-primary p-3 sm:p-4 rounded-xl sm:rounded-2xl border transition-all text-left relative
                     ${isSelected 
-                      ? 'border-yellow-warm shadow-lg dark:shadow-xl' 
-                      : 'border-border-soft dark:border-dark-border/30 shadow-sm hover:border-yellow-warm/50 dark:hover:border-yellow-warm/50'
+                      /* PREV: border-yellow-warm */
+                      ? 'border-brand dark:border-brand-light shadow-lg dark:shadow-xl' 
+                      /* PREV: hover:border-yellow-warm/50 */
+                      : 'border-border-soft dark:border-dark-border/30 shadow-sm hover:border-brand/50 dark:hover:border-brand-light/50'
                     }
                   `}
                 >
-                  <span className="absolute top-2 sm:top-3 right-3 sm:right-4 px-1.5 py-0.5 bg-yellow-warm/20 dark:bg-yellow-warm/30 text-yellow-warm rounded-md text-xs font-black uppercase tracking-widest">
+                  {/* PREV: bg-yellow-warm/20 ... text-yellow-warm */}
+                  <span className="absolute top-2 sm:top-3 right-3 sm:right-4 px-1.5 py-0.5 bg-brand/10 dark:bg-brand/20 text-brand dark:text-brand-light rounded-md text-xs font-black uppercase tracking-widest">
                     {goal.frequency}
                   </span>
                   <div className="flex items-center gap-1.5 mb-2">
-                    <div className="w-1.5 h-1.5 rounded-full bg-yellow-warm" />
+                    {/* PREV: bg-yellow-warm */}
+                    <div className="w-1.5 h-1.5 rounded-full bg-brand dark:bg-brand-light" />
                     <span className="text-xs sm:text-sm font-black text-text-primary/50 dark:text-white/50 uppercase tracking-widest">
                       {val?.name}
                     </span>
@@ -182,7 +186,8 @@ const GoalsUpdateView: React.FC<GoalsUpdateViewProps> = ({
                   <textarea
                     value={editedText}
                     onChange={(e) => setEditedText(e.target.value)}
-                    className="w-full p-2 rounded-lg bg-white dark:bg-dark-bg-primary border border-border-soft dark:border-dark-border/30 focus:ring-2 focus:ring-yellow-warm/30 outline-none text-text-primary dark:text-white min-h-[100px] text-sm"
+                    /* PREV: focus:ring-yellow-warm/30 */
+                    className="w-full p-2 rounded-lg bg-white dark:bg-dark-bg-primary border border-border-soft dark:border-dark-border/30 focus:ring-2 focus:ring-brand/30 dark:focus:ring-brand-light/30 outline-none text-text-primary dark:text-white min-h-[100px] text-sm"
                   />
                   <div className="flex gap-2 justify-end">
                     <button
@@ -198,7 +203,8 @@ const GoalsUpdateView: React.FC<GoalsUpdateViewProps> = ({
                           setIsEditingText(false);
                         }
                       }}
-                      className="px-3 py-1.5 text-xs font-bold uppercase tracking-wider bg-yellow-warm text-text-primary rounded-lg hover:opacity-90"
+                      /* PREV: bg-yellow-warm text-text-primary */
+                      className="px-3 py-1.5 text-xs font-bold uppercase tracking-wider bg-brand dark:bg-brand-light text-white dark:text-navy-dark rounded-lg hover:opacity-90"
                     >
                       Save Text
                     </button>
@@ -237,7 +243,8 @@ const GoalsUpdateView: React.FC<GoalsUpdateViewProps> = ({
                   value={updateNote}
                   onChange={(e) => setUpdateNote(e.target.value)}
                   placeholder="Share your progress, challenges, or insights..."
-                  className="w-full p-3 sm:p-4 rounded-xl sm:rounded-2xl bg-bg-secondary dark:bg-dark-bg-primary/50 border-none focus:ring-2 focus:ring-yellow-warm/30 outline-none text-text-primary dark:text-white min-h-[100px] sm:min-h-[120px] resize-none text-sm sm:text-base leading-relaxed shadow-inner"
+                  /* PREV: focus:ring-yellow-warm/30 */
+                  className="w-full p-3 sm:p-4 rounded-xl sm:rounded-2xl bg-bg-secondary dark:bg-dark-bg-primary/50 border-none focus:ring-2 focus:ring-brand/30 dark:focus:ring-brand-light/30 outline-none text-text-primary dark:text-white min-h-[100px] sm:min-h-[120px] resize-none text-sm sm:text-base leading-relaxed shadow-inner"
                 />
               </div>
 
@@ -253,8 +260,10 @@ const GoalsUpdateView: React.FC<GoalsUpdateViewProps> = ({
                       className={`
                         p-2 sm:p-3 rounded-lg sm:rounded-xl border-2 transition-all active:scale-95 flex flex-col items-center justify-center
                         ${selectedMood === mood
-                          ? 'border-yellow-warm bg-yellow-warm/20 dark:bg-yellow-warm/20 shadow-sm scale-105'
-                          : 'border-border-soft dark:border-dark-border/30 hover:border-yellow-warm/50 bg-white dark:bg-dark-bg-primary'
+                          /* PREV: border-yellow-warm bg-yellow-warm/20 */
+                          ? 'border-brand dark:border-brand-light bg-brand/10 dark:bg-brand/20 shadow-sm scale-105'
+                          /* PREV: hover:border-yellow-warm/50 */
+                          : 'border-border-soft dark:border-dark-border/30 hover:border-brand/50 dark:hover:border-brand-light/50 bg-white dark:bg-dark-bg-primary'
                         }
                       `}
                     >
@@ -271,7 +280,8 @@ const GoalsUpdateView: React.FC<GoalsUpdateViewProps> = ({
                 <button
                   onClick={handleUpdateGoal}
                   disabled={!updateNote.trim() || isSubmitting}
-                  className="flex-1 py-2 sm:py-2.5 bg-yellow-warm text-text-primary rounded-lg sm:rounded-xl font-black uppercase tracking-widest text-xs sm:text-sm shadow-sm hover:opacity-90 transition-all active:scale-[0.98] disabled:opacity-30 disabled:cursor-not-allowed"
+                  /* PREV: bg-yellow-warm text-text-primary */
+                  className="flex-1 py-2 sm:py-2.5 bg-brand dark:bg-brand-light text-white dark:text-navy-dark rounded-lg sm:rounded-xl font-black uppercase tracking-widest text-xs sm:text-sm shadow-sm hover:opacity-90 transition-all active:scale-[0.98] disabled:opacity-30 disabled:cursor-not-allowed"
                 >
                   {isSubmitting ? 'Saving...' : '💾 Save Update'}
                 </button>
