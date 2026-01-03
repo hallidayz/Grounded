@@ -710,38 +710,61 @@ CRITICAL:
         
         // If extraction is too short, the prompt might still be there - try more aggressive removal
         if (extracted.length < 100) {
-          extracted = generatedText.split(/Generate a comprehensive report|You are a therapy integration/i)[1] || generatedText;
+          extracted = generatedText.split(/Generate a comprehensive report|You are a therapy integration|OUTPUT FORMAT REQUIREMENTS|MOOD TRENDS DATA|DAILY ACTIVITY LOGS/i)[1] || generatedText;
           extracted = extracted.trim();
         }
         
-        // Remove repetitive patterns from the report
-        // Detect if the same sentence/phrase repeats multiple times
-        const sentences = extracted.split(/[.!?]\s+/);
-        const uniqueSentences: string[] = [];
-        const seenSentences = new Set<string>();
+        // Remove "OUTPUT FORMAT REQUIREMENTS" section if it leaked
+        extracted = extracted.replace(/OUTPUT FORMAT REQUIREMENTS:[\s\S]*?═══════════════════════════════════════════════════════════════/i, '').trim();
         
-        for (const sentence of sentences) {
+        // Remove repetitive patterns from the report
+        // Detect if the same sentence/phrase repeats CONSECUTIVELY or within a small window
+        // We do NOT want to remove duplicates across different report formats (SOAP vs DAP vs BIRP)
+        const sentences = extracted.split(/([.!?]\s+)/); // Keep delimiters to reconstruct
+        const uniqueSentences: string[] = [];
+        const recentSentences: string[] = []; // Window of recent sentences to check against
+        const WINDOW_SIZE = 5; // Check last 5 sentences for loops
+        
+        for (let i = 0; i < sentences.length; i++) {
+          const sentence = sentences[i];
+          // Skip delimiters for check but keep them for reconstruction
+          if (/[.!?]\s+/.test(sentence)) {
+            if (uniqueSentences.length > 0) {
+              uniqueSentences.push(sentence);
+            }
+            continue;
+          }
+          
           const normalized = sentence.trim().toLowerCase();
-          // Check for high similarity with already seen sentences
-          const isDuplicate = Array.from(seenSentences).some(seen => {
-            if (normalized.length < 20) return false; // Skip short sentences
+          if (normalized.length < 20) {
+            uniqueSentences.push(sentence);
+            continue;
+          }
+
+          // Check for high similarity with RECENT sentences only (to prevent loops but allow multi-format repetition)
+          const isDuplicate = recentSentences.some(seen => {
             const words1 = normalized.split(/\s+/);
             const words2 = seen.split(/\s+/);
             const commonWords = words1.filter(w => words2.includes(w)).length;
             const similarity = commonWords / Math.max(words1.length, words2.length);
-            return similarity > 0.7; // 70% word overlap = likely duplicate
+            return similarity > 0.85; // 85% word overlap = likely loop artifact
           });
           
-          if (!isDuplicate && sentence.trim().length > 10) {
-            uniqueSentences.push(sentence.trim());
-            seenSentences.add(normalized);
+          if (!isDuplicate) {
+            uniqueSentences.push(sentence);
+            recentSentences.push(normalized);
+            if (recentSentences.length > WINDOW_SIZE) {
+              recentSentences.shift();
+            }
           }
         }
         
-        extracted = uniqueSentences.join('. ').trim();
+        extracted = uniqueSentences.join('').trim();
         
         // Additional cleanup: remove obvious repetitive patterns
         extracted = extracted.replace(/(The LCSW Lens is a ['"]LCSW Lens['"].*?)(?:\1){2,}/gi, (match, first) => first);
+        // Remove "LCSW Lens is a 'LCSW Lens'" phrase specifically if it appears
+        extracted = extracted.replace(/The LCSW Lens is a ['"]LCSW Lens['"]/gi, 'The LCSW Lens analysis indicates');
         
         // Ensure we have meaningful content - check for actual report sections
         const hasReportContent = extracted.includes('SOAP') || 
@@ -779,28 +802,44 @@ CRITICAL:
               let retryExtracted = retryText.replace(prompt, '').trim();
               
               // Apply same repetition removal to retry
-              const retrySentences = retryExtracted.split(/[.!?]\s+/);
+              const retrySentences = retryExtracted.split(/([.!?]\s+)/);
               const retryUniqueSentences: string[] = [];
-              const retrySeenSentences = new Set<string>();
+              const retryRecentSentences: string[] = [];
+              const WINDOW_SIZE = 5;
               
-              for (const sentence of retrySentences) {
+              for (let i = 0; i < retrySentences.length; i++) {
+                const sentence = retrySentences[i];
+                if (/[.!?]\s+/.test(sentence)) {
+                  if (retryUniqueSentences.length > 0) {
+                    retryUniqueSentences.push(sentence);
+                  }
+                  continue;
+                }
+                
                 const normalized = sentence.trim().toLowerCase();
-                const isDuplicate = Array.from(retrySeenSentences).some(seen => {
-                  if (normalized.length < 20) return false;
+                if (normalized.length < 20) {
+                  retryUniqueSentences.push(sentence);
+                  continue;
+                }
+
+                const isDuplicate = retryRecentSentences.some(seen => {
                   const words1 = normalized.split(/\s+/);
                   const words2 = seen.split(/\s+/);
                   const commonWords = words1.filter(w => words2.includes(w)).length;
                   const similarity = commonWords / Math.max(words1.length, words2.length);
-                  return similarity > 0.7;
+                  return similarity > 0.85;
                 });
                 
-                if (!isDuplicate && sentence.trim().length > 10) {
-                  retryUniqueSentences.push(sentence.trim());
-                  retrySeenSentences.add(normalized);
+                if (!isDuplicate) {
+                  retryUniqueSentences.push(sentence);
+                  retryRecentSentences.push(normalized);
+                  if (retryRecentSentences.length > WINDOW_SIZE) {
+                    retryRecentSentences.shift();
+                  }
                 }
               }
               
-              retryExtracted = retryUniqueSentences.join('. ').trim();
+              retryExtracted = retryUniqueSentences.join('').trim();
               retryExtracted = retryExtracted.replace(/(The LCSW Lens is a ['"]LCSW Lens['"].*?)(?:\1){2,}/gi, (match, first) => first);
               
               if (retryExtracted && retryExtracted.length > 50) {
