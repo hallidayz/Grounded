@@ -18,6 +18,7 @@ const mockTauriPlugin = () => ({
   resolveId(id: string) {
     // Catch ANY import starting with @tauri-apps/api or plugin
     if (id.startsWith("@tauri-apps/")) {
+      console.log('Mocking Tauri import:', id);
       return "virtual:mock-tauri";
     }
   },
