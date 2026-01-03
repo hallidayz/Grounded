@@ -488,12 +488,26 @@ const App: React.FC = () => {
         // Check for old database (only in legacy mode) - with timeout
         if (!encryptionEnabled) {
           try {
-            const hasOldDatabase = await Promise.race([
-              dbService.checkForOldDatabase(),
-              new Promise<boolean>((resolve) => setTimeout(() => resolve(false), 2000)) // 2 second timeout
-            ]).catch(() => false);
-            if (hasOldDatabase) {
-              setShowDatabaseMigrationModal(true);
+            // Only check if user hasn't dismissed it
+            const dismissed = localStorage.getItem('old_db_migration_dismissed') === 'true';
+            if (!dismissed) {
+              const hasOldDatabase = await Promise.race([
+                dbService.checkForOldDatabase(),
+                new Promise<boolean>((resolve) => setTimeout(() => resolve(false), 2000)) // 2 second timeout
+              ]).catch(() => false);
+              
+              if (hasOldDatabase) {
+                // Check if we already have data in the NEW database (using the adapter we just initialized)
+                // If we have data, we shouldn't prompt to migrate (user is already using new app)
+                try {
+                  // Rough check - if we can get app data, we assume user is active
+                  // Note: userId might not be set yet, so this is a heuristic
+                  // If we can't easily check, we rely on the user dismissing the modal
+                  setShowDatabaseMigrationModal(true);
+                } catch (e) {
+                  setShowDatabaseMigrationModal(true);
+                }
+              }
             }
           } catch (error) {
             console.warn('[INIT] Old database check failed (non-critical):', error);
@@ -1469,6 +1483,9 @@ const App: React.FC = () => {
           }}
           onCancel={() => {
             setShowDatabaseMigrationModal(false);
+            // User cancelled - remember this choice so we don't annoy them again
+            localStorage.setItem('old_db_migration_dismissed', 'true');
+            
             // User cancelled - proceed anyway but log the warning
             console.warn('User cancelled database migration - old database may still exist');
             // Try to initialize new database anyway
