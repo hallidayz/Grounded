@@ -84,9 +84,9 @@ export default defineConfig({
       registerType: 'autoUpdate',
       // Ensure all needed assets are included
       includeAssets: ['favicon.svg', 'robots.txt', 'apple-touch-icon.png', 'mask-icon.svg'],
-      filename: 'manifest.js', // Changed to .js as per previous fix
+      filename: 'manifest.js', 
       strategies: 'generateSW',
-      injectRegister: 'auto',
+      injectRegister: 'script', // Changed from 'auto' to 'script' to simplify injection
       manifest: {
         name: 'Grounded',
         short_name: 'Grounded',
@@ -152,8 +152,7 @@ export default defineConfig({
         ]
       },
       devOptions: {
-        enabled: false,
-        type: 'module'
+        enabled: false
       }
     })
   ],
