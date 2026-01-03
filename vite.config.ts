@@ -10,6 +10,51 @@ import { fixOnnxPlugin } from './plugins/fixOnnxPlugin'; // Import the new ONNX 
 // Only load Tauri plugin when building for Tauri
 const isTauriBuild = process.env.TAURI_PLATFORM !== undefined;
 
+// Custom plugin to intercept Tauri imports and return mock code
+// This works even if filesystem aliases fail or resolve logic is tricky
+const mockTauriPlugin = () => ({
+  name: "mock-tauri-api",
+  enforce: "pre",
+  resolveId(id: string) {
+    // Catch ANY import starting with @tauri-apps/api or plugin
+    if (id.startsWith("@tauri-apps/")) {
+      return "virtual:mock-tauri";
+    }
+  },
+  load(id: string) {
+    if (id === "virtual:mock-tauri") {
+      return `
+        export const invoke = () => Promise.reject("Tauri API not available in browser");
+        export const convertFileSrc = (src) => src;
+        export const listen = () => Promise.resolve({ unlisten: () => {} });
+        export const fetch = () => Promise.reject("Native fetch not supported");
+        // Store mock
+        export class Store {
+          constructor() {}
+          get = () => Promise.reject("Store not available");
+          set = () => Promise.reject("Store not available");
+          save = () => Promise.reject("Store not available");
+          load = () => Promise.reject("Store not available");
+          delete = () => Promise.reject("Store not available");
+          clear = () => Promise.reject("Store not available");
+          keys = () => Promise.resolve([]);
+          values = () => Promise.resolve([]);
+          entries = () => Promise.resolve([]);
+        }
+        // Notification mock
+        export const sendNotification = () => {};
+        export const requestPermission = () => Promise.resolve('denied');
+        export const isPermissionGranted = () => Promise.resolve(false);
+        // Deep link mock
+        export const onOpenUrl = () => {};
+        export const getCurrent = () => Promise.resolve(null);
+        
+        export default { invoke, convertFileSrc, listen, fetch, Store, sendNotification, requestPermission, isPermissionGranted, onOpenUrl, getCurrent };
+      `;
+    }
+  },
+});
+
 // Plugin to exclude model files from web builds (models download at runtime)
 const excludeModelsPlugin = () => {
   return {
@@ -91,6 +136,8 @@ export default defineConfig({
       jsxRuntime: 'automatic',
       fastRefresh: true,
     }),
+    // Only use the mock plugin if we are NOT in Tauri
+    !isTauriBuild && mockTauriPlugin(),
     // fixOnnxPlugin(), // Temporarily disabled to debug initialization error
     noMinifyTransformersPlugin(), // Disable minification to prevent transformers initialization errors
     ...(isTauriBuild ? [Tauri()] : []),
@@ -120,21 +167,6 @@ export default defineConfig({
   resolve: {
     alias: {
       '@': path.resolve(__dirname, 'src'), // Alias @ to src directory
-      // Mock Tauri APIs in web builds to prevent import errors
-      ...(!isTauriBuild ? {
-        '@tauri-apps/api/core': path.resolve(__dirname, 'src/mocks/empty-tauri.ts'),
-        '@tauri-apps/api/event': path.resolve(__dirname, 'src/mocks/empty-tauri.ts'),
-        '@tauri-apps/api/fs': path.resolve(__dirname, 'src/mocks/empty-tauri.ts'),
-        '@tauri-apps/api/path': path.resolve(__dirname, 'src/mocks/empty-tauri.ts'),
-        '@tauri-apps/api/shell': path.resolve(__dirname, 'src/mocks/empty-tauri.ts'),
-        '@tauri-apps/api/webview': path.resolve(__dirname, 'src/mocks/empty-tauri.ts'),
-        '@tauri-apps/api/webviewWindow': path.resolve(__dirname, 'src/mocks/empty-tauri.ts'),
-        '@tauri-apps/api/window': path.resolve(__dirname, 'src/mocks/empty-tauri.ts'),
-        '@tauri-apps/api/cli': path.resolve(__dirname, 'src/mocks/empty-tauri.ts'),
-        '@tauri-apps/plugin-store': path.resolve(__dirname, 'src/mocks/empty-tauri.ts'),
-        '@tauri-apps/plugin-notification': path.resolve(__dirname, 'src/mocks/empty-tauri.ts'),
-        '@tauri-apps/plugin-deep-link': path.resolve(__dirname, 'src/mocks/empty-tauri.ts'),
-      } : {})
     },
     dedupe: ['react', 'react-dom']
   },
