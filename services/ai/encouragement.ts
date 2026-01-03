@@ -22,14 +22,16 @@ export async function generateFocusLens(
   context?: {
     recentReflections?: string;
     timeOfDay?: 'morning' | 'afternoon' | 'evening' | 'night';
+    selectedFeeling?: string; // Add selected feeling/sub-emotion
   }
 ): Promise<string> {
   const protocols = lcswConfig?.protocols || [];
+  const selectedFeeling = context?.selectedFeeling;
   
   const cacheKey = generateCacheKey(
-    `${emotionalState}|${value.id}|${context?.recentReflections?.substring(0, 50) || ''}`,
+    `${emotionalState}|${selectedFeeling || ''}|${value.id}|${context?.recentReflections?.substring(0, 50) || ''}`,
     emotionalState,
-    undefined,
+    selectedFeeling,
     undefined,
     protocols
   );
@@ -69,18 +71,23 @@ export async function generateFocusLens(
     ? ` Recent reflections: "${context.recentReflections.substring(0, 200)}".` 
     : '';
 
+  const feelingContext = selectedFeeling 
+    ? ` They specifically identify as feeling "${selectedFeeling}".`
+    : '';
+
   const prompt = `Generate a concise, empathetic "Focus Lens" message (2-3 sentences) for a user.
 
-Context: User is currently feeling ${emotionalState}. They are reflecting on the value: "${value.name}" (${value.description}).${reflectionContext}
+Context: User is currently feeling ${emotionalState}.${feelingContext} They are reflecting on the value: "${value.name}" (${value.description}).${reflectionContext}
 ${protocolContext}
 
 Your Focus Lens should:
-- Acknowledge their emotional state.
-- Connect to their chosen value.
+- Acknowledge their specific emotional state (${emotionalState}${selectedFeeling ? ` and the feeling of "${selectedFeeling}"` : ''}).
+- Connect to their chosen value ("${value.name}").
 - Offer a gentle perspective or question to guide their reflection.
+- Be personalized to their current emotional experience.
 - Avoid giving direct advice or therapeutic interventions.
 
-Return ONLY the Focus Lens text.`;
+Return ONLY the Focus Lens text. Do not repeat instructions or include placeholders.`;
 
   if (counselingCoachModel) {
     try {
@@ -93,10 +100,24 @@ Return ONLY the Focus Lens text.`;
       });
 
       const generatedText = result[0]?.generated_text || '';
-      const extracted = generatedText.replace(prompt, '').trim();
-      if (extracted && extracted.length > 20) {
+      let extracted = generatedText.replace(prompt, '').trim();
+      
+      // Remove any prompt artifacts or instruction text
+      extracted = extracted.replace(/^Generate a concise.*?$/im, '').trim();
+      extracted = extracted.replace(/^Return ONLY.*?$/im, '').trim();
+      extracted = extracted.replace(/^Your Focus Lens should:.*?$/ims, '').trim();
+      extracted = extracted.replace(/^Context:.*?$/ims, '').trim();
+      
+      // Validate that it's not just placeholder text
+      const hasPlaceholder = /\[.*?\]|placeholder|example|template/i.test(extracted);
+      const hasInstructions = /acknowledge|connect|offer|avoid|should|must/i.test(extracted) && extracted.length < 100;
+      
+      if (extracted && extracted.length > 20 && !hasPlaceholder && !hasInstructions) {
         await setCachedResponse(cacheKey, { focusLens: extracted });
+        console.log('✅ AI-generated Focus Lens:', extracted.substring(0, 100));
         return extracted;
+      } else {
+        console.warn('⚠️ AI Focus Lens response invalid or contains placeholders, using fallback');
       }
     } catch (error) {
       console.warn('AI Focus Lens generation failed:', error);
@@ -104,10 +125,14 @@ Return ONLY the Focus Lens text.`;
     }
   }
 
-  // Rule-based fallback
+  // Rule-based fallback - include selected feeling if available
+  const fallbackContext: any = { emotionalState, valueCategory: value.category };
+  if (selectedFeeling) {
+    fallbackContext.selectedFeeling = selectedFeeling;
+  }
   const fallback = getFallbackResponse(
     focusLensFallbacks,
-    { emotionalState, valueCategory: value.category },
+    fallbackContext,
     focusLensFallbacks.default
   );
   console.log('ℹ️ Using rule-based Focus Lens fallback.');
@@ -288,18 +313,22 @@ export async function analyzeReflection(
       ? `\nPrevious analysis context (user wants a fresh perspective):\nCore Themes: ${previousAnalysis.coreThemes.join(', ')}\nLCSW Lens: ${previousAnalysis.lcswLens}\n\nProvide a different perspective or deeper insight.`
       : '';
 
-    // Schema-Only prompt format - no placeholders in brackets to prevent copying
-    const prompt = `Analyze this reflection and provide analysis. Return ONLY the sections below with actual content:
-
-REFLECTION: Summarize the user's experience in 2 sentences
-EMOTIONS: List 2-3 emotions inferred from the reflection
-SELF_ADVOCACY: Ask 1 gentle question for self-reflection
-PACE_NOTE: Give 1 sentence of pacing advice
+    // AI Counselor Analysis prompt - provide therapeutic perspective
+    const prompt = `You are an AI counseling assistant providing therapeutic analysis. Analyze this client reflection and provide structured counselor insights.
 
 User Reflection: "${reflection.substring(0, 500)}"
-Mood: ${emotionalState || 'unknown'} (${selectedFeeling || 'general'})
+Emotional State: ${emotionalState || 'unknown'} (${selectedFeeling || 'general'})
 Goal Frequency: ${frequency}
-${protocolContext}${previousContext}`;
+${protocolContext}${previousContext}
+
+Provide your counselor analysis in these sections:
+
+REFLECTION: Summarize the client's experience in 2 sentences from a therapeutic perspective
+EMOTIONS: Identify 2-3 emotions or emotional themes present in the reflection
+SELF_ADVOCACY: Offer 1 gentle, reflective question to deepen the client's self-awareness
+PACE_NOTE: Provide 1 sentence of therapeutic pacing advice for the client
+
+Return ONLY the sections above with actual counselor insights. Do not include instructions or placeholders.`;
 
     // Try to get AI model for JSON response
     let counselingCoachModel = getCounselingCoachModel();
@@ -324,12 +353,12 @@ ${protocolContext}${previousContext}`;
 
     if (counselingCoachModel) {
       try {
-        console.log('🤖 Calling AI model for reflection analysis (Schema-Only v2 - Forced Update)...');
+        console.log('🤖 Calling AI model for reflection analysis (AI Counselor Analysis)...');
         const result = await counselingCoachModel(prompt, {
-          max_new_tokens: 250,
-          temperature: 0.1,
+          max_new_tokens: 400, // Increased for better analysis
+          temperature: 0.3, // Slightly higher for more natural counselor tone
           do_sample: true,
-          repetition_penalty: 1.2
+          repetition_penalty: 1.3
         });
 
         const generatedText = result[0]?.generated_text || '';
@@ -413,18 +442,20 @@ ${protocolContext}${previousContext}`;
             .trim();
         }
 
-        // Validate extraction - check for placeholders, empty content, or prompt text
+        // Validate extraction - be more lenient to accept AI-generated content
+        // Only reject if it's clearly placeholder text or instruction repetition
         const hasPlaceholders = 
-          sections.lcswLens.includes('[') || 
-          sections.lcswLens.includes('Summarize the user') ||
-          sections.sessionPrep.includes('[') ||
-          sections.sessionPrep.includes('Give 1 sentence') ||
-          sections.coreThemes.some(t => t.includes('[') || t.includes('List')) ||
-          sections.reflectiveInquiry.some(q => q.includes('[') || q.includes('Ask 1'));
+          (sections.lcswLens.includes('[') && sections.lcswLens.includes(']')) || 
+          sections.lcswLens.toLowerCase().includes('summarize the user\'s experience') ||
+          (sections.sessionPrep.includes('[') && sections.sessionPrep.includes(']')) ||
+          sections.sessionPrep.toLowerCase().includes('give 1 sentence of pacing') ||
+          sections.coreThemes.some(t => (t.includes('[') && t.includes(']')) || t.toLowerCase().includes('list 2-3 emotions')) ||
+          sections.reflectiveInquiry.some(q => (q.includes('[') && q.includes(']')) || q.toLowerCase().includes('ask 1 gentle question'));
         
+        // More lenient content check - accept if we have any meaningful content
         const hasContent = 
-          sections.lcswLens.length > 20 && 
-          (sections.coreThemes.length > 0 || sections.reflectiveInquiry.length > 0);
+          sections.lcswLens.length > 15 && // Reduced from 20
+          (sections.coreThemes.length > 0 || sections.reflectiveInquiry.length > 0 || sections.sessionPrep.length > 10);
         
         console.log('🔍 Parsed sections:', {
           lcswLens: sections.lcswLens.substring(0, 50),
@@ -432,16 +463,33 @@ ${protocolContext}${previousContext}`;
           reflectiveInquiryCount: sections.reflectiveInquiry.length,
           sessionPrep: sections.sessionPrep.substring(0, 50),
           hasPlaceholders,
-          hasContent
+          hasContent,
+          lcswLensLength: sections.lcswLens.length
         });
         
+        // Accept AI-generated content even if some sections are missing, as long as we have core content
         if (!hasPlaceholders && hasContent) {
-          console.log('✅ Valid reflection analysis extracted');
+          console.log('✅ Valid AI Counselor Analysis extracted');
+          await setCachedResponse(cacheKey, { reflectionAnalysis: JSON.stringify(sections) });
+          return sections;
+        } else if (sections.lcswLens.length > 15) {
+          // If we have at least the LCSW Lens, accept it even if other sections are missing
+          console.log('✅ Accepting AI analysis with LCSW Lens (some sections may be missing)');
+          // Fill in missing sections with minimal content rather than rejecting
+          if (sections.coreThemes.length === 0) {
+            sections.coreThemes = ['Reflection on personal experience'];
+          }
+          if (sections.reflectiveInquiry.length === 0) {
+            sections.reflectiveInquiry = ['What does this reflection reveal about your values?'];
+          }
+          if (sections.sessionPrep.length < 10) {
+            sections.sessionPrep = 'Consider bringing this reflection to your next therapy session.';
+          }
           await setCachedResponse(cacheKey, { reflectionAnalysis: JSON.stringify(sections) });
           return sections;
         } else {
           console.warn('⚠️ Failed to parse reflection analysis - placeholders detected or insufficient content');
-          console.warn('Full generated text:', generatedText);
+          console.warn('Full generated text:', generatedText.substring(0, 500));
         }
       } catch (error) {
         console.warn('AI reflection analysis failed:', error);

@@ -148,6 +148,7 @@ export function useDashboard(
             lcswConfig,
             {
               recentReflections: '', // No specific reflection here, just general focus
+              selectedFeeling: subEmotion, // Pass the selected feeling/sub-emotion
               timeOfDay: (() => {
                 const hour = new Date().getHours();
                 if (hour < 12) return 'morning';
@@ -345,58 +346,21 @@ export function useDashboard(
     }
   }, [reflectionText, goalText, activeValueId, saveInteraction]);
 
-  // Manual reflection analysis trigger
-  // Builds enhanced reflection context with feeling + sub-feeling + deep reflection
-  // Now also saves the reflection to database before analyzing
+  // ORCHESTRATED AI PROCESSING: When user clicks Save
+  // 1. Generate Focus Lens (acknowledging feelings/emotions) - AI
+  // 2. Analyze Reflection (AI Counselor Analysis) - AI  
+  // 3. Generate SMART Goal Suggestion (based on reflection) - AI
+  // All three processes share context and are interconnected
   const triggerReflectionAnalysis = useCallback(async () => {
-    const hasReflection = reflectionText.trim().length > 0; // Allow any length for saving
+    const hasReflection = reflectionText.trim().length > 0;
     
     if (!hasReflection) {
       console.warn('Reflection text is required');
       return;
     }
     
-    // Save the reflection first (even without emotion/feeling selection)
-    // This ensures the reflection is saved before analysis
-    if (activeValueId && reflectionText.trim()) {
-      try {
-        const timestamp = new Date().toISOString();
-        const feelingLog: FeelingLog = {
-          id: `feeling-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`,
-          timestamp,
-          emotion: emotionalState || 'mixed',
-          subEmotion: selectedFeeling || null,
-          jsonIn: JSON.stringify({
-            emotion: emotionalState || 'mixed',
-            subEmotion: selectedFeeling,
-            valueId: activeValueId,
-            reflection: reflectionText.trim(),
-            timestamp
-          }),
-          jsonOut: '', // Will be updated after analysis
-          focusLens: coachInsight || '',
-          reflection: reflectionText.trim(),
-          selfAdvocacy: '',
-          frequency: goalFreq,
-          jsonAssessment: '', // Will be updated after analysis
-          // Legacy fields
-          emotionalState: (emotionalState || 'mixed') as any,
-          selectedFeeling: selectedFeeling || null,
-          aiResponse: '',
-          isAIResponse: false,
-          lowStateCount: lowStateCount
-        };
-        
-        await dbService.saveFeelingLog(feelingLog);
-        console.log('✅ Reflection saved to database');
-      } catch (error) {
-        console.error('Error saving reflection:', error);
-        // Continue with analysis even if save fails
-      }
-    }
-    
-    // Now proceed with analysis if we have enough data
-    const hasEnoughReflection = reflectionText.trim().length > 20; // Minimum 20 characters for analysis
+    // Validate we have emotional context for proper AI processing
+    const hasEnoughReflection = reflectionText.trim().length > 20;
     const hasFeeling = emotionalState && emotionalState !== 'mixed';
     const hasSubFeeling = selectedFeeling !== null;
     
@@ -410,19 +374,53 @@ export function useDashboard(
       return;
     }
     
-    // Build enhanced reflection context with feeling information
-    const stateConfig = getEmotionalState(emotionalState);
-    const feelingContext = stateConfig && selectedFeeling
-      ? `Emotional State: ${stateConfig.label} (${selectedFeeling})\n\n`
-      : '';
+    if (!activeValueId) {
+      console.warn('No active value selected');
+      return;
+    }
     
-    const enhancedReflection = feelingContext 
-      ? `${feelingContext}Deep Reflection:\n${reflectionText}`
-      : reflectionText;
+    const activeValue = values.find(v => v.id === activeValueId);
+    if (!activeValue) {
+      console.warn('Active value not found');
+      return;
+    }
     
     setAnalyzingReflection(true);
+    
     try {
-      const analysis = await analyzeReflection(
+      // ORCHESTRATION: Run all three AI processes in parallel with shared context
+      console.log('🎯 Starting orchestrated AI processing...');
+      
+      // Build shared context for all AI processes
+      const stateConfig = getEmotionalState(emotionalState);
+      const feelingContext = stateConfig && selectedFeeling
+        ? `Emotional State: ${stateConfig.label} (${selectedFeeling})\n\n`
+        : '';
+      
+      const enhancedReflection = feelingContext 
+        ? `${feelingContext}Deep Reflection:\n${reflectionText}`
+        : reflectionText;
+      
+      // 1. Generate Focus Lens - acknowledging feelings and emotions through AI
+      const focusLensPromise = generateFocusLens(
+        emotionalState as EmotionalState,
+        activeValue,
+        lcswConfig,
+        {
+          recentReflections: reflectionText.trim(),
+          selectedFeeling: selectedFeeling || undefined,
+          timeOfDay: (() => {
+            const hour = new Date().getHours();
+            if (hour < 12) return 'morning';
+            if (hour < 18) return 'afternoon';
+            if (hour < 22) return 'evening';
+            return 'night';
+          })(),
+        }
+      );
+      
+      // 2. Analyze Reflection - AI Counselor Analysis
+      const analysisPromise = analyzeReflection(
         enhancedReflection,
         goalFreq,
         lcswConfig,
@@ -430,17 +428,107 @@ export function useDashboard(
         selectedFeeling,
         rawReflectionAnalysis
       );
-      setRawReflectionAnalysis(analysis);
-      // Format the analysis response as a string for display
-      const formattedAnalysis = `## Core Themes\n${analysis.coreThemes.map(t => `- ${t}`).join('\n')}\n\n## The 'LCSW Lens'\n${analysis.lcswLens}\n\n## Reflective Inquiry\n${analysis.reflectiveInquiry.map(q => `- ${q}`).join('\n')}\n\n## Session Prep\n${analysis.sessionPrep}`;
-      setReflectionAnalysis(formattedAnalysis);
+      
+      // 3. Generate SMART Goal Suggestion - based on reflection entry
+      // Start counseling guidance generation in parallel
+      const counselingGuidancePromise = generateCounselingGuidance(
+        activeValue,
+        emotionalState || 'mixed',
+        reflectionText,
+        lcswConfig
+      );
+      
+      // Execute Focus Lens and Analysis in parallel first
+      const [focusLensResult, analysisResult] = await Promise.all([
+        focusLensPromise,
+        analysisPromise
+      ]);
+      
+      // Then generate goal suggestion using the analysis result
+      let goalSuggestionResult = null;
+      try {
+        const counselingGuidance = await counselingGuidancePromise;
+        goalSuggestionResult = await suggestGoal(
+          activeValue,
+          goalFreq,
+          enhancedReflection,
+          counselingGuidance,
+          lcswConfig,
+          emotionalState,
+          selectedFeeling,
+          analysisResult // Use the analysis result from the parallel execution
+        );
+      } catch (error) {
+        console.error('Goal suggestion error in orchestration:', error);
+      }
+      
+      // Update state with all results
+      if (focusLensResult) {
+        setCoachInsight(focusLensResult);
+        console.log('✅ Focus Lens generated (AI)');
+      }
+      
+      if (analysisResult) {
+        setRawReflectionAnalysis(analysisResult);
+        // Format the analysis response as a string for display
+        const formattedAnalysis = `## Core Themes\n${analysisResult.coreThemes.map(t => `- ${t}`).join('\n')}\n\n## The 'LCSW Lens'\n${analysisResult.lcswLens}\n\n## Reflective Inquiry\n${analysisResult.reflectiveInquiry.map(q => `- ${q}`).join('\n')}\n\n## Session Prep\n${analysisResult.sessionPrep}`;
+        setReflectionAnalysis(formattedAnalysis);
+        console.log('✅ Reflection Analysis generated (AI Counselor Analysis)');
+      }
+      
+      if (goalSuggestionResult) {
+        setGoalText(goalSuggestionResult);
+        console.log('✅ SMART Goal Suggestion generated (AI)');
+      }
+      
+      // Save the reflection with all AI results
+      if (activeValueId && reflectionText.trim()) {
+        try {
+          const timestamp = new Date().toISOString();
+          const feelingLog: FeelingLog = {
+            id: `feeling-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`,
+            timestamp,
+            emotion: emotionalState || 'mixed',
+            subEmotion: selectedFeeling || null,
+            jsonIn: JSON.stringify({
+              emotion: emotionalState || 'mixed',
+              subEmotion: selectedFeeling,
+              valueId: activeValueId,
+              reflection: reflectionText.trim(),
+              timestamp
+            }),
+            jsonOut: JSON.stringify({
+              focusLens: focusLensResult,
+              analysis: analysisResult,
+              goalSuggestion: goalSuggestionResult
+            }),
+            focusLens: focusLensResult || coachInsight || '',
+            reflection: reflectionText.trim(),
+            selfAdvocacy: goalSuggestionResult || '',
+            frequency: goalFreq,
+            jsonAssessment: JSON.stringify(analysisResult || {}),
+            // Legacy fields
+            emotionalState: (emotionalState || 'mixed') as any,
+            selectedFeeling: selectedFeeling || null,
+            aiResponse: '',
+            isAIResponse: true, // Mark as AI-generated
+            lowStateCount: lowStateCount
+          };
+          
+          await dbService.saveFeelingLog(feelingLog);
+          console.log('✅ Reflection saved with all AI results');
+        } catch (error) {
+          console.error('Error saving reflection:', error);
+        }
+      }
+      
     } catch (error) {
-      console.error('Reflection analysis error:', error);
+      console.error('Orchestrated AI processing error:', error);
       setReflectionAnalysis(null);
     } finally {
       setAnalyzingReflection(false);
     }
-  }, [reflectionText, emotionalState, selectedFeeling, goalFreq, lcswConfig, reflectionAnalysis, activeValueId, coachInsight, lowStateCount]);
+  }, [reflectionText, emotionalState, selectedFeeling, goalFreq, lcswConfig, activeValueId, values, rawReflectionAnalysis, coachInsight, lowStateCount]);
 
   // AI Motivation Refresh - Focus Lens based on selected feeling
   // Use ref to prevent infinite loops from logs array changes
@@ -463,15 +551,16 @@ export function useDashboard(
         
         // Generate Focus Lens and Mantra
         Promise.all([
-          generateFocusLens(emotionalState, activeValue, {
+          generateFocusLens(emotionalState, activeValue, lcswConfig, {
             recentReflections: recentJournalText,
-              timeOfDay: (() => {
-                const hour = new Date().getHours();
-                if (hour < 12) return 'morning';
-                if (hour < 18) return 'afternoon';
-                if (hour < 22) return 'evening';
-                return 'night';
-              })(),
+            selectedFeeling: selectedFeeling || undefined, // Pass the selected feeling/sub-emotion
+            timeOfDay: (() => {
+              const hour = new Date().getHours();
+              if (hour < 12) return 'morning';
+              if (hour < 18) return 'afternoon';
+              if (hour < 22) return 'evening';
+              return 'night';
+            })(),
           }),
           generateValueMantra(activeValue)
         ]).then(([insight, mantra]) => {

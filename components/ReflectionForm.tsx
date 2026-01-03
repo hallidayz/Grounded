@@ -263,10 +263,20 @@ const ReflectionForm: React.FC<ReflectionFormProps> = ({
                 <button
                   onClick={onTriggerReflectionAnalysis}
                   disabled={analyzingReflection || !reflectionText.trim() || !emotionalState || emotionalState === 'mixed' || !selectedFeeling}
-                  className="text-xs sm:text-sm font-black text-yellow-warm uppercase tracking-widest hover:underline disabled:opacity-30 disabled:cursor-not-allowed"
+                  className="text-xs sm:text-sm font-black text-yellow-warm uppercase tracking-widest hover:underline disabled:opacity-30 disabled:cursor-not-allowed flex items-center gap-1.5"
                   title="Refresh analysis"
                 >
-                  🔄 Refresh
+                  {analyzingReflection ? (
+                    <>
+                      <svg className="animate-spin h-3 w-3" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                        <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+                        <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                      </svg>
+                      Processing...
+                    </>
+                  ) : (
+                    '🔄 Refresh'
+                  )}
                 </button>
               </div>
               <div className="text-sm sm:text-base text-text-primary dark:text-white leading-relaxed">
@@ -295,8 +305,18 @@ const ReflectionForm: React.FC<ReflectionFormProps> = ({
           <div className="flex justify-between items-center px-1">
             <label className="text-xs sm:text-sm font-black text-text-primary/50 dark:text-white/50 uppercase tracking-widest">2. Self-Advocacy Aim</label>
             <div className="flex items-center gap-2">
-              <button onClick={onSuggestGoal} disabled={aiGoalLoading} className="text-xs sm:text-sm font-black text-yellow-warm uppercase tracking-widest hover:underline disabled:opacity-50">
-                {aiGoalLoading ? 'Suggesting...' : '✨ Suggest'}
+              <button onClick={onSuggestGoal} disabled={aiGoalLoading} className="text-xs sm:text-sm font-black text-yellow-warm uppercase tracking-widest hover:underline disabled:opacity-50 flex items-center gap-1.5">
+                {aiGoalLoading ? (
+                  <>
+                    <svg className="animate-spin h-3 w-3" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                      <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+                      <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                    </svg>
+                    Suggesting...
+                  </>
+                ) : (
+                  '✨ Suggest'
+                )}
               </button>
               <StatusIndicator
                 status={

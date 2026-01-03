@@ -1157,8 +1157,18 @@ const App: React.FC = () => {
   }, [authState]);
 
   // Show loading state while checking auth
+  // Auto-navigate to login after 5 seconds when checking
+  useEffect(() => {
+    if (authState === 'checking') {
+      const timer = setTimeout(() => {
+        setAuthState('login');
+      }, 5000);
+      
+      return () => clearTimeout(timer);
+    }
+  }, [authState]);
+
   if (authState === 'checking') {
-    
     // If encryption is enabled but not authenticated, login screen will handle unlock
     // No separate unlock screen needed - login combines both steps
     
@@ -1183,13 +1193,6 @@ const App: React.FC = () => {
                 {progressState.details}
               </p>
             )}
-            <ProgressBar
-              progress={progressState.progress}
-              status={progressState.status}
-              showPercentage={true}
-              height="lg"
-              className="mt-4"
-            />
             {progressState.status === 'error' && (
               <button
                 onClick={() => setAuthState('login')}
