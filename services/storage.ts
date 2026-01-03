@@ -16,11 +16,9 @@ let tauriStore: any = null;
 async function initStorage(): Promise<void> {
   if (isTauri()) {
     try {
-      // Dynamic import for Tauri plugin (only available in Tauri builds)
-      // Using function wrapper prevents Vite from statically analyzing the import path
-      const getTauriStoreImport = () => '@tauri-apps/plugin-store';
-      // @ts-expect-error - Tauri plugin not available in web builds, will be caught by try-catch
-      const tauriStoreModule = await import(getTauriStoreImport());
+      // Direct dynamic import allows the mockTauriPlugin to intercept it during web builds
+      // while loading the real plugin in Tauri builds
+      const tauriStoreModule = await import('@tauri-apps/plugin-store');
       const { Store } = tauriStoreModule;
       tauriStore = new Store('.settings.dat');
     } catch (error) {

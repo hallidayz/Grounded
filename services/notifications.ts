@@ -65,11 +65,8 @@ export async function sendNotification(
     if (isTauri()) {
       // Use Tauri notification plugin if available
       try {
-        // Dynamic import for Tauri plugin (only available in Tauri builds)
-        // Using function wrapper prevents Vite from statically analyzing the import path
-        const getTauriNotifyImport = () => '@tauri-apps/plugin-notification';
-        // @ts-expect-error - Tauri plugin not available in web builds, will be caught by try-catch
-        const tauriNotifyModule = await import(getTauriNotifyImport());
+        // Direct dynamic import allows the mockTauriPlugin to intercept it during web builds
+        const tauriNotifyModule = await import('@tauri-apps/plugin-notification');
         const { sendNotification: tauriNotify } = tauriNotifyModule;
         await tauriNotify({
           title,
