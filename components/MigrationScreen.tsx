@@ -8,6 +8,7 @@ import { MigrationService, MigrationProgress } from '../services/migrationServic
 import { ValidationResult } from '../services/migrationValidator';
 import { detectLegacyData, LegacyDataInfo } from '../services/legacyDetection';
 import { restoreLegacyBackup, hasValidBackup } from '../services/backupManager';
+import { dbService } from '../services/database';
 
 interface MigrationScreenProps {
   onClose: () => void;
@@ -64,6 +65,18 @@ export const MigrationScreen: React.FC<MigrationScreenProps> = ({ onClose, onCom
       
       // Set encryption enabled flag
       localStorage.setItem('encryption_enabled', 'true');
+      
+      // Delete legacy database (Requirement: Migrate -> Remove -> Alert)
+      try {
+        await dbService.deleteOldDatabase();
+        // Mark as done so we don't check again in App.tsx (even though logic is removed there)
+        localStorage.setItem('old_db_migration_dismissed', 'true');
+      } catch (cleanupError) {
+        console.warn('Failed to clean up legacy database:', cleanupError);
+      }
+      
+      // Show alert as requested
+      alert("Database has been updated to the new secure format.");
       
       // Migration successful - show validation summary
       setTimeout(() => {

@@ -483,43 +483,6 @@ const App: React.FC = () => {
           }
         }
         
-        // Check for old database (only in legacy mode) - with timeout
-        if (!encryptionEnabled) {
-          try {
-            // Check if we already handled this
-            const migrationDismissed = localStorage.getItem('old_db_migration_dismissed') === 'true';
-            
-            if (!migrationDismissed) {
-              const hasOldDatabase = await Promise.race([
-                dbService.checkForOldDatabase(),
-                new Promise<boolean>((resolve) => setTimeout(() => resolve(false), 2000)) // 2 second timeout
-              ]).catch(() => false);
-              
-              if (hasOldDatabase) {
-                console.log('[MIGRATION] Old database detected - performing auto-cleanup...');
-                
-                // Delete the old database immediately
-                await dbService.deleteOldDatabase();
-                
-                // Mark as done so we don't check again
-                localStorage.setItem('old_db_migration_dismissed', 'true');
-                
-                // Show simple alert as requested by user
-                // Use setTimeout to ensure it doesn't block the init flow significantly
-                setTimeout(() => {
-                  alert("Database has been updated to the new secure format.");
-                }, 500);
-                
-                // Ensure new adapter is initialized
-                const adapter = getDatabaseAdapter();
-                await adapter.init();
-              }
-            }
-          } catch (error) {
-            console.warn('[INIT] Old database cleanup failed:', error);
-          }
-        }
-        
         // Update progress: Checking authentication
         setModelLoadingProgress(60, 'Checking authentication...', '');
         
