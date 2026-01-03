@@ -75,26 +75,33 @@ export async function generateFocusLens(
     ? ` They specifically identify as feeling "${selectedFeeling}".`
     : '';
 
-  // Ultra-minimal prompt - just context, no instructions
-  const prompt = `User feeling: ${emotionalState}.${feelingContext} Reflecting on: "${value.name}" (${value.description}).${reflectionContext}
-${protocolContext}
+  // T5-friendly prompt structure: Instruction -> Context -> Response marker
+  // Simplified context to prevent "social worker" hallucinations
+  const prompt = `Instruction: Write a short, warm message (2 sentences) to the user. Acknowledge their feeling of "${emotionalState}" and encourage their value of "${value.name}".
+Context:
+- Feeling: ${emotionalState} (${selectedFeeling || 'general'})
+- Value: ${value.name}
+- Reflection: ${context?.recentReflections?.substring(0, 100) || 'None'}
 
-Write 2-3 sentences acknowledging their feeling and connecting to their value.`;
+Message:`;
 
   if (counselingCoachModel && isTextGenerationModel(counselingCoachModel)) {
     try {
       console.log('🤖 Calling AI model for Focus Lens...');
       const result = await counselingCoachModel(prompt, {
-        max_new_tokens: 100,
-        temperature: 0.7,
+        max_new_tokens: 80, // Reduced tokens to encourage brevity
+        temperature: 0.5,
         do_sample: true,
-        top_p: 0.9
+        top_p: 0.9,
+        repetition_penalty: 1.2
       });
 
       const generatedText = result[0]?.generated_text || '';
+      // Remove prompt and specific artifacts
       let extracted = generatedText.replace(prompt, '').trim();
-      
-      // Remove any prompt artifacts or instruction text
+      extracted = extracted.replace(/^Message:\s*/i, '').trim();
+      extracted = extracted.replace(/^Response:\s*/i, '').trim();
+      extracted = extracted.replace(/^Instruction:\s*/i, '').trim();
       extracted = extracted.replace(/^Generate a concise.*?$/im, '').trim();
       extracted = extracted.replace(/^Return ONLY.*?$/im, '').trim();
       extracted = extracted.replace(/^Your Focus Lens should:.*?$/ims, '').trim();
@@ -108,17 +115,27 @@ Write 2-3 sentences acknowledging their feeling and connecting to their value.`;
       extracted = extracted.replace(/^Focus Lens\s+/i, '').trim();
       extracted = extracted.replace(/["']Focus Lens["'] message:?/i, '').trim();
       
+      // Remove repetition patterns (e.g. "feeling": "message" loops)
+      extracted = extracted.replace(/["']?[\w\s]+["']?\s*:\s*["']?.*?["']?/g, (match) => {
+        // Only remove if it looks like a key-value pair not part of a sentence
+        return match.length < 50 && match.includes(':') ? '' : match;
+      }).trim();
+      
+      // Clean up any double quotes at start/end if they remain
+      extracted = extracted.replace(/^["']|["']$/g, '');
+
       // Validate that it's not just placeholder text or literal "Focus Lens"
       const hasPlaceholder = /\[.*?\]|placeholder|example|template/i.test(extracted);
       const isLiteralFocusLens = /^Focus Lens$/i.test(extracted.trim());
       const hasInstructions = /acknowledge|connect|offer|avoid|should|must|Write 2-3/i.test(extracted) && extracted.length < 100;
+      const hasHallucination = /The speaker is|social worker|job opening|marketing promotion|leadership position/i.test(extracted);
       
-      if (extracted && extracted.length > 20 && !hasPlaceholder && !hasInstructions && !isLiteralFocusLens) {
+      if (extracted && extracted.length > 20 && !hasPlaceholder && !hasInstructions && !isLiteralFocusLens && !hasHallucination) {
         await setCachedResponse(cacheKey, { focusLens: extracted });
         console.log('✅ AI-generated Focus Lens:', extracted.substring(0, 100));
         return extracted;
       } else {
-        console.warn('⚠️ AI Focus Lens response invalid or contains placeholders, using fallback');
+        console.warn('⚠️ AI Focus Lens response invalid, contains placeholders, or hallucination detected, using fallback');
       }
     } catch (error) {
       console.warn('AI Focus Lens generation failed:', error);
@@ -751,15 +768,16 @@ export async function generateEmotionalEncouragement(
   // Use encouragement instruction from state config
   const baseInstruction = stateConfig.encouragementPrompt.instruction;
   
-  // Ultra-minimal prompt - just context and JSON example, no instructions
-  const prompt = `User feeling: ${stateConfig.label.toLowerCase()}.${feelingContext}${timeContext}${journalContext}${patternContext}
-${protocolContext}
+  // Text-only prompt for better stability
+  const prompt = `Task: Write 30-60 words of warm, realistic support for the user.
+Context:
+- User Feeling: ${stateConfig.label.toLowerCase()} ${selectedFeeling ? `(specifically "${selectedFeeling}")` : ''}
+${timeContext ? `- Time: ${timeContext.trim()}` : ''}
+${journalContext ? `- Recent Log: ${journalContext.trim()}` : ''}
+${patternContext ? `- Pattern: ${patternContext.trim()}` : ''}
+${protocolContext ? `- Protocol: ${protocolContext}` : ''}
 
-{
-  "message": "30-60 words of warm, realistic support",
-  "acknowledgeFeeling": "${selectedFeeling || stateConfig.shortLabel}",
-  "actionableStep": "optional"
-}`;
+Response:`;
 
   // Build fallback response using fallback tables
   const fallbackData = getFallbackResponse(
@@ -797,158 +815,46 @@ ${protocolContext}
     }
   }
   
-  // If AI model is available, use it FIRST (JSON in/out)
+  // If AI model is available, use it FIRST
   if (counselingCoachModel && isTextGenerationModel(counselingCoachModel)) {
     try {
       const result = await counselingCoachModel(prompt, {
-        max_new_tokens: 200,
-        temperature: 0.8,
+        max_new_tokens: 150,
+        temperature: 0.6,
         do_sample: true,
-        top_p: 0.9
+        top_p: 0.9,
+        repetition_penalty: 1.2
       });
 
       const generatedText = result[0]?.generated_text || '';
       
-      // Remove the prompt from the beginning if present
+      // Remove the prompt and artifacts
       let extracted = generatedText.replace(prompt, '').trim();
+      extracted = extracted.replace(/^Response:\s*/i, '').trim();
+      extracted = extracted.replace(/^Encouragement:\s*/i, '').trim();
+      extracted = extracted.replace(/^Message:\s*/i, '').trim();
       
       // Also remove common prompt artifacts
-      extracted = extracted.replace(/^Provide encouragement and return.*?$/im, '').trim();
-      extracted = extracted.replace(/^Return valid JSON only.*?$/im, '').trim();
-      
-      // Check if the response contains requirements text or prompt repetition (indicates model repeated the prompt)
-      const hasRequirements = /Requirements?:|Acknowledge:|Honest, realistic support|See possibilities without toxic|The user has already chosen|The user has selected|Generate a balanced reflection/i.test(extracted);
-      if (hasRequirements) {
-        console.warn('⚠️ AI returned requirements/prompt text instead of JSON, rejecting response');
-        // Try to extract JSON that might come after the requirements
-        const afterRequirements = extracted.split(/Requirements?:|The user has already chosen|The user has selected|Generate a balanced/i)[1] || extracted;
-        extracted = afterRequirements.trim();
-      }
+      extracted = extracted.replace(/^Provide encouragement.*?$/im, '').trim();
       
       // Remove common prompt repetition patterns
       extracted = extracted.replace(/The user is working with an LCSW.*?protocols?\./gi, '').trim();
       extracted = extracted.replace(/The user has been feeling.*?frequently\./gi, '').trim();
       extracted = extracted.replace(/It is (morning|afternoon|evening|night).*?momentum\./gi, '').trim();
       
-      // Try to parse JSON from response
-      const jsonMatch = extracted.match(/\{[\s\S]*\}/);
-      if (jsonMatch) {
-        try {
-          const jsonResponse: EmotionalEncouragementResponse = JSON.parse(jsonMatch[0]);
-          
-          // Validate that we got actual content, not placeholders
-          if (jsonResponse.message && jsonResponse.message.length > 20 && 
-              !jsonResponse.message.includes('[Summarize') && 
-              !jsonResponse.message.includes('[List') &&
-              !jsonResponse.message.includes('30-60 words')) {
-            console.log('✅ AI-generated JSON encouragement received');
-            // Return formatted message (React will handle full formatting later)
-            const result = jsonResponse.message || fallbackResponse;
-            // Cache the result
-            await setCachedResponse(cacheKey, { encouragement: result });
-            return result;
-          } else {
-            console.warn('⚠️ AI returned placeholder or invalid message in JSON');
-          }
-        } catch (parseError) {
-          console.warn('Failed to parse JSON encouragement:', parseError);
-        }
-      }
-      
-      // If JSON parsing failed, check if raw response looks like requirements/prompt
-      if (extracted && extracted.length > 20) {
-        // Reject if it looks like requirements text or contains "30-60 words"
-        if (hasRequirements || /Requirements?:|Acknowledge:|Return valid JSON|30-60 words/i.test(extracted)) {
-          console.warn('⚠️ Rejecting response that looks like prompt requirements');
-          // Don't return this - use fallback instead
-        } else {
-          // Only use raw response if it doesn't look like a prompt
-          console.warn('⚠️ Using raw response (JSON parsing failed but doesn\'t look like prompt)');
-          // Cache the raw response
-          await setCachedResponse(cacheKey, { encouragement: extracted });
-          return extracted;
-        }
+      // Clean up quotes
+      extracted = extracted.replace(/^["']|["']$/g, '');
+
+      if (extracted && extracted.length > 20 && !extracted.includes('Task:')) {
+        console.log('✅ AI-generated encouragement received');
+        await setCachedResponse(cacheKey, { encouragement: extracted });
+        return extracted;
+      } else {
+        console.warn('⚠️ AI returned empty or invalid encouragement');
       }
     } catch (error) {
       console.warn('Emotional encouragement inference failed:', error);
-      // If inference fails, check if it's because model is wrong type
-      // and try to reload with correct model type
-      if (error instanceof Error && (
-        error.message.includes('not a function') ||
-        error.message.includes('Cannot read') ||
-        error.message.includes('is not a function')
-      )) {
-        console.warn('Model type mismatch detected, attempting to reload...');
-        await initializeModels(true); // Force reload
-        const reloadedModel = getCounselingCoachModel();
-        if (reloadedModel) {
-          try {
-            const retryResult = await reloadedModel(prompt, {
-              max_new_tokens: 200,
-              temperature: 0.8,
-              do_sample: true,
-              top_p: 0.9
-            });
-            const retryText = retryResult[0]?.generated_text || '';
-            
-            // Remove the prompt from the beginning if present
-            let retryExtracted = retryText.replace(prompt, '').trim();
-            
-            // Also remove common prompt repetition patterns
-            retryExtracted = retryExtracted.replace(/The user is working with an LCSW.*?protocols?\./gi, '').trim();
-            retryExtracted = retryExtracted.replace(/The user has been feeling.*?frequently\./gi, '').trim();
-            retryExtracted = retryExtracted.replace(/It is (morning|afternoon|evening|night).*?momentum\./gi, '').trim();
-            
-            // Check if the response contains requirements text or prompt repetition
-            const retryHasRequirements = /Requirements?:|Acknowledge:|Honest, realistic support|See possibilities without toxic|The user has already chosen|The user has selected|Generate a balanced reflection/i.test(retryExtracted);
-            if (retryHasRequirements) {
-              console.warn('⚠️ Retry AI returned requirements/prompt text instead of JSON, rejecting response');
-              // Try to extract JSON that might come after the requirements
-              const afterRequirements = retryExtracted.split(/Requirements?:|The user has already chosen|The user has selected|Generate a balanced/i)[1] || retryExtracted;
-              retryExtracted = afterRequirements.trim();
-            }
-            
-            // Try to parse JSON from retry
-            const retryJsonMatch = retryExtracted.match(/\{[\s\S]*\}/);
-            if (retryJsonMatch) {
-              try {
-                const retryJsonResponse: EmotionalEncouragementResponse = JSON.parse(retryJsonMatch[0]);
-                
-                // Validate that we got actual content, not placeholders
-                if (retryJsonResponse.message && retryJsonResponse.message.length > 20 && 
-                    !retryJsonResponse.message.includes('[Summarize') && 
-                    !retryJsonResponse.message.includes('[List') &&
-                    !retryJsonResponse.message.includes('30-60 words')) {
-                  console.log('✅ AI-generated JSON encouragement received after reload');
-                  const result = retryJsonResponse.message || fallbackResponse;
-                  // Cache the result
-                  await setCachedResponse(cacheKey, { encouragement: result });
-                  return result;
-                } else {
-                  console.warn('⚠️ Retry AI returned placeholder or invalid message in JSON');
-                }
-              } catch (parseError) {
-                console.warn('Failed to parse retry JSON encouragement:', parseError);
-              }
-            }
-            
-            // If JSON parsing failed, check if raw response looks like requirements/prompt
-            if (retryExtracted && retryExtracted.length > 20) {
-              // Reject if it looks like requirements text or contains "30-60 words"
-              if (retryHasRequirements || /Requirements?:|Acknowledge:|Return valid JSON|30-60 words/i.test(retryExtracted)) {
-                console.warn('⚠️ Rejecting retry response that looks like prompt requirements');
-                // Don't return this - use fallback instead
-              } else {
-                // Only use raw response if it doesn't look like a prompt
-                console.warn('⚠️ Using raw retry response (JSON parsing failed but doesn\'t look like prompt)');
-                return retryExtracted;
-              }
-            }
-          } catch (retryError) {
-            console.warn('Retry inference also failed:', retryError);
-          }
-        }
-      }
+      // Fallback below
     }
   }
 
