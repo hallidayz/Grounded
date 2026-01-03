@@ -9,6 +9,13 @@
  * Detect if running in Tauri environment
  */
 export function isTauri(): boolean {
+  // Check build-time constant first (injected by Vite)
+  // @ts-ignore
+  if (typeof __IS_TAURI_BUILD__ !== 'undefined') {
+    // @ts-ignore
+    return __IS_TAURI_BUILD__;
+  }
+  // Runtime fallback
   return typeof window !== 'undefined' && '__TAURI__' in window;
 }
 
@@ -105,4 +112,3 @@ export const PlatformFeatures = {
     return 'vibrate' in navigator;
   },
 };
-

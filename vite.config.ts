@@ -44,7 +44,8 @@ export default defineConfig({
   define: {
     'import.meta.env.VITE_APP_VERSION': JSON.stringify(appVersion),
     'process.env.USE_WEBGPU': 'false',
-    'process.env.USE_WASM': 'true'
+    'process.env.USE_WASM': 'true',
+    '__IS_TAURI_BUILD__': JSON.stringify(isTauriBuild)
   },
   server: {
     port: 3000,
