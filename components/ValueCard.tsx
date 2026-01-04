@@ -104,7 +104,11 @@ const ValueCard: React.FC<ValueCardProps> = ({
           </div>
 
           <button 
-            onClick={onToggleActive}
+            onClick={(e) => {
+              e.preventDefault();
+              e.stopPropagation();
+              onToggleActive();
+            }}
             /* PREV: bg-yellow-warm text-text-primary */
             className={`px-3 sm:px-4 py-1.5 sm:py-2 rounded-lg sm:rounded-xl font-black text-xs sm:text-sm uppercase tracking-widest transition-all shadow-sm active:scale-95 flex-shrink-0 ${isActive ? 'bg-navy-primary dark:bg-navy-primary text-white' : 'bg-brand dark:bg-brand-light text-white dark:text-navy-dark hover:opacity-90'}`}
           >

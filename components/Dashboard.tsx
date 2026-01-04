@@ -262,11 +262,18 @@ const Dashboard: React.FC<DashboardProps> = ({ values, onLog, goals, onUpdateGoa
               }}
               onToggleActive={() => {
                 if (isActive) {
-                  dashboard.setEmotionalState('mixed');
+                  // Clean reset when closing
+                  dashboard.setEmotionalState('neutral' as any); // Use neutral instead of mixed
                   dashboard.setSelectedFeeling(null);
                   dashboard.setShowFeelingsList(false);
+                  dashboard.setActiveValueId(null);
+                } else {
+                  // Clean reset when opening
+                  dashboard.setEmotionalState('neutral' as any);
+                  dashboard.setSelectedFeeling(null);
+                  dashboard.setShowFeelingsList(false);
+                  dashboard.setActiveValueId(value.id);
                 }
-                dashboard.setActiveValueId(isActive ? null : value.id);
               }}
               onEmotionalStateChange={(state) => dashboard.setEmotionalState(state as any)}
               onShowFeelingsListToggle={() => dashboard.setShowFeelingsList(!dashboard.showFeelingsList)}

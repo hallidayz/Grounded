@@ -25,15 +25,17 @@ const BottomNavigation: React.FC<BottomNavigationProps> = ({ currentView, onView
             return (
               <button
                 key={tab.id}
-                onClick={() => {
-                  onViewChange(tab.id);
-                  // Reset dashboard state when navigating to home
-                  if (tab.id === 'home' && (window as any).__dashboardReset) {
-                    (window as any).__dashboardReset();
-                  }
-                  // Scroll to top when navigating to home
+                onClick={(e) => {
+                  e.preventDefault();
+                  // For home, ensure we reset state properly
                   if (tab.id === 'home') {
+                    onViewChange('home');
+                    if ((window as any).__dashboardReset) {
+                      (window as any).__dashboardReset();
+                    }
                     window.scrollTo({ top: 0, behavior: 'smooth' });
+                  } else {
+                    onViewChange(tab.id);
                   }
                 }}
                 className={`

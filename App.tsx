@@ -1262,7 +1262,9 @@ const App: React.FC = () => {
             {showNav && (
               <nav className="hidden lg:flex items-center space-x-0.5 sm:space-x-1">
                 <button 
-                  onClick={() => {
+                  onClick={(e) => {
+                    e.preventDefault();
+                    // Don't just setView('home'), ensure clean navigation
                     setView('home');
                     // Reset dashboard state when navigating to home
                     if ((window as any).__dashboardReset) {

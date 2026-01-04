@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useState, useEffect } from 'react';
 import { EmotionalState, EMOTIONAL_STATES, getEmotionalState } from '../services/emotionalStates';
 import { GoalFrequency, ValueItem, LCSWConfig } from '../types';
 import SkeletonLoader from './SkeletonLoader';
@@ -58,6 +58,64 @@ const ReflectionForm: React.FC<ReflectionFormProps> = ({
   getReflectionPlaceholder,
   onTriggerReflectionAnalysis,
 }) => {
+  // State for AI insights visibility
+  const [showAiInsights, setShowAiInsights] = useState(false);
+  
+  // Processing state for save button
+  const [isProcessing, setIsProcessing] = useState(false);
+  const [processingTime, setProcessingTime] = useState(0);
+
+  // Auto-expand insights when new analysis arrives
+  useEffect(() => {
+    if (reflectionAnalysis && !analyzingReflection) {
+      setShowAiInsights(true);
+    }
+  }, [reflectionAnalysis, analyzingReflection]);
+
+  // Handle save with processing feedback
+  const handleCommit = () => {
+    if (loading || isProcessing) return;
+    
+    setIsProcessing(true);
+    setProcessingTime(0);
+    
+    // Start timer
+    const timer = setInterval(() => {
+      setProcessingTime(prev => prev + 1);
+    }, 1000);
+    
+    // Call original onCommit
+    // Wrap in try/catch if onCommit was async, but it's passed as void function
+    // We assume parent component handles the async/loading state update
+    // If parent updates 'loading' prop to true, our local state is redundant but harmless
+    // If parent completes immediately, our local state needs reset via effect or timeout
+    
+    onCommit();
+    
+    // Safety cleanup if parent doesn't unmount or update loading
+    // ideally relying on 'loading' prop from parent is better, but user asked for local feedback
+  };
+
+  // Reset processing state when loading prop changes
+  useEffect(() => {
+    if (!loading && isProcessing) {
+      setIsProcessing(false);
+    } else if (loading && !isProcessing) {
+      setIsProcessing(true);
+    }
+  }, [loading]);
+
+  // Timer effect for processing
+  useEffect(() => {
+    let interval: NodeJS.Timeout;
+    if (isProcessing) {
+      interval = setInterval(() => {
+        setProcessingTime(prev => prev + 1);
+      }, 1000);
+    }
+    return () => clearInterval(interval);
+  }, [isProcessing]);
+
   return (
     <div className="mt-4 sm:mt-6 space-y-4 sm:space-y-6 animate-pop border-t border-border-soft dark:border-dark-border/30 pt-4 sm:pt-5">
       {/* Emotional State Bar - 8 States */}
@@ -255,13 +313,17 @@ const ReflectionForm: React.FC<ReflectionFormProps> = ({
               Analyzing reflection...
             </div>
           )}
-          {reflectionAnalysis && !analyzingReflection && (
-            /* PREV: bg-yellow-warm/10 ... border-yellow-warm/30 */
-            <div className="mt-3 p-3 sm:p-4 bg-brand/5 dark:bg-brand/10 rounded-xl border border-brand/20 dark:border-brand/30 space-y-3">
-              <div className="flex items-center justify-between">
-                <div className="flex items-center gap-2">
-                  {/* PREV: text-yellow-warm */}
-                  <div className="text-xs sm:text-sm font-black text-brand dark:text-brand-light uppercase tracking-widest">Reflection Analysis</div>
+          {/* AI Insights Section - Collapsible */}
+          {reflectionAnalysis && (
+            <div className="bg-white/50 dark:bg-dark-bg-secondary/30 rounded-xl p-4 border border-brand/10 dark:border-brand-light/10">
+              <div className="flex items-center justify-between mb-2">
+                <div className="flex items-center space-x-2">
+                  <span className="text-xl">🧠</span>
+                  <h3 className="font-bold text-navy-primary dark:text-brand-light text-sm uppercase tracking-wide">
+                    AI Insights
+                  </h3>
+                </div>
+                <div className="flex items-center space-x-3">
                   <StatusIndicator
                     status={
                       analyzingReflection
@@ -272,46 +334,56 @@ const ReflectionForm: React.FC<ReflectionFormProps> = ({
                     }
                     size="sm"
                   />
+                  <button
+                    onClick={() => setShowAiInsights(!showAiInsights)}
+                    className="text-xs font-bold text-brand dark:text-brand-light hover:underline uppercase tracking-wide"
+                  >
+                    {showAiInsights ? 'Hide Insights' : 'Show Insights'}
+                  </button>
                 </div>
-                <button
-                  onClick={onTriggerReflectionAnalysis}
-                disabled={analyzingReflection || !reflectionText.trim() || !emotionalState || emotionalState === 'mixed' || !selectedFeeling}
-                /* PREV: text-yellow-warm */
-                className="text-xs sm:text-sm font-black text-brand dark:text-brand-light uppercase tracking-widest hover:underline disabled:opacity-30 disabled:cursor-not-allowed flex items-center gap-1.5"
-                title="Refresh analysis"
-              >
-                  {analyzingReflection ? (
-                    <>
-                      <svg className="animate-spin h-3 w-3" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
-                        <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
-                        <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
-                      </svg>
-                      Processing...
-                    </>
-                  ) : (
-                    '🔄 Refresh'
-                  )}
-                </button>
               </div>
-              <div className="text-sm sm:text-base text-text-primary dark:text-white leading-relaxed">
-                {(() => {
-                  let analysisText: string;
-                  if (typeof reflectionAnalysis === 'string') {
-                    analysisText = reflectionAnalysis;
-                  } else if (reflectionAnalysis && typeof reflectionAnalysis === 'object') {
-                    const analysis = reflectionAnalysis as any;
-                    analysisText = `## Core Themes\n${(analysis.coreThemes || []).map((t: string) => `- ${t}`).join('\n')}\n\n## The 'LCSW Lens'\n${analysis.lcswLens || ''}\n\n## Reflective Inquiry\n${(analysis.reflectiveInquiry || []).map((q: string) => `- ${q}`).join('\n')}\n\n## Session Prep\n${analysis.sessionPrep || ''}`;
-                  } else {
-                    analysisText = '';
-                  }
-                  
-                  return (
-                    <div className="whitespace-pre-wrap leading-relaxed">
-                      {analysisText}
-                    </div>
-                  );
-                })()}
-              </div>
+
+              {showAiInsights && (
+                <div className="animate-fade-in text-sm sm:text-base text-text-primary dark:text-white leading-relaxed mt-3 pt-3 border-t border-brand/5 dark:border-brand-light/5">
+                  <div className="flex justify-end mb-2">
+                    <button
+                      onClick={onTriggerReflectionAnalysis}
+                      disabled={analyzingReflection || !reflectionText.trim() || !emotionalState || emotionalState === 'mixed' || !selectedFeeling}
+                      className="text-xs sm:text-sm font-black text-brand dark:text-brand-light uppercase tracking-widest hover:underline disabled:opacity-30 disabled:cursor-not-allowed flex items-center gap-1.5"
+                      title="Refresh analysis"
+                    >
+                      {analyzingReflection ? (
+                        <>
+                          <svg className="animate-spin h-3 w-3" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                            <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+                            <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                          </svg>
+                          Processing...
+                        </>
+                      ) : (
+                        '🔄 Refresh'
+                      )}
+                    </button>
+                  </div>
+                  {(() => {
+                    let analysisText: string;
+                    if (typeof reflectionAnalysis === 'string') {
+                      analysisText = reflectionAnalysis;
+                    } else if (reflectionAnalysis && typeof reflectionAnalysis === 'object') {
+                      const analysis = reflectionAnalysis as any;
+                      analysisText = `## Core Themes\n${(analysis.coreThemes || []).map((t: string) => `- ${t}`).join('\n')}\n\n## The 'LCSW Lens'\n${analysis.lcswLens || ''}\n\n## Reflective Inquiry\n${(analysis.reflectiveInquiry || []).map((q: string) => `- ${q}`).join('\n')}\n\n## Session Prep\n${analysis.sessionPrep || ''}`;
+                    } else {
+                      analysisText = '';
+                    }
+                    
+                    return (
+                      <div className="whitespace-pre-wrap leading-relaxed">
+                        <MarkdownRenderer>{analysisText}</MarkdownRenderer>
+                      </div>
+                    );
+                  })()}
+                </div>
+              )}
             </div>
           )}
         </div>
@@ -365,12 +437,12 @@ const ReflectionForm: React.FC<ReflectionFormProps> = ({
       </div>
 
       <button
-        onClick={onCommit}
-        disabled={!reflectionText.trim() && !goalText.trim()}
+        onClick={handleCommit}
+        disabled={!reflectionText.trim() && !goalText.trim() || loading || isProcessing}
         /* PREV: bg-yellow-warm text-text-primary */
-        className="w-full py-3 sm:py-4 bg-brand dark:bg-brand-light text-white dark:text-navy-dark rounded-xl sm:rounded-2xl font-black uppercase tracking-[0.2em] shadow-lg hover:opacity-90 transition-all active:scale-[0.98] disabled:opacity-20 text-xs sm:text-sm"
+        className={`w-full py-3 sm:py-4 bg-brand dark:bg-brand-light text-white dark:text-navy-dark rounded-xl sm:rounded-2xl font-black uppercase tracking-[0.2em] shadow-lg hover:opacity-90 transition-all active:scale-[0.98] disabled:opacity-20 text-xs sm:text-sm ${isProcessing ? 'cursor-not-allowed' : ''}`}
       >
-        Archive & Commit
+        {isProcessing ? `Processing (${processingTime}s)...` : 'Archive & Commit'}
       </button>
     </div>
   );

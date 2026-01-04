@@ -39,10 +39,34 @@ interface DatabaseMetadata {
   lastValidated: string;
 }
 
+// New Interfaces for Advanced AI Features
+export interface Assessment {
+  id: string;
+  userId: string;
+  emotion: string;
+  subEmotion: string;
+  reflection: string;
+  assessment: string;
+  timestamp: string;
+}
+
+export interface Report {
+  id: string;
+  userId: string;
+  report: string;
+  emailAddresses: string[];
+  treatmentProtocols: string[];
+  timestamp: string;
+}
+
+// Updated Goal interface is already in types.ts but we need to ensure DB handling respects userId
+// We'll rely on the existing Goal interface which should have userId added if not already present
+// Checking existing Goal interface in types.ts... it has userId
+
 class DatabaseService {
   // Database name: groundedDB - simple and descriptive
   private dbName = 'groundedDB';
-  private dbVersion = 6; // Incremented to ensure feelingLogs store is created
+  private dbVersion = 7; // Incremented for new tables
   private db: IDBDatabase | null = null;
   private oldDbName = 'com.acminds.grounded.therapy.db'; // Old database name for migration detection
   
@@ -488,6 +512,20 @@ class DatabaseService {
           const ruleBasedLogStore = db.createObjectStore('ruleBasedUsageLogs', { keyPath: 'id' });
           ruleBasedLogStore.createIndex('timestamp', 'timestamp', { unique: false });
           ruleBasedLogStore.createIndex('type', 'type', { unique: false });
+        }
+
+        // Assessments store - stores AI counselor assessments
+        if (!db.objectStoreNames.contains('assessments')) {
+          const assessmentStore = db.createObjectStore('assessments', { keyPath: 'id' });
+          assessmentStore.createIndex('userId', 'userId', { unique: false });
+          assessmentStore.createIndex('timestamp', 'timestamp', { unique: false });
+        }
+
+        // Reports store - stores generated clinical reports
+        if (!db.objectStoreNames.contains('reports')) {
+          const reportStore = db.createObjectStore('reports', { keyPath: 'id' });
+          reportStore.createIndex('userId', 'userId', { unique: false });
+          reportStore.createIndex('timestamp', 'timestamp', { unique: false });
         }
         
         request.onblocked = () => {
