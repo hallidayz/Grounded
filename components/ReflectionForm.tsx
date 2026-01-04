@@ -5,6 +5,8 @@ import SkeletonLoader from './SkeletonLoader';
 import StatusIndicator, { StatusType } from './StatusIndicator';
 import MarkdownRenderer from './MarkdownRenderer';
 
+import EmotionPicker from './EmotionPicker';
+
 interface ReflectionFormProps {
   value: ValueItem;
   emotionalState: EmotionalState;
@@ -123,40 +125,14 @@ const ReflectionForm: React.FC<ReflectionFormProps> = ({
         <label className="text-xs sm:text-sm font-black text-text-primary/50 dark:text-white/50 uppercase tracking-widest block px-1">
           How are you feeling right now?
         </label>
-        <div className="grid grid-cols-4 sm:grid-cols-4 lg:grid-cols-8 gap-1.5 sm:gap-2">
-          {EMOTIONAL_STATES.map((stateConfig) => {
-            const isSelected = emotionalState === stateConfig.state;
-            return (
-              <button
-                key={stateConfig.state}
-                onClick={() => {
-                  onEmotionalStateChange(stateConfig.state);
-                  onShowFeelingsListToggle();
-                }}
-                className={`flex flex-col items-center p-2 sm:p-3 rounded-lg sm:rounded-xl border-2 transition-all active:scale-95 ${
-                  isSelected
-                    ? 'border-navy-primary dark:border-white shadow-md scale-105 bg-white dark:bg-dark-bg-primary'
-                    : 'border-border-soft dark:border-dark-border/30 hover:border-border-soft dark:hover:border-dark-border/50 bg-white dark:bg-dark-bg-primary'
-                }`}
-              >
-                <div 
-                  className="w-full h-8 sm:h-10 rounded-md mb-1.5 sm:mb-2 transition-all"
-                  style={{
-                    backgroundColor: stateConfig.color,
-                    boxShadow: isSelected ? `0 0 0 2px ${stateConfig.color}, 0 2px 4px rgba(0,0,0,0.1)` : 'none'
-                  }}
-                />
-                <span className={`text-xs sm:text-sm font-black uppercase tracking-tight text-center leading-tight ${
-                  isSelected
-                    ? 'text-text-primary dark:text-white'
-                    : 'text-text-primary/60 dark:text-white/60'
-                }`}>
-                  {stateConfig.shortLabel}
-                </span>
-              </button>
-            );
-          })}
-        </div>
+        
+        <EmotionPicker 
+          selected={emotionalState === 'neutral' ? null : emotionalState}
+          onSelect={(state) => {
+            onEmotionalStateChange(state);
+            onShowFeelingsListToggle();
+          }}
+        />
         
         {/* Feelings List Modal */}
         {showFeelingsList && (() => {

@@ -1,6 +1,6 @@
 import React from 'react';
 
-type View = 'home' | 'values' | 'report' | 'vault' | 'goals' | 'onboarding';
+type View = 'home' | 'values' | 'report' | 'vault' | 'goals' | 'onboarding' | 'settings';
 
 interface BottomNavigationProps {
   currentView: View;
@@ -13,13 +13,13 @@ const BottomNavigation: React.FC<BottomNavigationProps> = ({ currentView, onView
     { id: 'values' as View, label: 'Values', icon: '💛' },
     { id: 'goals' as View, label: 'Goals', icon: '🎯' },
     { id: 'report' as View, label: 'Reports', icon: '📊' },
-    { id: 'vault' as View, label: 'Vault', icon: '🔒' }
+    { id: 'settings' as View, label: 'Settings', icon: '⚙️' }
   ];
 
   return (
-    <nav className="fixed bottom-0 left-0 right-0 bg-white dark:bg-dark-bg-primary border-t border-border-soft dark:border-dark-border shadow-lg z-50 safe-area-inset-bottom">
+    <nav className="fixed bottom-0 left-0 right-0 bg-white dark:bg-dark-bg-primary border-t border-border-soft dark:border-dark-border shadow-lg z-50 pb-[env(safe-area-inset-bottom)]">
       <div className="max-w-4xl mx-auto px-2">
-        <div className="flex items-center justify-around">
+        <div className="flex justify-around items-center">
           {tabs.map((tab) => {
             const isActive = currentView === tab.id;
             return (
@@ -39,7 +39,7 @@ const BottomNavigation: React.FC<BottomNavigationProps> = ({ currentView, onView
                   }
                 }}
                 className={`
-                  flex flex-col items-center justify-center py-3 px-4 min-w-[60px] min-h-[60px]
+                  flex flex-col items-center justify-center py-3 px-1 min-w-[60px] min-h-[60px]
                   transition-all duration-200
                   ${isActive 
                     /* PREV: text-navy-primary dark:text-yellow-warm */
@@ -52,8 +52,8 @@ const BottomNavigation: React.FC<BottomNavigationProps> = ({ currentView, onView
               >
                 <span className="text-2xl mb-1">{tab.icon}</span>
                 <span className={`
-                  text-xs font-medium
-                  ${isActive ? 'font-semibold' : ''}
+                  text-[10px] font-medium uppercase tracking-tight
+                  ${isActive ? 'font-bold' : ''}
                 `}>
                   {tab.label}
                 </span>
@@ -67,4 +67,3 @@ const BottomNavigation: React.FC<BottomNavigationProps> = ({ currentView, onView
 };
 
 export default BottomNavigation;
-

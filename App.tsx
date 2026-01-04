@@ -12,6 +12,7 @@ import ErrorBoundary from './components/ErrorBoundary';
 import SkeletonCard from './components/SkeletonCard';
 import PWAInstallPrompt from './components/PWAInstallPrompt';
 import FeedbackButton from './components/FeedbackButton';
+import Settings from './components/Settings';
 
 // Code splitting: Lazy load heavy components
 const Dashboard = lazy(() => import('./components/Dashboard'));
@@ -180,7 +181,7 @@ const App: React.FC = () => {
   const [settings, setSettings] = useState<AppSettings>({
     reminders: { enabled: false, frequency: 'daily', time: '09:00' }
   });
-  const [view, setView] = useState<'onboarding' | 'home' | 'report' | 'values' | 'vault' | 'goals'>('onboarding');
+  const [view, setView] = useState<'onboarding' | 'home' | 'report' | 'values' | 'vault' | 'goals' | 'settings'>('onboarding');
   const [showHelp, setShowHelp] = useState(false);
   const [showLCSWConfig, setShowLCSWConfig] = useState(false);
   const [showMigrationScreen, setShowMigrationScreen] = useState(false);
@@ -1235,7 +1236,7 @@ const App: React.FC = () => {
   
   return (
     <ErrorBoundary>
-      <div className="min-h-screen bg-bg-primary dark:bg-dark-bg-primary text-text-primary dark:text-white flex flex-col transition-colors duration-300">
+      <div className="min-h-screen bg-bg-primary dark:bg-dark-bg-primary text-text-primary dark:text-white flex flex-col transition-colors duration-300 pt-[env(safe-area-inset-top)] pb-[env(safe-area-inset-bottom)]">
         <header className="bg-white dark:bg-dark-bg-primary border-b border-border-soft dark:border-dark-border sticky top-0 z-40 shadow-sm dark:shadow-lg">
         <div className="max-w-4xl mx-auto px-3 sm:px-4 h-14 flex items-center justify-between">
           <div className="flex items-center space-x-2">
@@ -1333,13 +1334,12 @@ const App: React.FC = () => {
             >
               <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M8.228 9c.549-1.165 2.03-2 3.772-2 2.21 0 4 1.343 4 3 0 1.4-1.278 2.575-3.006 2.907-.542.104-.994.54-.994 1.093m0 3h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>
             </button>
-            <button 
-              onClick={handleLogout}
-              className="w-8 h-8 flex items-center justify-center rounded-full text-text-secondary dark:text-text-secondary hover:text-red-500 dark:hover:text-red-400 hover:bg-red-50 dark:hover:bg-red-900/20 transition-all"
-              aria-label="Logout"
-              title="Logout"
+            <button
+              onClick={() => setView('settings')}
+              className="w-8 h-8 flex items-center justify-center rounded-full text-text-secondary dark:text-text-secondary hover:text-brand dark:hover:text-brand-light hover:bg-brand/10 dark:hover:bg-brand/20 transition-all"
+              aria-label="Settings"
             >
-              <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1" /></svg>
+              <span className="text-lg">⚙️</span>
             </button>
           </div>
         </div>
@@ -1433,6 +1433,22 @@ const App: React.FC = () => {
               }}
               onDeleteGoal={(goalId) => handleUpdateGoals(goals.filter(g => g.id !== goalId))}
               onEditGoal={(goalId, newText) => handleUpdateGoals(goals.map(g => g.id === goalId ? { ...g, text: newText } : g))}
+            />
+          </Suspense>
+        )}
+
+        {view === 'settings' && (
+          <Suspense fallback={<SkeletonCard lines={5} showHeader={true} />}>
+            <Settings
+              onLogout={() => {
+                if (window.confirm('Are you sure you want to lock the app?')) {
+                  logoutUser();
+                  setAuthState('login');
+                  setView('home'); 
+                }
+              }}
+              onShowHelp={() => setShowHelp(true)}
+              onClearData={handleClearData}
             />
           </Suspense>
         )}
