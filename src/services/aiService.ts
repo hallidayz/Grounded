@@ -91,7 +91,29 @@ function getWorker(): Worker {
   return globalWorker;
 }
 
-export function runAIWorker(inputText: string, task: string = 'text2text-generation', modelName?: string, generationConfig?: any): Promise<any> {
+// Import the new safety service
+import { checkForCrisisKeywords, CrisisResponse } from './safetyService';
+
+// ... (keep existing code for AIWorkerResponse, globalWorker, pendingRequests, getWorker) ...
+
+export function runAIWorker(
+  inputText: string, 
+  task: string = 'text2text-generation', 
+  modelName?: string, 
+  generationConfig?: any
+): Promise<any | CrisisResponse> {
+  
+  // --- SAFETY INTERCEPTOR ---
+  // Check for crisis keywords FIRST.
+  const crisisResponse = checkForCrisisKeywords(inputText);
+  if (crisisResponse) {
+    // If a crisis is detected, DO NOT proceed to the AI worker.
+    // Immediately return the hardcoded safety response.
+    console.warn('Crisis keyword detected. Bypassing AI and returning safety response.');
+    return Promise.resolve(crisisResponse); 
+  }
+  // --- END OF SAFETY INTERCEPTOR ---
+
   // Check cache first
   const cacheKey = `${task}-${modelName}-${inputText}-${JSON.stringify(generationConfig)}`;
   const cached = responseCache.get(cacheKey);
@@ -198,6 +220,6 @@ Format for counselor review. Be concise yet comprehensive. Focus on themes and p
 }
 
 // Re-export generateText for backward compatibility if needed by other components
-export async function generateText(prompt: string, modelName: string): Promise<string> {
+export async function generateText(prompt: string, modelName: string): Promise<string | CrisisResponse> {
     return runAIWorker(prompt, 'text2text-generation', modelName);
 }

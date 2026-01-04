@@ -7,6 +7,7 @@ import ValueCard from './ValueCard';
 import GoalsSection from './GoalsSection';
 import SkeletonCard from './SkeletonCard';
 import CrisisResourcesModal from './CrisisResourcesModal';
+import CrisisAlertModal from './CrisisAlertModal';
 import { useDashboard } from '../hooks/useDashboard';
 
 interface DashboardProps {
@@ -310,6 +311,14 @@ const Dashboard: React.FC<DashboardProps> = ({ values, onLog, goals, onUpdateGoa
         <CrisisResourcesModal
           onClose={() => setShowResourcesModal(false)}
           lcswConfig={lcswConfig}
+        />
+      )}
+
+      {/* AI-Detected Crisis Alert */}
+      {dashboard.crisisAlert && (
+        <CrisisAlertModal
+          data={dashboard.crisisAlert}
+          onClose={() => dashboard.setCrisisAlert(null)}
         />
       )}
     </div>

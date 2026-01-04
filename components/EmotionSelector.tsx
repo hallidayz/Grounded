@@ -1,6 +1,6 @@
 import React, { useCallback } from 'react';
 import { EMOTIONAL_STATES, EmotionalState } from '../services/emotionalStates';
-import { hapticFeedback } from '../utils/haptics';
+import { triggerHapticFeedback } from '../src/utils/haptics';
 import EmotionPicker from './EmotionPicker';
 
 interface EmotionSelectorProps {
@@ -12,7 +12,7 @@ interface EmotionSelectorProps {
 const EmotionSelector: React.FC<EmotionSelectorProps> = ({ onSelect, selected, disabled = false }) => {
   const handleSelect = useCallback((emotionId: EmotionalState) => {
     if (disabled) return;
-    hapticFeedback('light');
+    triggerHapticFeedback('light');
     onSelect(emotionId);
   }, [disabled, onSelect]);
 

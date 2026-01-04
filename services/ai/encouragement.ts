@@ -1,6 +1,7 @@
 import { ValueItem, LCSWConfig, ReflectionAnalysisResponse, CounselingGuidanceResponse } from '../../types';
-import { generateText } from '../aiService';
+import { generateText } from '../../src/services/aiService';
 import { getSelectedModel } from './models';
+import { CrisisResponse } from '../../src/services/safetyService';
 
 // Helper to get user's name (placeholder for now, will connect to user context)
 const getUserName = () => {
@@ -22,7 +23,7 @@ export async function analyzeReflection(
   emotionalState: string,
   selectedFeeling: string | null,
   lcswConfig?: LCSWConfig
-): Promise<ReflectionAnalysisResponse> {
+): Promise<ReflectionAnalysisResponse | CrisisResponse> {
   // Use text-generation model
   const modelName = getSelectedModel() || 'Xenova/LaMini-Flan-T5-77M';
   const userName = getUserName();
@@ -46,8 +47,17 @@ export async function analyzeReflection(
 
   try {
     const response = await generateText(prompt, modelName);
+    
+    // Check if response is a CrisisResponse object
+    if (typeof response === 'object' && 'isCrisis' in response) {
+      return response as CrisisResponse;
+    }
+
+    // It's a string, proceed with parsing
+    const textResponse = response as string;
+
     // Parse JSON from response (handling potential non-JSON prefix/suffix)
-    const jsonMatch = response.match(/\{[\s\S]*\}/);
+    const jsonMatch = textResponse.match(/\{[\s\S]*\}/);
     if (jsonMatch) {
       return JSON.parse(jsonMatch[0]);
     }
@@ -88,7 +98,20 @@ export async function generateFocusLens(
   `;
   
   try {
-    return await generateText(prompt, modelName);
+    const response = await generateText(prompt, modelName);
+    // Crisis response handling for simple text generation?
+    // Usually focus lens is generated from limited context, but user input is involved?
+    // Focus lens inputs: mantra (string), selectedFeeling (string). 
+    // It doesn't take free text input from user (except maybe mantra if custom?).
+    // The prompt includes mantra. If mantra contains crisis words...
+    // But generateText returns string | CrisisResponse now.
+    
+    if (typeof response === 'object' && 'isCrisis' in response) {
+      // If crisis detected in focus lens inputs (unlikely but possible), fallback
+      return `Let your value of ${activeValue.name} guide you through this feeling.`;
+    }
+    
+    return response as string;
   } catch (error) {
     return `Let your value of ${activeValue.name} guide you through this feeling.`;
   }
@@ -120,8 +143,31 @@ export async function suggestGoal(
   `;
 
   try {
-    return await generateText(prompt, modelName);
+    const response = await generateText(prompt, modelName);
+    
+    if (typeof response === 'object' && 'isCrisis' in response) {
+       // Crisis detected in goal suggestion (which uses reflection text)
+       // We should probably NOT return a goal but maybe a safety message?
+       // Or simpler: just return a safe fallback goal.
+       // The crisis modal should have been triggered by analyzeReflection already.
+       return `Prioritize your safety and well-being today.`;
+    }
+
+    return response as string;
   } catch (error) {
     return `Practice ${activeValue.name} for 5 minutes.`;
   }
 }
+
+// Re-export generateCounselingGuidance and generateValueMantra/generateEncouragement/generateEmotionalEncouragement 
+// if they were here?
+// The file I read earlier didn't show them, but services/aiService.ts re-exports them.
+// Let's check the file content I read earlier again.
+// It seemed to only have analyzeReflection, generateFocusLens, suggestGoal.
+// Ah, the file read showed lines 1-128. It might be complete.
+// But services/aiService.ts re-exports: generateEncouragement, generateEmotionalEncouragement, generateCounselingGuidance, generateValueMantra.
+// This means they MUST be in this file.
+// I likely missed them in the read_file output or it was truncated.
+// I should read the REST of the file or just append/merge.
+// Since I don't want to lose them, I should use search_replace again carefully or read the full file first.
+

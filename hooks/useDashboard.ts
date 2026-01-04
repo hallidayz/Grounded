@@ -2,6 +2,7 @@ import { useState, useEffect, useRef, useCallback } from 'react';
 import { ValueItem, LogEntry, Goal, GoalFrequency, LCSWConfig, FeelingLog, UserInteraction, Session, ReflectionAnalysisResponse } from '../types';
 import { EmotionalState, getEmotionalState } from '../services/emotionalStates';
 import { generateEncouragement, generateEmotionalEncouragement, generateValueMantra, suggestGoal, detectCrisis, analyzeReflection, generateFocusLens, generateCounselingGuidance } from '../services/aiService';
+import { CrisisResponse } from '../services/safetyService';
 // Force update check - fix stale cache issues
 import { shareViaEmail, generateGoalsEmail } from '../services/emailService';
 import { useDebounce } from './useDebounce';
@@ -36,6 +37,7 @@ export function useDashboard(
   const [reflectionAnalysis, setReflectionAnalysis] = useState<string | null>(null);
   const [rawReflectionAnalysis, setRawReflectionAnalysis] = useState<ReflectionAnalysisResponse | null>(null);
   const [analyzingReflection, setAnalyzingReflection] = useState(false);
+  const [crisisAlert, setCrisisAlert] = useState<CrisisResponse | null>(null);
   
   // Encourage section state
   const [encouragementText, setEncouragementText] = useState<string | null>(null);
@@ -447,6 +449,15 @@ export function useDashboard(
         focusLensPromise,
         analysisPromise
       ]);
+
+      // Check for Crisis Response in analysis
+      if (analysisResult && 'isCrisis' in analysisResult && analysisResult.isCrisis) {
+        setCrisisAlert(analysisResult as CrisisResponse);
+        setAnalyzingReflection(false);
+        return; // Stop processing
+      }
+      
+      const safeAnalysisResult = analysisResult as ReflectionAnalysisResponse;
       
       // Then generate goal suggestion using the analysis result
       let goalSuggestionResult = null;
@@ -460,7 +471,7 @@ export function useDashboard(
           lcswConfig,
           emotionalState,
           selectedFeeling,
-          analysisResult // Use the analysis result from the parallel execution
+          safeAnalysisResult // Use the analysis result from the parallel execution
         );
       } catch (error) {
         console.error('Goal suggestion error in orchestration:', error);
@@ -472,10 +483,10 @@ export function useDashboard(
         console.log('✅ Focus Lens generated (AI)');
       }
       
-      if (analysisResult) {
-        setRawReflectionAnalysis(analysisResult);
+      if (safeAnalysisResult) {
+        setRawReflectionAnalysis(safeAnalysisResult);
         // Format the analysis response as a string for display
-        const formattedAnalysis = `## Core Themes\n${analysisResult.coreThemes.map(t => `- ${t}`).join('\n')}\n\n## The 'LCSW Lens'\n${analysisResult.lcswLens}\n\n## Reflective Inquiry\n${analysisResult.reflectiveInquiry.map(q => `- ${q}`).join('\n')}\n\n## Session Prep\n${analysisResult.sessionPrep}`;
+        const formattedAnalysis = `## Core Themes\n${safeAnalysisResult.coreThemes.map(t => `- ${t}`).join('\n')}\n\n## The 'LCSW Lens'\n${safeAnalysisResult.lcswLens}\n\n## Reflective Inquiry\n${safeAnalysisResult.reflectiveInquiry.map(q => `- ${q}`).join('\n')}\n\n## Session Prep\n${safeAnalysisResult.sessionPrep}`;
         setReflectionAnalysis(formattedAnalysis);
         console.log('✅ Reflection Analysis generated (AI Counselor Analysis)');
       }
@@ -503,14 +514,14 @@ export function useDashboard(
             }),
             jsonOut: JSON.stringify({
               focusLens: focusLensResult,
-              analysis: analysisResult,
+              analysis: safeAnalysisResult,
               goalSuggestion: goalSuggestionResult
             }),
             focusLens: focusLensResult || coachInsight || '',
             reflection: reflectionText.trim(),
             selfAdvocacy: goalSuggestionResult || '',
             frequency: goalFreq,
-            jsonAssessment: JSON.stringify(analysisResult || {}),
+            jsonAssessment: JSON.stringify(safeAnalysisResult || {}),
             // Legacy fields
             emotionalState: (emotionalState || 'mixed') as any,
             selectedFeeling: selectedFeeling || null,
@@ -990,6 +1001,8 @@ export function useDashboard(
     lowStateCount,
     topValueMantra,
     valueCardRefs,
+    crisisAlert,
+    setCrisisAlert,
     
     // Setters
     setActiveValueId,
