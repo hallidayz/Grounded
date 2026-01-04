@@ -499,6 +499,20 @@ class DatabaseService {
           sessionStore.createIndex('userId', 'userId', { unique: false });
         }
 
+        // Assessments store - stores AI assessments
+        if (!db.objectStoreNames.contains('assessments')) {
+          const assessmentStore = db.createObjectStore('assessments', { keyPath: 'id' });
+          assessmentStore.createIndex('userId', 'userId', { unique: false });
+          assessmentStore.createIndex('timestamp', 'timestamp', { unique: false });
+        }
+
+        // Counselor Reports store - stores generated reports
+        if (!db.objectStoreNames.contains('reports')) {
+          const reportStore = db.createObjectStore('reports', { keyPath: 'id' });
+          reportStore.createIndex('userId', 'userId', { unique: false });
+          reportStore.createIndex('timestamp', 'timestamp', { unique: false });
+        }
+
         // Metadata store - validates database belongs to this app
         // Protects against corruption and ensures database integrity
         if (!db.objectStoreNames.contains('metadata')) {
@@ -1226,6 +1240,74 @@ class DatabaseService {
   /**
    * Export all data for debugging/inspection
    */
+  // Assessment Operations
+  async saveAssessment(assessment: Assessment): Promise<void> {
+    const db = await this.ensureDB();
+    return new Promise((resolve, reject) => {
+      const transaction = db.transaction(['assessments'], 'readwrite');
+      const store = transaction.objectStore('assessments');
+      const request = store.add(assessment);
+      request.onsuccess = () => resolve();
+      request.onerror = () => reject(request.error);
+    });
+  }
+
+  async getAssessments(userId: string, limit?: number): Promise<Assessment[]> {
+    const db = await this.ensureDB();
+    return new Promise((resolve, reject) => {
+      const transaction = db.transaction(['assessments'], 'readonly');
+      const store = transaction.objectStore('assessments');
+      const index = store.index('userId');
+      const request = index.openCursor(IDBKeyRange.only(userId), 'prev'); // Most recent first
+
+      const assessments: Assessment[] = [];
+      request.onsuccess = (event) => {
+        const cursor = (event.target as IDBRequest<IDBCursorWithValue>).result;
+        if (cursor && (!limit || assessments.length < limit)) {
+          assessments.push(cursor.value);
+          cursor.continue();
+        } else {
+          resolve(assessments);
+        }
+      };
+      request.onerror = () => reject(request.error);
+    });
+  }
+
+  // Report Operations
+  async saveReport(report: Report): Promise<void> {
+    const db = await this.ensureDB();
+    return new Promise((resolve, reject) => {
+      const transaction = db.transaction(['reports'], 'readwrite');
+      const store = transaction.objectStore('reports');
+      const request = store.add(report);
+      request.onsuccess = () => resolve();
+      request.onerror = () => reject(request.error);
+    });
+  }
+
+  async getReports(userId: string, limit?: number): Promise<Report[]> {
+    const db = await this.ensureDB();
+    return new Promise((resolve, reject) => {
+      const transaction = db.transaction(['reports'], 'readonly');
+      const store = transaction.objectStore('reports');
+      const index = store.index('userId');
+      const request = index.openCursor(IDBKeyRange.only(userId), 'prev');
+
+      const reports: Report[] = [];
+      request.onsuccess = (event) => {
+        const cursor = (event.target as IDBRequest<IDBCursorWithValue>).result;
+        if (cursor && (!limit || reports.length < limit)) {
+          reports.push(cursor.value);
+          cursor.continue();
+        } else {
+          resolve(reports);
+        }
+      };
+      request.onerror = () => reject(request.error);
+    });
+  }
+
   async exportAllData(): Promise<any> {
     const db = await this.ensureDB();
     const exportData: any = {};
@@ -1246,6 +1328,82 @@ class DatabaseService {
       }
     }
     return exportData;
+  }
+
+  // Assessment operations
+  async saveAssessment(assessment: any): Promise<void> {
+    const db = await this.ensureDB();
+    if (!db.objectStoreNames.contains('assessments')) return;
+    
+    return new Promise((resolve, reject) => {
+      const transaction = db.transaction(['assessments'], 'readwrite');
+      const store = transaction.objectStore('assessments');
+      const request = store.put(assessment);
+      request.onsuccess = () => resolve();
+      request.onerror = () => reject(request.error);
+    });
+  }
+
+  async getAssessments(userId: string, limit?: number): Promise<any[]> {
+    const db = await this.ensureDB();
+    if (!db.objectStoreNames.contains('assessments')) return [];
+
+    return new Promise((resolve, reject) => {
+      const transaction = db.transaction(['assessments'], 'readonly');
+      const store = transaction.objectStore('assessments');
+      const index = store.index('userId');
+      const request = index.openCursor(IDBKeyRange.only(userId), 'prev'); // Most recent first
+
+      const results: any[] = [];
+      request.onsuccess = (event) => {
+        const cursor = (event.target as IDBRequest<IDBCursorWithValue>).result;
+        if (cursor && (!limit || results.length < limit)) {
+          results.push(cursor.value);
+          cursor.continue();
+        } else {
+          resolve(results);
+        }
+      };
+      request.onerror = () => reject(request.error);
+    });
+  }
+
+  // Report operations
+  async saveReport(report: any): Promise<void> {
+    const db = await this.ensureDB();
+    if (!db.objectStoreNames.contains('reports')) return;
+
+    return new Promise((resolve, reject) => {
+      const transaction = db.transaction(['reports'], 'readwrite');
+      const store = transaction.objectStore('reports');
+      const request = store.put(report);
+      request.onsuccess = () => resolve();
+      request.onerror = () => reject(request.error);
+    });
+  }
+
+  async getReports(userId: string, limit?: number): Promise<any[]> {
+    const db = await this.ensureDB();
+    if (!db.objectStoreNames.contains('reports')) return [];
+
+    return new Promise((resolve, reject) => {
+      const transaction = db.transaction(['reports'], 'readonly');
+      const store = transaction.objectStore('reports');
+      const index = store.index('userId');
+      const request = index.openCursor(IDBKeyRange.only(userId), 'prev');
+
+      const results: any[] = [];
+      request.onsuccess = (event) => {
+        const cursor = (event.target as IDBRequest<IDBCursorWithValue>).result;
+        if (cursor && (!limit || results.length < limit)) {
+          results.push(cursor.value);
+          cursor.continue();
+        } else {
+          resolve(results);
+        }
+      };
+      request.onerror = () => reject(request.error);
+    });
   }
 }
 

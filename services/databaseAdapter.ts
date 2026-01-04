@@ -113,6 +113,28 @@ export interface DatabaseAdapter {
     valuesEngaged: string[];
   }>;
   getFeelingFrequency(limit?: number): Promise<{ feeling: string; count: number }[]>;
+  // Assessment operations
+  saveAssessment(assessment: {
+    id: string;
+    userId: string;
+    emotion: string;
+    subEmotion: string;
+    reflection: string;
+    assessment: string;
+    timestamp: string;
+  }): Promise<void>;
+  getAssessments(userId: string, limit?: number): Promise<any[]>;
+
+  // Report operations
+  saveReport(report: {
+    id: string;
+    userId: string;
+    content: string;
+    timestamp: string;
+    emailAddresses: string[];
+    treatmentProtocols: string[];
+  }): Promise<void>;
+  getReports(userId: string, limit?: number): Promise<any[]>;
 }
 
 /**
@@ -269,6 +291,22 @@ export class LegacyAdapter implements DatabaseAdapter {
   
   async getFeelingFrequency(limit?: number): Promise<{ feeling: string; count: number }[]> {
     return this.dbService.getFeelingFrequency(limit);
+  }
+
+  async saveAssessment(assessment: any): Promise<void> {
+    return this.dbService.saveAssessment(assessment);
+  }
+
+  async getAssessments(userId: string, limit?: number): Promise<any[]> {
+    return this.dbService.getAssessments(userId, limit);
+  }
+
+  async saveReport(report: any): Promise<void> {
+    return this.dbService.saveReport(report);
+  }
+
+  async getReports(userId: string, limit?: number): Promise<any[]> {
+    return this.dbService.getReports(userId, limit);
   }
 }
 
@@ -880,6 +918,70 @@ export class EncryptedAdapter implements DatabaseAdapter {
     return results.map(row => ({
       feeling: row.feeling,
       count: row.count
+    }));
+  }
+
+  async saveAssessment(assessment: any): Promise<void> {
+    await this.encryptedDb.execute(
+      `INSERT INTO assessments_encrypted (id, user_id, emotion, sub_emotion, reflection, assessment, timestamp)
+       VALUES (?, ?, ?, ?, ?, ?, ?)`,
+      [
+        assessment.id,
+        assessment.userId,
+        assessment.emotion,
+        assessment.subEmotion,
+        assessment.reflection,
+        assessment.assessment,
+        assessment.timestamp
+      ]
+    );
+    await this.encryptedDb.save();
+  }
+
+  async getAssessments(userId: string, limit?: number): Promise<any[]> {
+    let sql = 'SELECT * FROM assessments_encrypted WHERE user_id = ? ORDER BY timestamp DESC';
+    if (limit) sql += ` LIMIT ${limit}`;
+    
+    const results = await this.encryptedDb.query(sql, [userId]);
+    return results.map(row => ({
+      id: row.id,
+      userId: row.user_id,
+      emotion: row.emotion,
+      subEmotion: row.sub_emotion,
+      reflection: row.reflection,
+      assessment: row.assessment,
+      timestamp: row.timestamp
+    }));
+  }
+
+  async saveReport(report: any): Promise<void> {
+    await this.encryptedDb.execute(
+      `INSERT INTO reports_encrypted (id, user_id, content, timestamp, email_addresses, treatment_protocols)
+       VALUES (?, ?, ?, ?, ?, ?)`,
+      [
+        report.id,
+        report.userId,
+        report.content,
+        report.timestamp,
+        JSON.stringify(report.emailAddresses),
+        JSON.stringify(report.treatmentProtocols)
+      ]
+    );
+    await this.encryptedDb.save();
+  }
+
+  async getReports(userId: string, limit?: number): Promise<any[]> {
+    let sql = 'SELECT * FROM reports_encrypted WHERE user_id = ? ORDER BY timestamp DESC';
+    if (limit) sql += ` LIMIT ${limit}`;
+    
+    const results = await this.encryptedDb.query(sql, [userId]);
+    return results.map(row => ({
+      id: row.id,
+      userId: row.user_id,
+      content: row.content,
+      timestamp: row.timestamp,
+      emailAddresses: JSON.parse(row.email_addresses || '[]'),
+      treatmentProtocols: JSON.parse(row.treatment_protocols || '[]')
     }));
   }
 }

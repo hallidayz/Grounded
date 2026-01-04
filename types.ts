@@ -124,12 +124,34 @@ export interface LCSWConfig {
 
 export interface Goal {
   id: string;
-  valueId: string;
+  valueId: string; // Keep for backward compatibility or link to value
+  userId?: string; // Added FK
+  assessmentId?: string; // Link to AI assessment
   text: string;
   frequency: GoalFrequency;
   completed: boolean;
   createdAt: string;
   updates: GoalUpdate[];
+  status?: 'pending' | 'active' | 'completed' | 'archived'; // Enhanced status
+}
+
+export interface Assessment {
+  id: string;
+  userId: string;
+  emotion: string;
+  subEmotion: string;
+  reflection: string;
+  assessment: string;
+  timestamp: string;
+}
+
+export interface CounselorReport {
+  id: string;
+  userId: string;
+  content: string;
+  timestamp: string;
+  emailAddresses: string[];
+  treatmentProtocols: string[];
 }
 
 export enum ReportFormat {
