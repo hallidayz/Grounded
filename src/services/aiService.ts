@@ -1,51 +1,47 @@
-// src/services/aiService.ts
-// This service will now primarily manage interaction with the AI worker.
-// Existing direct pipeline calls will be refactored to use this worker interface.
-
-export interface AIWorkerResponse {
+interface AIWorkerResponse {
+  id: string;
   output?: any;
   error?: string;
-  timestamp: number;
+}
+
+let globalWorker: Worker | null = null;
+const pendingRequests = new Map<string, { resolve: Function, reject: Function }>();
+
+function getWorker(): Worker {
+  if (!globalWorker) {
+    // Initialize worker once
+    globalWorker = new Worker(new URL('../workers/aiWorker.ts', import.meta.url), { type: 'module' });
+    
+    // Handle incoming messages and route them to the correct promise
+    globalWorker.onmessage = (e) => {
+      const { id, output, error } = e.data as AIWorkerResponse;
+      const request = pendingRequests.get(id);
+      
+      if (request) {
+        if (error) request.reject(new Error(error));
+        else request.resolve(output);
+        
+        // Clean up the pending request
+        pendingRequests.delete(id);
+      }
+    };
+    
+    globalWorker.onerror = (err) => {
+      console.error('Global AI Worker Error:', err);
+    };
+  }
+  return globalWorker;
 }
 
 export function runAIWorker(inputText: string, task: string = 'feature-extraction', modelName?: string): Promise<any> {
+  const id = crypto.randomUUID();
+  const worker = getWorker();
+  
   return new Promise((resolve, reject) => {
-    // Note: The path to the worker is relative to the current module
-    const worker = new Worker(new URL('../workers/aiWorker.ts', import.meta.url), { type: 'module' });
-
-    worker.postMessage({ text: inputText, task, modelName });
-
-    worker.onmessage = (e) => {
-      worker.terminate(); // Terminate worker after message to free up resources
-      const response = e.data as AIWorkerResponse;
-      if (response.error) {
-        return reject(new Error(response.error));
-      }
-      resolve(response.output);
-    };
-
-    worker.onerror = (err) => {
-      worker.terminate();
-      console.error('AI Worker error:', err);
-      reject(new Error(`AI Worker failed: ${err.message || 'Unknown error'}`));
-    };
+    // Store the promise resolvers
+    pendingRequests.set(id, { resolve, reject });
+    
+    // Send request with ID
+    worker.postMessage({ id, text: inputText, task, modelName });
   });
 }
-
-// Any existing functions like generateEmotionalEncouragement, generateFocusLens, etc.,
-// will need to be updated to call runAIWorker.
-// Example:
-/*
-import { runAIWorker } from './aiService';
-
-export async function generateEmotionalEncouragement(prompt: string): Promise<string> {
-  try {
-    const response = await runAIWorker(prompt, 'text2text-generation', 'Xenova/LaMini-Flan-T5-77M');
-    // Process response as needed
-    return response.generated_text || "Thank you for sharing your emotions.";
-  } catch (error) {
-    console.error("Failed to get AI encouragement:", error);
-    return "Sometimes, it's okay to not be okay. I'm here for you."; // Fallback
-  }
-}
-*/

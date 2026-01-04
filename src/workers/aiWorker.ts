@@ -1,32 +1,36 @@
-// src/workers/aiWorker.ts
-// Ensure ONNX is initialized globally for the worker context if transformers requires it
-var ONNX = { env: {} };
-if (typeof self !== 'undefined') {
-  self.ONNX = self.ONNX || { env: {} };
-}
+import { pipeline, env } from '@xenova/transformers';
 
-import { pipeline } from '@xenova/transformers';
+// Force remote models to prevent 404s on Vercel
+env.allowLocalModels = false;
+env.useBrowserCache = true;
 
-let modelInstance = null; // Cache the model within the worker
+// Cache for multiple models (prevents "wrong model" errors)
+const modelCache: Record<string, any> = {};
 
 self.onmessage = async (event) => {
-  const { text, task, modelName } = event.data; // Added modelName to allow dynamic model selection
+  const { id, text, task, modelName } = event.data;
+  
+  // Create a unique key for the model + task combination
+  const modelKey = `${task || 'default'}-${modelName || 'default'}`;
 
   try {
-    if (!modelInstance) {
-      console.log(`[AIWorker] Initializing model: ${modelName || 'default'} for task: ${task || 'feature-extraction'}...`);
-      // It's crucial that pipeline() handles ONNX initialization internally or finds it globally
-      modelInstance = await pipeline(task || 'feature-extraction', modelName || 'Xenova/distilbert-base-uncased');
-      console.log(`[AIWorker] Model ${modelName || 'default'} initialized.`);
+    if (!modelCache[modelKey]) {
+      console.log(`[AIWorker] Initializing model: ${modelName} for task: ${task}...`);
+      modelCache[modelKey] = await pipeline(task || 'feature-extraction', modelName || 'Xenova/distilbert-base-uncased');
+      console.log(`[AIWorker] Model ${modelName} initialized.`);
     }
 
-    const output = await modelInstance(text);
-    self.postMessage({ output, timestamp: Date.now() });
+    // Run inference
+    const output = await modelCache[modelKey](text);
+    
+    // Send back success with ID
+    self.postMessage({ id, output });
   } catch (error: any) {
     console.error('[AIWorker] Inference error:', error);
-    self.postMessage({
-      error: `Inference failed: ${error.message || error}`,
-      timestamp: Date.now(),
+    // Send back error with ID
+    self.postMessage({ 
+      id, 
+      error: `Inference failed: ${error.message || error}` 
     });
   }
 };
