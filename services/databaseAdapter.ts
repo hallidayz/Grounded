@@ -58,13 +58,14 @@ export interface DatabaseAdapter {
   saveFeelingLog(feelingLog: {
     id: string;
     timestamp: string;
+    userId?: string;
     emotionalState: string;
     selectedFeeling: string | null;
     aiResponse: string;
     isAIResponse: boolean;
     lowStateCount: number;
   }): Promise<void>;
-  getFeelingLogs(limit?: number): Promise<any[]>;
+  getFeelingLogs(limit?: number, userId?: string): Promise<any[]>;
   getFeelingLogsByState(emotionalState: string, limit?: number): Promise<any[]>;
   
   // User interactions operations
@@ -180,17 +181,20 @@ export class LegacyAdapter implements DatabaseAdapter {
   async saveFeelingLog(feelingLog: {
     id: string;
     timestamp: string;
+    userId?: string;
     emotionalState: string;
     selectedFeeling: string | null;
     aiResponse: string;
     isAIResponse: boolean;
     lowStateCount: number;
+    migrated?: boolean; // Added for migration tracking
+    migrationDate?: string; // Added for migration tracking
   }): Promise<void> {
     return this.dbService.saveFeelingLog(feelingLog);
   }
   
-  async getFeelingLogs(limit?: number): Promise<any[]> {
-    return this.dbService.getFeelingLogs(limit);
+  async getFeelingLogs(limit?: number, userId?: string): Promise<any[]> {
+    return this.dbService.getFeelingLogs(limit, userId);
   }
   
   async getFeelingLogsByState(emotionalState: string, limit?: number): Promise<any[]> {
@@ -206,6 +210,9 @@ export class LegacyAdapter implements DatabaseAdapter {
     emotionalState?: string;
     selectedFeeling?: string;
     metadata?: Record<string, any>;
+    userId?: string; // Ensure userId is passed through
+    migrated?: boolean;
+    migrationDate?: string;
   }): Promise<void> {
     return this.dbService.saveUserInteraction(interaction);
   }
@@ -533,18 +540,26 @@ export class EncryptedAdapter implements DatabaseAdapter {
   async saveFeelingLog(feelingLog: {
     id: string;
     timestamp: string;
+    userId?: string;
     emotionalState: string;
     selectedFeeling: string | null;
     aiResponse: string;
     isAIResponse: boolean;
     lowStateCount: number;
+    migrated?: boolean;
+    migrationDate?: string;
   }): Promise<void> {
     await this.encryptedDb.execute(
       `INSERT INTO feeling_logs_encrypted (id, user_id, timestamp, emotional_state, selected_feeling, reflection_text, ai_analysis, created_at)
-       VALUES (?, ?, ?, ?, ?, ?, ?, ?)`,
+       VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+       ON CONFLICT(id) DO UPDATE SET
+       user_id = excluded.user_id,
+       emotional_state = excluded.emotional_state,
+       selected_feeling = excluded.selected_feeling,
+       ai_analysis = excluded.ai_analysis`,
       [
         feelingLog.id,
-        null, // user_id - would need to be passed or derived
+        feelingLog.userId || null, 
         feelingLog.timestamp,
         feelingLog.emotionalState,
         feelingLog.selectedFeeling,
@@ -558,13 +573,22 @@ export class EncryptedAdapter implements DatabaseAdapter {
     await this.encryptedDb.save();
   }
   
-  async getFeelingLogs(limit?: number): Promise<any[]> {
-    let sql = 'SELECT * FROM feeling_logs_encrypted ORDER BY timestamp DESC';
+  async getFeelingLogs(limit?: number, userId?: string): Promise<any[]> {
+    let sql = 'SELECT * FROM feeling_logs_encrypted';
+    const params: any[] = [];
+    
+    if (userId) {
+      sql += ' WHERE user_id = ?';
+      params.push(userId);
+    }
+    
+    sql += ' ORDER BY timestamp DESC';
+    
     if (limit) {
       sql += ` LIMIT ${limit}`;
     }
     
-    const results = await this.encryptedDb.query(sql);
+    const results = await this.encryptedDb.query(sql, params);
     
     return results.map(row => {
       const aiAnalysis = row.ai_analysis ? JSON.parse(row.ai_analysis) : {};
@@ -619,16 +643,22 @@ export class EncryptedAdapter implements DatabaseAdapter {
     emotionalState?: string;
     selectedFeeling?: string;
     metadata?: Record<string, any>;
+    userId?: string;
+    migrated?: boolean;
+    migrationDate?: string;
   }): Promise<void> {
     await this.encryptedDb.execute(
       `INSERT INTO user_interactions_encrypted (id, timestamp, type, session_id, user_id, value_id, emotional_state, selected_feeling, metadata, created_at)
-       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+       ON CONFLICT(id) DO UPDATE SET
+       user_id = excluded.user_id,
+       metadata = excluded.metadata`,
       [
         interaction.id,
         interaction.timestamp,
         interaction.type,
         interaction.sessionId,
-        null, // user_id - would need to be passed
+        interaction.userId || null, // Ensure userId is passed
         interaction.valueId || null,
         interaction.emotionalState || null,
         interaction.selectedFeeling || null,

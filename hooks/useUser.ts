@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react';
 import { getDatabaseAdapter } from '../services/databaseAdapter';
 import { UserData as User } from '../services/database';
+import { DatabaseMigrationService } from '../services/migrationService';
 
 export const useUser = () => {
   const [user, setUser] = useState<User | null>(null);
@@ -25,6 +26,13 @@ export const useUser = () => {
         );
         
         setUser(latestUser);
+        
+        // Check for legacy data and migrate if needed
+        const legacyCheck = await DatabaseMigrationService.getLegacyData();
+        if (legacyCheck.counts.feelingLogs > 0 || legacyCheck.counts.interactions > 0) {
+           console.log('[Migration] Found legacy data. Migrating to user:', latestUser.id);
+           await DatabaseMigrationService.migrateLegacyData(latestUser.id);
+        }
       } else {
         // 2. Only create new user if none exists
         const timestamp = Date.now();
@@ -39,6 +47,14 @@ export const useUser = () => {
         const userWithId = await db.getUserById(userId);
         if (userWithId) {
           setUser(userWithId);
+          
+          // Even for new users, check if there was orphaned data (e.g. from before user creation logic was fixed)
+          // and adopt it.
+          const legacyCheck = await DatabaseMigrationService.getLegacyData();
+          if (legacyCheck.counts.feelingLogs > 0 || legacyCheck.counts.interactions > 0) {
+             console.log('[Migration] Found orphaned legacy data. Adopting for new user:', userWithId.id);
+             await DatabaseMigrationService.migrateLegacyData(userWithId.id);
+          }
         }
       }
     } catch (error) {

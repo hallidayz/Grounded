@@ -859,6 +859,7 @@ class DatabaseService {
           selfAdvocacy: feelingLog.selfAdvocacy || '',
           frequency: feelingLog.frequency || 'daily',
           jsonAssessment: feelingLog.jsonAssessment || '',
+          userId: feelingLog.userId || 'anonymous', // Ensure userId is saved
           // Legacy fields for backward compatibility
           emotionalState: feelingLog.emotionalState || feelingLog.emotion || '',
           selectedFeeling: feelingLog.selectedFeeling !== undefined ? feelingLog.selectedFeeling : (feelingLog.subEmotion || null),
@@ -942,7 +943,7 @@ class DatabaseService {
     });
   }
 
-  async getFeelingLogs(limit?: number): Promise<any[]> {
+  async getFeelingLogs(limit?: number, userId?: string): Promise<any[]> {
     const db = await this.ensureDB();
     return new Promise((resolve, reject) => {
       const transaction = db.transaction(['feelingLogs'], 'readonly');
@@ -954,7 +955,10 @@ class DatabaseService {
       request.onsuccess = (event) => {
         const cursor = (event.target as IDBRequest<IDBCursorWithValue>).result;
         if (cursor && (!limit || logs.length < limit)) {
-          logs.push(cursor.value);
+          // Filter by userId if provided
+          if (!userId || cursor.value.userId === userId) {
+            logs.push(cursor.value);
+          }
           cursor.continue();
         } else {
           resolve(logs);
@@ -987,7 +991,7 @@ class DatabaseService {
   }
 
   // User interactions operations - for tracking user behavior
-  async saveUserInteraction(interaction: { id: string; timestamp: string; type: string; sessionId: string; valueId?: string; emotionalState?: string; selectedFeeling?: string; metadata?: Record<string, any> }): Promise<void> {
+  async saveUserInteraction(interaction: { id: string; timestamp: string; type: string; sessionId: string; userId?: string; valueId?: string; emotionalState?: string; selectedFeeling?: string; metadata?: Record<string, any> }): Promise<void> {
     const db = await this.ensureDB();
     return new Promise((resolve, reject) => {
       const transaction = db.transaction(['userInteractions'], 'readwrite');
