@@ -578,6 +578,18 @@ class DatabaseService {
     });
   }
 
+  async getAllUsers(): Promise<UserData[]> {
+    const db = await this.ensureDB();
+    return new Promise((resolve, reject) => {
+      const transaction = db.transaction(['users'], 'readonly');
+      const store = transaction.objectStore('users');
+      const request = store.getAll();
+
+      request.onsuccess = () => resolve(request.result || []);
+      request.onerror = () => reject(request.error);
+    });
+  }
+
   async updateUser(userId: string, updates: Partial<UserData>): Promise<void> {
     const db = await this.ensureDB();
     return new Promise(async (resolve, reject) => {

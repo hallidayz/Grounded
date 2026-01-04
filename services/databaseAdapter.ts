@@ -41,6 +41,7 @@ export interface DatabaseAdapter {
   getUserByUsername(username: string): Promise<UserData | null>;
   getUserByEmail(email: string): Promise<UserData | null>;
   getUserById(userId: string): Promise<UserData | null>;
+  getAllUsers(): Promise<UserData[]>;
   updateUser(userId: string, updates: Partial<UserData>): Promise<void>;
   
   // App data operations
@@ -142,6 +143,10 @@ export class LegacyAdapter implements DatabaseAdapter {
   
   async getUserById(userId: string): Promise<UserData | null> {
     return this.dbService.getUserById(userId);
+  }
+
+  async getAllUsers(): Promise<UserData[]> {
+    return this.dbService.getAllUsers();
   }
   
   async updateUser(userId: string, updates: Partial<UserData>): Promise<void> {
@@ -384,6 +389,22 @@ export class EncryptedAdapter implements DatabaseAdapter {
       createdAt: row.created_at,
       lastLogin: row.last_login || undefined
     };
+  }
+
+  async getAllUsers(): Promise<UserData[]> {
+    const results = await this.encryptedDb.query('SELECT * FROM users_encrypted');
+    
+    return results.map(row => ({
+      id: row.id,
+      username: row.username,
+      passwordHash: row.password_hash,
+      email: row.email,
+      therapistEmails: row.therapist_emails ? JSON.parse(row.therapist_emails) : [],
+      termsAccepted: row.terms_accepted === 1,
+      termsAcceptedDate: row.terms_accepted_date || undefined,
+      createdAt: row.created_at,
+      lastLogin: row.last_login || undefined
+    }));
   }
   
   async updateUser(userId: string, updates: Partial<UserData>): Promise<void> {
