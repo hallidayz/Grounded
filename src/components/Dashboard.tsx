@@ -20,6 +20,8 @@ interface DashboardProps {
   goals: Goal[];
   lcswConfig?: LCSWConfig;
   onNavigate?: (screen: string) => void;
+  onLog?: (entry: LogEntry) => void;
+  onUpdateGoals?: (goals: Goal[]) => void;
 }
 
 /**
@@ -31,14 +33,22 @@ const Dashboard: React.FC<DashboardProps> = ({
   goals,
   lcswConfig,
   onNavigate,
+  onLog,
+  onUpdateGoals,
 }) => {
   // ✅ useDashboard using object‑arg pattern
-  const dashboard = useDashboard({ values, goals, logs, lcswConfig });
+  const dashboard = useDashboard({ 
+    values, 
+    goals, 
+    logs, 
+    lcswConfig,
+    onLog: onLog || (() => {}),
+    onUpdateGoals: onUpdateGoals || (() => {}),
+  });
 
   // Local UI state
-  const [emotionalState, setEmotionalState] = useState<string | null>(null);
-  const [showModal, setShowModal] = useState(false);
-  const [selectedEmotion, setSelectedEmotion] = useState<string | null>(null);
+  const [showEmotionModal, setShowEmotionModal] = useState(false);
+  const [showReflectionModal, setShowReflectionModal] = useState(false);
   const [selectedValue, setSelectedValue] = useState<ValueItem | null>(null);
   const [showResourcesModal, setShowResourcesModal] = useState(false);
   const [showCrisisAlert, setShowCrisisAlert] = useState(false);
@@ -58,28 +68,52 @@ const Dashboard: React.FC<DashboardProps> = ({
   }, []);
 
   /**
-   * Emotion button handler
+   * Emotion button handler - opens EmotionModal for sub-emotion selection
    */
-  const handleEmotionClick = (emotionId: string) => {
-    setSelectedEmotion(emotionId);
-    setEmotionalState(emotionId);
-    setSelectedValue(null);
-    setShowModal(true);
+  const handleEmotionClick = () => {
+    setShowEmotionModal(true);
   };
 
   /**
-   * Value check‑in (“+”) button handler
+   * Handle emotion selection from EmotionModal
+   */
+  const handleEmotionSelect = (primaryState: any, subState?: any) => {
+    dashboard.setEmotionalState(primaryState.state);
+    if (subState) {
+      dashboard.setSelectedFeeling(subState.shortLabel);
+    }
+    // After emotion selection, if we have values, open reflection form with first value
+    if (values.length > 0) {
+      setSelectedValue(values[0]);
+      dashboard.setActiveValueId(values[0].id);
+      setShowReflectionModal(true);
+    }
+    setShowEmotionModal(false);
+  };
+
+  /**
+   * Value check‑in ("+") button handler
    */
   const handleCheckInClick = (val: ValueItem) => {
     setSelectedValue(val);
-    setSelectedEmotion(null);
-    setShowModal(true);
+    dashboard.setActiveValueId(val.id);
+    dashboard.setEmotionalState('mixed');
+    setShowReflectionModal(true);
   };
 
-  const closeModal = () => {
-    setShowModal(false);
-    setSelectedEmotion(null);
+  const closeReflectionModal = () => {
+    setShowReflectionModal(false);
     setSelectedValue(null);
+    dashboard.setActiveValueId(null);
+  };
+
+  // Get reflection placeholder helper
+  const getReflectionPlaceholder = (freq: string, subFeeling?: string | null) => {
+    const base = `What does ${selectedValue?.name || 'this value'} mean to you right now?`;
+    if (subFeeling) {
+      return `${base} How does feeling ${subFeeling} relate to ${selectedValue?.name || 'this'}?`;
+    }
+    return base;
   };
 
   /**
@@ -110,9 +144,9 @@ const Dashboard: React.FC<DashboardProps> = ({
         {EMOTIONAL_STATES.map((emotion) => (
           <button
             key={emotion.id}
-            onClick={() => handleEmotionClick(emotion.id)}
+            onClick={handleEmotionClick}
             className={`px-4 py-2 rounded-md border text-sm capitalize transition-colors duration-150 ${
-              emotionalState === emotion.id
+              dashboard.emotionalState === emotion.state
                 ? 'bg-blue-500 text-white border-blue-600'
                 : 'bg-white hover:bg-blue-100 border-gray-300 text-gray-700'
             }`}
@@ -122,17 +156,25 @@ const Dashboard: React.FC<DashboardProps> = ({
         ))}
       </div>
 
-      {/* Values List Section */}
+      {/* Mood Trends - moved above values */}
+      <MoodTrendChart data={moodData} />
+
+      {/* Values List Section - with priority indicators */}
       <div className="grid grid-cols-2 gap-4 mb-8">
-        {values.map((val) => (
+        {values.map((val, index) => (
           <div
             key={val.id}
-            className="p-3 border rounded-md flex items-center justify-between shadow-sm hover:shadow transition"
+            className="p-3 border rounded-md flex items-center justify-between shadow-sm hover:shadow transition relative"
           >
-            <span className="font-medium text-gray-800">{val.name}</span>
+            <div className="flex items-center gap-2 flex-1 min-w-0">
+              <span className="text-xs font-bold text-gray-500 dark:text-gray-400 flex-shrink-0">
+                #{index + 1}
+              </span>
+              <span className="font-medium text-gray-800 dark:text-gray-200 truncate">{val.name}</span>
+            </div>
             <button
               onClick={() => handleCheckInClick(val)}
-              className="bg-green-500 hover:bg-green-600 text-white rounded-full w-8 h-8 text-xl flex items-center justify-center leading-[1]"
+              className="bg-green-500 hover:bg-green-600 text-white rounded-full w-8 h-8 text-xl flex items-center justify-center leading-[1] flex-shrink-0"
               title="Check in"
             >
               +
@@ -141,24 +183,67 @@ const Dashboard: React.FC<DashboardProps> = ({
         ))}
       </div>
 
-      {/* Mood/Encouragement/Goals */}
-      <MoodTrendChart data={moodData} />
-
       <EncourageSection
-        emotion={selectedEmotion}
-        goals={goals}
+        encouragementText={dashboard.encouragementText}
+        encouragementLoading={dashboard.encouragementLoading}
+        lastEncouragedState={dashboard.emotionalState}
+        selectedFeeling={dashboard.selectedFeeling}
+        lowStateCount={0}
+        lcswConfig={lcswConfig}
+        values={values}
+        onSelectEmotion={handleEmotionClick}
         onActionClick={handleActionClick}
+        onResetEncouragement={dashboard.resetEncouragement}
+        onOpenFirstValue={() => {
+          if (values.length > 0) {
+            handleCheckInClick(values[0]);
+          }
+        }}
       />
 
       <GoalsSection goals={goals} />
 
-      {/* Shared Modal for Emotion + Value reflections */}
-      {showModal && (
-        <EmotionModal onClose={closeModal}>
+      {/* Emotion Modal for sub-emotion selection */}
+      <EmotionModal
+        isOpen={showEmotionModal}
+        onClose={() => setShowEmotionModal(false)}
+        onEmotionSelect={handleEmotionSelect}
+        selectedEmotion={EMOTIONAL_STATES.find(e => e.state === dashboard.emotionalState) || null}
+      />
+
+      {/* Reflection Modal for value check-ins */}
+      {showReflectionModal && selectedValue && (
+        <EmotionModal onClose={closeReflectionModal}>
           <ReflectionForm
-            emotion={selectedEmotion}
             value={selectedValue}
-            onClose={closeModal}
+            emotionalState={dashboard.emotionalState}
+            selectedFeeling={dashboard.selectedFeeling}
+            showFeelingsList={false}
+            reflectionText={dashboard.reflectionText}
+            goalText={dashboard.goalText}
+            goalFreq={dashboard.goalFreq}
+            reflectionAnalysis={dashboard.reflectionAnalysis}
+            analyzingReflection={false}
+            coachInsight={dashboard.coachInsight}
+            valueMantra={dashboard.valueMantra}
+            loading={dashboard.loading}
+            aiGoalLoading={false}
+            lcswConfig={lcswConfig}
+            onEmotionalStateChange={dashboard.setEmotionalState}
+            onShowFeelingsListToggle={() => {}}
+            onSelectedFeelingChange={dashboard.setSelectedFeeling}
+            onReflectionTextChange={dashboard.setReflectionText}
+            onGoalTextChange={dashboard.setGoalText}
+            onGoalFreqChange={dashboard.setGoalFreq}
+            onSuggestGoal={() => {}}
+            onCommit={() => {
+              if (selectedValue) {
+                dashboard.handleCommit(selectedValue.id);
+                closeReflectionModal();
+              }
+            }}
+            getReflectionPlaceholder={getReflectionPlaceholder}
+            onTriggerReflectionAnalysis={() => {}}
           />
         </EmotionModal>
       )}

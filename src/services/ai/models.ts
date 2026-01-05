@@ -522,9 +522,16 @@ export async function initializeModels(forceReload: boolean = false, modelType?:
         const shouldUpdate = now - lastUpdateTime >= THROTTLE_MS;
         
         if (progress.status === 'progress') {
-          const percent = progress.progress ? Math.round(progress.progress * 100) : 0;
+          // Handle both 0-1 and 0-100 formats
+          let percent = 0;
+          if (progress.progress) {
+            // If progress is already 0-100, use it directly; otherwise convert from 0-1
+            percent = progress.progress > 1 ? Math.round(progress.progress) : Math.round(progress.progress * 100);
+            // Ensure percent is within valid range
+            percent = Math.max(0, Math.min(100, percent));
+          }
           const modelProgress = Math.round((modelsLoaded / totalModels) * 100 + (percent / totalModels));
-          totalProgress = Math.min(100, modelProgress);
+          totalProgress = Math.max(0, Math.min(100, modelProgress));
           
           const modelName = progress.name || 'model';
           
