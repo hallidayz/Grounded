@@ -1,6 +1,6 @@
 import React, { useCallback } from 'react';
 import { EMOTIONAL_STATES, EmotionalState } from '../services/emotionalStates';
-import { triggerHapticFeedback } from '../src/utils/haptics';
+import { triggerHapticFeedback } from '../utils/haptics';
 import EmotionPicker from './EmotionPicker';
 
 interface EmotionSelectorProps {

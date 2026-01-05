@@ -55,7 +55,7 @@ if (typeof process !== 'undefined' && process.env) {
 
 import { checkBrowserCompatibility, CompatibilityReport, getCompatibilitySummary } from './browserCompatibility';
 import { setModelLoadingProgress, setProgressSuccess, setProgressError } from '../progressTracker';
-import { AIModelType } from '../../types';
+import { AIModelType } from '../types';
 
 // Model definitions
 export const MODEL_CONFIGS: Record<AIModelType, { 

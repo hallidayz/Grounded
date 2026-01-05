@@ -1,7 +1,7 @@
-import { ValueItem, LCSWConfig, ReflectionAnalysisResponse, CounselingGuidanceResponse } from '../../types';
-import { generateText } from '../../src/services/aiService';
+import { ValueItem, LCSWConfig, ReflectionAnalysisResponse, CounselingGuidanceResponse } from '../types';
+import { generateText } from '../aiService';
 import { getSelectedModel } from './models';
-import { CrisisResponse } from '../../src/services/safetyService';
+import { CrisisResponse } from '../safetyService';
 
 // Helper to get user's name (placeholder for now, will connect to user context)
 const getUserName = () => {
@@ -159,15 +159,130 @@ export async function suggestGoal(
   }
 }
 
-// Re-export generateCounselingGuidance and generateValueMantra/generateEncouragement/generateEmotionalEncouragement 
-// if they were here?
-// The file I read earlier didn't show them, but services/aiService.ts re-exports them.
-// Let's check the file content I read earlier again.
-// It seemed to only have analyzeReflection, generateFocusLens, suggestGoal.
-// Ah, the file read showed lines 1-128. It might be complete.
-// But services/aiService.ts re-exports: generateEncouragement, generateEmotionalEncouragement, generateCounselingGuidance, generateValueMantra.
-// This means they MUST be in this file.
-// I likely missed them in the read_file output or it was truncated.
-// I should read the REST of the file or just append/merge.
-// Since I don't want to lose them, I should use search_replace again carefully or read the full file first.
+export async function generateEncouragement(value: ValueItem): Promise<string> {
+  const modelName = getSelectedModel() || 'Xenova/LaMini-Flan-T5-77M';
+  const userName = getUserName();
+  
+  const prompt = `
+    User: ${userName}
+    Value: ${value.name}
+    
+    Give ${userName} a brief, encouraging message about ${value.name}.
+    Be supportive and personal. Use "you". Under 50 words.
+  `;
+  
+  try {
+    const response = await generateText(prompt, modelName);
+    if (typeof response === 'object' && 'isCrisis' in response) {
+      return `Remember that ${value.name} is important to you.`;
+    }
+    return response as string;
+  } catch (error) {
+    return `Remember that ${value.name} is important to you.`;
+  }
+}
+
+export async function generateEmotionalEncouragement(
+  emotion: string,
+  subEmotion?: string | null
+): Promise<string> {
+  const modelName = getSelectedModel() || 'Xenova/LaMini-Flan-T5-77M';
+  const userName = getUserName();
+  
+  const prompt = `
+    User: ${userName}
+    Emotion: ${subEmotion ? `${emotion} (${subEmotion})` : emotion}
+    
+    Give ${userName} a brief, encouraging message about feeling ${emotion}.
+    Be supportive and validating. Use "you". Under 50 words.
+  `;
+  
+  try {
+    const response = await generateText(prompt, modelName);
+    if (typeof response === 'object' && 'isCrisis' in response) {
+      return `Your feelings are valid. Take care of yourself.`;
+    }
+    return response as string;
+  } catch (error) {
+    return `Your feelings are valid. Take care of yourself.`;
+  }
+}
+
+export async function generateValueMantra(value: ValueItem): Promise<string> {
+  const modelName = getSelectedModel() || 'Xenova/LaMini-Flan-T5-77M';
+  const userName = getUserName();
+  
+  const prompt = `
+    User: ${userName}
+    Value: ${value.name}
+    
+    Create a short, inspiring mantra (1-2 sentences) about ${value.name} for ${userName}.
+    Use "you". Be personal and motivating.
+  `;
+  
+  try {
+    const response = await generateText(prompt, modelName);
+    if (typeof response === 'object' && 'isCrisis' in response) {
+      return `${value.name} guides you forward.`;
+    }
+    return response as string;
+  } catch (error) {
+    return `${value.name} guides you forward.`;
+  }
+}
+
+export async function generateCounselingGuidance(
+  value: ValueItem,
+  emotionalState: string,
+  reflection: string,
+  selectedFeeling?: string | null,
+  lcswConfig?: LCSWConfig
+): Promise<CounselingGuidanceResponse> {
+  const modelName = getSelectedModel() || 'Xenova/LaMini-Flan-T5-77M';
+  const userName = getUserName();
+  
+  const prompt = `
+    You are a licensed clinical social worker (LCSW).
+    User: ${userName}
+    Value: ${value.name}
+    Emotion: ${selectedFeeling ? `${emotionalState} (${selectedFeeling})` : emotionalState}
+    Reflection: "${reflection}"
+    
+    Provide therapeutic guidance connecting their emotion and reflection to their value.
+    Return ONLY a JSON object with:
+    1. "insight": "One compassionate insight"
+    2. "guidance": "One actionable guidance statement"
+    3. "questions": ["Question 1", "Question 2"]
+  `;
+  
+  try {
+    const response = await generateText(prompt, modelName);
+    if (typeof response === 'object' && 'isCrisis' in response) {
+      return {
+        insight: `It sounds like you're going through a difficult time.`,
+        guidance: `Please reach out to a mental health professional for support.`,
+        questions: [
+          `How can you prioritize your safety right now?`,
+          `Who can you reach out to for support?`
+        ]
+      };
+    }
+    
+    const textResponse = response as string;
+    const jsonMatch = textResponse.match(/\{[\s\S]*\}/);
+    if (jsonMatch) {
+      return JSON.parse(jsonMatch[0]);
+    }
+    throw new Error('Invalid JSON response');
+  } catch (error) {
+    return {
+      insight: `Your reflection on ${value.name} shows self-awareness.`,
+      guidance: `Consider how this value can support you through this feeling.`,
+      questions: [
+        `How does ${value.name} relate to your current emotion?`,
+        `What is one small way to honor this value today?`
+      ]
+    };
+  }
+}
 

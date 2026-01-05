@@ -5,7 +5,7 @@
  * Uses IndexedDB for persistent storage with 24-hour TTL.
  */
 
-import { GoalFrequency } from '../../types';
+import { GoalFrequency } from '../types';
 
 export interface CachedResponse {
   key: string;

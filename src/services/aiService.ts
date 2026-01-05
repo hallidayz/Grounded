@@ -1,66 +1,23 @@
-// src/services/aiService.ts
-import { LogEntry } from '../types';
+/**
+ * AI SERVICE - MAIN EXPORT
+ * 
+ * This file re-exports all AI functionality from the modular structure.
+ * Maintains backward compatibility with existing imports.
+ * 
+ * The AI service has been split into:
+ * - ai/models.ts - Model loading and management
+ * - ai/crisis.ts - Crisis detection and response
+ * - ai/reports.ts - Clinical report generation
+ * - ai/encouragement.ts - Encouragement and guidance generation
+ */
+
+import { checkForCrisisKeywords, CrisisResponse } from './safetyService';
 
 interface AIWorkerResponse {
   id: string;
   output?: any;
   error?: string;
 }
-
-// Request Types
-interface EncouragementRequest {
-  emotion: string;
-}
-
-interface AssessmentRequest {
-  userId: string;
-  emotion: string;
-  subEmotion: string;
-  reflection: string;
-}
-
-interface GoalRequest {
-  userId: string;
-  assessment: string;
-  moodTrends: any[]; // Define specific trend type if available
-}
-
-interface ReportRequest {
-  userId: string;
-  userEntries: LogEntry[];
-  treatmentProtocols?: string[];
-}
-
-// Response Types
-export interface AIEncouragementResponse {
-  message: string;
-  type: 'encouragement';
-  timestamp: string;
-}
-
-export interface AIAssessmentResponse {
-  assessment: string;
-  emotion: string;
-  subEmotion: string;
-  reflection: string;
-  timestamp: string;
-}
-
-export interface AIGoalResponse {
-  goal: string;
-  assessmentId: string; // Linking ID
-  timestamp: string;
-  status: 'pending';
-}
-
-export interface AIReportResponse {
-  report: string;
-  userId: string;
-  timestamp: string;
-  emailAddresses: string[];
-  treatmentProtocols: string[];
-}
-
 
 let globalWorker: Worker | null = null;
 const pendingRequests = new Map<string, { resolve: Function, reject: Function }>();
@@ -90,11 +47,6 @@ function getWorker(): Worker {
   }
   return globalWorker;
 }
-
-// Import the new safety service
-import { checkForCrisisKeywords, CrisisResponse } from './safetyService';
-
-// ... (keep existing code for AIWorkerResponse, globalWorker, pendingRequests, getWorker) ...
 
 export function runAIWorker(
   inputText: string, 
@@ -138,88 +90,58 @@ export function runAIWorker(
   });
 }
 
-// 1. Emotion Selection AI (Initial Encouragement)
-export async function getEmotionEncouragement(emotion: string): Promise<AIEncouragementResponse> {
-  const prompt = `You are a compassionate counselor. Respond to someone feeling ${emotion}. Be supportive but brief (under 50 words). Use encouraging, non-judgmental language. Address them directly using 'you'.`;
-  
-  const output = await runAIWorker(prompt, 'text2text-generation', 'Xenova/LaMini-Flan-T5-77M', {
-    max_new_tokens: 60 // ~50 words
-  });
-
-  return {
-    message: output,
-    type: 'encouragement',
-    timestamp: new Date().toISOString()
-  };
-}
-
-// 2. Comprehensive Assessment AI (Counselor Role)
-export async function getComprehensiveAssessment(userId: string, emotion: string, subEmotion: string, reflection: string): Promise<AIAssessmentResponse> {
-  const prompt = `Counselor's Assessment:
-  Emotion: ${emotion}
-  Sub-emotion: ${subEmotion}
-  Reflection: '${reflection}'
-  
-  Provide insight about their awareness, acknowledge their feelings, and offer gentle guidance. Be specific to their situation. Limit to 80 words. Address them directly as 'you'.`;
-
-  const output = await runAIWorker(prompt, 'text2text-generation', 'Xenova/LaMini-Flan-T5-77M', {
-    max_new_tokens: 120 // ~80-100 words
-  });
-
-  return {
-    assessment: output,
-    emotion,
-    subEmotion,
-    reflection,
-    timestamp: new Date().toISOString()
-  };
-}
-
-// 3. Self-Advocacy Goal Recommendation
-export async function getGoalRecommendation(userId: string, assessment: string, moodTrends: any[]): Promise<AIGoalResponse> {
-  // Simplify trends for prompt
-  const trendsSummary = moodTrends.slice(0, 3).map(t => `${t.state} (${t.percentage}%)`).join(', ');
-  
-  const prompt = `Based on this assessment: '${assessment}' and their recent mood trends: [${trendsSummary}], suggest one specific, achievable goal focusing on their wellbeing. Make it actionable and time-bound. Max 60 words.`;
-
-  const output = await runAIWorker(prompt, 'text2text-generation', 'Xenova/LaMini-Flan-T5-77M', {
-    max_new_tokens: 80 // ~60 words
-  });
-
-  return {
-    goal: output,
-    assessmentId: 'temp-id', // Needs to be linked after saving assessment
-    timestamp: new Date().toISOString(),
-    status: 'pending'
-  };
-}
-
-// 4. Reporting & Email Aggregation
-export async function getReportSummary(userId: string, userEntries: LogEntry[], treatmentProtocols: string[] = ['CBT']): Promise<AIReportResponse> {
-  // Format entries for prompt (limit to last 5 to save context window)
-  const entriesText = userEntries.slice(0, 5).map(e => `- ${e.date.split('T')[0]}: ${e.emotionalState} - ${e.note}`).join('\n');
-  const protocolsText = treatmentProtocols.join(', ');
-
-  const prompt = `Create a professional counseling summary for these recent entries:
-${entriesText}
-
-Treatment protocols: ${protocolsText}.
-Format for counselor review. Be concise yet comprehensive. Focus on themes and progress.`;
-
-  const output = await runAIWorker(prompt, 'text2text-generation', 'Xenova/LaMini-Flan-T5-77M', {
-    max_new_tokens: 300 // ~200 words
-  });
-
-  return {
-    report: output,
-    userId,
-    timestamp: new Date().toISOString(),
-    emailAddresses: [], // To be filled by caller
-    treatmentProtocols
-  };
-}
-
-// Re-export generateText for backward compatibility if needed by other components
+// Re-export generateText for backward compatibility
 export async function generateText(prompt: string, modelName: string): Promise<string | CrisisResponse> {
-    return runAIWorker(prompt, 'text2text-generation', modelName);
+  return runAIWorker(prompt, 'text2text-generation', modelName);
 }
+
+// Re-export model functions
+export {
+  clearModels,
+  initializeModels,
+  preloadModels,
+  preloadModelsContinuously,
+  areModelsLoaded,
+  getModelStatus,
+  getCompatibilityReport,
+  // Model selection functions
+  getSelectedModel,
+  setSelectedModel,
+  getModelConfig,
+  getAllModelConfigs,
+  // Internal helper functions (for advanced use cases)
+  getMoodTrackerModel,
+  getCounselingCoachModel,
+  getIsModelLoading,
+  isTextGenerationModel
+} from './ai/models';
+
+// Re-export compatibility functions
+export {
+  checkBrowserCompatibility,
+  getCompatibilitySummary
+} from './ai/browserCompatibility';
+
+// Re-export crisis functions
+export {
+  detectCrisis,
+  getCrisisResponse
+} from './ai/crisis';
+
+// Re-export report functions
+export {
+  assessMentalState,
+  generateHumanReports,
+  generateFallbackReport
+} from './ai/reports';
+
+// Re-export encouragement functions
+export {
+  generateEncouragement,
+  generateEmotionalEncouragement,
+  generateCounselingGuidance,
+  generateValueMantra,
+  suggestGoal,
+  analyzeReflection,
+  generateFocusLens
+} from './ai/encouragement';

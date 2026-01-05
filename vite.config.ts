@@ -167,7 +167,14 @@ export default defineConfig({
   ],
   resolve: {
     alias: {
-      '@': path.resolve(__dirname, 'src'), // Alias @ to src directory
+      '@': path.resolve(__dirname, './src'),
+      '@components': path.resolve(__dirname, './src/components'),
+      '@services': path.resolve(__dirname, './src/services'),
+      '@contexts': path.resolve(__dirname, './src/contexts'),
+      '@hooks': path.resolve(__dirname, './src/hooks'),
+      '@utils': path.resolve(__dirname, './src/utils'),
+      '@workers': path.resolve(__dirname, './src/workers'),
+      '@mocks': path.resolve(__dirname, './src/mocks'),
     },
     dedupe: ['react', 'react-dom']
   },
