@@ -280,6 +280,12 @@ const AppContent: React.FC = () => {
           onViewChange={setView}
           onOpenLCSWConfig={modals.openLCSWConfig}
           onOpenHelp={modals.openHelp}
+          onLogout={() => {
+            if (window.confirm('Are you sure you want to lock the app?')) {
+              logoutUser();
+              handleLogout();
+            }
+          }}
         >
           <AppRouter
             view={view}

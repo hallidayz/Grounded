@@ -12,6 +12,7 @@ interface AppLayoutProps {
   onViewChange: (view: 'onboarding' | 'home' | 'report' | 'values' | 'vault' | 'goals' | 'settings') => void;
   onOpenLCSWConfig: () => void;
   onOpenHelp: () => void;
+  onLogout: () => void;
 }
 
 export const AppLayout: React.FC<AppLayoutProps> = ({
@@ -23,6 +24,7 @@ export const AppLayout: React.FC<AppLayoutProps> = ({
   onViewChange,
   onOpenLCSWConfig,
   onOpenHelp,
+  onLogout,
 }) => {
   return (
     <div className="min-h-screen bg-bg-primary dark:bg-dark-bg-primary text-text-primary dark:text-white flex flex-col transition-colors duration-300 pt-[env(safe-area-inset-top)] pb-[env(safe-area-inset-bottom)]">
@@ -34,6 +36,7 @@ export const AppLayout: React.FC<AppLayoutProps> = ({
         onViewChange={onViewChange}
         onOpenLCSWConfig={onOpenLCSWConfig}
         onOpenHelp={onOpenHelp}
+        onLogout={onLogout}
       />
       <main className="flex-grow max-w-4xl w-full mx-auto px-3 sm:px-4 py-4 sm:py-6 pb-24 lg:pb-6">
         {children}
@@ -42,6 +45,7 @@ export const AppLayout: React.FC<AppLayoutProps> = ({
         <BottomNavigation
           currentView={view}
           onViewChange={onViewChange}
+          onLogout={onLogout}
         />
       )}
       <AppFooter />

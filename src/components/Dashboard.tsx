@@ -77,11 +77,13 @@ const Dashboard: React.FC<DashboardProps> = ({
   /**
    * Handle emotion selection from EmotionModal
    */
-  const handleEmotionSelect = (primaryState: any, subState?: any) => {
+  const handleEmotionSelect = async (primaryState: any, subState?: any) => {
     dashboard.setEmotionalState(primaryState.state);
     if (subState) {
       dashboard.setSelectedFeeling(subState.shortLabel);
     }
+    // Automatically generate encouragement when emotion is selected
+    await dashboard.handleEmotionalEncourage(primaryState.state);
     // After emotion selection, if we have values, open reflection form with first value
     if (values.length > 0) {
       setSelectedValue(values[0]);
@@ -97,7 +99,8 @@ const Dashboard: React.FC<DashboardProps> = ({
   const handleCheckInClick = (val: ValueItem) => {
     setSelectedValue(val);
     dashboard.setActiveValueId(val.id);
-    dashboard.setEmotionalState('mixed');
+    // Don't set emotional state to 'mixed' - let user select emotion if they want
+    // If no emotion selected, it will remain null/empty
     setShowReflectionModal(true);
   };
 
@@ -141,19 +144,24 @@ const Dashboard: React.FC<DashboardProps> = ({
       {/* Emotion Section */}
       <h2 className="text-xl font-semibold mb-3">How are you feeling?</h2>
       <div className="flex flex-wrap gap-3 mb-6">
-        {EMOTIONAL_STATES.map((emotion) => (
-          <button
-            key={emotion.id}
-            onClick={handleEmotionClick}
-            className={`px-4 py-2 rounded-md border text-sm capitalize transition-colors duration-150 ${
-              dashboard.emotionalState === emotion.state
-                ? 'bg-blue-500 text-white border-blue-600'
-                : 'bg-white hover:bg-blue-100 border-gray-300 text-gray-700'
-            }`}
-          >
-            {emotion.label}
-          </button>
-        ))}
+        {EMOTIONAL_STATES.map((emotion) => {
+          // Only highlight if emotion was explicitly selected (has selectedFeeling or encouragementText indicates selection)
+          const isSelected = dashboard.emotionalState === emotion.state && 
+                            (dashboard.selectedFeeling || dashboard.encouragementText);
+          return (
+            <button
+              key={emotion.id}
+              onClick={handleEmotionClick}
+              className={`px-4 py-2 rounded-md border text-sm capitalize transition-colors duration-150 ${
+                isSelected
+                  ? 'bg-blue-500 text-white border-blue-600'
+                  : 'bg-white hover:bg-blue-100 border-gray-300 text-gray-700'
+              }`}
+            >
+              {emotion.label}
+            </button>
+          );
+        })}
       </div>
 
       {/* Mood Trends - moved above values */}
@@ -174,7 +182,7 @@ const Dashboard: React.FC<DashboardProps> = ({
             </div>
             <button
               onClick={() => handleCheckInClick(val)}
-              className="bg-green-500 hover:bg-green-600 text-white rounded-full w-8 h-8 text-xl flex items-center justify-center leading-[1] flex-shrink-0"
+              className="bg-brand hover:bg-brand-dark text-white rounded-full w-8 h-8 text-xl flex items-center justify-center leading-[1] flex-shrink-0"
               title="Check in"
             >
               +
@@ -183,23 +191,7 @@ const Dashboard: React.FC<DashboardProps> = ({
         ))}
       </div>
 
-      <EncourageSection
-        encouragementText={dashboard.encouragementText}
-        encouragementLoading={dashboard.encouragementLoading}
-        lastEncouragedState={dashboard.emotionalState}
-        selectedFeeling={dashboard.selectedFeeling}
-        lowStateCount={0}
-        lcswConfig={lcswConfig}
-        values={values}
-        onSelectEmotion={handleEmotionClick}
-        onActionClick={handleActionClick}
-        onResetEncouragement={dashboard.resetEncouragement}
-        onOpenFirstValue={() => {
-          if (values.length > 0) {
-            handleCheckInClick(values[0]);
-          }
-        }}
-      />
+      {/* EncourageSection removed - encouragement now shows in reflection modal */}
 
       <GoalsSection goals={goals} />
 
@@ -214,6 +206,21 @@ const Dashboard: React.FC<DashboardProps> = ({
       {/* Reflection Modal for value check-ins */}
       {showReflectionModal && selectedValue && (
         <EmotionModal onClose={closeReflectionModal}>
+          {/* Encouragement displayed above reflection form */}
+          {dashboard.encouragementText && (
+            <div className="mb-4 p-4 bg-brand/5 dark:bg-brand/10 rounded-xl border border-brand/20 dark:border-brand/30">
+              <p className="text-text-primary dark:text-white text-sm italic">
+                "{dashboard.encouragementText}"
+              </p>
+            </div>
+          )}
+          {dashboard.encouragementLoading && (
+            <div className="mb-4 p-4 bg-brand/5 dark:bg-brand/10 rounded-xl border border-brand/20 dark:border-brand/30">
+              <p className="text-text-secondary dark:text-white/70 text-sm italic">
+                Generating encouragement...
+              </p>
+            </div>
+          )}
           <ReflectionForm
             value={selectedValue}
             emotionalState={dashboard.emotionalState}

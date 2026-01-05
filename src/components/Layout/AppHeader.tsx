@@ -9,6 +9,7 @@ interface AppHeaderProps {
   onViewChange: (view: 'onboarding' | 'home' | 'report' | 'values' | 'vault' | 'goals' | 'settings') => void;
   onOpenLCSWConfig: () => void;
   onOpenHelp: () => void;
+  onLogout: () => void;
 }
 
 export const AppHeader: React.FC<AppHeaderProps> = ({
@@ -19,6 +20,7 @@ export const AppHeader: React.FC<AppHeaderProps> = ({
   onViewChange,
   onOpenLCSWConfig,
   onOpenHelp,
+  onLogout,
 }) => {
   return (
     <header className="bg-white dark:bg-dark-bg-primary border-b border-border-soft dark:border-dark-border sticky top-0 z-40 shadow-sm dark:shadow-lg">
@@ -108,11 +110,14 @@ export const AppHeader: React.FC<AppHeaderProps> = ({
             <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M8.228 9c.549-1.165 2.03-2 3.772-2 2.21 0 4 1.343 4 3 0 1.4-1.278 2.575-3.006 2.907-.542.104-.994.54-.994 1.093m0 3h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>
           </button>
           <button
-            onClick={() => onViewChange('settings')}
-            className="w-8 h-8 flex items-center justify-center rounded-full text-text-secondary dark:text-text-secondary hover:text-brand dark:hover:text-brand-light hover:bg-brand/10 dark:hover:bg-brand/20 transition-all"
-            aria-label="Settings"
+            onClick={onLogout}
+            className="w-8 h-8 flex items-center justify-center rounded-full text-text-secondary dark:text-text-secondary hover:text-red-600 dark:hover:text-red-400 hover:bg-red-50 dark:hover:bg-red-900/20 transition-all"
+            aria-label="Logout"
+            title="Logout"
           >
-            <span className="text-lg">⚙️</span>
+            <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1" />
+            </svg>
           </button>
         </div>
       </div>
