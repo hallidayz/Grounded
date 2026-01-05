@@ -1,4 +1,4 @@
-import React, { useState, useEffect, Suspense, lazy } from 'react';
+import React, { useState, useEffect, useRef, Suspense, lazy } from 'react';
 import { ALL_VALUES } from './constants';
 import { ValueItem, GoalUpdate } from './types';
 import Login from './components/Login';
@@ -57,23 +57,37 @@ const AppContent: React.FC = () => {
     },
   });
 
+  // Track if we've synced data to prevent multiple syncs
+  const hasSyncedDataRef = useRef<string | null>(null);
+
   // Sync initialization data with DataContext
+  // This effect runs whenever initialization completes and we have a userId
   useEffect(() => {
-    if (!initResult.loading && initResult.userId && authState === 'app') {
-      if (initResult.selectedValueIds.length > 0) {
-        data.setSelectedValueIds(initResult.selectedValueIds);
-      }
-      if (initResult.logs.length > 0) {
-        data.setLogs(initResult.logs);
-      }
-      if (initResult.goals.length > 0) {
-        data.setGoals(initResult.goals);
-      }
-      if (initResult.settings) {
-        data.setSettings(initResult.settings);
+    if (!initResult.loading && initResult.userId) {
+      // Only sync once per userId to prevent overwriting
+      if (hasSyncedDataRef.current !== initResult.userId) {
+        // Always sync data, even if arrays are empty - this ensures DataContext has the latest state
+        console.log('[SYNC] Syncing initialization data to DataContext', {
+          userId: initResult.userId,
+          values: initResult.selectedValueIds.length,
+          logs: initResult.logs.length,
+          goals: initResult.goals.length,
+          hasSettings: !!initResult.settings,
+          authState
+        });
+        
+        // Use functional updates to ensure we're setting the exact values from initialization
+        data.setSelectedValueIds(() => initResult.selectedValueIds);
+        data.setLogs(() => initResult.logs);
+        data.setGoals(() => initResult.goals);
+        if (initResult.settings) {
+          data.setSettings(() => initResult.settings);
+        }
+        
+        hasSyncedDataRef.current = initResult.userId;
       }
     }
-  }, [initResult.loading, initResult.userId, authState, data]);
+  }, [initResult.loading, initResult.userId, initResult.selectedValueIds, initResult.logs, initResult.goals, initResult.settings, authState, data]);
 
   // Update auth state based on initialization
   useEffect(() => {

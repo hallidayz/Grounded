@@ -1,4 +1,4 @@
-import React, { createContext, useContext, useState, useEffect, useCallback, ReactNode } from 'react';
+import React, { createContext, useContext, useState, useEffect, useCallback, useRef, ReactNode } from 'react';
 import { LogEntry, Goal, AppSettings, LCSWConfig } from '../types';
 import { dbService } from '../services/database';
 
@@ -47,29 +47,84 @@ export const DataProvider: React.FC<DataProviderProps> = ({
     initialData?.settings || { reminders: { enabled: false, frequency: 'daily', time: '09:00' } }
   );
 
+  // Track if we've loaded initial data to prevent overwriting with empty arrays
+  // This is set to true once we receive data from either initialData or via setters
+  const hasLoadedInitialDataRef = useRef(false);
+  const initializationTimeoutRef = useRef<NodeJS.Timeout | null>(null);
+
   // Update state when initialData changes (from initialization)
   useEffect(() => {
-    if (initialData) {
-      if (initialData.selectedValueIds) {
+    // Check if initialData has any actual data (not just empty object)
+    const hasData = initialData && (
+      (initialData.selectedValueIds && initialData.selectedValueIds.length > 0) ||
+      (initialData.logs && initialData.logs.length > 0) ||
+      (initialData.goals && initialData.goals.length > 0) ||
+      initialData.settings
+    );
+    
+    if (hasData && !hasLoadedInitialDataRef.current) {
+      console.log('[DataContext] Loading initial data from props', {
+        values: initialData.selectedValueIds?.length || 0,
+        logs: initialData.logs?.length || 0,
+        goals: initialData.goals?.length || 0,
+        hasSettings: !!initialData.settings
+      });
+      
+      if (initialData.selectedValueIds !== undefined) {
         setSelectedValueIds(initialData.selectedValueIds);
       }
-      if (initialData.logs) {
+      if (initialData.logs !== undefined) {
         setLogs(initialData.logs);
       }
-      if (initialData.goals) {
+      if (initialData.goals !== undefined) {
         setGoals(initialData.goals);
       }
       if (initialData.settings) {
         setSettings(initialData.settings);
       }
+      hasLoadedInitialDataRef.current = true;
     }
   }, [initialData]);
 
-  // Save app data to database whenever it changes
+  // Track when data is set via setters (from sync in AppContent)
+  // After a short delay, mark as loaded to allow saves
   useEffect(() => {
-    if (userId && authState === 'app') {
+    // If we have any data, mark as loaded after a delay
+    if ((selectedValueIds.length > 0 || logs.length > 0 || goals.length > 0) && !hasLoadedInitialDataRef.current) {
+      // Clear any existing timeout
+      if (initializationTimeoutRef.current) {
+        clearTimeout(initializationTimeoutRef.current);
+      }
+      
+      // Mark as loaded after a short delay to ensure sync completes
+      initializationTimeoutRef.current = setTimeout(() => {
+        console.log('[DataContext] Marking data as loaded after sync', {
+          values: selectedValueIds.length,
+          logs: logs.length,
+          goals: goals.length
+        });
+        hasLoadedInitialDataRef.current = true;
+      }, 1000);
+    }
+    
+    return () => {
+      if (initializationTimeoutRef.current) {
+        clearTimeout(initializationTimeoutRef.current);
+      }
+    };
+  }, [selectedValueIds.length, logs.length, goals.length]);
+
+  // Save app data to database whenever it changes
+  // Only save after initial data has been loaded to prevent overwriting with empty arrays
+  useEffect(() => {
+    if (userId && authState === 'app' && hasLoadedInitialDataRef.current) {
       const saveData = async () => {
         try {
+          console.log('[DataContext] Saving app data', {
+            values: selectedValueIds.length,
+            logs: logs.length,
+            goals: goals.length
+          });
           await dbService.saveAppData(userId, {
             settings,
             logs,
