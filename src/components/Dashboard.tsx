@@ -3,87 +3,108 @@ import { ValueItem, LogEntry, Goal, LCSWConfig } from '../types';
 import { EMOTIONAL_STATES, getEmotionalState } from '../services/emotionalStates';
 import MoodTrendChart from './MoodTrendChart';
 import EncourageSection from './EncourageSection';
-import ValueCard from './ValueCard';
-import GoalsSection from './GoalsSection';
 import CrisisResourcesModal from './CrisisResourcesModal';
 import CrisisAlertModal from './CrisisAlertModal';
-import { useDashboard } from '../hooks/useDashboard';
-import { useEmotion } from '../contexts/EmotionContext';
-import EmotionModal from './EmotionModal';
+import GoalProgress from './GoalProgress';
+import ValueCard from './ValueCard';
+import useDashboard from '../hooks/useDashboard';
+import useEmotion from '../hooks/useEmotion';
 
-const Dashboard = ({ values, onLog, goals, onUpdateGoals, logs, lcswConfig, onNavigate, onReset, initialValueId }: any) => {
-  const dashboard = useDashboard(values, goals, logs, lcswConfig, onLog, onUpdateGoals);
+interface DashboardProps {
+  values: ValueItem[];
+  logs: LogEntry[];
+  goals: Goal[];
+  lcswConfig?: LCSWConfig;
+  onNavigate?: (screen: string) => void;
+}
+
+const Dashboard: React.FC<DashboardProps> = ({
+  values,
+  logs,
+  goals,
+  lcswConfig,
+  onNavigate,
+}) => {
+  const dashboard = useDashboard(values, logs, goals);
+  const { emotionalState, setEmotionalState } = useEmotion();
   const [showResourcesModal, setShowResourcesModal] = useState(false);
+  const [showCrisisAlert, setShowCrisisAlert] = useState(false);
 
-  const { emotionState, setPrimaryEmotion, setSubEmotion, clearEmotions } = useEmotion();
-  const [showEmotionModal, setShowEmotionModal] = useState(false);
-
-  const handleModalEmotionSelect = (primary: any, sub?: any) => {
-    dashboard.setEmotionalState(primary.state);
-    if (sub) dashboard.setSelectedFeeling(sub.shortLabel);
-    setPrimaryEmotion(primary.state, 'dashboard');
-    if (sub?.shortLabel) setSubEmotion(sub.shortLabel);
-    setShowEmotionModal(false);
-  };
-
-  const handleOpenFirstValue = () => {
-    if (values.length > 0) {
-      dashboard.setActiveValueId(values[0].id);
+  // ✅ Restore and persist selected Value ID
+  useEffect(() => {
+    const savedId = localStorage.getItem('selectedValueId');
+    if (savedId) {
+      dashboard.setActiveValueId(Number(savedId));
     }
-  };
+  }, []);
 
+  useEffect(() => {
+    if (dashboard.activeValueId) {
+      localStorage.setItem('selectedValueId', dashboard.activeValueId.toString());
+    }
+  }, [dashboard.activeValueId]);
+
+  // ✅ Restore proper action handling
   const handleActionClick = (action: 'reflection' | 'values' | 'resources') => {
     if (action === 'resources') setShowResourcesModal(true);
     if (action === 'values') onNavigate?.('values');
   };
 
-  const topValue = values[0];
+  const handleOpenFirstValue = () => {
+    if (values && values.length > 0) {
+      dashboard.setActiveValueId(values[0].id);
+    }
+  };
+
+  const moodData = useMemo(
+    () => logs.map((log) => ({
+      date: new Date(log.date),
+      emotion: getEmotionalState(log.emotion),
+    })),
+    [logs]
+  );
 
   return (
-    <div className="space-y-6 pb-20 animate-fade-in">
+    <div className="dashboard-container">
+      <h1 className="text-2xl font-semibold mb-4">Dashboard</h1>
 
-      {/* Greeting simplified */}
-      <h1 className="text-2xl font-bold text-text-primary dark:text-white">Dashboard</h1>
+      {/* ✅ Restored List of Values */}
+      <div className="grid grid-cols-2 gap-4 mb-6">
+        {values.map((val: ValueItem) => (
+          <ValueCard
+            key={val.id}
+            value={val}
+            isActive={dashboard.activeValueId === val.id}
+            onClick={() => dashboard.setActiveValueId(val.id)}
+          />
+        ))}
+      </div>
 
-      {/* Encourage Section */}
+      {/* Mood Trends */}
+      <MoodTrendChart data={moodData} />
+
+      {/* Encouragement Section (existing) */}
       <EncourageSection
-        encouragementText={dashboard.encouragementText}
-        encouragementLoading={dashboard.encouragementLoading}
-        lastEncouragedState={dashboard.lastEncouragedState}
-        selectedFeeling={dashboard.selectedFeeling}
-        lowStateCount={dashboard.lowStateCount}
-        lcswConfig={lcswConfig}
-        values={values}
-        onSelectEmotion={() => setShowEmotionModal(true)}
+        emotion={emotionalState}
+        goals={goals}
         onActionClick={handleActionClick}
-        onResetEncouragement={() => {
-          dashboard.resetEncouragement();
-          clearEmotions();
-        }}
-        onOpenFirstValue={handleOpenFirstValue}
       />
 
-      {/* Unified Emotion Modal */}
-      <EmotionModal
-        isOpen={showEmotionModal}
-        onClose={() => setShowEmotionModal(false)}
-        onEmotionSelect={handleModalEmotionSelect}
-        selectedEmotion={
-          EMOTIONAL_STATES.find((e) => e.state === dashboard.emotionalState) || null
-        }
-      />
+      {/* Goal Progress */}
+      <GoalProgress goals={goals} onSelectValue={handleOpenFirstValue} />
 
-      {/* Rest of your file unchanged – goals, values, chart, modals, etc. */}
-      <GoalsSection goals={goals} values={values} onCompleteGoal={dashboard.handleCompleteGoal} />
-
+      {/* Crisis Modals */}
       {showResourcesModal && (
-        <CrisisResourcesModal onClose={() => setShowResourcesModal(false)} lcswConfig={lcswConfig} />
+        <CrisisResourcesModal onClose={() => setShowResourcesModal(false)} />
       )}
-      {dashboard.crisisAlert && (
-        <CrisisAlertModal data={dashboard.crisisAlert} onClose={() => dashboard.setCrisisAlert(null)} />
+      {showCrisisAlert && (
+        <CrisisAlertModal
+          onClose={() => setShowCrisisAlert(false)}
+          lcswConfig={lcswConfig}
+        />
       )}
     </div>
   );
 };
 
-export default React.memo(Dashboard);
+export default Dashboard;
