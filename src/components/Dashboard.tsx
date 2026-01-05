@@ -7,6 +7,8 @@ import CrisisResourcesModal from './CrisisResourcesModal';
 import CrisisAlertModal from './CrisisAlertModal';
 import GoalsSection from './GoalsSection';
 import ValueCard from './ValueCard';
+import EmotionModal from './EmotionModal';
+import ReflectionForm from './ReflectionForm';
 import useDashboard from '../hooks/useDashboard';
 import useEmotion from '../hooks/useEmotion';
 
@@ -27,10 +29,23 @@ const Dashboard: React.FC<DashboardProps> = ({
 }) => {
   const dashboard = useDashboard(values, logs, goals);
   const { emotionalState, setEmotionalState } = useEmotion();
+
+  const [showModal, setShowModal] = useState(false);
+  const [selectedEmotion, setSelectedEmotion] = useState<string | null>(null);
+  const [selectedValue, setSelectedValue] = useState<ValueItem | null>(null);
   const [showResourcesModal, setShowResourcesModal] = useState(false);
   const [showCrisisAlert, setShowCrisisAlert] = useState(false);
 
-  // ✅ Restore and persist selected Value ID
+  // ⏳ Persist selected value
+  useEffect(() => {
+    if (dashboard.activeValueId) {
+      localStorage.setItem(
+        'selectedValueId',
+        dashboard.activeValueId.toString()
+      );
+    }
+  }, [dashboard.activeValueId]);
+
   useEffect(() => {
     const savedId = localStorage.getItem('selectedValueId');
     if (savedId) {
@@ -38,62 +53,99 @@ const Dashboard: React.FC<DashboardProps> = ({
     }
   }, []);
 
-  useEffect(() => {
-    if (dashboard.activeValueId) {
-      localStorage.setItem('selectedValueId', dashboard.activeValueId.toString());
-    }
-  }, [dashboard.activeValueId]);
+  const handleEmotionClick = (emotionId: string) => {
+    setSelectedEmotion(emotionId);
+    setSelectedValue(null);
+    setShowModal(true);
+  };
 
-  // ✅ Restore proper action handling
+  const handleCheckInClick = (val: ValueItem) => {
+    setSelectedValue(val);
+    setSelectedEmotion(null);
+    setShowModal(true);
+  };
+
+  const closeModal = () => {
+    setShowModal(false);
+    setSelectedEmotion(null);
+    setSelectedValue(null);
+  };
+
   const handleActionClick = (action: 'reflection' | 'values' | 'resources') => {
     if (action === 'resources') setShowResourcesModal(true);
     if (action === 'values') onNavigate?.('values');
   };
 
-  const handleOpenFirstValue = () => {
-    if (values && values.length > 0) {
-      dashboard.setActiveValueId(values[0].id);
-    }
-  };
-
   const moodData = useMemo(
-    () => logs.map((log) => ({
-      date: new Date(log.date),
-      emotion: getEmotionalState(log.emotion),
-    })),
+    () =>
+      logs.map((log) => ({
+        date: new Date(log.date),
+        emotion: getEmotionalState(log.emotion),
+      })),
     [logs]
   );
 
   return (
-    <div className="dashboard-container">
-      <h1 className="text-2xl font-semibold mb-4">Dashboard</h1>
-
-      {/* ✅ Restored List of Values */}
-      <div className="grid grid-cols-2 gap-4 mb-6">
-        {values.map((val: ValueItem) => (
-          <ValueCard
-            key={val.id}
-            value={val}
-            isActive={dashboard.activeValueId === val.id}
-            onClick={() => dashboard.setActiveValueId(val.id)}
-          />
+    <div className="dashboard-container p-4">
+      {/* Emotion section */}
+      <h2 className="text-xl font-semibold mb-3">How are you feeling?</h2>
+      <div className="flex flex-wrap gap-3 mb-6">
+        {EMOTIONAL_STATES.map((emotion) => (
+          <button
+            key={emotion.id}
+            onClick={() => handleEmotionClick(emotion.id)}
+            className={`px-4 py-2 rounded-md border text-sm capitalize ${
+              emotionalState === emotion.id
+                ? 'bg-blue-500 text-white'
+                : 'bg-white hover:bg-blue-100'
+            }`}
+          >
+            {emotion.label}
+          </button>
         ))}
       </div>
 
-      {/* Mood Trends */}
+      {/* Values list section */}
+      <div className="grid grid-cols-2 gap-4 mb-8">
+        {values.map((val) => (
+          <div
+            key={val.id}
+            className="p-3 border rounded-md flex items-center justify-between"
+          >
+            <span className="font-medium text-gray-800">{val.name}</span>
+            <button
+              onClick={() => handleCheckInClick(val)}
+              className="bg-green-500 hover:bg-green-600 text-white rounded-full w-8 h-8 text-xl"
+              title="Check in"
+            >
+              +
+            </button>
+          </div>
+        ))}
+      </div>
+
+      {/* Keep existing components for familiarity */}
       <MoodTrendChart data={moodData} />
 
-      {/* Encouragement Section (existing) */}
       <EncourageSection
         emotion={emotionalState}
         goals={goals}
         onActionClick={handleActionClick}
       />
 
-      {/* Goal Progress */}
-      <GoalsSection goals={goals} onSelectValue={handleOpenFirstValue} />
+      <GoalsSection goals={goals} />
 
-      {/* Crisis Modals */}
+      {/* Modals */}
+      {showModal && (
+        <EmotionModal onClose={closeModal}>
+          <ReflectionForm
+            emotion={selectedEmotion}
+            value={selectedValue}
+            onClose={closeModal}
+          />
+        </EmotionModal>
+      )}
+
       {showResourcesModal && (
         <CrisisResourcesModal onClose={() => setShowResourcesModal(false)} />
       )}
