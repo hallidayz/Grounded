@@ -5,7 +5,7 @@ import MoodTrendChart from './MoodTrendChart';
 import EncourageSection from './EncourageSection';
 import CrisisResourcesModal from './CrisisResourcesModal';
 import CrisisAlertModal from './CrisisAlertModal';
-import GoalProgress from './GoalProgress';
+import GoalsSection from './GoalsSection';
 import ValueCard from './ValueCard';
 import useDashboard from '../hooks/useDashboard';
 import useEmotion from '../hooks/useEmotion';
@@ -91,7 +91,7 @@ const Dashboard: React.FC<DashboardProps> = ({
       />
 
       {/* Goal Progress */}
-      <GoalProgress goals={goals} onSelectValue={handleOpenFirstValue} />
+      <GoalsSection goals={goals} onSelectValue={handleOpenFirstValue} />
 
       {/* Crisis Modals */}
       {showResourcesModal && (
