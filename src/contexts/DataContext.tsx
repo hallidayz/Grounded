@@ -87,24 +87,27 @@ export const DataProvider: React.FC<DataProviderProps> = ({
   }, [initialData]);
 
   // Track when data is set via setters (from sync in AppContent)
-  // After a short delay, mark as loaded to allow saves
+  // Mark as loaded when we have userId (user is authenticated) or after data appears
   useEffect(() => {
-    // If we have any data, mark as loaded after a delay
-    if ((selectedValueIds.length > 0 || logs.length > 0 || goals.length > 0) && !hasLoadedInitialDataRef.current) {
+    // If we have userId (authenticated) OR any data, mark as loaded
+    // This allows saves to happen immediately when user selects values, even before full initialization
+    if ((userId || selectedValueIds.length > 0 || logs.length > 0 || goals.length > 0) && !hasLoadedInitialDataRef.current) {
       // Clear any existing timeout
       if (initializationTimeoutRef.current) {
         clearTimeout(initializationTimeoutRef.current);
       }
       
-      // Mark as loaded after a short delay to ensure sync completes
+      // If userId is available, mark as loaded immediately; otherwise wait briefly for sync
+      const delay = userId ? 100 : 1000;
       initializationTimeoutRef.current = setTimeout(() => {
         console.log('[DataContext] Marking data as loaded after sync', {
           values: selectedValueIds.length,
           logs: logs.length,
-          goals: goals.length
+          goals: goals.length,
+          userId: !!userId
         });
         hasLoadedInitialDataRef.current = true;
-      }, 1000);
+      }, delay);
     }
     
     return () => {
@@ -112,34 +115,43 @@ export const DataProvider: React.FC<DataProviderProps> = ({
         clearTimeout(initializationTimeoutRef.current);
       }
     };
-  }, [selectedValueIds.length, logs.length, goals.length]);
+  }, [selectedValueIds.length, logs.length, goals.length, userId]);
 
   // Save app data to database whenever it changes
-  // Only save after initial data has been loaded to prevent overwriting with empty arrays
+  // Allow saves as soon as userId is available - don't wait for slow initialization flags
   useEffect(() => {
-    if (userId && authState === 'app' && hasLoadedInitialDataRef.current) {
-      const saveData = async () => {
-        try {
-          console.log('[DataContext] Saving app data', {
-            values: selectedValueIds.length,
-            logs: logs.length,
-            goals: goals.length
-          });
-          await dbService.saveAppData(userId, {
-            settings,
-            logs,
-            goals,
-            values: selectedValueIds,
-            lcswConfig: settings.lcswConfig,
-          });
-        } catch (error) {
-          console.error('Error saving app data:', error);
-        }
-      };
+    if (userId && authState === 'app') {
+      // If flag isn't set yet but we have data, set it immediately to allow saves
+      if (!hasLoadedInitialDataRef.current && (selectedValueIds.length > 0 || logs.length > 0 || goals.length > 0)) {
+        hasLoadedInitialDataRef.current = true;
+      }
       
-      // Debounce saves
-      const timeoutId = setTimeout(saveData, 500);
-      return () => clearTimeout(timeoutId);
+      // Save if flag is set OR if we have any data (user is actively using the app)
+      if (hasLoadedInitialDataRef.current || selectedValueIds.length > 0 || logs.length > 0 || goals.length > 0) {
+        const saveData = async () => {
+          try {
+            console.log('[DataContext] Saving app data', {
+              values: selectedValueIds.length,
+              logs: logs.length,
+              goals: goals.length,
+              userId
+            });
+            await dbService.saveAppData(userId, {
+              settings,
+              logs,
+              goals,
+              values: selectedValueIds,
+              lcswConfig: settings.lcswConfig,
+            });
+          } catch (error) {
+            console.error('Error saving app data:', error);
+          }
+        };
+        
+        // Debounce saves
+        const timeoutId = setTimeout(saveData, 500);
+        return () => clearTimeout(timeoutId);
+      }
     }
   }, [userId, settings, logs, goals, selectedValueIds, authState]);
 

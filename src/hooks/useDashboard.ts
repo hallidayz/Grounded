@@ -96,7 +96,15 @@ export function useDashboard({
   const saveEmotionInteraction = useCallback(
     async (emotion: string, subEmotion: string, valueId: string) => {
       try {
-        const userId = sessionStorage.getItem('userId') || 'anonymous';
+        // Get userId properly from getCurrentUser or sessionStorage
+        let userId: string = 'anonymous';
+        try {
+          const user = await getCurrentUser();
+          userId = user?.id || sessionStorage.getItem('userId') || 'anonymous';
+        } catch (err) {
+          userId = sessionStorage.getItem('userId') || 'anonymous';
+        }
+
         const timestamp = new Date().toISOString();
         const logId = `feeling-${Date.now()}-${Math.random()
           .toString(36)
@@ -113,6 +121,7 @@ export function useDashboard({
         const feelingLog: FeelingLog = {
           id: logId,
           timestamp,
+          userId: userId !== 'anonymous' ? userId : undefined, // Add userId to feelingLog
           emotion,
           subEmotion,
           jsonIn,
@@ -186,6 +195,16 @@ export function useDashboard({
     async (valueId: string) => {
       if (!reflectionText.trim() && !goalText.trim()) return;
 
+      // Get userId from getCurrentUser or sessionStorage
+      let userId: string | null = null;
+      try {
+        const user = await getCurrentUser();
+        userId = user?.id || null;
+      } catch (err) {
+        // Fallback to sessionStorage
+        userId = sessionStorage.getItem('userId') || null;
+      }
+
       const timestamp = new Date().toISOString();
       const hasGoal = goalText.trim().length > 0;
 
@@ -193,6 +212,7 @@ export function useDashboard({
         const newGoal: Goal = {
           id: `${Date.now()}-goal`,
           valueId,
+          userId: userId || undefined, // Add userId to goal
           text: goalText,
           frequency: goalFreq,
           completed: false,
@@ -216,6 +236,7 @@ export function useDashboard({
       const feelingLog: FeelingLog = {
         id: `${timestamp}-feeling`,
         timestamp,
+        userId: userId || undefined, // Add userId to feelingLog
         emotion: emotionalState,
         subEmotion: selectedFeeling,
         reflection: reflectionText,
