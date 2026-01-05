@@ -27,8 +27,9 @@ const Dashboard: React.FC<DashboardProps> = ({
   onNavigate,
 }) => {
   const dashboard = useDashboard(values, logs, goals);
-  const { emotionalState, setEmotionalState } = useEmotion();
 
+  // ✅ use local state — no more useEmotion()
+  const [emotionalState, setEmotionalState] = useState<string | null>(null);
   const [showModal, setShowModal] = useState(false);
   const [selectedEmotion, setSelectedEmotion] = useState<string | null>(null);
   const [selectedValue, setSelectedValue] = useState<ValueItem | null>(null);
