@@ -11,6 +11,9 @@ import EmotionModal from './EmotionModal';
 import ReflectionForm from './ReflectionForm';
 import { useDashboard } from '../hooks/useDashboard';
 
+/**
+ * Dashboard Props
+ */
 interface DashboardProps {
   values: ValueItem[];
   logs: LogEntry[];
@@ -19,6 +22,9 @@ interface DashboardProps {
   onNavigate?: (screen: string) => void;
 }
 
+/**
+ * Main Dashboard Component
+ */
 const Dashboard: React.FC<DashboardProps> = ({
   values,
   logs,
@@ -26,9 +32,10 @@ const Dashboard: React.FC<DashboardProps> = ({
   lcswConfig,
   onNavigate,
 }) => {
-  const dashboard = useDashboard(values, logs, goals);
+  // ✅ useDashboard using object‑arg pattern
+  const dashboard = useDashboard({ values, goals, logs, lcswConfig });
 
-  // ✅ use local state — no more useEmotion()
+  // Local UI state
   const [emotionalState, setEmotionalState] = useState<string | null>(null);
   const [showModal, setShowModal] = useState(false);
   const [selectedEmotion, setSelectedEmotion] = useState<string | null>(null);
@@ -36,29 +43,33 @@ const Dashboard: React.FC<DashboardProps> = ({
   const [showResourcesModal, setShowResourcesModal] = useState(false);
   const [showCrisisAlert, setShowCrisisAlert] = useState(false);
 
-  // ⏳ Persist selected value
+  // Persist and restore the selected value card
   useEffect(() => {
     if (dashboard.activeValueId) {
-      localStorage.setItem(
-        'selectedValueId',
-        dashboard.activeValueId.toString()
-      );
+      localStorage.setItem('selectedValueId', dashboard.activeValueId.toString());
     }
   }, [dashboard.activeValueId]);
 
   useEffect(() => {
     const savedId = localStorage.getItem('selectedValueId');
     if (savedId) {
-      dashboard.setActiveValueId(Number(savedId));
+      dashboard.setActiveValueId(savedId);
     }
   }, []);
 
+  /**
+   * Emotion button handler
+   */
   const handleEmotionClick = (emotionId: string) => {
     setSelectedEmotion(emotionId);
+    setEmotionalState(emotionId);
     setSelectedValue(null);
     setShowModal(true);
   };
 
+  /**
+   * Value check‑in (“+”) button handler
+   */
   const handleCheckInClick = (val: ValueItem) => {
     setSelectedValue(val);
     setSelectedEmotion(null);
@@ -71,11 +82,17 @@ const Dashboard: React.FC<DashboardProps> = ({
     setSelectedValue(null);
   };
 
+  /**
+   * EncourageSection action handler
+   */
   const handleActionClick = (action: 'reflection' | 'values' | 'resources') => {
     if (action === 'resources') setShowResourcesModal(true);
     if (action === 'values') onNavigate?.('values');
   };
 
+  /**
+   * Build mood trend chart dataset
+   */
   const moodData = useMemo(
     () =>
       logs.map((log) => ({
@@ -86,18 +103,18 @@ const Dashboard: React.FC<DashboardProps> = ({
   );
 
   return (
-    <div className="dashboard-container p-4">
-      {/* Emotion section */}
+    <div className="dashboard-container px-4 pb-12">
+      {/* Emotion Section */}
       <h2 className="text-xl font-semibold mb-3">How are you feeling?</h2>
       <div className="flex flex-wrap gap-3 mb-6">
         {EMOTIONAL_STATES.map((emotion) => (
           <button
             key={emotion.id}
             onClick={() => handleEmotionClick(emotion.id)}
-            className={`px-4 py-2 rounded-md border text-sm capitalize ${
+            className={`px-4 py-2 rounded-md border text-sm capitalize transition-colors duration-150 ${
               emotionalState === emotion.id
-                ? 'bg-blue-500 text-white'
-                : 'bg-white hover:bg-blue-100'
+                ? 'bg-blue-500 text-white border-blue-600'
+                : 'bg-white hover:bg-blue-100 border-gray-300 text-gray-700'
             }`}
           >
             {emotion.label}
@@ -105,17 +122,17 @@ const Dashboard: React.FC<DashboardProps> = ({
         ))}
       </div>
 
-      {/* Values list section */}
+      {/* Values List Section */}
       <div className="grid grid-cols-2 gap-4 mb-8">
         {values.map((val) => (
           <div
             key={val.id}
-            className="p-3 border rounded-md flex items-center justify-between"
+            className="p-3 border rounded-md flex items-center justify-between shadow-sm hover:shadow transition"
           >
             <span className="font-medium text-gray-800">{val.name}</span>
             <button
               onClick={() => handleCheckInClick(val)}
-              className="bg-green-500 hover:bg-green-600 text-white rounded-full w-8 h-8 text-xl"
+              className="bg-green-500 hover:bg-green-600 text-white rounded-full w-8 h-8 text-xl flex items-center justify-center leading-[1]"
               title="Check in"
             >
               +
@@ -124,18 +141,18 @@ const Dashboard: React.FC<DashboardProps> = ({
         ))}
       </div>
 
-      {/* Keep existing components for familiarity */}
+      {/* Mood/Encouragement/Goals */}
       <MoodTrendChart data={moodData} />
 
       <EncourageSection
-        emotion={emotionalState}
+        emotion={selectedEmotion}
         goals={goals}
         onActionClick={handleActionClick}
       />
 
       <GoalsSection goals={goals} />
 
-      {/* Modals */}
+      {/* Shared Modal for Emotion + Value reflections */}
       {showModal && (
         <EmotionModal onClose={closeModal}>
           <ReflectionForm
@@ -146,9 +163,11 @@ const Dashboard: React.FC<DashboardProps> = ({
         </EmotionModal>
       )}
 
+      {/* Crisis Resource & Alert Modals */}
       {showResourcesModal && (
         <CrisisResourcesModal onClose={() => setShowResourcesModal(false)} />
       )}
+
       {showCrisisAlert && (
         <CrisisAlertModal
           onClose={() => setShowCrisisAlert(false)}
