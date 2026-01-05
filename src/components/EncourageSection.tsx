@@ -18,6 +18,7 @@ interface EncourageSectionProps {
   onActionClick: (action: 'reflection' | 'values' | 'resources') => void;
   onResetEncouragement: () => void;
   onOpenFirstValue: () => void;
+  dashboardActiveValueId: string | null; // ADDED PROPS
 }
 
 const EncourageSection: React.FC<EncourageSectionProps> = ({
@@ -32,6 +33,7 @@ const EncourageSection: React.FC<EncourageSectionProps> = ({
   onActionClick,
   onResetEncouragement,
   onOpenFirstValue,
+  dashboardActiveValueId // ADDED PROPS
 }) => {
   // Get emoji from emotional state config
   const stateConfig = lastEncouragedState ? getEmotionalState(lastEncouragedState as EmotionalState) : null;
@@ -39,13 +41,14 @@ const EncourageSection: React.FC<EncourageSectionProps> = ({
 
   return (
     <div className="bg-white dark:bg-dark-bg-secondary rounded-xl sm:rounded-2xl border border-border-soft dark:border-dark-border shadow-sm p-4 sm:p-5">
-      {!encouragementText && (
+      {/* Render EmotionSelector only when no value card is active */}
+      {dashboardActiveValueId === null ? (
         <EmotionSelector
           onSelect={onSelectEmotion}
           selected={lastEncouragedState as EmotionalState | undefined}
           disabled={encouragementLoading}
         />
-      )}
+      ) : null}
 
       {/* Display AI encouragement message */}
       {encouragementText && (
@@ -76,7 +79,7 @@ const EncourageSection: React.FC<EncourageSectionProps> = ({
               }
             }}
           />
-          
+
           {/* Safety net message for repeated low states */}
           {lowStateCount >= 3 && (lastEncouragedState === 'drained' || lastEncouragedState === 'heavy' || lastEncouragedState === 'overwhelmed') && (
             <div className="mt-3 p-4 bg-blue-50 dark:bg-blue-900/20 rounded-xl border border-blue-200 dark:border-blue-800">
@@ -105,4 +108,3 @@ const EncourageSection: React.FC<EncourageSectionProps> = ({
 };
 
 export default EncourageSection;
-
