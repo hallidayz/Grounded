@@ -9,6 +9,8 @@ import SkeletonCard from './SkeletonCard';
 import CrisisResourcesModal from './CrisisResourcesModal';
 import CrisisAlertModal from './CrisisAlertModal';
 import { useDashboard } from '../hooks/useDashboard';
+// ADD THIS IMPORT
+import { useEmotion } from '../contexts/EmotionContext';
 
 interface DashboardProps {
   values: ValueItem[];
@@ -17,7 +19,7 @@ interface DashboardProps {
   onUpdateGoals: (goals: Goal[]) => void;
   logs: LogEntry[];
   lcswConfig?: LCSWConfig;
-  onNavigate?: (view: 'values' | 'report' | 'vault') => void;
+  onNavigate?: (view: 'values' | 'report' | 'vault' | 'home') => void;
   onReset?: () => void;
   initialValueId?: string | null;
 }
@@ -25,24 +27,55 @@ interface DashboardProps {
 const Dashboard: React.FC<DashboardProps> = ({ values, onLog, goals, onUpdateGoals, logs, lcswConfig, onNavigate, onReset, initialValueId }) => {
   const dashboard = useDashboard(values, goals, logs, lcswConfig, onLog, onUpdateGoals);
   const [showResourcesModal, setShowResourcesModal] = useState(false);
+  
+  // ADD THIS: Use shared emotion context
+  const { emotionState, setPrimaryEmotion, setSubEmotion, clearEmotions } = useEmotion();
+
+  // Sync shared emotion state with dashboard state when emotion is selected from EncourageSection
+  useEffect(() => {
+    // If emotion was selected on dashboard (from EncourageSection), sync to shared state
+    if (dashboard.lastEncouragedState && dashboard.lastEncouragedState !== emotionState.primaryEmotion) {
+      setPrimaryEmotion(dashboard.lastEncouragedState, 'dashboard');
+    }
+  }, [dashboard.lastEncouragedState]);
+
+  // Sync shared emotion state with dashboard when selectedFeeling changes
+  useEffect(() => {
+    if (dashboard.selectedFeeling && dashboard.selectedFeeling !== emotionState.subEmotion) {
+      setSubEmotion(dashboard.selectedFeeling);
+    }
+  }, [dashboard.selectedFeeling]);
+
+  // When opening a ValueCard (check-in), pre-populate from shared state if available
+  useEffect(() => {
+    if (dashboard.activeValueId && emotionState.primaryEmotion && emotionState.source === 'dashboard') {
+      // User selected emotion on dashboard, now opening check-in
+      // Sync the shared state to dashboard's internal state
+      if (emotionState.primaryEmotion !== dashboard.emotionalState) {
+        dashboard.setEmotionalState(emotionState.primaryEmotion as any);
+      }
+      if (emotionState.subEmotion && emotionState.subEmotion !== dashboard.selectedFeeling) {
+        dashboard.setSelectedFeeling(emotionState.subEmotion);
+      }
+    }
+  }, [dashboard.activeValueId, emotionState.primaryEmotion, emotionState.subEmotion]);
 
   // Reset active value card when navigating to home, or set initial value if provided
   useEffect(() => {
     if (initialValueId) {
       dashboard.setActiveValueId(initialValueId);
-      // Clear initialValueId after it's been used (by calling a callback if provided)
-      // The parent component (App.tsx) should clear it after this effect runs
     } else {
-    const handleReset = () => {
-      dashboard.setActiveValueId(null);
-    };
-    // Store reset handler for App.tsx to call
-    (window as any).__dashboardReset = handleReset;
-    return () => {
-      delete (window as any).__dashboardReset;
-    };
+      const handleReset = () => {
+        dashboard.setActiveValueId(null);
+        // Also clear shared emotion state when resetting
+        clearEmotions();
+      };
+      (window as any).__dashboardReset = handleReset;
+      return () => {
+        delete (window as any).__dashboardReset;
+      };
     }
-  }, [initialValueId, dashboard]);
+  }, [initialValueId, dashboard, clearEmotions]);
 
   // Get personalized greeting based on time of day
   const getGreeting = () => {
@@ -111,10 +144,17 @@ const Dashboard: React.FC<DashboardProps> = ({ values, onLog, goals, onUpdateGoa
       if (dashboard.lastEncouragedState) {
         dashboard.setEmotionalState(dashboard.lastEncouragedState as any);
       }
-      // selectedFeeling is already preserved from the encourage section state
       // Open the first value card for reflection
       dashboard.setActiveValueId(values[0].id);
     }
+  };
+
+  // UPDATED: Handle emotion selection from EncourageSection
+  const handleEmotionSelect = (emotion: string) => {
+    // Update shared state
+    setPrimaryEmotion(emotion, 'dashboard');
+    // Also update dashboard's internal state
+    dashboard.handleEmotionalEncourage(emotion);
   };
 
   return (
@@ -130,15 +170,13 @@ const Dashboard: React.FC<DashboardProps> = ({ values, onLog, goals, onUpdateGoa
           </p>
         </div>
         <div className="text-left sm:text-right">
-          {/* PREV: text-yellow-warm */}
           <p className="text-xs sm:text-sm font-black text-brand dark:text-brand-light uppercase tracking-widest">Active Focus</p>
           <p className="text-sm sm:text-base font-black text-text-primary dark:text-white leading-tight">{values.length} Core Values</p>
         </div>
       </div>
 
-      {/* Today's Focus Section - Moved to top and made compact */}
+      {/* Today's Focus Section */}
       {topValue && (
-        /* PREV: from-yellow-warm/20 to-yellow-light/20 dark:from-yellow-warm/10 dark:to-yellow-light/10 */
         <div className="bg-gradient-to-br from-brand/10 to-brand-light/10 dark:from-brand/20 dark:to-brand-light/20 rounded-xl sm:rounded-2xl p-3 sm:p-4">
           <div className="flex items-center justify-between gap-2 sm:gap-3">
             <div className="flex items-center gap-2 sm:gap-3 flex-1 min-w-0">
@@ -167,7 +205,7 @@ const Dashboard: React.FC<DashboardProps> = ({ values, onLog, goals, onUpdateGoa
         </div>
       </div>
 
-      {/* Encourage Section */}
+      {/* Encourage Section - UPDATED to use shared emotion handler */}
       <EncourageSection
         encouragementText={dashboard.encouragementText}
         encouragementLoading={dashboard.encouragementLoading}
@@ -176,9 +214,12 @@ const Dashboard: React.FC<DashboardProps> = ({ values, onLog, goals, onUpdateGoa
         lowStateCount={dashboard.lowStateCount}
         lcswConfig={lcswConfig}
         values={values}
-        onSelectEmotion={dashboard.handleEmotionalEncourage}
+        onSelectEmotion={handleEmotionSelect}
         onActionClick={handleActionClick}
-        onResetEncouragement={dashboard.resetEncouragement}
+        onResetEncouragement={() => {
+          dashboard.resetEncouragement();
+          clearEmotions(); // Also clear shared state
+        }}
         onOpenFirstValue={handleOpenFirstValue}
       />
 
@@ -264,32 +305,54 @@ const Dashboard: React.FC<DashboardProps> = ({ values, onLog, goals, onUpdateGoa
               onToggleActive={() => {
                 if (isActive) {
                   // Clean reset when closing
-                  dashboard.setEmotionalState('neutral' as any); // Use neutral instead of mixed
+                  dashboard.setEmotionalState('neutral' as any);
                   dashboard.setSelectedFeeling(null);
                   dashboard.setShowFeelingsList(false);
                   dashboard.setActiveValueId(null);
+                  // Clear shared emotion state when closing check-in
+                  clearEmotions();
                 } else {
-                  // Clean reset when opening
-                  dashboard.setEmotionalState('neutral' as any);
-                  dashboard.setSelectedFeeling(null);
+                  // When opening, check if we have a pre-selected emotion from dashboard
+                  if (emotionState.primaryEmotion && emotionState.source === 'dashboard') {
+                    // Use the emotion selected on dashboard
+                    dashboard.setEmotionalState(emotionState.primaryEmotion as any);
+                    if (emotionState.subEmotion) {
+                      dashboard.setSelectedFeeling(emotionState.subEmotion);
+                    }
+                  } else {
+                    // Clean reset when opening without pre-selection
+                    dashboard.setEmotionalState('neutral' as any);
+                    dashboard.setSelectedFeeling(null);
+                  }
                   dashboard.setShowFeelingsList(false);
                   dashboard.setActiveValueId(value.id);
                 }
               }}
-              onEmotionalStateChange={(state) => dashboard.setEmotionalState(state as any)}
+              onEmotionalStateChange={(state) => {
+                dashboard.setEmotionalState(state as any);
+                // Sync to shared state
+                setPrimaryEmotion(state, 'checkin');
+              }}
               onShowFeelingsListToggle={() => dashboard.setShowFeelingsList(!dashboard.showFeelingsList)}
-              onSelectedFeelingChange={(feeling) => dashboard.setSelectedFeeling(feeling)}
+              onSelectedFeelingChange={(feeling) => {
+                dashboard.setSelectedFeeling(feeling);
+                // Sync to shared state
+                setSubEmotion(feeling);
+              }}
               onReflectionTextChange={(text) => dashboard.setReflectionText(text)}
               onGoalTextChange={(text) => dashboard.setGoalText(text)}
               onGoalFreqChange={(freq) => dashboard.setGoalFreq(freq)}
               onSuggestGoal={() => activeValue && dashboard.handleSuggestGoal(activeValue)}
               onCompleteGoal={dashboard.handleCompleteGoal}
-              onCommit={() => dashboard.handleCommit(value.id)}
+              onCommit={() => {
+                dashboard.handleCommit(value.id);
+                // Clear shared emotion state after committing
+                clearEmotions();
+              }}
               getReflectionPlaceholder={dashboard.getReflectionPlaceholder}
               onTriggerReflectionAnalysis={dashboard.triggerReflectionAnalysis}
               lcswConfig={lcswConfig}
               onNavigateToHome={() => {
-                // Navigate to home and open this value card
                 onNavigate?.('home');
                 dashboard.setActiveValueId(value.id);
               }}

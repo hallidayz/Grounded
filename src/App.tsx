@@ -13,6 +13,8 @@ import SkeletonCard from './components/SkeletonCard';
 import PWAInstallPrompt from './components/PWAInstallPrompt';
 import FeedbackButton from './components/FeedbackButton';
 import Settings from './components/Settings';
+import { EmotionProvider } from './contexts/EmotionContext';
+
 
 // Code splitting: Lazy load heavy components
 const Dashboard = lazy(() => import('./components/Dashboard'));
@@ -1235,8 +1237,9 @@ const App: React.FC = () => {
   }
   
   return (
-    <ErrorBoundary>
-      <div className="min-h-screen bg-bg-primary dark:bg-dark-bg-primary text-text-primary dark:text-white flex flex-col transition-colors duration-300 pt-[env(safe-area-inset-top)] pb-[env(safe-area-inset-bottom)]">
+    <EmotionProvider>
+      <ErrorBoundary>
+        <div className="min-h-screen bg-bg-primary dark:bg-dark-bg-primary text-text-primary dark:text-white flex flex-col transition-colors duration-300 pt-[env(safe-area-inset-top)] pb-[env(safe-area-inset-bottom)]">
         <header className="bg-white dark:bg-dark-bg-primary border-b border-border-soft dark:border-dark-border sticky top-0 z-40 shadow-sm dark:shadow-lg">
         <div className="max-w-4xl mx-auto px-3 sm:px-4 h-14 flex items-center justify-between">
           <div className="flex items-center space-x-2">
@@ -1502,6 +1505,7 @@ const App: React.FC = () => {
         </footer>
       </div>
     </ErrorBoundary>
+  </EmotionProvider>
   );
   
   // Final safety net - should never reach here, but if we do, show something
