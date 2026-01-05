@@ -9,8 +9,7 @@ import GoalsSection from './GoalsSection';
 import ValueCard from './ValueCard';
 import EmotionModal from './EmotionModal';
 import ReflectionForm from './ReflectionForm';
-import useDashboard from '../hooks/useDashboard';
-import useEmotion from '../hooks/useEmotion';
+import { useDashboard } from '../hooks/useDashboard';
 
 interface DashboardProps {
   values: ValueItem[];
