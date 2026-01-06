@@ -29,6 +29,24 @@ interface AuthProviderProps {
   onLogoutComplete?: () => void;
 }
 
+// Persistent Storage API helpers for Android PWA credential persistence
+const requestPersistentStorage = async (): Promise<boolean> => {
+  if (navigator.storage?.persist) {
+    const isPersisted = await navigator.storage.persist();
+    console.log(`[AuthContext] Persistent storage granted: ${isPersisted}`);
+    return isPersisted;
+  }
+  console.warn('[AuthContext] Persistent Storage API not supported');
+  return false;
+};
+
+const checkStoragePersistence = async (): Promise<boolean> => {
+  if (navigator.storage?.persisted) {
+    return await navigator.storage.persisted();
+  }
+  return false;
+};
+
 export const AuthProvider: React.FC<AuthProviderProps> = ({ 
   children, 
   onLoginComplete,
@@ -54,6 +72,11 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({
       
       try {
         console.log('[AuthContext] Initializing auth state...');
+        // Request persistent storage for Android PWA credential persistence
+        const isPersisted = await requestPersistentStorage();
+        if (!isPersisted) {
+          console.warn('[AuthContext] Persistent storage not granted - credentials may be lost');
+        }
         // Ensure auth store is initialized before getting user
         const { default: authStore } = await import('../services/authStore');
         try {
@@ -189,6 +212,8 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({
   const handleLogin = useCallback(async (loggedInUserId: string) => {
     try {
       console.log('[LOGIN] handleLogin called with userId:', loggedInUserId);
+      // Request persistent storage to protect credentials
+      await requestPersistentStorage();
       setUserId(loggedInUserId);
       
       // Reset initialization flags to allow app to continue after login
@@ -308,6 +333,23 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({
     setUserId(null);
     onLogoutComplete?.();
   }, [onLogoutComplete]);
+
+  // Monitor storage persistence and re-request if lost (e.g., on app resume)
+  useEffect(() => {
+    const checkOnResume = async () => {
+      if (!(await checkStoragePersistence()) && userId) {
+        console.warn('[AuthContext] Storage permission lost - re-requesting');
+        await requestPersistentStorage();
+      }
+    };
+    
+    const handler = () => {
+      if (document.visibilityState === 'visible') checkOnResume();
+    };
+    
+    document.addEventListener('visibilitychange', handler);
+    return () => document.removeEventListener('visibilitychange', handler);
+  }, [userId]);
 
   return (
     <AuthContext.Provider
