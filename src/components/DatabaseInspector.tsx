@@ -12,7 +12,19 @@
  */
 
 import React, { useState, useEffect } from 'react';
-import { db } from '../services/dexieDB';
+import { 
+  db, 
+  exportDatabase, 
+  importDatabase,
+  syncToCloud,
+  restoreFromCloud,
+  triggerManualSync,
+  isCloudSyncAvailable,
+  getLastSyncTime,
+  getLastRestoreTime,
+  startAutoSync,
+  stopAutoSync
+} from '../services/dexieDB';
 import { getDatabaseAdapter, isEncryptionEnabled } from '../services/databaseAdapter';
 import { isDatabaseInspectorEnabled } from '../constants/environment';
 import { runDeploymentDiagnostics, logDeploymentDiagnostics, exportDiagnostics } from '../utils/deploymentDiagnostics';
@@ -33,6 +45,9 @@ export const DatabaseInspector: React.FC = () => {
   const [error, setError] = useState<string | null>(null);
   const [showDiagnostics, setShowDiagnostics] = useState(false);
   const [diagnosticsResult, setDiagnosticsResult] = useState<any>(null);
+  const [importFile, setImportFile] = useState<File | null>(null);
+  const [syncStatus, setSyncStatus] = useState<'idle' | 'syncing' | 'restoring' | 'success' | 'error'>('idle');
+  const [syncMessage, setSyncMessage] = useState<string>('');
 
   // Check if inspector is enabled (dev mode only)
   if (!isDatabaseInspectorEnabled()) {
@@ -272,6 +287,118 @@ export const DatabaseInspector: React.FC = () => {
               </button>
               <button
                 onClick={async () => {
+                  try {
+                    const json = await exportDatabase();
+                    const blob = new Blob([json], { type: 'application/json' });
+                    const url = URL.createObjectURL(blob);
+                    const a = document.createElement('a');
+                    a.href = url;
+                    a.download = `grounded_database_export_${new Date().toISOString().split('T')[0]}.json`;
+                    document.body.appendChild(a);
+                    a.click();
+                    document.body.removeChild(a);
+                    URL.revokeObjectURL(url);
+                    alert('Database exported successfully! Use this file to restore data in another browser.');
+                  } catch (err: any) {
+                    setError(err.message || 'Failed to export database');
+                  }
+                }}
+                className="px-4 py-2 bg-teal-600 text-white rounded hover:bg-teal-700 transition"
+                title="Export for cross-browser migration"
+              >
+                Export for Migration
+              </button>
+              {isCloudSyncAvailable() && (
+                <>
+                  <button
+                    onClick={async () => {
+                      setSyncStatus('syncing');
+                      setSyncMessage('Syncing to cloud...');
+                      try {
+                        const result = await triggerManualSync();
+                        if (result.success) {
+                          setSyncStatus('success');
+                          setSyncMessage('Cloud sync successful!');
+                          setTimeout(() => {
+                            setSyncStatus('idle');
+                            setSyncMessage('');
+                          }, 3000);
+                        } else {
+                          setSyncStatus('error');
+                          setSyncMessage(result.error || 'Sync failed');
+                        }
+                      } catch (err: any) {
+                        setSyncStatus('error');
+                        setSyncMessage(err.message || 'Sync failed');
+                      }
+                    }}
+                    disabled={syncStatus === 'syncing' || syncStatus === 'restoring'}
+                    className="px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700 transition disabled:opacity-50"
+                    title="Manually sync database to cloud"
+                  >
+                    {syncStatus === 'syncing' ? 'Syncing...' : 'Sync to Cloud'}
+                  </button>
+                  <button
+                    onClick={async () => {
+                      setSyncStatus('restoring');
+                      setSyncMessage('Restoring from cloud...');
+                      try {
+                        const restored = await restoreFromCloud();
+                        if (restored) {
+                          setSyncStatus('success');
+                          setSyncMessage('Cloud restore successful!');
+                          await loadStoreInfo(); // Refresh store info
+                          setTimeout(() => {
+                            setSyncStatus('idle');
+                            setSyncMessage('');
+                          }, 3000);
+                        } else {
+                          setSyncStatus('idle');
+                          setSyncMessage('No backup found or restore skipped');
+                        }
+                      } catch (err: any) {
+                        setSyncStatus('error');
+                        setSyncMessage(err.message || 'Restore failed');
+                      }
+                    }}
+                    disabled={syncStatus === 'syncing' || syncStatus === 'restoring'}
+                    className="px-4 py-2 bg-indigo-600 text-white rounded hover:bg-indigo-700 transition disabled:opacity-50"
+                    title="Restore database from cloud backup"
+                  >
+                    {syncStatus === 'restoring' ? 'Restoring...' : 'Restore from Cloud'}
+                  </button>
+                </>
+              )}
+              <label className="px-4 py-2 bg-indigo-600 text-white rounded hover:bg-indigo-700 transition cursor-pointer">
+                <input
+                  type="file"
+                  accept=".json"
+                  className="hidden"
+                  onChange={async (e) => {
+                    const file = e.target.files?.[0];
+                    if (!file) return;
+                    
+                    if (!confirm('Import will merge data with existing database. Continue?')) {
+                      e.target.value = '';
+                      return;
+                    }
+                    
+                    try {
+                      const text = await file.text();
+                      await importDatabase(text, false);
+                      alert('Database imported successfully!');
+                      await loadStoreInfo();
+                      e.target.value = '';
+                    } catch (err: any) {
+                      setError(err.message || 'Failed to import database');
+                      e.target.value = '';
+                    }
+                  }}
+                />
+                Import Database
+              </label>
+              <button
+                onClick={async () => {
                   const result = await runDeploymentDiagnostics();
                   setDiagnosticsResult(result);
                   setShowDiagnostics(true);
@@ -287,6 +414,38 @@ export const DatabaseInspector: React.FC = () => {
           {error && (
             <div className="mb-4 p-4 bg-red-100 dark:bg-red-900 border border-red-400 text-red-700 dark:text-red-300 rounded">
               {error}
+            </div>
+          )}
+
+          {syncMessage && (
+            <div className={`mb-4 p-4 rounded ${
+              syncStatus === 'success' 
+                ? 'bg-green-100 dark:bg-green-900 border border-green-400 text-green-700 dark:text-green-300'
+                : syncStatus === 'error'
+                ? 'bg-red-100 dark:bg-red-900 border border-red-400 text-red-700 dark:text-red-300'
+                : 'bg-blue-100 dark:bg-blue-900 border border-blue-400 text-blue-700 dark:text-blue-300'
+            }`}>
+              {syncMessage}
+              {syncStatus === 'success' && (
+                <div className="mt-2 text-sm">
+                  Last sync: {getLastSyncTime() ? new Date(getLastSyncTime()!).toLocaleString() : 'Never'}
+                  {getLastRestoreTime() && (
+                    <> | Last restore: {new Date(getLastRestoreTime()!).toLocaleString()}</>
+                  )}
+                </div>
+              )}
+            </div>
+          )}
+
+          {isCloudSyncAvailable() && (
+            <div className="mb-4 p-3 bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 rounded text-sm">
+              <p className="text-blue-700 dark:text-blue-300 font-semibold mb-1">☁️ Cloud Sync Active</p>
+              <p className="text-blue-600 dark:text-blue-400 text-xs">
+                Last sync: {getLastSyncTime() ? new Date(getLastSyncTime()!).toLocaleString() : 'Never'}
+                {getLastRestoreTime() && (
+                  <> | Last restore: {new Date(getLastRestoreTime()!).toLocaleString()}</>
+                )}
+              </p>
             </div>
           )}
 

@@ -322,6 +322,33 @@ export function useAppInitialization(options: UseAppInitializationOptions): AppI
         }
         
         console.log('[INIT] Starting database initialization with 10s timeout...');
+        
+        // Attempt to recover exported data if available (from version recovery)
+        try {
+          const { recoverExportedData } = await import('../services/dexieDB');
+          const recovered = await recoverExportedData();
+          if (recovered) {
+            console.log('[INIT] Data recovered from previous version error');
+          }
+        } catch (recoveryError) {
+          // Non-critical - recovery is optional
+          console.warn('[INIT] Data recovery check failed (non-critical):', recoveryError);
+        }
+        
+        // Attempt cloud restore if enabled (after local recovery)
+        try {
+          const { restoreFromCloud, startAutoSync } = await import('../services/dexieDB');
+          const cloudRestored = await restoreFromCloud();
+          if (cloudRestored) {
+            console.log('[INIT] Data restored from cloud backup');
+          }
+          // Start auto-sync after restore attempt (if not already started)
+          startAutoSync();
+        } catch (cloudError) {
+          // Non-critical - cloud sync is optional
+          console.warn('[INIT] Cloud restore check failed (non-critical):', cloudError);
+        }
+        
         const dbInitPromise = adapter.init();
         const dbInitTimeout = new Promise((_, reject) => {
           setTimeout(() => reject(new Error('Database initialization timeout after 10 seconds')), 10000);
