@@ -316,6 +316,26 @@ class GroundedDB extends Dexie {
     // Clean up old database before opening
     await this.cleanupOldDatabase();
     
+    // Check existing database version first to prevent VersionError
+    const existingVersion = await this.checkExistingVersion();
+    if (existingVersion !== null && existingVersion > CURRENT_DB_VERSION) {
+      console.warn(
+        `[Dexie] Existing database version (${existingVersion}) is higher than requested (${CURRENT_DB_VERSION}). Resetting database...`
+      );
+      // Attempt to export data before reset
+      try {
+        const exportData = await exportFromRawIndexedDB();
+        if (exportData && Object.keys(exportData).length > 0) {
+          sessionStorage.setItem('dexie_export_before_recovery', JSON.stringify(exportData));
+          console.log('[Dexie] Data exported before reset - stored in sessionStorage');
+        }
+      } catch (exportError) {
+        console.warn('[Dexie] Could not export data before reset:', exportError);
+      }
+      // Reset database to current version
+      await this.resetDatabase();
+    }
+    
     // Check for version conflicts and reset if needed
     try {
       await this.openDatabaseWithRecovery();
@@ -324,10 +344,37 @@ class GroundedDB extends Dexie {
       if (error?.name === 'VersionError' || error?.message?.includes('version')) {
         console.warn('[Dexie] Version error persists after recovery attempt - performing hard reset');
         await this.resetDatabase();
+        // Try opening again after reset
+        await this.open();
       } else {
         throw error;
       }
     }
+  }
+
+  /**
+   * Check the existing database version using raw IndexedDB API
+   * Returns null if database doesn't exist, or the version number if it does
+   */
+  private async checkExistingVersion(): Promise<number | null> {
+    return new Promise((resolve) => {
+      const request = indexedDB.open(DB_NAME);
+      request.onsuccess = () => {
+        const db = request.result;
+        const version = db.version;
+        db.close();
+        resolve(version);
+      };
+      request.onerror = () => {
+        // Database doesn't exist or can't be opened
+        resolve(null);
+      };
+      request.onblocked = () => {
+        // Another tab has the database open - we can't check version
+        // Return null to let normal flow handle it
+        resolve(null);
+      };
+    });
   }
 
   /**
