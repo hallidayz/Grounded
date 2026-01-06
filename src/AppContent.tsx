@@ -222,18 +222,21 @@ export default function AppContent({ onHydrationReady }: { onHydrationReady?: ()
         )}
       </main>
 
-      <footer className="flex-shrink-0 border-t border-neutral-800">
-        <BottomNavigation 
-          currentView={currentView as BottomNavView} 
-          onViewChange={(view) => {
-            // Map all BottomNavigation views to AppContent views
-            if (view === "goals" || view === "vault" || view === "home" || view === "values" || view === "report") {
-              setCurrentView(view as AppView);
-            }
-          }}
-          onLogout={handleLogout}
-        />
-      </footer>
+      {/* Hide bottom navigation on values view to show confirm button */}
+      {currentView !== "values" && (
+        <footer className="flex-shrink-0 border-t border-neutral-800">
+          <BottomNavigation 
+            currentView={currentView as BottomNavView} 
+            onViewChange={(view) => {
+              // Map all BottomNavigation views to AppContent views
+              if (view === "goals" || view === "vault" || view === "home" || view === "values" || view === "report") {
+                setCurrentView(view as AppView);
+              }
+            }}
+            onLogout={handleLogout}
+          />
+        </footer>
+      )}
 
       {showHelp && <HelpOverlay onClose={() => setShowHelp(false)} />}
     </div>
