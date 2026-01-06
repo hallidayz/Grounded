@@ -118,8 +118,6 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({
     initPromise.finally(() => {
       initializationPromiseRef.current = null;
     });
-
-    initializeAuth();
   }, []); // Empty dependency array - only run once on mount
 
   const handleLogin = useCallback(async (loggedInUserId: string) => {
