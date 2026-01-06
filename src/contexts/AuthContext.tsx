@@ -1,4 +1,4 @@
-import React, { createContext, useContext, useState, useCallback, useEffect, ReactNode } from 'react';
+import React, { createContext, useContext, useState, useCallback, useEffect, useRef, ReactNode } from 'react';
 import { acceptTerms, logoutUser, getCurrentUser } from '../services/authService';
 import { getDatabaseAdapter } from '../services/databaseAdapter';
 import { AppSettings } from '../types';
@@ -37,9 +37,19 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({
   const [authState, setAuthState] = useState<AuthState>('checking');
   const [userId, setUserId] = useState<string | null>(null);
 
-  // Initialize: Check if user is already logged in
+  // Initialize: Check if user is already logged in (only once on mount)
+  const hasInitializedRef = React.useRef(false);
+  
   useEffect(() => {
+    // Prevent multiple initializations
+    if (hasInitializedRef.current) {
+      return;
+    }
+    
     const initializeAuth = async () => {
+      if (hasInitializedRef.current) return;
+      hasInitializedRef.current = true;
+      
       try {
         console.log('[AuthContext] Initializing auth state...');
         const user = await getCurrentUser();
@@ -98,11 +108,12 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({
       } catch (error) {
         console.error('[AuthContext] Error initializing auth:', error);
         setAuthState('login');
+        hasInitializedRef.current = false; // Allow retry on error
       }
     };
 
     initializeAuth();
-  }, [onLoginComplete]);
+  }, []); // Empty dependency array - only run once on mount
 
   const handleLogin = useCallback(async (loggedInUserId: string) => {
     try {
