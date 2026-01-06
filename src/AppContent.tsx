@@ -291,7 +291,6 @@ export default function AppContent({ onHydrationReady }: { onHydrationReady?: ()
                   setShowSettings(false);
                   setShowHelp(true);
                 }}
-                onClearData={handleClearData}
               />
             </div>
           </div>

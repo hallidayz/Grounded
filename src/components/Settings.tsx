@@ -434,17 +434,6 @@ const Settings: React.FC<SettingsProps> = ({ onLogout, onShowHelp, version = '1.
             </button>
           )}
 
-          <button 
-            onClick={() => {
-              if (window.confirm('Are you sure you want to clear all local data? This cannot be undone.')) {
-                onClearData();
-              }
-            }}
-            className="w-full flex items-center justify-between p-3 rounded-xl bg-red-50 dark:bg-red-900/20 text-red-600 dark:text-red-400 hover:bg-red-100 dark:hover:bg-red-900/30 transition-colors"
-          >
-            <span className="font-medium">Clear Local Data</span>
-            <span className="text-xl">🗑️</span>
-          </button>
         </div>
       </div>
 
