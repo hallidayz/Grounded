@@ -369,6 +369,46 @@ class GroundedDB extends Dexie {
   }
 
   /**
+   * Reset database - deletes and recreates with clean schema
+   * Use this to resolve version conflicts or start fresh
+   */
+  async resetDatabase(): Promise<void> {
+    console.log('[Dexie] Resetting database...');
+    
+    // Close any open connections
+    try {
+      this.close();
+    } catch (e) {
+      // Ignore if already closed
+    }
+    
+    // Delete the database
+    await new Promise<void>((resolve, reject) => {
+      const deleteRequest = indexedDB.deleteDatabase(DB_NAME);
+      deleteRequest.onsuccess = () => {
+        console.log(`[Dexie] Database ${DB_NAME} deleted successfully`);
+        resolve();
+      };
+      deleteRequest.onerror = () => {
+        console.error('[Dexie] Failed to delete database:', deleteRequest.error);
+        reject(deleteRequest.error);
+      };
+      deleteRequest.onblocked = () => {
+        console.warn('[Dexie] Database deletion blocked - another tab may have it open');
+        setTimeout(() => resolve(), 1000);
+      };
+    });
+    
+    // Clear any migration flags
+    localStorage.removeItem('dexie_migration_v7_to_v8');
+    sessionStorage.removeItem('dexie_export_before_recovery');
+    
+    // Reopen with fresh schema
+    await this.open();
+    console.log(`[Dexie] Database reset complete - opened with version ${CURRENT_DB_VERSION}`);
+  }
+
+  /**
    * Initialize database and clean up old databases
    * Should be called after construction to perform async cleanup
    * Includes automatic version error recovery with data preservation option
@@ -377,22 +417,32 @@ class GroundedDB extends Dexie {
     // Clean up old database before opening
     await this.cleanupOldDatabase();
     
-    // Open database with automatic version error recovery
-    await this.openDatabaseWithRecovery();
+    // Check for version conflicts and reset if needed
+    try {
+      await this.openDatabaseWithRecovery();
+    } catch (error: any) {
+      // If recovery failed, do a hard reset
+      if (error?.name === 'VersionError' || error?.message?.includes('version')) {
+        console.warn('[Dexie] Version error persists after recovery attempt - performing hard reset');
+        await this.resetDatabase();
+      } else {
+        throw error;
+      }
+    }
   }
 
   /**
    * Open database with automatic recovery from VersionError
-   * Automatically handles version mismatches by deleting stale database and reloading
+   * Automatically handles version mismatches by resetting the database
    */
   private async openDatabaseWithRecovery(): Promise<void> {
     try {
       await this.open();
       console.log(`[Dexie] Database opened successfully (version ${CURRENT_DB_VERSION})`);
     } catch (error: any) {
-      if (error?.name === 'VersionError') {
+      if (error?.name === 'VersionError' || error?.message?.includes('version')) {
         console.warn(
-          `[Dexie] Version mismatch detected: expected version ${CURRENT_DB_VERSION}, but existing version is higher. Recovering automatically...`
+          `[Dexie] Version mismatch detected: expected version ${CURRENT_DB_VERSION}, but existing version is different. Resetting database...`
         );
         console.warn(`[Dexie] Error details: ${error.message}`);
 
@@ -405,35 +455,21 @@ class GroundedDB extends Dexie {
             // Store export in sessionStorage temporarily for recovery
             sessionStorage.setItem('dexie_export_before_recovery', JSON.stringify(exportData));
             dataExported = true;
-            console.log('[Dexie] Data exported before recovery - stored in sessionStorage');
+            console.log('[Dexie] Data exported before reset - stored in sessionStorage');
           }
         } catch (exportError) {
-          console.warn('[Dexie] Could not export data before recovery (non-critical):', exportError);
+          console.warn('[Dexie] Could not export data before reset (non-critical):', exportError);
         }
 
-        // Delete the old database and recreate it cleanly
-        await new Promise<void>((resolve, reject) => {
-          const deleteRequest = indexedDB.deleteDatabase(DB_NAME);
-          deleteRequest.onsuccess = () => {
-            console.log(`[Dexie] Database ${DB_NAME} deleted successfully. Reloading page...`);
-            if (dataExported) {
-              console.log('[Dexie] Data export available in sessionStorage for recovery after reload');
-            }
-            resolve();
-          };
-          deleteRequest.onerror = () => {
-            console.error('[Dexie] Failed to delete database:', deleteRequest.error);
-            reject(deleteRequest.error);
-          };
-          deleteRequest.onblocked = () => {
-            console.warn('[Dexie] Database deletion blocked - another tab may have it open');
-            setTimeout(() => resolve(), 1000);
-          };
-        });
-
-        // Full reload to ensure Dexie reinitializes with new schema
-        window.location.reload();
-        return; // Exit early - page will reload
+        // Reset the database (delete and recreate)
+        await this.resetDatabase();
+        
+        if (dataExported) {
+          console.log('[Dexie] Data export available in sessionStorage - you can import it manually if needed');
+        }
+        
+        // No reload needed - database is now reset and ready
+        return;
       } else {
         // Not a version error - re-throw for logging
         console.error('[Dexie] Failed to open database:', error);
@@ -491,6 +527,14 @@ class GroundedDB extends Dexie {
 
 // Export singleton instance
 export const db = new GroundedDB();
+
+/**
+ * Reset the Dexie database (deletes and recreates)
+ * Use this to resolve version conflicts or start fresh
+ */
+export async function resetDexieDatabase(): Promise<void> {
+  await db.resetDatabase();
+}
 
 /**
  * Export all database data as JSON
