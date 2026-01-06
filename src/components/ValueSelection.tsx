@@ -10,9 +10,10 @@ interface ValueSelectionProps {
   onAddGoal?: (valueId: string) => void;
   goals?: Array<{ valueId: string }>;
   onSave?: (ids: string[]) => void; // Optional: save without navigation
+  hideConfirm?: boolean; // Hide confirm button when modals are open
 }
 
-const ValueSelection: React.FC<ValueSelectionProps> = ({ initialSelected, onComplete, isReorderingOnly = false, onAddGoal, goals = [], onSave }) => {
+const ValueSelection: React.FC<ValueSelectionProps> = ({ initialSelected, onComplete, isReorderingOnly = false, onAddGoal, goals = [], onSave, hideConfirm = false }) => {
   const [selected, setSelected] = useState<string[]>(initialSelected);
   const [shakeId, setShakeId] = useState<string | null>(null);
   const [collapsedCategories, setCollapsedCategories] = useState<Set<string>>(new Set());
@@ -257,23 +258,25 @@ const ValueSelection: React.FC<ValueSelectionProps> = ({ initialSelected, onComp
         </div>
       )}
 
-      <div className="fixed bottom-0 left-0 right-0 p-3 z-[60] safe-area-inset-bottom" style={{ paddingBottom: 'calc(env(safe-area-inset-bottom) + 4rem)' }}>
-        <div className="max-w-md mx-auto bg-white/95 dark:bg-dark-bg-primary/95 backdrop-blur shadow-2xl border border-border-soft dark:border-dark-border/30 rounded-xl sm:rounded-2xl p-3 flex items-center justify-between gap-3">
-          <div className="px-2 sm:px-3 flex-shrink-0">
-            <p className="text-xs text-text-primary/50 dark:text-white/50 font-black uppercase tracking-widest">Strength</p>
-            <p className="text-sm font-bold text-text-primary dark:text-white">{selected.length}/10</p>
+      {!hideConfirm && (
+        <div className="fixed bottom-0 left-0 right-0 p-3 z-40 safe-area-inset-bottom" style={{ paddingBottom: 'calc(env(safe-area-inset-bottom) + 4rem)' }}>
+          <div className="max-w-md mx-auto bg-white/95 dark:bg-dark-bg-primary/95 backdrop-blur shadow-2xl border border-border-soft dark:border-dark-border/30 rounded-xl sm:rounded-2xl p-3 flex items-center justify-between gap-3">
+            <div className="px-2 sm:px-3 flex-shrink-0">
+              <p className="text-xs text-text-primary/50 dark:text-white/50 font-black uppercase tracking-widest">Strength</p>
+              <p className="text-sm font-bold text-text-primary dark:text-white">{selected.length}/10</p>
+            </div>
+            <button
+              onClick={() => onComplete(selected)}
+              disabled={selected.length === 0}
+              /* PREV: bg-yellow-warm text-text-primary */
+              className={`px-6 sm:px-8 py-2.5 sm:py-3 rounded-lg sm:rounded-xl font-black text-xs sm:text-sm uppercase tracking-widest transition-all flex-shrink-0 ${selected.length > 0 ? 'bg-brand dark:bg-brand-light text-white dark:text-navy-dark hover:opacity-90 shadow-lg' : 'bg-bg-secondary dark:bg-dark-bg-primary/50 text-text-primary/30 dark:text-white/30 cursor-not-allowed'}`}
+            >
+              <span className="hidden sm:inline">Confirm Compass</span>
+              <span className="sm:hidden">Confirm</span>
+            </button>
           </div>
-          <button
-            onClick={() => onComplete(selected)}
-            disabled={selected.length === 0}
-            /* PREV: bg-yellow-warm text-text-primary */
-            className={`px-6 sm:px-8 py-2.5 sm:py-3 rounded-lg sm:rounded-xl font-black text-xs sm:text-sm uppercase tracking-widest transition-all flex-shrink-0 ${selected.length > 0 ? 'bg-brand dark:bg-brand-light text-white dark:text-navy-dark hover:opacity-90 shadow-lg' : 'bg-bg-secondary dark:bg-dark-bg-primary/50 text-text-primary/30 dark:text-white/30 cursor-not-allowed'}`}
-          >
-            <span className="hidden sm:inline">Confirm Compass</span>
-            <span className="sm:hidden">Confirm</span>
-          </button>
         </div>
-      </div>
+      )}
     </div>
   );
 };
