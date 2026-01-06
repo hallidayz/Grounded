@@ -4,6 +4,7 @@ import './index.css';
 import './styles/safe-area.css';
 import App from './App';
 import { ThemeProvider } from './contexts/ThemeContext';
+import { watchServiceWorkerVersion } from './utils/refresh-cache';
 
 // Global error handlers to catch any errors before React mounts
 window.addEventListener('error', (event) => {
@@ -78,6 +79,9 @@ const renderTimeout = setTimeout(() => {
     `;
   }
 }, 5000);
+
+// Watch for service worker updates and auto-refresh
+watchServiceWorkerVersion();
 
 const root = ReactDOM.createRoot(rootElement);
 
