@@ -15,6 +15,7 @@ import React, { useState, useEffect } from 'react';
 import { db } from '../services/dexieDB';
 import { getDatabaseAdapter, isEncryptionEnabled } from '../services/databaseAdapter';
 import { isDatabaseInspectorEnabled } from '../constants/environment';
+import { runDeploymentDiagnostics, logDeploymentDiagnostics, exportDiagnostics } from '../utils/deploymentDiagnostics';
 
 interface StoreInfo {
   name: string;
@@ -30,6 +31,8 @@ export const DatabaseInspector: React.FC = () => {
   const [storeData, setStoreData] = useState<any[]>([]);
   const [exportData, setExportData] = useState<any>(null);
   const [error, setError] = useState<string | null>(null);
+  const [showDiagnostics, setShowDiagnostics] = useState(false);
+  const [diagnosticsResult, setDiagnosticsResult] = useState<any>(null);
 
   // Check if inspector is enabled (dev mode only)
   if (!isDatabaseInspectorEnabled()) {
@@ -254,7 +257,7 @@ export const DatabaseInspector: React.FC = () => {
                 ⚠️ Development mode only — not available in production.
               </p>
             </div>
-            <div className="flex gap-2">
+            <div className="flex gap-2 flex-wrap">
               <button
                 onClick={loadStoreInfo}
                 className="px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700 transition"
@@ -266,6 +269,17 @@ export const DatabaseInspector: React.FC = () => {
                 className="px-4 py-2 bg-green-600 text-white rounded hover:bg-green-700 transition"
               >
                 Export All
+              </button>
+              <button
+                onClick={async () => {
+                  const result = await runDeploymentDiagnostics();
+                  setDiagnosticsResult(result);
+                  setShowDiagnostics(true);
+                  logDeploymentDiagnostics(result);
+                }}
+                className="px-4 py-2 bg-purple-600 text-white rounded hover:bg-purple-700 transition"
+              >
+                Run Diagnostics
               </button>
             </div>
           </div>
@@ -371,6 +385,111 @@ export const DatabaseInspector: React.FC = () => {
                 </div>
               </div>
             )}
+          </div>
+        )}
+
+        {showDiagnostics && diagnosticsResult && (
+          <div className="bg-white dark:bg-gray-800 rounded-lg shadow-lg p-6 mb-6">
+            <div className="flex items-center justify-between mb-4">
+              <h2 className="text-2xl font-bold text-gray-900 dark:text-white">
+                Deployment Diagnostics
+              </h2>
+              <button
+                onClick={() => setShowDiagnostics(false)}
+                className="px-4 py-2 bg-gray-600 text-white rounded hover:bg-gray-700 transition"
+              >
+                Close
+              </button>
+            </div>
+            
+            <div className="space-y-4">
+              <div>
+                <h3 className="font-semibold text-gray-900 dark:text-white mb-2">Origin</h3>
+                <p className="text-sm text-gray-600 dark:text-gray-400">
+                  Current: <code className="bg-gray-100 dark:bg-gray-700 px-2 py-1 rounded">{diagnosticsResult.origin.current}</code>
+                </p>
+                <p className="text-sm text-gray-600 dark:text-gray-400">
+                  Is Production: {diagnosticsResult.origin.isProduction ? '✅' : '❌'}
+                </p>
+                <p className="text-sm text-gray-600 dark:text-gray-400">
+                  Is Preview: {diagnosticsResult.origin.isPreview ? '⚠️ Yes' : 'No'}
+                </p>
+              </div>
+              
+              <div>
+                <h3 className="font-semibold text-gray-900 dark:text-white mb-2">Dexie Database</h3>
+                <p className="text-sm text-gray-600 dark:text-gray-400">
+                  Expected Version: <code className="bg-gray-100 dark:bg-gray-700 px-2 py-1 rounded">{diagnosticsResult.dexie.expectedVersion}</code>
+                </p>
+                <p className="text-sm text-gray-600 dark:text-gray-400">
+                  Actual Version: <code className="bg-gray-100 dark:bg-gray-700 px-2 py-1 rounded">{diagnosticsResult.dexie.version}</code>
+                </p>
+                <p className="text-sm text-gray-600 dark:text-gray-400">
+                  Version Match: {diagnosticsResult.dexie.versionMatch ? '✅' : '❌'}
+                </p>
+                <p className="text-sm text-gray-600 dark:text-gray-400">
+                  Database Exists: {diagnosticsResult.dexie.databaseExists ? '✅' : '❌'}
+                </p>
+                <p className="text-sm text-gray-600 dark:text-gray-400">
+                  Stores Count: {diagnosticsResult.dexie.storesCount}
+                </p>
+              </div>
+              
+              <div>
+                <h3 className="font-semibold text-gray-900 dark:text-white mb-2">Storage</h3>
+                <p className="text-sm text-gray-600 dark:text-gray-400">
+                  IndexedDB Usage: {diagnosticsResult.storage.indexedDBUsage 
+                    ? `${(diagnosticsResult.storage.indexedDBUsage / 1024 / 1024).toFixed(2)} MB`
+                    : 'Unknown'}
+                </p>
+                <p className="text-sm text-gray-600 dark:text-gray-400">
+                  localStorage Keys: {diagnosticsResult.storage.localStorageKeys.length}
+                </p>
+                <p className="text-sm text-gray-600 dark:text-gray-400">
+                  Has Auth Data: {diagnosticsResult.storage.hasAuthData ? '✅' : '❌'}
+                </p>
+              </div>
+              
+              {diagnosticsResult.issues.length > 0 && (
+                <div>
+                  <h3 className="font-semibold text-red-600 dark:text-red-400 mb-2">Issues</h3>
+                  <ul className="list-disc list-inside space-y-1">
+                    {diagnosticsResult.issues.map((issue: string, idx: number) => (
+                      <li key={idx} className="text-sm text-red-600 dark:text-red-400">{issue}</li>
+                    ))}
+                  </ul>
+                </div>
+              )}
+              
+              {diagnosticsResult.recommendations.length > 0 && (
+                <div>
+                  <h3 className="font-semibold text-blue-600 dark:text-blue-400 mb-2">Recommendations</h3>
+                  <ul className="list-disc list-inside space-y-1">
+                    {diagnosticsResult.recommendations.map((rec: string, idx: number) => (
+                      <li key={idx} className="text-sm text-blue-600 dark:text-blue-400">{rec}</li>
+                    ))}
+                  </ul>
+                </div>
+              )}
+              
+              <button
+                onClick={async () => {
+                  const json = await exportDiagnostics();
+                  const blob = new Blob([json], { type: 'application/json' });
+                  const url = URL.createObjectURL(blob);
+                  const a = document.createElement('a');
+                  a.href = url;
+                  a.download = `deployment-diagnostics-${new Date().toISOString().split('T')[0]}.json`;
+                  document.body.appendChild(a);
+                  a.click();
+                  document.body.removeChild(a);
+                  URL.revokeObjectURL(url);
+                }}
+                className="px-4 py-2 bg-purple-600 text-white rounded hover:bg-purple-700 transition"
+              >
+                Export Diagnostics JSON
+              </button>
+            </div>
           </div>
         )}
 

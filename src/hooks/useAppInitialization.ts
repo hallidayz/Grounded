@@ -8,6 +8,7 @@ import { initializeDebugLogging } from '../services/debugLog';
 import { setModelLoadingProgress, setProgressError } from '../services/progressTracker';
 import { initializeShortcuts } from '../utils/createShortcut';
 import { ensureServiceWorkerActive, listenForServiceWorkerUpdates } from '../utils/serviceWorker';
+import { runDeploymentDiagnostics, logDeploymentDiagnostics } from '../utils/deploymentDiagnostics';
 import { migrateLocalStorageToIndexedDB, isLocalStorageMigrationComplete } from '../services/localStorageMigration';
 import { runDataPruning, scheduleWeeklyPruning } from '../services/dataPruningService';
 import { isDataPruningEnabled } from '../constants/environment';
@@ -170,6 +171,22 @@ export function useAppInitialization(options: UseAppInitializationOptions): AppI
     const initialize = async () => {
       try {
         console.log('[INIT] Starting initialization...');
+        
+        // Run deployment diagnostics in development mode
+        if (import.meta.env?.DEV || window.location.hostname === 'localhost') {
+          try {
+            const diagnostics = await runDeploymentDiagnostics();
+            if (diagnostics.issues.length > 0 || !diagnostics.dexie.versionMatch) {
+              console.group('[INIT] 🔍 Deployment Diagnostics');
+              logDeploymentDiagnostics(diagnostics);
+              console.groupEnd();
+            }
+          } catch (diagError) {
+            // Non-critical - don't block initialization
+            console.warn('[INIT] Diagnostic check failed (non-critical):', diagError);
+          }
+        }
+        
         setModelLoadingProgress(5, 'Starting...', 'Initializing app');
         
         // START AI MODEL LOADING IMMEDIATELY - don't wait, run in background
