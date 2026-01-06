@@ -454,22 +454,13 @@ export class LegacyAdapter implements DatabaseAdapter {
     }
     
     try {
-      // Use Dexie for better performance with compound index
-      // Fallback to filter if compound index query fails
-      let values;
-      try {
-        values = await db.values
-          .where('[userId+active]')
-          .equals([userId, true])
-          .sortBy('priority');
-      } catch (indexError) {
-        // Fallback: filter manually if compound index fails
-        console.warn('[LegacyAdapter] Compound index query failed, using filter fallback:', indexError);
-        const allValues = await db.values.where('userId').equals(userId).toArray();
-        values = allValues
-          .filter(v => v.active === true)
-          .sort((a, b) => (a.priority || 0) - (b.priority || 0));
-      }
+      // Use filter approach directly - more reliable than compound index query
+      // Compound index queries can fail with invalid key errors, especially with boolean values
+      const allValues = await db.values.where('userId').equals(userId).toArray();
+      const values = allValues
+        .filter(v => v.active === true || v.active === 1) // Handle both boolean and numeric active flags
+        .sort((a, b) => (a.priority || 0) - (b.priority || 0));
+      
       return values.map(v => v.valueId);
     } catch (error) {
       console.error('[LegacyAdapter] Error getting active values:', error);
