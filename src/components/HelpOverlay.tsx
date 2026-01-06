@@ -1,7 +1,8 @@
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import DebugLogComponent from './DebugLog';
 import DatabaseViewer from './DatabaseViewer';
+import { getCurrentUser } from '../services/authService';
 
 interface HelpOverlayProps {
   onClose: () => void;
@@ -10,6 +11,17 @@ interface HelpOverlayProps {
 const HelpOverlay: React.FC<HelpOverlayProps> = ({ onClose }) => {
   const [showDebugLog, setShowDebugLog] = useState(false);
   const [showDatabaseViewer, setShowDatabaseViewer] = useState(false);
+  const [termsAcceptedDate, setTermsAcceptedDate] = useState<string | null>(null);
+
+  useEffect(() => {
+    const loadUserData = async () => {
+      const user = await getCurrentUser();
+      if (user?.termsAcceptedDate) {
+        setTermsAcceptedDate(user.termsAcceptedDate);
+      }
+    };
+    loadUserData();
+  }, []);
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4 sm:p-6 bg-navy-dark/60 backdrop-blur-sm animate-fade-in">
@@ -206,6 +218,26 @@ const HelpOverlay: React.FC<HelpOverlayProps> = ({ onClose }) => {
                   </button>
                 </div>
               </div>
+            </div>
+          </div>
+
+          <div className="pt-4 border-t border-border-soft dark:border-dark-border space-y-4">
+            <h3 className="text-lg font-black text-text-primary dark:text-white">Account Information</h3>
+            <div className="bg-bg-secondary dark:bg-dark-bg-secondary p-6 rounded-3xl space-y-3">
+              {termsAcceptedDate && (
+                <div className="space-y-1">
+                  <p className="text-xs font-black text-text-primary dark:text-white uppercase tracking-widest">Terms & Conditions</p>
+                  <p className="text-xs text-text-secondary dark:text-text-secondary leading-relaxed">
+                    Accepted on: {new Date(termsAcceptedDate).toLocaleDateString('en-US', { 
+                      year: 'numeric', 
+                      month: 'long', 
+                      day: 'numeric',
+                      hour: '2-digit',
+                      minute: '2-digit'
+                    })}
+                  </p>
+                </div>
+              )}
             </div>
           </div>
 
