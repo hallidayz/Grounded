@@ -10,6 +10,8 @@ interface AIResponseBubbleProps {
   feelingEmoji?: string; // The emoji for the emotional state
   onActionClick?: (action: 'reflection' | 'values' | 'resources') => void;
   onMoodChange?: (emotion: string, feeling: string) => void; // Callback for mood loop changes
+  encouragement?: string | null; // Encouragement text to display
+  encouragementLoading?: boolean; // Whether encouragement is loading
 }
 
 // Map feelings to emojis for better visual feedback
@@ -38,7 +40,9 @@ const AIResponseBubble: React.FC<AIResponseBubbleProps> = ({
   feeling, 
   feelingEmoji, 
   onActionClick,
-  onMoodChange 
+  onMoodChange,
+  encouragement,
+  encouragementLoading
 }) => {
   const { handleMoodLoopEntry } = useData();
   const [isVisible, setIsVisible] = useState(false);

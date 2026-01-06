@@ -37,6 +37,12 @@ export default function AppContent({ onHydrationReady }: { onHydrationReady?: ()
   const [showSettings, setShowSettings] = useState(false);
   const [showResources, setShowResources] = useState(false);
   const [showReflection, setShowReflection] = useState(false);
+  
+  // Encouragement state for home screen
+  const [encouragementText, setEncouragementText] = useState<string | null>(null);
+  const [encouragementLoading, setEncouragementLoading] = useState(false);
+  const [currentEmotion, setCurrentEmotion] = useState<string | undefined>(undefined);
+  const [currentFeeling, setCurrentFeeling] = useState<string | undefined>(undefined);
 
   // Memoize values to prevent hydration mismatches - MUST be called before any early returns
   const selectedValues = useMemo(() => 
@@ -98,11 +104,27 @@ export default function AppContent({ onHydrationReady }: { onHydrationReady?: ()
     }
   };
 
-  // Handle mood changes from AIResponseBubble
-  const handleMoodChange = (emotion: string, feeling: string) => {
-    console.log('Mood changed:', emotion, feeling);
-    // Mood is already saved via handleMoodLoopEntry in AIResponseBubble
-  };
+  // Handle mood changes from AIResponseBubble - generate encouragement
+  const handleMoodChange = useCallback(async (emotion: string, feeling: string) => {
+    console.log('[AppContent] Mood changed:', emotion, feeling);
+    setCurrentEmotion(emotion);
+    setCurrentFeeling(feeling);
+    
+    // Generate encouragement when emotion is selected
+    setEncouragementLoading(true);
+    setEncouragementText(null);
+    
+    try {
+      const encouragement = await generateEmotionalEncouragement(emotion, feeling);
+      setEncouragementText(encouragement);
+      console.log('[AppContent] Encouragement generated:', encouragement);
+    } catch (error) {
+      console.error('[AppContent] Error generating encouragement:', error);
+      setEncouragementText("Your feelings are valid. Take care of yourself.");
+    } finally {
+      setEncouragementLoading(false);
+    }
+  }, []);
 
   // Handle clear data with confirmation
   const handleClearData = () => {
@@ -136,13 +158,15 @@ export default function AppContent({ onHydrationReady }: { onHydrationReady?: ()
       />
       <main className="flex-1 w-full overflow-y-auto p-4 pb-24">
         {currentView === "home" && (
-          <div className="max-w-2xl mx-auto py-8">
+          <div className="max-w-2xl mx-auto py-8 space-y-4">
             <AIResponseBubble 
               message="Welcome to Grounded. How are you feeling today?"
-              emotion="calm"
-              feeling="balanced"
+              emotion={currentEmotion}
+              feeling={currentFeeling}
               onActionClick={handleActionClick}
               onMoodChange={handleMoodChange}
+              encouragement={encouragementText}
+              encouragementLoading={encouragementLoading}
             />
           </div>
         )}

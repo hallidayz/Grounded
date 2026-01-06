@@ -46,6 +46,20 @@ const Dashboard: React.FC<DashboardProps> = ({
     onLog: onLog || (() => {}),
     onUpdateGoals: onUpdateGoals || (() => {}),
   });
+  
+  // Carry over emotion, feeling, and encouragement from home screen
+  useEffect(() => {
+    if (initialEmotion) {
+      dashboard.setEmotionalState(initialEmotion as any);
+      if (initialFeeling) {
+        dashboard.setSelectedFeeling(initialFeeling);
+      }
+    }
+    if (initialEncouragement) {
+      // Set encouragement directly if provided from home screen
+      (dashboard as any).setEncouragementText?.(initialEncouragement);
+    }
+  }, [initialEmotion, initialFeeling, initialEncouragement]);
 
   // Emotion context integration
   const { setPrimaryEmotion, setSubEmotion } = useEmotion();
