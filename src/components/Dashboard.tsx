@@ -10,6 +10,7 @@ import ValueCard from './ValueCard';
 import EmotionModal from './EmotionModal';
 import ReflectionForm from './ReflectionForm';
 import { useDashboard } from '../hooks/useDashboard';
+import { useEmotion } from '../contexts/EmotionContext';
 
 /**
  * Dashboard Props
@@ -46,12 +47,16 @@ const Dashboard: React.FC<DashboardProps> = ({
     onUpdateGoals: onUpdateGoals || (() => {}),
   });
 
+  // Emotion context integration
+  const { setPrimaryEmotion, setSubEmotion } = useEmotion();
+
   // Local UI state
   const [showEmotionModal, setShowEmotionModal] = useState(false);
   const [showReflectionModal, setShowReflectionModal] = useState(false);
   const [selectedValue, setSelectedValue] = useState<ValueItem | null>(null);
   const [showResourcesModal, setShowResourcesModal] = useState(false);
   const [showCrisisAlert, setShowCrisisAlert] = useState(false);
+  const [preSelectedEmotion, setPreSelectedEmotion] = useState<string | null>(null);
 
   // Persist and restore the selected value card
   useEffect(() => {
@@ -68,22 +73,38 @@ const Dashboard: React.FC<DashboardProps> = ({
   }, []);
 
   /**
-   * Emotion button handler - opens EmotionModal for sub-emotion selection
+   * Emotion button handler - opens EmotionModal with pre-selected emotion for sub-emotion selection
    */
-  const handleEmotionClick = () => {
+  const handleEmotionClick = (emotionState: string) => {
+    // Pre-select the emotion so modal opens directly to sub-emotions
     setShowEmotionModal(true);
+    // Store the pre-selected emotion to pass to modal
+    setPreSelectedEmotion(emotionState);
   };
 
   /**
    * Handle emotion selection from EmotionModal
+   * Now receives strings: primary (emotion state) and sub (feeling word)
    */
-  const handleEmotionSelect = async (primaryState: any, subState?: any) => {
-    dashboard.setEmotionalState(primaryState.state);
-    if (subState) {
-      dashboard.setSelectedFeeling(subState.shortLabel);
+  const handleEmotionSelect = async (primary: string, sub?: string) => {
+    // Update EmotionContext
+    setPrimaryEmotion(primary, 'dashboard');
+    if (sub) {
+      setSubEmotion(sub);
+    } else {
+      setSubEmotion(null);
     }
+
+    // Update dashboard state
+    dashboard.setEmotionalState(primary);
+    if (sub) {
+      dashboard.setSelectedFeeling(sub);
+    }
+
     // Automatically generate encouragement when emotion is selected
-    await dashboard.handleEmotionalEncourage(primaryState.state);
+    // Pass both primary and sub-emotion to ensure encouragement uses the sub-emotion
+    await dashboard.handleEmotionalEncourage(primary, sub);
+    
     // After emotion selection, if we have values, open reflection form with first value
     if (values.length > 0) {
       setSelectedValue(values[0]);
@@ -95,13 +116,14 @@ const Dashboard: React.FC<DashboardProps> = ({
 
   /**
    * Value check‑in ("+") button handler
+   * Opens emotion modal for primary emotion selection (not sub-emotions)
    */
   const handleCheckInClick = (val: ValueItem) => {
     setSelectedValue(val);
     dashboard.setActiveValueId(val.id);
-    // Don't set emotional state to 'mixed' - let user select emotion if they want
-    // If no emotion selected, it will remain null/empty
-    setShowReflectionModal(true);
+    // Open emotion modal without pre-selection (shows primary emotions)
+    setPreSelectedEmotion(null);
+    setShowEmotionModal(true);
   };
 
   const closeReflectionModal = () => {
@@ -150,8 +172,8 @@ const Dashboard: React.FC<DashboardProps> = ({
                             (dashboard.selectedFeeling || dashboard.encouragementText);
           return (
             <button
-              key={emotion.id}
-              onClick={handleEmotionClick}
+              key={emotion.state}
+              onClick={() => handleEmotionClick(emotion.state)}
               className={`px-4 py-2 rounded-md border text-sm capitalize transition-colors duration-150 ${
                 isSelected
                   ? 'bg-blue-500 text-white border-blue-600'
@@ -198,61 +220,90 @@ const Dashboard: React.FC<DashboardProps> = ({
       {/* Emotion Modal for sub-emotion selection */}
       <EmotionModal
         isOpen={showEmotionModal}
-        onClose={() => setShowEmotionModal(false)}
+        onClose={() => {
+          setShowEmotionModal(false);
+          setPreSelectedEmotion(null);
+        }}
         onEmotionSelect={handleEmotionSelect}
-        selectedEmotion={EMOTIONAL_STATES.find(e => e.state === dashboard.emotionalState) || null}
+        selectedEmotion={
+          // Only show as selected if there's been an explicit selection (has selectedFeeling or encouragementText)
+          dashboard.emotionalState && (dashboard.selectedFeeling || dashboard.encouragementText)
+            ? EMOTIONAL_STATES.find(e => e.state === dashboard.emotionalState) || null
+            : null
+        }
+        preSelectedEmotion={preSelectedEmotion}
       />
 
       {/* Reflection Modal for value check-ins */}
       {showReflectionModal && selectedValue && (
-        <EmotionModal onClose={closeReflectionModal}>
-          {/* Encouragement displayed above reflection form */}
-          {dashboard.encouragementText && (
-            <div className="mb-4 p-4 bg-brand/5 dark:bg-brand/10 rounded-xl border border-brand/20 dark:border-brand/30">
-              <p className="text-text-primary dark:text-white text-sm italic">
-                "{dashboard.encouragementText}"
-              </p>
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm">
+          <div
+            role="dialog"
+            aria-modal="true"
+            className="bg-white dark:bg-dark-bg-secondary rounded-2xl p-6 w-[90%] max-w-2xl max-h-[90vh] overflow-y-auto shadow-xl"
+          >
+            <div className="flex justify-between items-center mb-4">
+              <h2 className="text-xl font-semibold text-text-primary dark:text-white">
+                Reflection: {selectedValue.name}
+              </h2>
+              <button
+                aria-label="Close"
+                onClick={closeReflectionModal}
+                className="text-gray-500 dark:text-gray-300 hover:text-gray-700 dark:hover:text-white text-xl font-bold"
+              >
+                ×
+              </button>
             </div>
-          )}
-          {dashboard.encouragementLoading && (
-            <div className="mb-4 p-4 bg-brand/5 dark:bg-brand/10 rounded-xl border border-brand/20 dark:border-brand/30">
-              <p className="text-text-secondary dark:text-white/70 text-sm italic">
-                Generating encouragement...
-              </p>
-            </div>
-          )}
-          <ReflectionForm
-            value={selectedValue}
-            emotionalState={dashboard.emotionalState}
-            selectedFeeling={dashboard.selectedFeeling}
-            showFeelingsList={false}
-            reflectionText={dashboard.reflectionText}
-            goalText={dashboard.goalText}
-            goalFreq={dashboard.goalFreq}
-            reflectionAnalysis={dashboard.reflectionAnalysis}
-            analyzingReflection={false}
-            coachInsight={dashboard.coachInsight}
-            valueMantra={dashboard.valueMantra}
-            loading={dashboard.loading}
-            aiGoalLoading={false}
-            lcswConfig={lcswConfig}
-            onEmotionalStateChange={dashboard.setEmotionalState}
-            onShowFeelingsListToggle={() => {}}
-            onSelectedFeelingChange={dashboard.setSelectedFeeling}
-            onReflectionTextChange={dashboard.setReflectionText}
-            onGoalTextChange={dashboard.setGoalText}
-            onGoalFreqChange={dashboard.setGoalFreq}
-            onSuggestGoal={() => {}}
-            onCommit={() => {
-              if (selectedValue) {
-                dashboard.handleCommit(selectedValue.id);
-                closeReflectionModal();
-              }
-            }}
-            getReflectionPlaceholder={getReflectionPlaceholder}
-            onTriggerReflectionAnalysis={() => {}}
-          />
-        </EmotionModal>
+
+            {/* Encouragement displayed above reflection form */}
+            {dashboard.encouragementText && (
+              <div className="mb-4 p-4 bg-brand/5 dark:bg-brand/10 rounded-xl border border-brand/20 dark:border-brand/30">
+                <p className="text-text-primary dark:text-white text-sm italic">
+                  "{dashboard.encouragementText}"
+                </p>
+              </div>
+            )}
+            {dashboard.encouragementLoading && (
+              <div className="mb-4 p-4 bg-brand/5 dark:bg-brand/10 rounded-xl border border-brand/20 dark:border-brand/30">
+                <p className="text-text-secondary dark:text-white/70 text-sm italic">
+                  Generating encouragement...
+                </p>
+              </div>
+            )}
+
+            <ReflectionForm
+              value={selectedValue}
+              emotionalState={dashboard.emotionalState}
+              selectedFeeling={dashboard.selectedFeeling}
+              showFeelingsList={false}
+              reflectionText={dashboard.reflectionText}
+              goalText={dashboard.goalText}
+              goalFreq={dashboard.goalFreq}
+              reflectionAnalysis={dashboard.reflectionAnalysis}
+              analyzingReflection={false}
+              coachInsight={dashboard.coachInsight}
+              valueMantra={dashboard.valueMantra}
+              loading={dashboard.loading}
+              aiGoalLoading={false}
+              lcswConfig={lcswConfig}
+              onEmotionalStateChange={dashboard.setEmotionalState}
+              onShowFeelingsListToggle={() => {}}
+              onSelectedFeelingChange={dashboard.setSelectedFeeling}
+              onReflectionTextChange={dashboard.setReflectionText}
+              onGoalTextChange={dashboard.setGoalText}
+              onGoalFreqChange={dashboard.setGoalFreq}
+              onSuggestGoal={() => {}}
+              onCommit={() => {
+                if (selectedValue) {
+                  dashboard.handleCommit(selectedValue.id);
+                  closeReflectionModal();
+                }
+              }}
+              getReflectionPlaceholder={getReflectionPlaceholder}
+              onTriggerReflectionAnalysis={() => {}}
+            />
+          </div>
+        </div>
       )}
 
       {/* Crisis Resource & Alert Modals */}

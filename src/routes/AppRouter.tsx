@@ -11,8 +11,9 @@ const VaultControl = lazy(() => import('../components/VaultControl'));
 const GoalsUpdateView = lazy(() => import('../components/GoalsUpdateView'));
 const Settings = lazy(() => import('../components/Settings'));
 const DatabaseInspector = lazy(() => import('../components/DatabaseInspector'));
+const ModalSequenceTest = lazy(() => import('../test/ModalSequenceTest'));
 
-export type ViewType = 'onboarding' | 'home' | 'report' | 'values' | 'vault' | 'goals' | 'settings' | 'dev';
+export type ViewType = 'onboarding' | 'home' | 'report' | 'values' | 'vault' | 'goals' | 'settings' | 'dev' | 'modal-test';
 
 interface AppRouterProps {
   view: ViewType;
@@ -157,6 +158,12 @@ export const AppRouter: React.FC<AppRouterProps> = ({
       {isDatabaseInspectorEnabled() && view === 'dev' && (
         <Suspense fallback={<SkeletonCard lines={5} showHeader={true} />}>
           <DatabaseInspector />
+        </Suspense>
+      )}
+
+      {isDatabaseInspectorEnabled() && view === 'modal-test' && (
+        <Suspense fallback={<SkeletonCard lines={5} showHeader={true} />}>
+          <ModalSequenceTest />
         </Suspense>
       )}
     </>

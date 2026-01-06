@@ -172,6 +172,35 @@ export function useAppInitialization(options: UseAppInitializationOptions): AppI
       try {
         console.log('[INIT] Starting initialization...');
         
+        // Clear all caches to ensure fresh load
+        console.log('[INIT] Clearing caches for fresh load...');
+        try {
+          // Clear browser caches (Cache API)
+          if ('caches' in window) {
+            const cacheNames = await caches.keys();
+            await Promise.all(cacheNames.map(name => {
+              console.log(`[INIT] Deleting cache: ${name}`);
+              return caches.delete(name);
+            }));
+            console.log(`[INIT] Cleared ${cacheNames.length} cache(s)`);
+          }
+          
+          // Clear service worker cache if available
+          if ('serviceWorker' in navigator) {
+            const registrations = await navigator.serviceWorker.getRegistrations();
+            for (const registration of registrations) {
+              if (registration.active) {
+                // Unregister service worker to force fresh registration
+                await registration.unregister();
+                console.log('[INIT] Unregistered service worker for fresh load');
+              }
+            }
+          }
+        } catch (cacheError) {
+          console.warn('[INIT] Cache clearing failed (non-critical):', cacheError);
+          // Non-critical, continue initialization
+        }
+        
         // Run deployment diagnostics in development mode
         if (import.meta.env?.DEV || window.location.hostname === 'localhost') {
           try {

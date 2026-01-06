@@ -600,15 +600,27 @@ export async function initializeModels(forceReload: boolean = false, modelType?:
             setTimeout(() => reject(new Error('Model loading timeout after 30 seconds')), 30000);
           });
           
-          moodTrackerModel = await Promise.race([
-            pipeline(moodTrackingConfig.task, moodTrackingModelPath, pipelineOptions),
-            modelLoadTimeout
-          ]) as any;
-          
-          console.log(`✓ ${moodTrackingConfig.name} model loaded successfully for mood tracking`);
-          
-          if (!moodTrackerModel) {
-            throw new Error('Model loaded but moodTrackerModel is null');
+          // Try to load the model with better error handling
+          try {
+            moodTrackerModel = await Promise.race([
+              pipeline(moodTrackingConfig.task, moodTrackingModelPath, pipelineOptions),
+              modelLoadTimeout
+            ]) as any;
+            
+            // Verify the model loaded correctly
+            if (!moodTrackerModel) {
+              throw new Error('Model pipeline returned null');
+            }
+            
+            console.log(`✓ ${moodTrackingConfig.name} model loaded successfully for mood tracking`);
+          } catch (pipelineError: any) {
+            // Check if error is due to HTML response (CORS/network issue)
+            const errorMsg = pipelineError?.message || String(pipelineError);
+            if (errorMsg.includes('<!DOCTYPE') || errorMsg.includes('Unexpected token')) {
+              console.warn(`[MODEL_DEBUG] ${moodTrackingConfig.name} loading failed - received HTML instead of model data. This may be a CORS or network issue.`);
+              throw new Error(`Network/CORS error: Received HTML response instead of model data. Check network connectivity and CORS settings.`);
+            }
+            throw pipelineError; // Re-throw other errors
           }
           
           allModelsCache.set(moodTrackingModelType, moodTrackerModel);
@@ -669,12 +681,28 @@ export async function initializeModels(forceReload: boolean = false, modelType?:
             setTimeout(() => reject(new Error('Counseling model loading timeout after 30 seconds')), 30000);
           });
           
-          counselingCoachModel = await Promise.race([
-            pipeline(counselingConfig.task, counselingModelPath, counselingOptions),
-            counselingLoadTimeout
-          ]) as any;
-          
-          console.log(`✓ ${counselingConfig.name} loaded successfully for counseling`);
+          // Try to load the model with better error handling
+          try {
+            counselingCoachModel = await Promise.race([
+              pipeline(counselingConfig.task, counselingModelPath, counselingOptions),
+              counselingLoadTimeout
+            ]) as any;
+            
+            // Verify the model loaded correctly
+            if (!counselingCoachModel) {
+              throw new Error('Model pipeline returned null');
+            }
+            
+            console.log(`✓ ${counselingConfig.name} loaded successfully for counseling`);
+          } catch (pipelineError: any) {
+            // Check if error is due to HTML response (CORS/network issue)
+            const errorMsg = pipelineError?.message || String(pipelineError);
+            if (errorMsg.includes('<!DOCTYPE') || errorMsg.includes('Unexpected token')) {
+              console.warn(`[MODEL_DEBUG] ${counselingConfig.name} loading failed - received HTML instead of model data. This may be a CORS or network issue.`);
+              throw new Error(`Network/CORS error: Received HTML response instead of model data. Check network connectivity and CORS settings.`);
+            }
+            throw pipelineError; // Re-throw other errors
+          }
           
           allModelsCache.set(counselingModelType, counselingCoachModel);
           

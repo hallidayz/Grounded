@@ -111,11 +111,10 @@ export function useDashboard({
           .substring(2, 9)}`;
 
         const jsonIn = JSON.stringify({ emotion, subEmotion, valueId, timestamp, userId });
+        // generateEmotionalEncouragement only takes 2 parameters: emotion and subEmotion
         const encouragement = await generateEmotionalEncouragement(
           emotion as EmotionalState,
-          subEmotion,
-          lowStateCount,
-          lcswConfig
+          subEmotion
         );
 
         const feelingLog: FeelingLog = {
@@ -158,9 +157,12 @@ export function useDashboard({
    * Handle AI‑based encouragement generation
    */
   const handleEmotionalEncourage = useCallback(
-    async (state: EmotionalState) => {
+    async (state: EmotionalState, subEmotion?: string | null) => {
       setEncouragementLoading(true);
       setEncouragementText(null);
+
+      // Use the passed subEmotion, or fall back to selectedFeeling from state
+      const feelingToUse = subEmotion !== undefined ? subEmotion : selectedFeeling;
 
       let newLowCount = lowStateCount;
       if (['heavy', 'drained', 'overwhelmed'].includes(state))
@@ -169,11 +171,10 @@ export function useDashboard({
       setLowStateCount(newLowCount);
 
       try {
+        // generateEmotionalEncouragement only takes 2 parameters: emotion and subEmotion
         const encouragement = await generateEmotionalEncouragement(
           state,
-          selectedFeeling || '',
-          newLowCount,
-          lcswConfig
+          feelingToUse || null
         );
 
         setEncouragementText(encouragement);
@@ -183,7 +184,7 @@ export function useDashboard({
           id: `feeling-${Date.now()}`,
           timestamp: new Date().toISOString(),
           emotionalState: state,
-          selectedFeeling: selectedFeeling || null,
+          selectedFeeling: feelingToUse || null,
           aiResponse: encouragement,
           isAIResponse: true,
           lowStateCount: newLowCount,
