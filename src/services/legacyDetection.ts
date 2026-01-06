@@ -29,9 +29,8 @@ export async function detectLegacyData(): Promise<LegacyDataInfo> {
       // If version error (requested version < existing), try to open without version
       // This happens when database was upgraded but we're checking with old version
       if (versionError?.name === 'VersionError' || versionError?.message?.includes('version')) {
-        // Database exists but is newer - use dbService to access it properly
-        const { dbService } = await import('./database');
-        await dbService.init();
+        // Database exists but is newer - this means we're using Dexie (version 80/800)
+        // Don't call dbService.init() as it will cause version conflicts
         // Return empty - database exists but is current version, not legacy
         return {
           hasLegacyData: false,

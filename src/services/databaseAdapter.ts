@@ -179,8 +179,8 @@ export class LegacyAdapter implements DatabaseAdapter {
     // Initialize Dexie database with cleanup
     // This will clean up old databases and open the connection
     await db.initialize();
-    // Also initialize dbService for any methods not yet migrated
-    return this.dbService.init();
+    // Don't call dbService.init() - it uses old database.ts with version conflicts
+    // All operations should go through Dexie now
   }
   
   async createUser(userData: Omit<UserData, 'id' | 'createdAt'>): Promise<string> {

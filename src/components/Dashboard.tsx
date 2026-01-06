@@ -72,6 +72,15 @@ const Dashboard: React.FC<DashboardProps> = ({
     }
   }, []);
 
+  // Debug: Log when reflection modal state changes
+  useEffect(() => {
+    console.log('[Dashboard] Reflection modal state changed:', {
+      showReflectionModal,
+      selectedValue: selectedValue?.name || null,
+      valuesCount: values.length
+    });
+  }, [showReflectionModal, selectedValue, values.length]);
+
   /**
    * Emotion button handler - opens EmotionModal with pre-selected emotion for sub-emotion selection
    */
@@ -87,6 +96,8 @@ const Dashboard: React.FC<DashboardProps> = ({
    * Now receives strings: primary (emotion state) and sub (feeling word)
    */
   const handleEmotionSelect = async (primary: string, sub?: string) => {
+    console.log('[Dashboard] Emotion selected:', { primary, sub, valuesCount: values.length });
+    
     // Update EmotionContext
     setPrimaryEmotion(primary, 'dashboard');
     if (sub) {
@@ -101,17 +112,38 @@ const Dashboard: React.FC<DashboardProps> = ({
       dashboard.setSelectedFeeling(sub);
     }
 
+    // Close emotion modal first
+    setShowEmotionModal(false);
+
     // Automatically generate encouragement when emotion is selected
     // Pass both primary and sub-emotion to ensure encouragement uses the sub-emotion
-    await dashboard.handleEmotionalEncourage(primary, sub);
+    // Don't await - let it run in background, but open modal immediately
+    dashboard.handleEmotionalEncourage(primary, sub).catch(err => {
+      console.error('[Dashboard] Encouragement generation failed (non-critical):', err);
+    });
     
-    // After emotion selection, if we have values, open reflection form with first value
+    // After emotion selection, open reflection form
+    // If we have values, use the first one; otherwise create a placeholder
     if (values.length > 0) {
+      console.log('[Dashboard] Opening reflection modal with value:', values[0].name);
       setSelectedValue(values[0]);
       dashboard.setActiveValueId(values[0].id);
-      setShowReflectionModal(true);
+    } else {
+      console.warn('[Dashboard] No values available - opening reflection modal with placeholder');
+      // Create a placeholder value so the modal can still open
+      setSelectedValue({
+        id: 'placeholder',
+        name: 'Reflection',
+        description: 'General reflection',
+        category: 'general'
+      });
     }
-    setShowEmotionModal(false);
+    
+    // Use setTimeout to ensure state updates are processed
+    setTimeout(() => {
+      setShowReflectionModal(true);
+      console.log('[Dashboard] Reflection modal should now be open');
+    }, 100);
   };
 
   /**
@@ -236,7 +268,15 @@ const Dashboard: React.FC<DashboardProps> = ({
 
       {/* Reflection Modal for value check-ins */}
       {showReflectionModal && selectedValue && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm">
+        <div 
+          className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm"
+          onClick={(e) => {
+            // Close modal when clicking backdrop
+            if (e.target === e.currentTarget) {
+              closeReflectionModal();
+            }
+          }}
+        >
           <div
             role="dialog"
             aria-modal="true"
