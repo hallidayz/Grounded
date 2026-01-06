@@ -92,7 +92,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({
           console.warn('[AuthContext] Persistent storage not granted - credentials may be lost');
         }
         // Ensure auth store is initialized before getting user
-        const { default: authStore } = await import('../services/authStore');
+        const { authStore } = await import('../services/authStore');
         try {
           await authStore.init();
           console.log('[AuthContext] Auth store initialized');
