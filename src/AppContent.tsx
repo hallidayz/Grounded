@@ -126,14 +126,6 @@ export default function AppContent({ onHydrationReady }: { onHydrationReady?: ()
     );
   }
 
-  // Handle clear data with confirmation
-  const handleClearData = () => {
-    if (window.confirm('Are you sure you want to clear all local data? This cannot be undone.')) {
-      if (context) {
-        context.handleClearData();
-      }
-    }
-  };
 
   return (
     <div className="min-h-screen flex flex-col bg-bg-primary dark:bg-dark-bg-primary text-text-primary dark:text-white">
