@@ -239,6 +239,7 @@ export default function AppContent({ onHydrationReady }: { onHydrationReady?: ()
             )}
             <ValueSelection
               initialSelected={context?.selectedValueIds || []}
+              hideConfirm={showSettings || showHelp || showResources}
               onSave={(ids) => {
                 // Auto-save without navigation (called on every selection change)
                 if (context) {
