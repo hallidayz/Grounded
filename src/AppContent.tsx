@@ -342,6 +342,9 @@ export default function AppContent({ onHydrationReady }: { onHydrationReady?: ()
                 logs={context.logs || []}
                 goals={context.goals || []}
                 lcswConfig={context.settings?.lcswConfig}
+                initialEmotion={currentEmotion}
+                initialFeeling={currentFeeling}
+                initialEncouragement={encouragementText}
                 onLog={(entry) => {
                   if (context) {
                     context.handleLogEntry(entry);

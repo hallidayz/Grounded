@@ -55,11 +55,11 @@ const Dashboard: React.FC<DashboardProps> = ({
         dashboard.setSelectedFeeling(initialFeeling);
       }
     }
-    if (initialEncouragement) {
+    if (initialEncouragement && dashboard.setEncouragementText) {
       // Set encouragement directly if provided from home screen
-      (dashboard as any).setEncouragementText?.(initialEncouragement);
+      dashboard.setEncouragementText(initialEncouragement);
     }
-  }, [initialEmotion, initialFeeling, initialEncouragement]);
+  }, [initialEmotion, initialFeeling, initialEncouragement, dashboard]);
 
   // Emotion context integration
   const { setPrimaryEmotion, setSubEmotion } = useEmotion();

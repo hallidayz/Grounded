@@ -306,6 +306,7 @@ export function useDashboard({
     setGoalText,
     setGoalFreq,
     setCrisisAlert,
+    setEncouragementText, // Expose for setting encouragement from external sources
 
     // handlers
     handleEmotionalEncourage,
