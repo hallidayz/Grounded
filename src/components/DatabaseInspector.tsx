@@ -35,8 +35,11 @@ export const DatabaseInspector: React.FC = () => {
   if (!isDatabaseInspectorEnabled()) {
     return (
       <div className="p-8 text-center">
-        <h1 className="text-2xl font-bold text-red-600 mb-4">Database Inspector Disabled</h1>
-        <p className="text-gray-600">This tool is only available in development mode.</p>
+        <h1 className="text-2xl font-bold text-red-600 dark:text-red-400 mb-4">Database Inspector Disabled</h1>
+        <p className="text-gray-600 dark:text-gray-400 mb-2">This tool is only available in development mode.</p>
+        <p className="text-sm text-gray-500 dark:text-gray-500 italic">
+          Development mode only — not available in production.
+        </p>
       </div>
     );
   }
@@ -246,6 +249,9 @@ export const DatabaseInspector: React.FC = () => {
               </h1>
               <p className="text-sm text-gray-600 dark:text-gray-400">
                 Development tool for inspecting and managing database stores
+              </p>
+              <p className="text-xs text-amber-600 dark:text-amber-400 mt-1 italic">
+                ⚠️ Development mode only — not available in production.
               </p>
             </div>
             <div className="flex gap-2">

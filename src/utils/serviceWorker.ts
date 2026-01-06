@@ -7,6 +7,7 @@
 
 // Guard to prevent multiple simultaneous service worker checks
 let serviceWorkerCheckInProgress = false;
+let timeoutWarningLogged = false; // Track if timeout warning was already logged
 
 /**
  * Verify and activate service worker on app startup
@@ -72,7 +73,11 @@ export async function ensureServiceWorkerActive(): Promise<boolean> {
           }),
           new Promise<boolean>((resolve) => {
             setTimeout(() => {
-              console.warn('⚠️ Service Worker installation timeout after 5 seconds');
+              // Only log warning once to prevent console spam
+              if (!timeoutWarningLogged) {
+                console.warn('⚠️ [SW] Installation timeout after 5 seconds (non-critical)');
+                timeoutWarningLogged = true;
+              }
               resolve(false);
             }, 5000);
           })
@@ -142,9 +147,11 @@ export async function ensureServiceWorkerActive(): Promise<boolean> {
   // Reset flag when check completes (success or failure) and return result
   return checkPromise.then((result) => {
     serviceWorkerCheckInProgress = false;
+    timeoutWarningLogged = false; // Reset timeout warning flag
     return result;
   }).catch((error) => {
     serviceWorkerCheckInProgress = false;
+    timeoutWarningLogged = false; // Reset timeout warning flag
     return false; // Return false on error instead of throwing
   });
 }

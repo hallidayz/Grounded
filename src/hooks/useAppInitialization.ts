@@ -17,6 +17,11 @@ const INIT_STARTED_KEY = 'app_init_started';
 const INIT_STARTED_TIME_KEY = 'app_init_started_time';
 const INIT_COMPLETE_KEY = 'app_init_complete';
 
+// Debounce flag to prevent multiple "already in progress" logs
+let initializationWarningLogged = false;
+let lastWarningTime = 0;
+const WARNING_DEBOUNCE_MS = 2000; // Only log warning once per 2 seconds
+
 function isInitializationStarted(): boolean {
   if (typeof sessionStorage !== 'undefined') {
     const started = sessionStorage.getItem(INIT_STARTED_KEY);
@@ -28,16 +33,20 @@ function isInitializationStarted(): boolean {
           console.warn('[INIT] Initialization stuck for', elapsed, 'ms - resetting');
           sessionStorage.removeItem(INIT_STARTED_KEY);
           sessionStorage.removeItem(INIT_STARTED_TIME_KEY);
+          initializationWarningLogged = false; // Reset warning flag
           return false;
         }
         return true;
       } else {
         console.warn('[INIT] Initialization started flag exists but no timestamp - resetting');
         sessionStorage.removeItem(INIT_STARTED_KEY);
+        initializationWarningLogged = false; // Reset warning flag
         return false;
       }
     }
   }
+  // Reset warning flag when initialization is not started
+  initializationWarningLogged = false;
   return false;
 }
 
@@ -132,9 +141,18 @@ export function useAppInitialization(options: UseAppInitializationOptions): AppI
     
     // Prevent multiple initializations using sessionStorage guard
     if (isInitializationStarted()) {
-      console.log('[INIT] ⚠️ Initialization already in progress, skipping...');
+      // Debounce warning logs to prevent console spam
+      const now = Date.now();
+      if (!initializationWarningLogged || (now - lastWarningTime) > WARNING_DEBOUNCE_MS) {
+        console.log('[INIT] ⚠️ Initialization already in progress, skipping...');
+        initializationWarningLogged = true;
+        lastWarningTime = now;
+      }
       return;
     }
+    
+    // Reset warning flag when starting new initialization
+    initializationWarningLogged = false;
     
     setInitializationStarted(true);
     console.log('[INIT] ✅ Marking initialization as started');

@@ -12,7 +12,10 @@ import Dexie, { Table } from 'dexie';
 import { Goal, FeelingLog, Assessment, CounselorReport, Session, UserInteraction, RuleBasedUsageLog, AppSettings, LogEntry, LCSWConfig } from '../types';
 
 // Version constant for explicit version management
-export const CURRENT_DB_VERSION = 8;
+// Can be overridden via environment variable for testing
+export const CURRENT_DB_VERSION = Number(
+  (import.meta.env?.VITE_DB_VERSION as string) ?? 8
+);
 
 // Type definitions matching schema v8
 
@@ -360,12 +363,58 @@ class GroundedDB extends Dexie {
   /**
    * Initialize database and clean up old databases
    * Should be called after construction to perform async cleanup
+   * Includes safe version error recovery (dev mode only)
    */
   async initialize(): Promise<void> {
     // Clean up old database before opening
     await this.cleanupOldDatabase();
-    // Open database (triggers schema creation/upgrade if needed)
-    await this.open();
+    
+    // Open database with version error recovery
+    try {
+      await this.open();
+    } catch (err: any) {
+      // Handle version conflicts - only auto-recover in development
+      if (err?.name === 'VersionError') {
+        const isDev = import.meta.env?.DEV || 
+                     window.location.hostname === 'localhost' || 
+                     window.location.hostname === '127.0.0.1';
+        
+        if (isDev) {
+          console.warn('[Dexie] Version mismatch detected - clearing database and retrying (dev mode only)');
+          console.warn('[Dexie] Error details:', err.message);
+          
+          try {
+            // Delete the database
+            await new Promise<void>((resolve, reject) => {
+              const deleteRequest = indexedDB.deleteDatabase(this.name);
+              deleteRequest.onsuccess = () => {
+                console.log('[Dexie] Database deleted successfully, reloading page...');
+                resolve();
+              };
+              deleteRequest.onerror = () => reject(deleteRequest.error);
+              deleteRequest.onblocked = () => {
+                console.warn('[Dexie] Database deletion blocked - another tab may have it open');
+                setTimeout(() => resolve(), 1000);
+              };
+            });
+            
+            // Reload page to reinitialize
+            window.location.reload();
+            return; // Exit early - page will reload
+          } catch (deleteError) {
+            console.error('[Dexie] Failed to delete database:', deleteError);
+            throw err; // Re-throw original error
+          }
+        } else {
+          // Production mode - don't auto-delete, just throw
+          console.error('[Dexie] VersionError in production - manual intervention required');
+          throw err;
+        }
+      } else {
+        // Not a version error - re-throw
+        throw err;
+      }
+    }
   }
 
   /**

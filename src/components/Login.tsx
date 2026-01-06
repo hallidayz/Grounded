@@ -284,6 +284,7 @@ const Login: React.FC<LoginProps> = ({ onLogin }) => {
                     value={password}
                     onChange={(e) => setPassword(e.target.value)}
                     required
+                    autoComplete="current-password"
                     /* PREV: focus:ring-yellow-warm/50 */
                     className="w-full px-4 py-3 pr-12 rounded-lg bg-bg-primary dark:bg-dark-bg-primary/50 border border-border-soft dark:border-dark-border/30 text-text-primary dark:text-white focus:ring-2 focus:ring-brand/50 dark:focus:ring-brand-light/50 outline-none"
                     placeholder="Enter your password"
@@ -377,6 +378,7 @@ const Login: React.FC<LoginProps> = ({ onLogin }) => {
                     onChange={(e) => setPassword(e.target.value)}
                     required
                     minLength={6}
+                    autoComplete="new-password"
                     /* PREV: focus:ring-yellow-warm/50 */
                     className="w-full px-4 py-3 pr-12 rounded-lg bg-bg-primary dark:bg-dark-bg-primary/50 border border-border-soft dark:border-dark-border/30 text-text-primary dark:text-white focus:ring-2 focus:ring-brand/50 dark:focus:ring-brand-light/50 outline-none"
                     placeholder="Choose a password (min 6 characters)"
@@ -411,6 +413,7 @@ const Login: React.FC<LoginProps> = ({ onLogin }) => {
                     onChange={(e) => setConfirmPassword(e.target.value)}
                     required
                     minLength={6}
+                    autoComplete="new-password"
                     /* PREV: focus:ring-yellow-warm/50 */
                     className="w-full px-4 py-3 pr-12 rounded-lg bg-bg-primary dark:bg-dark-bg-primary/50 border border-border-soft dark:border-dark-border/30 text-text-primary dark:text-white focus:ring-2 focus:ring-brand/50 dark:focus:ring-brand-light/50 outline-none"
                     placeholder="Confirm your password"
@@ -512,6 +515,7 @@ const Login: React.FC<LoginProps> = ({ onLogin }) => {
                     onChange={(e) => setNewPassword(e.target.value)}
                     required
                     minLength={6}
+                    autoComplete="new-password"
                     /* PREV: focus:ring-yellow-warm/50 */
                     className="w-full px-4 py-3 pr-12 rounded-lg bg-bg-primary dark:bg-dark-bg-primary/50 border border-border-soft dark:border-dark-border/30 text-text-primary dark:text-white focus:ring-2 focus:ring-brand/50 dark:focus:ring-brand-light/50 outline-none"
                     placeholder="Enter new password (min 6 characters)"
@@ -546,6 +550,7 @@ const Login: React.FC<LoginProps> = ({ onLogin }) => {
                     onChange={(e) => setConfirmPassword(e.target.value)}
                     required
                     minLength={6}
+                    autoComplete="new-password"
                     /* PREV: focus:ring-yellow-warm/50 */
                     className="w-full px-4 py-3 pr-12 rounded-lg bg-bg-primary dark:bg-dark-bg-primary/50 border border-border-soft dark:border-dark-border/30 text-text-primary dark:text-white focus:ring-2 focus:ring-brand/50 dark:focus:ring-brand-light/50 outline-none"
                     placeholder="Confirm new password"
