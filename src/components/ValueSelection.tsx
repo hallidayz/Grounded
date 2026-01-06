@@ -22,6 +22,11 @@ const ValueSelection: React.FC<ValueSelectionProps> = ({ initialSelected, onComp
   const [draggedIndex, setDraggedIndex] = useState<number | null>(null);
   const [dragOverIndex, setDragOverIndex] = useState<number | null>(null);
 
+  // Sync local state with initialSelected prop changes
+  useEffect(() => {
+    setSelected(initialSelected);
+  }, [initialSelected]);
+
   const groupedValues = useMemo(() => {
     return ALL_VALUES.reduce((acc, value) => {
       if (!acc[value.category]) acc[value.category] = [];
@@ -36,13 +41,28 @@ const ValueSelection: React.FC<ValueSelectionProps> = ({ initialSelected, onComp
 
   const toggleValue = (id: string) => {
     setSelected(prev => {
-      if (prev.includes(id)) return prev.filter(v => v !== id);
-      if (prev.length >= 10) {
+      let newSelected: string[];
+      if (prev.includes(id)) {
+        newSelected = prev.filter(v => v !== id);
+      } else if (prev.length >= 10) {
         setShakeId(id);
         setTimeout(() => setShakeId(null), 500);
-        return prev;
+        return prev; // Don't change selection if at max
+      } else {
+        newSelected = [...prev, id];
       }
-      return [...prev, id];
+      
+      // CRITICAL: Auto-save values immediately when changed (not just on confirm)
+      // This ensures values persist even if user navigates away or encounters an error
+      // Use setTimeout to debounce rapid changes and avoid blocking UI
+      setTimeout(() => {
+        if (newSelected.length > 0 || prev.length > 0) {
+          // Save current selection (even if empty, to clear old selections)
+          onComplete(newSelected);
+        }
+      }, 200);
+      
+      return newSelected;
     });
   };
 
@@ -52,6 +72,10 @@ const ValueSelection: React.FC<ValueSelectionProps> = ({ initialSelected, onComp
     if (targetIndex < 0 || targetIndex >= newSelected.length) return;
     [newSelected[index], newSelected[targetIndex]] = [newSelected[targetIndex], newSelected[index]];
     setSelected(newSelected);
+    // Auto-save when reordering
+    setTimeout(() => {
+      onComplete(newSelected);
+    }, 200);
   };
 
   const handleDragStart = (index: number) => setDraggedIndex(index);
@@ -73,6 +97,10 @@ const ValueSelection: React.FC<ValueSelectionProps> = ({ initialSelected, onComp
     setSelected(newSelected);
     setDraggedIndex(null);
     setDragOverIndex(null);
+    // Auto-save when drag-drop reordering
+    setTimeout(() => {
+      onComplete(newSelected);
+    }, 200);
   };
 
   const toggleCategory = (category: string) => {
@@ -192,9 +220,21 @@ const ValueSelection: React.FC<ValueSelectionProps> = ({ initialSelected, onComp
                 {/* Plus button for adding goals - only in Values menu */}
                 {onAddGoal && (
                   <button
-                    onClick={(e) => {
+                    onClick={async (e) => {
                       e.stopPropagation();
-                      onAddGoal(value.id);
+                      // CRITICAL: Save current selected values before navigating to add goal
+                      // This ensures values persist even if there's an error
+                      try {
+                        await new Promise(resolve => {
+                          onComplete(selected);
+                          setTimeout(resolve, 50); // Small delay to ensure save completes
+                        });
+                        onAddGoal(value.id);
+                      } catch (error) {
+                        console.error('[ValueSelection] Error saving values before adding goal:', error);
+                        // Still try to navigate, but log the error
+                        onAddGoal(value.id);
+                      }
                     }}
                     /* PREV: bg-yellow-warm text-text-primary */
                     className="w-6 h-6 sm:w-7 sm:h-7 flex items-center justify-center rounded-lg bg-brand dark:bg-brand-light text-white dark:text-navy-dark hover:opacity-90 transition-all shadow-sm active:scale-95 flex-shrink-0"

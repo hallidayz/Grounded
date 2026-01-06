@@ -166,7 +166,45 @@ export default function AppContent({ onHydrationReady }: { onHydrationReady?: ()
             }}
           />
         )}
-        {currentView === "update" && <GoalsUpdateView />}
+        {currentView === "update" && (
+          <GoalsUpdateView
+            goals={context?.goals || []}
+            values={selectedValues}
+            onUpdateGoal={(goalId, update) => {
+              if (context) {
+                const updatedGoals = (context.goals || []).map(g => {
+                  if (g.id === goalId) {
+                    return { ...g, updates: [...(g.updates || []), update] };
+                  }
+                  return g;
+                });
+                context.handleUpdateGoals(updatedGoals);
+              }
+            }}
+            onCompleteGoal={(goal) => {
+              if (context) {
+                const updatedGoals = (context.goals || []).map(g => 
+                  g.id === goal.id ? { ...g, completed: true } : g
+                );
+                context.handleUpdateGoals(updatedGoals);
+              }
+            }}
+            onDeleteGoal={(goalId) => {
+              if (context) {
+                const updatedGoals = (context.goals || []).filter(g => g.id !== goalId);
+                context.handleUpdateGoals(updatedGoals);
+              }
+            }}
+            onEditGoal={(goalId, newText) => {
+              if (context) {
+                const updatedGoals = (context.goals || []).map(g => 
+                  g.id === goalId ? { ...g, text: newText } : g
+                );
+                context.handleUpdateGoals(updatedGoals);
+              }
+            }}
+          />
+        )}
         {currentView === "vault" && <VaultControl />}
         {currentView === "values" && (
           <div className="max-w-2xl mx-auto">
