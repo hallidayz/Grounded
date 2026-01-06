@@ -1,6 +1,6 @@
 import { ValueItem, LCSWConfig, ReflectionAnalysisResponse, CounselingGuidanceResponse } from '../types';
 import { generateText } from '../aiService';
-import { getSelectedModel } from './models';
+import { getSelectedModel, getModelConfig } from './models';
 import { CrisisResponse } from '../safetyService';
 
 // Helper to get user's name (placeholder for now, will connect to user context)
@@ -186,24 +186,48 @@ export async function generateEmotionalEncouragement(
   emotion: string,
   subEmotion?: string | null
 ): Promise<string> {
-  const modelName = getSelectedModel() || 'Xenova/LaMini-Flan-T5-77M';
+  // CRITICAL FIX: Get the actual model path, not just the model type
+  // getSelectedModel() returns 'lamini' or 'distilbert', but we need the path
+  const selectedModelType = getSelectedModel();
+  const modelConfig = getModelConfig(selectedModelType);
+  // For encouragement, always use Lamini (text2text-generation model)
+  // If Lamini isn't selected, use it anyway for counseling features
+  const modelName = modelConfig?.task === 'text2text-generation' 
+    ? modelConfig.path 
+    : 'Xenova/LaMini-Flan-T5-77M'; // Fallback to Lamini path
+  
   const userName = getUserName();
+  
+  // Enhanced prompt with emotion and sub-emotion context
+  const emotionContext = subEmotion ? `${emotion} (feeling ${subEmotion})` : emotion;
   
   const prompt = `
     User: ${userName}
-    Emotion: ${subEmotion ? `${emotion} (${subEmotion})` : emotion}
+    Emotion: ${emotionContext}
     
-    Give ${userName} a brief, encouraging message about feeling ${emotion}.
+    Give ${userName} a brief, encouraging message about feeling ${emotionContext}.
     Be supportive and validating. Use "you". Under 50 words.
+    ${subEmotion ? `Specifically acknowledge their feeling of ${subEmotion}.` : ''}
   `;
+  
+  console.log('[generateEmotionalEncouragement] Generating with:', { 
+    emotion, 
+    subEmotion, 
+    modelName,
+    emotionContext 
+  });
   
   try {
     const response = await generateText(prompt, modelName);
     if (typeof response === 'object' && 'isCrisis' in response) {
+      console.warn('[generateEmotionalEncouragement] Crisis detected, using fallback');
       return `Your feelings are valid. Take care of yourself.`;
     }
-    return response as string;
+    const encouragement = response as string;
+    console.log('[generateEmotionalEncouragement] Generated encouragement:', encouragement);
+    return encouragement;
   } catch (error) {
+    console.error('[generateEmotionalEncouragement] Error generating encouragement:', error);
     return `Your feelings are valid. Take care of yourself.`;
   }
 }

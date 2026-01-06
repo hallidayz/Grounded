@@ -120,97 +120,22 @@ const ReflectionForm: React.FC<ReflectionFormProps> = ({
 
   return (
     <div className="mt-4 sm:mt-6 space-y-4 sm:space-y-6 animate-pop border-t border-border-soft dark:border-dark-border/30 pt-4 sm:pt-5">
-      {/* Emotional State Bar - 8 States */}
+      {/* Emotional State Selection - Consistent with home page */}
       <div className="space-y-3">
         <label className="text-xs sm:text-sm font-black text-text-primary/50 dark:text-white/50 uppercase tracking-widest block px-1">
           How are you feeling right now?
         </label>
         
-        <EmotionPicker 
-          selected={emotionalState === 'neutral' ? null : emotionalState}
-          onSelect={(state) => {
-            onEmotionalStateChange(state);
-            onShowFeelingsListToggle();
+        <EmotionSelection
+          emotion={emotionalState === 'neutral' ? undefined : emotionalState}
+          feeling={selectedFeeling || undefined}
+          onEmotionChange={(emotion, feeling) => {
+            onEmotionalStateChange(emotion as EmotionalState);
+            onSelectedFeelingChange(feeling);
           }}
+          showSwipeHint={true}
+          compact={false}
         />
-        
-        {/* Feelings List Modal */}
-        {showFeelingsList && (() => {
-          const currentStateConfig = getEmotionalState(emotionalState);
-          if (!currentStateConfig) return null;
-          
-          return (
-            <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-navy-dark/60 backdrop-blur-sm" onClick={onShowFeelingsListToggle}>
-              <div className="bg-white dark:bg-dark-bg-primary rounded-2xl sm:rounded-3xl shadow-2xl max-w-md w-full max-h-[80vh] overflow-hidden" onClick={(e) => e.stopPropagation()}>
-                <div className="p-4 sm:p-6">
-                  <div className="flex items-center justify-between mb-4">
-                    <div>
-                      <h3 className="text-lg sm:text-xl font-black text-text-primary dark:text-white">
-                        {currentStateConfig.label}
-                      </h3>
-                      <p className="text-xs text-text-primary/60 dark:text-white/60 mt-1">
-                        {currentStateConfig.reflectionPrompt}
-                      </p>
-                    </div>
-                    <button
-                      onClick={onShowFeelingsListToggle}
-                      className="w-8 h-8 flex items-center justify-center rounded-full bg-bg-secondary dark:bg-dark-bg-primary/50 text-text-tertiary hover:text-text-primary dark:hover:text-white"
-                    >
-                      <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={3} d="M6 18L18 6M6 6l12 12" />
-                      </svg>
-                    </button>
-                  </div>
-                  
-                  <div className="grid grid-cols-2 sm:grid-cols-3 gap-2 sm:gap-3">
-                    {currentStateConfig.feelings.map((feeling) => (
-                      <button
-                        key={feeling}
-                        onClick={() => {
-                          onSelectedFeelingChange(feeling);
-                          onShowFeelingsListToggle();
-                        }}
-                        className={`p-3 sm:p-4 rounded-xl sm:rounded-2xl border-2 transition-all active:scale-95 ${
-                          selectedFeeling === feeling
-                            ? 'border-navy-primary dark:border-white font-bold text-white dark:text-text-primary'
-                            /* PREV: hover:border-yellow-warm/50 */
-                            : 'border-border-soft dark:border-dark-border/30 bg-bg-secondary dark:bg-dark-bg-primary/50 text-text-primary dark:text-white hover:border-brand/50 dark:hover:border-brand-light/50'
-                        }`}
-                        style={selectedFeeling === feeling ? {
-                          backgroundColor: currentStateConfig.color
-                        } : {}}
-                      >
-                        <span className="text-xs sm:text-sm capitalize">{feeling}</span>
-                      </button>
-                    ))}
-                  </div>
-                  
-                  {selectedFeeling && (
-                    /* PREV: bg-yellow-warm/10 ... border-yellow-warm/30 */
-                    <div className="mt-4 p-3 bg-brand/5 dark:bg-brand/10 rounded-xl border border-brand/20 dark:border-brand/30">
-                      <p className="text-xs text-text-primary dark:text-white">
-                        <span className="font-bold">Selected:</span> {selectedFeeling}
-                      </p>
-                    </div>
-                  )}
-                </div>
-              </div>
-            </div>
-          );
-        })()}
-        
-        {selectedFeeling && (() => {
-          const currentStateConfig = getEmotionalState(emotionalState);
-          if (!currentStateConfig) return null;
-          return (
-            /* PREV: bg-yellow-warm/10 ... border-yellow-warm/30 */
-            <div className="mt-2 p-2 sm:p-3 bg-brand/5 dark:bg-brand/10 rounded-lg border border-brand/20 dark:border-brand/30">
-              <p className="text-xs sm:text-sm text-text-primary dark:text-white">
-                <span className="font-bold">Feeling:</span> {selectedFeeling} ({currentStateConfig.shortLabel})
-              </p>
-            </div>
-          );
-        })()}
       </div>
 
       <div className="bg-navy-primary dark:bg-navy-primary rounded-xl sm:rounded-2xl p-3 sm:p-4 shadow-md border border-navy-primary/20 dark:border-dark-border/50 relative overflow-hidden group">
