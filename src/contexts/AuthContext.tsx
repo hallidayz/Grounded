@@ -131,10 +131,50 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({
         } else {
           // No user found - show login
           console.log('[AuthContext] No user found - showing login');
+          // Double-check localStorage as a last resort
+          const localUserId = localStorage.getItem('userId');
+          if (localUserId) {
+            console.log('[AuthContext] Found userId in localStorage, attempting to restore:', localUserId);
+            try {
+              const localUser = await getCurrentUser();
+              if (localUser) {
+                console.log('[AuthContext] Successfully restored user from localStorage');
+                setUserId(localUser.id);
+                if (localUser.termsAccepted) {
+                  setAuthState('app');
+                } else {
+                  setAuthState('terms');
+                }
+                return;
+              }
+            } catch (restoreError) {
+              console.error('[AuthContext] Failed to restore user from localStorage:', restoreError);
+            }
+          }
           setAuthState('login');
         }
       } catch (error) {
         console.error('[AuthContext] Error initializing auth:', error);
+        // Try to recover by checking localStorage directly
+        const localUserId = localStorage.getItem('userId');
+        if (localUserId) {
+          console.log('[AuthContext] Attempting recovery from localStorage:', localUserId);
+          try {
+            const localUser = await getCurrentUser();
+            if (localUser) {
+              console.log('[AuthContext] Recovery successful');
+              setUserId(localUser.id);
+              if (localUser.termsAccepted) {
+                setAuthState('app');
+              } else {
+                setAuthState('terms');
+              }
+              return;
+            }
+          } catch (recoveryError) {
+            console.error('[AuthContext] Recovery failed:', recoveryError);
+          }
+        }
         setAuthState('login');
         hasInitializedRef.current = false; // Allow retry on error
       }
