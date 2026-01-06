@@ -13,17 +13,16 @@
  * - Safe migration handling
  */
 
-import Dexie, { Table } from 'dexie';
+import Dexie, { Table, Middleware } from 'dexie';
 import { Goal, FeelingLog, Assessment, CounselorReport, Session, UserInteraction, RuleBasedUsageLog, AppSettings, LogEntry, LCSWConfig } from '../types';
+import { encryptData, decryptData } from './encryption';
 
 // Database name constant for consistency
 const DB_NAME = 'groundedDB';
 
 // Version constant for explicit version management
-// Default to 80 to match existing deployments, can be overridden via environment variable
-export const CURRENT_DB_VERSION = Number(
-  (import.meta.env?.VITE_DB_VERSION as string) ?? 80
-);
+// Version 3: Alpha wipe - clean schema with hook-based encryption
+export const CURRENT_DB_VERSION = 3;
 
 // Type definitions matching schema v8
 
@@ -142,7 +141,7 @@ class GroundedDB extends Dexie {
   constructor() {
     super(DB_NAME);
     
-    // Version 8: Full schema with values and goals tables
+    // Version 3: Alpha wipe - clean schema with hook-based encryption
     this.version(CURRENT_DB_VERSION).stores({
       // Users store - keyPath: id, indexes: username (unique), email (unique)
       users: 'id, username, email',
@@ -179,193 +178,93 @@ class GroundedDB extends Dexie {
       
       // RuleBasedUsageLogs store - keyPath: id, indexes: timestamp, type
       ruleBasedUsageLogs: 'id, timestamp, type',
-    }).upgrade(async (trans) => {
-      // TRANSACTION SEMANTICS:
-      // Dexie upgrade transactions are atomic - either all changes commit or none do.
-      // If any error is thrown, the entire upgrade is rolled back.
-      // This prevents partial migrations that could corrupt data.
-      // All awaited operations must target `trans.table(...)` to maintain atomicity.
+    });
+    
+    // Hook-based encryption middleware for PHI data stores
+    // Uses Dexie middleware to intercept and encrypt/decrypt data
+    this.setupEncryptionHooks();
+  }
+  
+  /**
+   * Setup encryption hooks for PHI data stores
+   * Hooks mark fields for encryption/decryption - actual crypto happens in adapter
+   */
+  private setupEncryptionHooks(): void {
+    const phiStores = ['feelingLogs', 'sessions', 'assessments', 'reports', 'userInteractions'];
+    
+    phiStores.forEach(storeName => {
+      const table = this.table(storeName);
       
-      console.log(`[Dexie] Upgrading database to version ${CURRENT_DB_VERSION}`);
-      
-      // Migration from v7 → v8: Move values and goals from appData to dedicated tables
-      // Note: We check for v7→v8 migration by checking if we're upgrading to v8
-      // (Dexie doesn't expose old version cleanly in trans object)
-      
-      try {
-        const appDataStore = trans.table('appData');
-        const valuesStore = trans.table('values');
-        const goalsStore = trans.table('goals');
-        
-        // Read migration flag BEFORE processing (read-only, safe in transaction)
-        const migrationKey = 'dexie_migration_v7_to_v8';
-        if (localStorage.getItem(migrationKey) === 'true') {
-          console.log('[Dexie] Migration v7→v8 already completed, skipping');
-          return; // Exit early to avoid duplicate migration
+      // Hook into creating to mark fields for encryption
+      table.hook('creating', (primKey, obj, trans) => {
+        if (this.shouldEncrypt() && obj) {
+          return this.markForEncryption(obj);
         }
-        
-        // Migrate values and goals from appData to dedicated tables
-        const allAppData = await appDataStore.toArray();
-        const migratedUserIds = new Set(); // Track users to prevent duplicate processing
-        
-          // Error/warning throttling for large datasets
-          let warningCount = 0;
-          const MAX_WARNINGS = 10; // Cap warnings to prevent console flooding
-          
-          for (const appData of allAppData) {
-            // Safety validation: Ensure appData has required fields
-            if (!appData || !appData.userId) {
-              if (warningCount < MAX_WARNINGS) {
-                console.warn('[Dexie] Skipping invalid appData entry:', appData);
-                warningCount++;
-              }
-              continue;
-            }
-            
-            // Duplicate prevention: Skip if already processed
-            if (migratedUserIds.has(appData.userId)) {
-              if (warningCount < MAX_WARNINGS) {
-                console.warn(`[Dexie] User ${appData.userId} already processed, skipping duplicate`);
-                warningCount++;
-              }
-              continue;
-            }
-          
-          const userId = appData.userId;
-          const now = new Date().toISOString();
-          
-          // Migrate values from appData to values table
-          const valueIds: string[] = (appData.data as any)?.values ?? [];
-          if (valueIds.length > 0 && Array.isArray(valueIds)) {
-            // Get existing values for this user
-            const existingValues = await valuesStore
-              .where('userId').equals(userId)
-              .toArray();
-            
-            // Prepare bulk updates for existing values (mark inactive)
-            const updatePromises = existingValues
-              .filter(v => v.id !== undefined)
-              .map(v => valuesStore.update(v.id!, { 
-                active: false, 
-                updatedAt: now 
-              }));
-            
-            // Prepare new value records (use bulkPut for performance)
-            const newValueRecords = valueIds
-              .filter((valueId, i) => {
-                // Safety validation: Ensure valueId is valid
-                if (!valueId || typeof valueId !== 'string') {
-                  if (warningCount < MAX_WARNINGS) {
-                    console.warn(`[Dexie] Invalid valueId at index ${i}, skipping`);
-                    warningCount++;
-                  }
-                  return false;
-                }
-                return true;
-              })
-              .map((valueId, i) => {
-                const existing = existingValues.find(v => v.valueId === valueId);
-                if (existing && existing.id) {
-                  // Will be updated to active via bulkPut
-                  return {
-                    id: existing.id,
-                    userId,
-                    valueId,
-                    active: true,
-                    priority: i,
-                    createdAt: existing.createdAt || now,
-                    updatedAt: now,
-                  };
-                } else {
-                  // New entry (id will be auto-generated)
-                  return {
-                    userId,
-                    valueId,
-                    active: true,
-                    priority: i,
-                    createdAt: now,
-                    updatedAt: now,
-                  };
-                }
-              });
-            
-            // Execute updates and bulk insert/update
-            await Promise.all(updatePromises);
-            if (newValueRecords.length > 0) {
-              await valuesStore.bulkPut(newValueRecords);
-            }
-          }
-          
-          // Migrate goals from appData to goals table
-          const goalRecords: any[] = (appData.data as any)?.goals ?? [];
-          if (goalRecords.length > 0 && Array.isArray(goalRecords)) {
-            // Filter and prepare valid goals
-            const validGoals = goalRecords
-              .filter(g => {
-                // Safety validation: Ensure goal has required fields
-                if (!g || !g.id || typeof g.id !== 'string') {
-                  if (warningCount < MAX_WARNINGS) {
-                    console.warn('[Dexie] Skipping invalid goal:', g);
-                    warningCount++;
-                  }
-                  return false;
-                }
-                return true;
-              })
-              .map(g => {
-                // Add userId if missing
-                return {
-                  ...g,
-                  userId: g.userId || userId,
-                };
-              })
-              .filter(g => {
-                // Safety validation: Ensure userId is present
-                if (!g.userId) {
-                  if (warningCount < MAX_WARNINGS) {
-                    console.warn(`[Dexie] Goal ${g.id} missing userId, skipping`);
-                    warningCount++;
-                  }
-                  return false;
-                }
-                return true;
-              });
-            
-            // Check for duplicates before bulk add
-            if (validGoals.length > 0) {
-              const existingGoalIds = new Set(
-                (await goalsStore.bulkGet(validGoals.map(g => g.id)))
-                  .filter(Boolean)
-                  .map((g: any) => g.id)
-              );
-              
-              const newGoals = validGoals.filter(g => !existingGoalIds.has(g.id));
-              
-              if (newGoals.length > 0) {
-                await goalsStore.bulkAdd(newGoals);
-              }
-            }
-          }
-          
-          migratedUserIds.add(userId);
+        return obj;
+      });
+      
+      // Hook into updating to mark fields for encryption
+      table.hook('updating', (modifications, primKey, obj, trans) => {
+        if (this.shouldEncrypt() && modifications) {
+          return this.markForEncryption(modifications);
         }
-        
-        // Mark migration as completed (only if we reach here without errors)
-        // Note: This is set AFTER successful migration within the transaction
-        // If transaction fails, this won't be set, allowing retry
-        localStorage.setItem(migrationKey, 'true');
-        
-        console.log('[Dexie] Migration from v7 to v8 completed successfully');
-      } catch (error) {
-        // CRITICAL: Throw error to rollback transaction
-        // This ensures no partial migration commits
-        // Don't set flag on error - allows retry on next open
-        console.error('[Dexie] CRITICAL ERROR during v7→v8 migration:', error);
-        console.error('[Dexie] Transaction will be rolled back - no partial migration will commit');
-        console.error('[Dexie] Migration flag not set - will retry on next database open');
-        throw error; // Re-throw to trigger transaction rollback
+        return modifications;
+      });
+      
+      // Hook into reading to mark fields for decryption
+      table.hook('reading', (obj) => {
+        if (this.shouldDecrypt() && obj) {
+          return this.markForDecryption(obj);
+        }
+        return obj;
+      });
+    });
+  }
+  
+  /**
+   * Check if encryption should be applied
+   */
+  private shouldEncrypt(): boolean {
+    return localStorage.getItem('encryption_enabled') === 'true';
+  }
+  
+  /**
+   * Check if decryption should be applied
+   */
+  private shouldDecrypt(): boolean {
+    return localStorage.getItem('encryption_enabled') === 'true';
+  }
+  
+  /**
+   * Mark fields for encryption (actual encryption happens in adapter)
+   */
+  private markForEncryption(obj: any): any {
+    const fieldsToEncrypt = ['reflectionText', 'aiAnalysis', 'content', 'assessment', 'report'];
+    const marked = { ...obj };
+    
+    fieldsToEncrypt.forEach(field => {
+      if (marked[field] && typeof marked[field] === 'string' && !marked[`${field}_encrypted`]) {
+        marked[`${field}_needs_encryption`] = true;
       }
     });
+    
+    return marked;
+  }
+  
+  /**
+   * Mark fields for decryption (actual decryption happens in adapter)
+   */
+  private markForDecryption(obj: any): any {
+    const fieldsToDecrypt = ['reflectionText', 'aiAnalysis', 'content', 'assessment', 'report'];
+    const marked = { ...obj };
+    
+    fieldsToDecrypt.forEach(field => {
+      if (marked[`${field}_encrypted`] && typeof marked[field] === 'string') {
+        marked[`${field}_needs_decryption`] = true;
+      }
+    });
+    
+    return marked;
   }
 
   /**

@@ -1697,6 +1697,134 @@ class DatabaseService {
       }
     });
   }
+
+  /**
+   * Uninstall app data - completely wipes all local storage
+   * Wipes IndexedDB, localStorage, sessionStorage, and cache
+   * Use with caution - this is irreversible!
+   */
+  async uninstallAppData(): Promise<void> {
+    console.log('[Uninstall] Starting complete data wipe...');
+    
+    try {
+      // Step 1: Close any open database connections
+      if (this.db) {
+        this.db.close();
+        this.db = null;
+      }
+      
+      // Step 2: Delete all IndexedDB databases
+      const databasesToDelete = [
+        this.dbName,
+        this.oldDbName,
+        'groundedDB', // Dexie database name
+        'com.acminds.grounded.therapy.db', // Legacy database
+      ];
+      
+      for (const dbName of databasesToDelete) {
+        try {
+          await new Promise<void>((resolve, reject) => {
+            const deleteRequest = indexedDB.deleteDatabase(dbName);
+            deleteRequest.onsuccess = () => {
+              console.log(`[Uninstall] Deleted IndexedDB: ${dbName}`);
+              resolve();
+            };
+            deleteRequest.onerror = () => {
+              console.warn(`[Uninstall] Failed to delete IndexedDB: ${dbName}`, deleteRequest.error);
+              resolve(); // Continue even if deletion fails
+            };
+            deleteRequest.onblocked = () => {
+              console.warn(`[Uninstall] IndexedDB deletion blocked: ${dbName}`);
+              setTimeout(() => resolve(), 1000);
+            };
+          });
+        } catch (error) {
+          console.warn(`[Uninstall] Error deleting IndexedDB ${dbName}:`, error);
+        }
+      }
+      
+      // Step 3: Clear localStorage (except service worker registration)
+      const localStorageKeys = Object.keys(localStorage);
+      for (const key of localStorageKeys) {
+        // Preserve service worker registration if needed
+        if (key.startsWith('workbox-') || key.startsWith('sw-')) {
+          continue;
+        }
+        try {
+          localStorage.removeItem(key);
+        } catch (error) {
+          console.warn(`[Uninstall] Failed to remove localStorage key ${key}:`, error);
+        }
+      }
+      console.log('[Uninstall] Cleared localStorage');
+      
+      // Step 4: Clear sessionStorage
+      try {
+        sessionStorage.clear();
+        console.log('[Uninstall] Cleared sessionStorage');
+      } catch (error) {
+        console.warn('[Uninstall] Failed to clear sessionStorage:', error);
+      }
+      
+      // Step 5: Clear cache storage (Cache API)
+      if ('caches' in window) {
+        try {
+          const cacheNames = await caches.keys();
+          await Promise.all(
+            cacheNames.map(cacheName => {
+              console.log(`[Uninstall] Deleting cache: ${cacheName}`);
+              return caches.delete(cacheName);
+            })
+          );
+          console.log('[Uninstall] Cleared cache storage');
+        } catch (error) {
+          console.warn('[Uninstall] Failed to clear cache storage:', error);
+        }
+      }
+      
+      // Step 6: Unregister service workers
+      if ('serviceWorker' in navigator) {
+        try {
+          const registrations = await navigator.serviceWorker.getRegistrations();
+          await Promise.all(
+            registrations.map(registration => {
+              console.log(`[Uninstall] Unregistering service worker: ${registration.scope}`);
+              return registration.unregister();
+            })
+          );
+          console.log('[Uninstall] Unregistered service workers');
+        } catch (error) {
+          console.warn('[Uninstall] Failed to unregister service workers:', error);
+        }
+      }
+      
+      // Step 7: Clear OPFS (Origin Private File System) if available
+      if ('storage' in navigator && 'getDirectory' in navigator.storage) {
+        try {
+          const root = await navigator.storage.getDirectory();
+          // Clear all files in OPFS
+          for await (const [name, handle] of root.entries()) {
+            if (handle.kind === 'file') {
+              await root.removeEntry(name, { recursive: true });
+            }
+          }
+          console.log('[Uninstall] Cleared OPFS');
+        } catch (error) {
+          console.warn('[Uninstall] Failed to clear OPFS:', error);
+        }
+      }
+      
+      // Step 8: Reset internal state
+      this.metadataValidated = false;
+      this.oldDatabaseCheckCache = null;
+      this.metadataCache = null;
+      
+      console.log('[Uninstall] Complete data wipe finished successfully');
+    } catch (error) {
+      console.error('[Uninstall] Error during data wipe:', error);
+      throw new Error(`Failed to uninstall app data: ${error instanceof Error ? error.message : String(error)}`);
+    }
+  }
 }
 
 export const dbService = new DatabaseService();

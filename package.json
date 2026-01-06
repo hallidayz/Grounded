@@ -39,6 +39,7 @@
     "test": "jest",
     "test:watch": "jest --watch",
     "test:coverage": "jest --coverage",
+    "test-local": "node --loader ts-node/esm src/tests/localIntegrity.test.ts",
     "tauri": "tauri"
   },
   "dependencies": {
@@ -48,6 +49,7 @@
     "@tauri-apps/plugin-deep-link": "^2.4.5",
     "@xenova/transformers": "^2.17.2",
     "dexie": "^4.2.1",
+    "dexie-react-hooks": "^4.2.0",
     "framer-motion": "^11.18.2",
     "idb": "^7.1.1",
     "pdfmake": "^0.2.11",
@@ -57,6 +59,7 @@
   },
   "devDependencies": {
     "@babel/plugin-bugfix-firefox-class-in-computed-class-key": "^7.28.5",
+    "@playwright/test": "^1.40.0",
     "@tauri-apps/api": "^2.9.1",
     "@tauri-apps/cli": "^2.9.6",
     "@types/jest": "^29.5.12",
@@ -71,6 +74,7 @@
     "tailwindcss": "^3.4.1",
     "terser": "^5.44.1",
     "ts-jest": "^29.1.2",
+    "ts-node": "^10.9.2",
     "typescript": "~5.8.2",
     "vite": "^6.2.0",
     "vite-plugin-pwa": "^1.2.0",

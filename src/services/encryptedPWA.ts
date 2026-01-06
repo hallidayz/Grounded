@@ -516,7 +516,23 @@ export class EncryptedPWA {
   }
   
   /**
-   * Encrypt data using AES-GCM
+   * Encrypt data using AES-GCM (public utility)
+   * Can be used for encrypting individual fields or data before storage
+   */
+  async encryptData(data: Uint8Array): Promise<ArrayBuffer> {
+    return this.encrypt(data);
+  }
+
+  /**
+   * Decrypt data using AES-GCM (public utility)
+   * Can be used for decrypting individual fields or data after retrieval
+   */
+  async decryptData(encryptedData: ArrayBuffer): Promise<Uint8Array> {
+    return this.decrypt(encryptedData);
+  }
+
+  /**
+   * Encrypt data using AES-GCM (internal)
    */
   private async encrypt(data: Uint8Array): Promise<ArrayBuffer> {
     if (!this.encryptionKey) {
@@ -720,17 +736,186 @@ export class EncryptedPWA {
   }
   
   /**
-   * Verify database integrity
+   * Verify database integrity using SQLite PRAGMA and SHA-256 hashing
    */
   async verifyIntegrity(): Promise<boolean> {
     try {
+      // Step 1: SQLite integrity check
       const result = await this.query('PRAGMA integrity_check');
       const integrityResult = result[0]?.integrity_check;
-      return integrityResult === 'ok';
+      if (integrityResult !== 'ok') {
+        console.error('[Integrity] SQLite integrity check failed:', integrityResult);
+        return false;
+      }
+      
+      // Step 2: SHA-256 hash verification
+      const dbData = await this.exportDB();
+      const currentHash = await this.computeSHA256Hash(dbData);
+      const storedHash = await this.getStoredIntegrityHash();
+      
+      if (storedHash && currentHash !== storedHash) {
+        console.error('[Integrity] SHA-256 hash mismatch - data may be corrupted');
+        return false;
+      }
+      
+      // If no stored hash exists, store the current one
+      if (!storedHash) {
+        await this.storeIntegrityHash(currentHash);
+      }
+      
+      return true;
     } catch (error) {
       console.error('Error verifying integrity:', error);
       return false;
     }
+  }
+  
+  /**
+   * Compute SHA-256 hash of database data
+   */
+  private async computeSHA256Hash(data: Uint8Array): Promise<string> {
+    const hashBuffer = await crypto.subtle.digest('SHA-256', data);
+    const hashArray = Array.from(new Uint8Array(hashBuffer));
+    return hashArray.map(b => b.toString(16).padStart(2, '0')).join('');
+  }
+  
+  /**
+   * Get stored integrity hash from metadata
+   * Uses a separate integrity_hashes table to avoid schema conflicts
+   */
+  private async getStoredIntegrityHash(): Promise<string | null> {
+    try {
+      // Check if integrity_hashes table exists, if not return null
+      const result = await this.query(
+        'SELECT hash FROM integrity_hashes WHERE id = ?',
+        ['db_integrity']
+      );
+      return result[0]?.hash || null;
+    } catch (error) {
+      // Table might not exist yet - that's OK
+      return null;
+    }
+  }
+  
+  /**
+   * Store integrity hash in dedicated integrity_hashes table
+   */
+  private async storeIntegrityHash(hash: string): Promise<void> {
+    try {
+      // Create table if it doesn't exist
+      await this.execute(`
+        CREATE TABLE IF NOT EXISTS integrity_hashes (
+          id TEXT PRIMARY KEY,
+          hash TEXT NOT NULL,
+          updated_at TEXT NOT NULL
+        )
+      `);
+      
+      await this.execute(
+        `INSERT OR REPLACE INTO integrity_hashes (id, hash, updated_at) 
+         VALUES (?, ?, ?)`,
+        ['db_integrity', hash, new Date().toISOString()]
+      );
+    } catch (error) {
+      console.error('[Integrity] Failed to store integrity hash:', error);
+      // Non-critical - continue even if hash storage fails
+    }
+  }
+  
+  /**
+   * Rotate encryption key (periodic key rotation for security)
+   * Re-encrypts entire database with a new key derived from the same password
+   */
+  async rotateEncryptionKey(): Promise<void> {
+    if (!this.db || !this.initialized || !this.encryptionKey) {
+      throw new Error('Database not initialized');
+    }
+
+    try {
+      console.log('[Key Rotation] Starting encryption key rotation...');
+      
+      // Step 1: Export current database
+      const dbData = await this.exportDB();
+      
+      // Step 2: Generate new salt for key derivation
+      const newSaltArray = new Uint8Array(16);
+      crypto.getRandomValues(newSaltArray);
+      const saltKey = 'grounded_encryption_salt';
+      const newSaltHex = Array.from(newSaltArray).map(b => b.toString(16).padStart(2, '0')).join('');
+      
+      // Step 3: Get current password (stored securely or prompt user)
+      // For automatic rotation, we need to re-derive from the same password
+      // In practice, this would be called after password verification
+      const currentPassword = await this.getCurrentPasswordForRotation();
+      if (!currentPassword) {
+        throw new Error('Cannot rotate key without password verification');
+      }
+      
+      // Step 4: Derive new encryption key with new salt
+      const encoder = new TextEncoder();
+      const passwordData = encoder.encode(currentPassword);
+      const keyMaterial = await crypto.subtle.importKey(
+        'raw',
+        passwordData,
+        'PBKDF2',
+        false,
+        ['deriveBits', 'deriveKey']
+      );
+      
+      const newKey = await crypto.subtle.deriveKey(
+        {
+          name: 'PBKDF2',
+          salt: newSaltArray,
+          iterations: 100000,
+          hash: 'SHA-256'
+        },
+        keyMaterial,
+        {
+          name: 'AES-GCM',
+          length: 256
+        },
+        false,
+        ['encrypt', 'decrypt']
+      );
+      
+      // Step 5: Update salt in localStorage
+      localStorage.setItem(saltKey, newSaltHex);
+      
+      // Step 6: Update encryption key
+      this.encryptionKey = newKey;
+      
+      // Step 7: Re-encrypt and save database
+      const newEncryptedData = await this.encrypt(dbData);
+      await this.saveEncryptedDB(newEncryptedData);
+      
+      // Step 8: Update integrity hash
+      const newHash = await this.computeSHA256Hash(dbData);
+      await this.storeIntegrityHash(newHash);
+      
+      // Step 9: Audit log
+      await this.auditLog('key_rotated', 'system', null, 'Encryption key rotated successfully');
+      
+      console.log('[Key Rotation] Encryption key rotation completed successfully');
+    } catch (error) {
+      console.error('[Key Rotation] Error rotating encryption key:', error);
+      throw error;
+    }
+  }
+  
+  /**
+   * Get current password for key rotation
+   * In production, this should prompt user or use secure session storage
+   */
+  private async getCurrentPasswordForRotation(): Promise<string | null> {
+    // Check session storage for password (set during login)
+    const password = sessionStorage.getItem('encryption_password');
+    if (password) {
+      return password;
+    }
+    
+    // Fallback: return null (requires user to re-authenticate)
+    console.warn('[Key Rotation] Password not found in session - user must re-authenticate');
+    return null;
   }
   
   /**

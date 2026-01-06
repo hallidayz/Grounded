@@ -38,6 +38,8 @@ const AppContent: React.FC = () => {
   const [view, setView] = useState<ViewType>('onboarding');
   const [initialValueIdForGoal, setInitialValueIdForGoal] = useState<string | null>(null);
   const [progressState, setProgressState] = useState({ progress: 0, status: 'idle' as const, label: 'Initializing...', details: '' });
+  const [isFirstRun, setIsFirstRun] = useState<boolean | null>(null); // null = checking, true/false = determined
+  const [isHydrating, setIsHydrating] = useState(true); // Track hydration state
   
   const { status: installationStatus, label: installationLabel, progress: installationProgress, displayText: aiStatusText } = useModelInstallationStatus();
 
@@ -48,6 +50,74 @@ const AppContent: React.FC = () => {
   } catch (error) {
     encryptionEnabled = false;
   }
+
+  // First-run detection
+  useEffect(() => {
+    const checkFirstRun = async () => {
+      try {
+        const { updateManager } = await import('./services/updateManager');
+        const updateInfo = await updateManager.initialize();
+        setIsFirstRun(updateInfo.isNewInstall);
+        console.log('[App] First-run detection:', { isFirstRun: updateInfo.isNewInstall, isUpdate: updateInfo.isUpdate });
+      } catch (error) {
+        console.warn('[App] First-run detection failed:', error);
+        setIsFirstRun(false); // Default to false on error
+      }
+    };
+    checkFirstRun();
+  }, []);
+
+  // Auto-reset logic: Detect DB version mismatch (version 3) and reset automatically
+  useEffect(() => {
+    const checkDbVersion = async () => {
+      try {
+        const { CURRENT_DB_VERSION, db, resetDexieDatabase } = await import('./services/dexieDB');
+        
+        // Try to open database to check version
+        try {
+          await db.open();
+          const version = (db as any).verno || (db as any).verno;
+          
+          // Auto-reset if version doesn't match version 3 (alpha wipe)
+          if (version !== CURRENT_DB_VERSION && CURRENT_DB_VERSION === 3) {
+            console.warn(`[App] DB version mismatch detected: ${version} !== ${CURRENT_DB_VERSION}. Auto-resetting for alpha wipe...`);
+            await resetDexieDatabase();
+            console.log('[App] Database reset complete (version 3), reloading page...');
+            window.location.reload();
+            return;
+          }
+        } catch (error: any) {
+          if (error?.name === 'VersionError') {
+            console.warn('[App] VersionError detected, auto-resetting database for version 3...');
+            await resetDexieDatabase();
+            window.location.reload();
+            return;
+          }
+        }
+      } catch (error) {
+        console.warn('[App] DB version check failed:', error);
+      }
+    };
+    
+    // Check after a short delay to ensure Dexie is initialized
+    const timer = setTimeout(checkDbVersion, 1000);
+    return () => clearTimeout(timer);
+  }, []);
+
+  // Smooth hydration loader - show while data is loading
+  useEffect(() => {
+    if (authState === 'app' && (initResult.loading || data.isHydrating)) {
+      setIsHydrating(true);
+    } else if (authState === 'app' && !initResult.loading && !data.isHydrating) {
+      // Smooth fade-out after hydration completes
+      const timer = setTimeout(() => {
+        setIsHydrating(false);
+      }, 300); // Small delay for smooth transition
+      return () => clearTimeout(timer);
+    } else {
+      setIsHydrating(false);
+    }
+  }, [authState, initResult.loading, data.isHydrating]);
 
   // Initialize app
   const initResult = useAppInitialization({
@@ -222,6 +292,16 @@ const AppContent: React.FC = () => {
       setView('home'); // Returning user - go to home
     }
   };
+
+  // Show smooth hydration loader during data hydration
+  if (authState === 'app' && (isHydrating || initResult.loading)) {
+    return (
+      <LoadingScreen 
+        message={progressState.label || 'Loading your data...'} 
+        progress={progressState.progress}
+      />
+    );
+  }
 
   // Show loading state while checking auth
   if (authState === 'checking') {

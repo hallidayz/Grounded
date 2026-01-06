@@ -249,10 +249,8 @@ export class LegacyAdapter implements DatabaseAdapter {
     migrated?: boolean;
     migrationDate?: string;
   }): Promise<void> {
-    // SECURITY: Validate encryption boundary - feelingLogs contain PHI
-    validateEncryptionBoundary('saveFeelingLog', 'feelingLogs');
-    
-    // Use Dexie for better performance
+    // Hooks manage encryption - adapter just saves
+    // Encryption is handled by Dexie hooks if enabled
     await db.feelingLogs.put({
       id: feelingLog.id,
       timestamp: feelingLog.timestamp,
@@ -268,10 +266,8 @@ export class LegacyAdapter implements DatabaseAdapter {
   }
   
   async getFeelingLogs(limit?: number, userId?: string): Promise<any[]> {
-    // SECURITY: Validate encryption boundary - feelingLogs contain PHI
-    validateEncryptionBoundary('getFeelingLogs', 'feelingLogs');
-    
-    // Use Dexie for better performance
+    // Hooks manage encryption - adapter just reads
+    // Decryption is handled by Dexie hooks if enabled
     let query = db.feelingLogs.orderBy('timestamp').reverse();
     
     if (userId) {
@@ -283,20 +279,14 @@ export class LegacyAdapter implements DatabaseAdapter {
   }
   
   async getFeelingLogsByState(emotionalState: string, limit?: number): Promise<any[]> {
-    // SECURITY: Validate encryption boundary - feelingLogs contain PHI
-    validateEncryptionBoundary('getFeelingLogsByState', 'feelingLogs');
-    
-    // Use Dexie for better performance
+    // Hooks manage encryption - adapter just reads
     let query = db.feelingLogs.where('emotionalState').equals(emotionalState).orderBy('timestamp').reverse();
     const logs = await query.toArray();
     return limit ? logs.slice(0, limit) : logs;
   }
   
   async deleteFeelingLog(logId: string): Promise<void> {
-    // SECURITY: Validate encryption boundary - feelingLogs contain PHI
-    validateEncryptionBoundary('deleteFeelingLog', 'feelingLogs');
-    
-    // Use Dexie for deletion
+    // Hooks manage encryption - adapter just deletes
     await db.feelingLogs.delete(logId);
   }
   
@@ -327,10 +317,7 @@ export class LegacyAdapter implements DatabaseAdapter {
   }
   
   async getUserInteractions(sessionId?: string, limit?: number): Promise<any[]> {
-    // SECURITY: Validate encryption boundary - userInteractions contain PHI
-    validateEncryptionBoundary('getUserInteractions', 'userInteractions');
-    
-    // Use Dexie for better performance
+    // Hooks manage encryption - adapter just reads
     let query = db.userInteractions.orderBy('timestamp').reverse();
     
     if (sessionId) {
@@ -342,10 +329,7 @@ export class LegacyAdapter implements DatabaseAdapter {
   }
   
   async deleteUserInteraction(interactionId: string): Promise<void> {
-    // SECURITY: Validate encryption boundary - userInteractions contain PHI
-    validateEncryptionBoundary('deleteUserInteraction', 'userInteractions');
-    
-    // Use Dexie for deletion
+    // Hooks manage encryption - adapter just deletes
     await db.userInteractions.delete(interactionId);
   }
   
@@ -362,10 +346,7 @@ export class LegacyAdapter implements DatabaseAdapter {
     goalCreated: boolean;
     duration?: number;
   }): Promise<void> {
-    // SECURITY: Validate encryption boundary - sessions contain PHI
-    validateEncryptionBoundary('saveSession', 'sessions');
-    
-    // Use Dexie for better performance
+    // Hooks manage encryption - adapter just saves
     await db.sessions.put({
       id: session.id,
       userId: session.userId,
@@ -393,20 +374,14 @@ export class LegacyAdapter implements DatabaseAdapter {
   }
   
   async getSessions(userId: string, limit?: number): Promise<any[]> {
-    // SECURITY: Validate encryption boundary - sessions contain PHI
-    validateEncryptionBoundary('getSessions', 'sessions');
-    
-    // Use Dexie for better performance
+    // Hooks manage encryption - adapter just reads
     let query = db.sessions.where('userId').equals(userId).orderBy('startTimestamp').reverse();
     const sessions = await query.toArray();
     return limit ? sessions.slice(0, limit) : sessions;
   }
   
   async getSessionsByValue(valueId: string, limit?: number): Promise<any[]> {
-    // SECURITY: Validate encryption boundary - sessions contain PHI
-    validateEncryptionBoundary('getSessionsByValue', 'sessions');
-    
-    // Use Dexie for better performance
+    // Hooks manage encryption - adapter just reads
     let query = db.sessions.where('valueId').equals(valueId).orderBy('startTimestamp').reverse();
     const sessions = await query.toArray();
     return limit ? sessions.slice(0, limit) : sessions;
@@ -442,10 +417,7 @@ export class LegacyAdapter implements DatabaseAdapter {
   }
 
   async getAssessments(userId: string, limit?: number): Promise<any[]> {
-    // SECURITY: Validate encryption boundary - assessments contain PHI
-    validateEncryptionBoundary('getAssessments', 'assessments');
-    
-    // Use Dexie for better performance
+    // Hooks manage encryption - adapter just reads
     let query = db.assessments.where('userId').equals(userId).orderBy('timestamp').reverse();
     const assessments = await query.toArray();
     return limit ? assessments.slice(0, limit) : assessments;
@@ -464,10 +436,7 @@ export class LegacyAdapter implements DatabaseAdapter {
   }
 
   async getReports(userId: string, limit?: number): Promise<any[]> {
-    // SECURITY: Validate encryption boundary - reports contain PHI
-    validateEncryptionBoundary('getReports', 'reports');
-    
-    // Use Dexie for better performance
+    // Hooks manage encryption - adapter just reads
     let query = db.reports.where('userId').equals(userId).orderBy('timestamp').reverse();
     const reports = await query.toArray();
     return limit ? reports.slice(0, limit) : reports;

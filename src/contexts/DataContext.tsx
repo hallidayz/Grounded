@@ -1,62 +1,7 @@
 import React, { createContext, useContext, useState, useEffect, useCallback, useRef, useMemo, ReactNode } from 'react';
 import { LogEntry, Goal, AppSettings, LCSWConfig, FeelingLog } from '../types';
 import { getDatabaseAdapter } from '../services/databaseAdapter';
-import React, {
-  createContext,
-  useContext,
-  useCallback,
-  useState,
-  useEffect,
-  useMemo,
-} from "react";
-import { adapter } from "../services/databaseAdapter";
 
-interface DataContextType {
-  logs: any[];
-  setLogs: React.Dispatch<React.SetStateAction<any[]>>;
-  handleMoodLoopEntry: (mood: string, emoji: string) => void;
-  settings: any;
-  setSettings: React.Dispatch<React.SetStateAction<any>>;
-}
-
-export const DataContext = createContext<DataContextType | undefined>(undefined);
-
-export const useDataContext = (): DataContextType => {
-  const context = useContext(DataContext);
-  if (!context) {
-    throw new Error("useDataContext must be used within a DataProvider");
-  }
-  return context;
-};
-
-export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
-  const [logs, setLogs] = useState<any[]>([]);
-  const [settings, setSettings] = useState({});
-
-  const handleMoodLoopEntry = useCallback((mood: string, emoji: string) => {
-    try {
-      const time = new Date().toISOString();
-      const newEntry = { id: time, mood, emoji, time };
-      setLogs((prev) => [...prev, newEntry]);
-      adapter?.saveFeelingLog?.(newEntry);
-    } catch (err) {
-      console.error("Error saving mood entry:", err);
-    }
-  }, []);
-
-  const value = useMemo(
-    () => ({
-      logs,
-      setLogs,
-      handleMoodLoopEntry,
-      settings,
-      setSettings,
-    }),
-    [logs, settings]
-  );
-
-  return <DataContext.Provider value={value}>{children}</DataContext.Provider>;
-};
 interface DataContextType {
   selectedValueIds: string[];
   logs: LogEntry[];
@@ -255,11 +200,19 @@ export const DataProvider: React.FC<DataProviderProps> = ({
 
   const handleUpdateGoalProgress = useCallback((goalId: string, update: { date: string; note: string; progress?: number }) => {
     setGoals(prevGoals => 
-      prevGoals.map(goal => 
-        goal.id === goalId 
-          ? { ...goal, updates: [...(goal.updates || []), update] }
-          : goal
-      )
+      prevGoals.map(goal => {
+        if (goal.id === goalId) {
+          // Convert update to GoalUpdate format
+          const goalUpdate: Goal['updates'][0] = {
+            id: `update-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`,
+            timestamp: update.date,
+            note: update.note,
+            mood: undefined, // Optional field
+          };
+          return { ...goal, updates: [...(goal.updates || []), goalUpdate] };
+        }
+        return goal;
+      })
     );
   }, []);
 
@@ -476,4 +429,7 @@ export const useData = () => {
   }
   return context;
 };
+
+// Alias for convenience - provides same functionality with different name
+export const useDataContext = useData;
 

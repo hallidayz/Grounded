@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useRef, useState, useEffect } from 'react';
 import ThemeToggle from './ThemeToggle';
 
 type View = 'home' | 'values' | 'report' | 'vault' | 'goals' | 'onboarding' | 'settings';
@@ -17,8 +17,69 @@ const BottomNavigation: React.FC<BottomNavigationProps> = ({ currentView, onView
     { id: 'report' as View, label: 'Reports', icon: '📊' },
   ];
 
+  // Thumb swipe navigation state
+  const navRef = useRef<HTMLElement>(null);
+  const touchStartX = useRef<number>(0);
+  const touchStartY = useRef<number>(0);
+  const [swipeDirection, setSwipeDirection] = useState<'left' | 'right' | null>(null);
+
+  // Get current tab index
+  const currentIndex = tabs.findIndex(tab => tab.id === currentView);
+  
+  // Handle touch events for thumb swipe navigation
+  useEffect(() => {
+    const nav = navRef.current;
+    if (!nav) return;
+
+    const handleTouchStart = (e: TouchEvent) => {
+      const touch = e.touches[0];
+      touchStartX.current = touch.clientX;
+      touchStartY.current = touch.clientY;
+    };
+
+    const handleTouchEnd = (e: TouchEvent) => {
+      if (!touchStartX.current || !touchStartY.current) return;
+      
+      const touch = e.changedTouches[0];
+      const deltaX = touch.clientX - touchStartX.current;
+      const deltaY = touch.clientY - touchStartY.current;
+      
+      // Only handle horizontal swipes (ignore vertical scrolling)
+      if (Math.abs(deltaX) > Math.abs(deltaY) && Math.abs(deltaX) > 50) {
+        if (deltaX > 0 && currentIndex > 0) {
+          // Swipe right - go to previous tab
+          onViewChange(tabs[currentIndex - 1].id);
+          setSwipeDirection('right');
+        } else if (deltaX < 0 && currentIndex < tabs.length - 1) {
+          // Swipe left - go to next tab
+          onViewChange(tabs[currentIndex + 1].id);
+          setSwipeDirection('left');
+        }
+        
+        // Reset swipe direction after animation
+        setTimeout(() => setSwipeDirection(null), 300);
+      }
+      
+      touchStartX.current = 0;
+      touchStartY.current = 0;
+    };
+
+    nav.addEventListener('touchstart', handleTouchStart, { passive: true });
+    nav.addEventListener('touchend', handleTouchEnd, { passive: true });
+
+    return () => {
+      nav.removeEventListener('touchstart', handleTouchStart);
+      nav.removeEventListener('touchend', handleTouchEnd);
+    };
+  }, [currentIndex, onViewChange]);
+
   return (
-    <nav className="fixed bottom-0 left-0 right-0 bg-white dark:bg-dark-bg-primary border-t border-border-soft dark:border-dark-border shadow-lg z-50 pb-[env(safe-area-inset-bottom)]">
+    <nav 
+      ref={navRef}
+      className={`fixed bottom-0 left-0 right-0 bg-white dark:bg-dark-bg-primary border-t border-border-soft dark:border-dark-border shadow-lg z-50 pb-[env(safe-area-inset-bottom)] transition-transform duration-300 ${
+        swipeDirection === 'left' ? 'translate-x-[-10px]' : swipeDirection === 'right' ? 'translate-x-[10px]' : ''
+      }`}
+    >
       <div className="max-w-4xl mx-auto px-2">
         <div className="flex justify-around items-center">
           {tabs.map((tab) => {
