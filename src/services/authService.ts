@@ -121,6 +121,27 @@ export async function registerUser(data: RegisterData): Promise<AuthResult> {
         termsAccepted: false,
       });
       
+      console.log('[AuthService] User created successfully:', { userId, username: data.username });
+      
+      // VERIFY: Immediately verify the user was saved by retrieving it
+      try {
+        const verifyUser = await authStore.getUserById(userId);
+        if (!verifyUser) {
+          console.error('[AuthService] CRITICAL: User was created but cannot be retrieved!', { userId });
+          return { success: false, error: 'Account created but verification failed. Please try logging in.' };
+        }
+        if (verifyUser.username !== data.username) {
+          console.error('[AuthService] CRITICAL: Username mismatch after creation!', { 
+            expected: data.username, 
+            found: verifyUser.username 
+          });
+        }
+        console.log('[AuthService] User verification successful:', { userId, username: verifyUser.username });
+      } catch (verifyError) {
+        console.error('[AuthService] CRITICAL: Error verifying created user:', verifyError);
+        // Continue anyway - user was created, verification might be a timing issue
+      }
+      
       // Auto-login: Store session immediately after creation
       // CRITICAL: Store in both sessionStorage and localStorage for persistence
       // localStorage persists across app updates, cache clears, and Vercel deployments
@@ -130,6 +151,18 @@ export async function registerUser(data: RegisterData): Promise<AuthResult> {
         localStorage.setItem('userId', userId);
         localStorage.setItem('username', data.username);
         console.log('[AuthService] CRITICAL: New user credentials saved to both sessionStorage and localStorage:', { userId, username: data.username });
+        
+        // VERIFY: Verify credentials were saved
+        const savedUserId = localStorage.getItem('userId');
+        const savedUsername = localStorage.getItem('username');
+        if (savedUserId !== userId || savedUsername !== data.username) {
+          console.error('[AuthService] CRITICAL: Credentials saved but verification failed!', {
+            expected: { userId, username: data.username },
+            found: { userId: savedUserId, username: savedUsername }
+          });
+        } else {
+          console.log('[AuthService] Credentials verification successful');
+        }
       } catch (error) {
         console.error('[AuthService] CRITICAL ERROR: Failed to save new user credentials to storage:', error);
         // This is critical - if we can't save, user will need to login again
