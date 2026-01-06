@@ -2,13 +2,15 @@
 import React, { useState, useEffect } from 'react';
 import DebugLogComponent from './DebugLog';
 import DatabaseViewer from './DatabaseViewer';
-import { getCurrentUser } from '../services/authService';
+import { getCurrentUser, logoutUser } from '../services/authService';
+import { useAuthContext } from '../contexts/AuthContext';
 
 interface HelpOverlayProps {
   onClose: () => void;
 }
 
 const HelpOverlay: React.FC<HelpOverlayProps> = ({ onClose }) => {
+  const { handleLogout } = useAuthContext();
   const [showDebugLog, setShowDebugLog] = useState(false);
   const [showDatabaseViewer, setShowDatabaseViewer] = useState(false);
   const [showSystemDanger, setShowSystemDanger] = useState(false);
@@ -273,9 +275,26 @@ const HelpOverlay: React.FC<HelpOverlayProps> = ({ onClose }) => {
                           await adapter.init();
                           const userId = sessionStorage.getItem('userId') || localStorage.getItem('userId');
                           if (userId) {
+                            // Clear all user data
                             await adapter.clearAllData(userId);
-                            alert('All data has been cleared. The app will reload.');
-                            window.location.reload();
+                            
+                            // Logout user - clears session and localStorage
+                            logoutUser();
+                            handleLogout();
+                            
+                            // Clear all remaining storage
+                            sessionStorage.clear();
+                            localStorage.clear();
+                            
+                            // Redirect to login page and reload from Vercel
+                            const vercelUrl = 'https://grounded-nu.vercel.app';
+                            if (window.location.origin !== vercelUrl) {
+                              // If not already on Vercel, redirect there
+                              window.location.href = vercelUrl;
+                            } else {
+                              // If already on Vercel, just reload to show login page
+                              window.location.reload();
+                            }
                           } else {
                             alert('Error: No user ID found. Please log in and try again.');
                           }
