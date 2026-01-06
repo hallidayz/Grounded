@@ -18,9 +18,15 @@ const Settings: React.FC<SettingsProps> = ({ onLogout, onShowHelp, version = '1.
   const context = useDataContext();
   const [userEmail, setUserEmail] = useState<string>('');
   const [therapistEmails, setTherapistEmails] = useState<string[]>([]);
+  const [username, setUsername] = useState<string>('');
   const [settings, setSettings] = useState<AppSettings>(context.settings || {
     reminders: { enabled: false, frequency: 'daily', time: '09:00' }
   });
+  
+  // Modal state for adding emails
+  const [showEmailModal, setShowEmailModal] = useState(false);
+  const [emailModalType, setEmailModalType] = useState<'therapist' | 'recipient' | null>(null);
+  const [emailInput, setEmailInput] = useState('');
 
   // Load user data
   useEffect(() => {
@@ -28,6 +34,7 @@ const Settings: React.FC<SettingsProps> = ({ onLogout, onShowHelp, version = '1.
       const user = await getCurrentUser();
       if (user) {
         setUserEmail(user.email || '');
+        setUsername(user.username || '');
         setTherapistEmails(user.therapistEmails || []);
       }
     };
@@ -79,26 +86,31 @@ const Settings: React.FC<SettingsProps> = ({ onLogout, onShowHelp, version = '1.
     }));
   };
 
-  const addTherapistEmail = () => {
-    const email = prompt('Enter therapist email:');
-    if (email && email.includes('@')) {
-      setTherapistEmails(prev => [...prev, email]);
-      // TODO: Save to user profile
+  const openEmailModal = (type: 'therapist' | 'recipient') => {
+    setEmailModalType(type);
+    setEmailInput('');
+    setShowEmailModal(true);
+  };
+
+  const handleEmailSubmit = () => {
+    if (emailInput && emailInput.includes('@')) {
+      if (emailModalType === 'therapist') {
+        setTherapistEmails(prev => [...prev, emailInput]);
+        // TODO: Save to user profile
+      } else if (emailModalType === 'recipient') {
+        updateEmailSchedule({
+          recipientEmails: [...(settings.emailSchedule?.recipientEmails || []), emailInput]
+        });
+      }
+      setShowEmailModal(false);
+      setEmailInput('');
+      setEmailModalType(null);
     }
   };
 
   const removeTherapistEmail = (index: number) => {
     setTherapistEmails(prev => prev.filter((_, i) => i !== index));
     // TODO: Save to user profile
-  };
-
-  const addRecipientEmail = () => {
-    const email = prompt('Enter recipient email for reports:');
-    if (email && email.includes('@')) {
-      updateEmailSchedule({
-        recipientEmails: [...(settings.emailSchedule?.recipientEmails || []), email]
-      });
-    }
   };
 
   const removeRecipientEmail = (index: number) => {
@@ -173,8 +185,8 @@ const Settings: React.FC<SettingsProps> = ({ onLogout, onShowHelp, version = '1.
                   </button>
                 </div>
               ))}
-              <button
-                onClick={addTherapistEmail}
+              <button 
+                onClick={() => openEmailModal('therapist')}
                 className="w-full px-3 py-2 text-sm bg-bg-secondary dark:bg-dark-bg-primary text-text-primary dark:text-white rounded-lg hover:bg-bg-secondary/80 transition-colors"
               >
                 + Add Therapist Email
@@ -319,7 +331,7 @@ const Settings: React.FC<SettingsProps> = ({ onLogout, onShowHelp, version = '1.
                     </div>
                   ))}
                   <button
-                    onClick={addRecipientEmail}
+                    onClick={() => openEmailModal('recipient')}
                     className="w-full px-3 py-2 text-sm bg-bg-secondary dark:bg-dark-bg-primary text-text-primary dark:text-white rounded-lg hover:bg-bg-secondary/80 transition-colors"
                   >
                     + Add Recipient Email
@@ -416,13 +428,18 @@ const Settings: React.FC<SettingsProps> = ({ onLogout, onShowHelp, version = '1.
         </h2>
         
         <div className="space-y-3">
-          <button 
-            onClick={onShowHelp}
-            className="w-full flex items-center justify-between p-3 rounded-xl bg-bg-secondary dark:bg-dark-bg-primary/50 text-text-primary dark:text-white hover:bg-bg-secondary/80 transition-colors"
-          >
-            <span className="font-medium">Help & Resources</span>
-            <span className="text-xl">ℹ️</span>
-          </button>
+          <div className="p-3 rounded-xl bg-bg-secondary dark:bg-dark-bg-primary/50">
+            <div className="space-y-2">
+              <div className="flex items-center justify-between">
+                <span className="text-sm text-text-secondary dark:text-white/60">Username</span>
+                <span className="text-sm font-medium text-text-primary dark:text-white">{username || 'Not set'}</span>
+              </div>
+              <div className="flex items-center justify-between">
+                <span className="text-sm text-text-secondary dark:text-white/60">Email</span>
+                <span className="text-sm font-medium text-text-primary dark:text-white">{userEmail || 'Not set'}</span>
+              </div>
+            </div>
+          </div>
 
           {isEncryptionEnabled && (
             <button 
@@ -440,12 +457,59 @@ const Settings: React.FC<SettingsProps> = ({ onLogout, onShowHelp, version = '1.
       {/* App Info */}
       <div className="text-center pt-8">
         <p className="text-xs font-bold text-text-tertiary uppercase tracking-widest">
-          Grounded v{version}
+          GROUNDED V{version}
         </p>
         <p className="text-xs text-text-tertiary mt-1">
           Made with 💙 for mental wellness
         </p>
       </div>
+
+      {/* Email Input Modal */}
+      {showEmailModal && (
+        <div className="fixed inset-0 z-50 bg-black/50 backdrop-blur-sm flex items-center justify-center p-4">
+          <div className="bg-bg-primary dark:bg-dark-bg-primary text-text-primary dark:text-white rounded-2xl max-w-md w-full p-6 shadow-2xl">
+            <h3 className="text-lg font-bold mb-4">
+              {emailModalType === 'therapist' ? 'Add Therapist Email' : 'Add Recipient Email'}
+            </h3>
+            <input
+              type="email"
+              value={emailInput}
+              onChange={(e) => setEmailInput(e.target.value)}
+              placeholder={emailModalType === 'therapist' ? 'therapist@example.com' : 'recipient@example.com'}
+              className="w-full px-4 py-3 rounded-lg bg-bg-secondary dark:bg-dark-bg-primary border border-border-soft dark:border-dark-border text-text-primary dark:text-white mb-4 focus:ring-2 focus:ring-brand dark:focus:ring-brand-light outline-none"
+              autoFocus
+              onKeyDown={(e) => {
+                if (e.key === 'Enter') {
+                  handleEmailSubmit();
+                } else if (e.key === 'Escape') {
+                  setShowEmailModal(false);
+                  setEmailInput('');
+                  setEmailModalType(null);
+                }
+              }}
+            />
+            <div className="flex gap-3">
+              <button
+                onClick={() => {
+                  setShowEmailModal(false);
+                  setEmailInput('');
+                  setEmailModalType(null);
+                }}
+                className="flex-1 px-4 py-2 rounded-lg bg-bg-secondary dark:bg-dark-bg-primary text-text-primary dark:text-white hover:bg-bg-secondary/80 transition-colors"
+              >
+                Cancel
+              </button>
+              <button
+                onClick={handleEmailSubmit}
+                disabled={!emailInput || !emailInput.includes('@')}
+                className="flex-1 px-4 py-2 rounded-lg bg-brand dark:bg-brand-light text-white dark:text-navy-dark hover:opacity-90 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+              >
+                Add
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 };
