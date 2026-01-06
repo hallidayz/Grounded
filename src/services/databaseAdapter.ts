@@ -1287,8 +1287,11 @@ export class EncryptedAdapter implements DatabaseAdapter {
         'SELECT value_id FROM values_encrypted WHERE user_id = ? AND active = 1 ORDER BY priority ASC',
         [userId]
       );
-    
-    return results.map((row: any) => row.value_id);
+      return results.map((row: any) => row.value_id);
+    } catch (error) {
+      console.error('[EncryptedAdapter] Error getting active values:', error);
+      return [];
+    }
   }
 
   async setValuesActive(userId: string, valueIds: string[]): Promise<void> {
