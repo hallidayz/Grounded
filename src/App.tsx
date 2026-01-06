@@ -29,7 +29,11 @@ const LCSWConfigComponent = lazy(() => import('./components/LCSWConfig'));
 // Export function to reset initialization (for logout, etc.)
 export { resetInitialization };
 
-const AppContent: React.FC = () => {
+interface AppContentProps {
+  onHydrationReady?: () => void;
+}
+
+const AppContent: React.FC<AppContentProps> = ({ onHydrationReady }) => {
   const auth = useAuth();
   const authContext = useAuthContext();
   const { authState, userId, setAuthState, handleLogin, handleAcceptTerms, handleDeclineTerms, handleLogout } = authContext;
@@ -112,12 +116,15 @@ const AppContent: React.FC = () => {
       // Smooth fade-out after hydration completes
       const timer = setTimeout(() => {
         setIsHydrating(false);
+        // Notify parent that hydration is ready
+        onHydrationReady?.();
       }, 300); // Small delay for smooth transition
       return () => clearTimeout(timer);
     } else {
       setIsHydrating(false);
+      onHydrationReady?.();
     }
-  }, [authState, initResult.loading, data.isHydrating]);
+  }, [authState, initResult.loading, data.isHydrating, onHydrationReady]);
 
   // Initialize app
   const initResult = useAppInitialization({
@@ -470,7 +477,7 @@ const AppContent: React.FC = () => {
   );
 };
 
-const AppWithData: React.FC = () => {
+const AppWithData: React.FC<{ onHydrationReady?: () => void }> = ({ onHydrationReady }) => {
   const authContext = useAuthContext();
   
   return (
@@ -479,23 +486,58 @@ const AppWithData: React.FC = () => {
       authState={authContext.authState}
       initialData={{}}
     >
-      <AppContent />
+      <AppContent onHydrationReady={onHydrationReady} />
     </DataProvider>
   );
 };
 
+/* ---------- Diagnostic Overlay ---------- */
+const DiagnosticOverlay: React.FC<{ status: string }> = ({ status }) => (
+  <div
+    style={{
+      position: "fixed",
+      bottom: 8,
+      right: 8,
+      background: "rgba(0,0,0,0.65)",
+      color: "#00ffff",
+      padding: "6px 10px",
+      fontSize: 12,
+      borderRadius: 5,
+      fontFamily: "monospace",
+      zIndex: 9999,
+    }}
+  >
+    ⚙️ Grounded: {status}
+  </div>
+);
+
 const App: React.FC = () => {
+  const [status, setStatus] = React.useState("Initializing contexts...");
+
   return (
-    <AuthProvider
-      onLoginComplete={(userId, appData) => {
-        // Data will be synced via DataContext
-      }}
-      onLogoutComplete={() => {
-        // Handled by DataContext
-      }}
-    >
-      <AppWithData />
-    </AuthProvider>
+    <>
+      <ErrorBoundary>
+        <Suspense fallback={
+          <div className="flex flex-col items-center justify-center h-screen bg-black text-gray-100">
+            <div className="animate-pulse text-lg tracking-wide">Loading Grounded ...</div>
+          </div>
+        }>
+          <AuthProvider
+            onLoginComplete={(userId, appData) => {
+              // Data will be synced via DataContext
+              setStatus("User authenticated");
+            }}
+            onLogoutComplete={() => {
+              // Handled by DataContext
+              setStatus("User logged out");
+            }}
+          >
+            <AppWithData onHydrationReady={() => setStatus("Rendering ready")} />
+          </AuthProvider>
+        </Suspense>
+      </ErrorBoundary>
+      <DiagnosticOverlay status={status} />
+    </>
   );
 };
 
