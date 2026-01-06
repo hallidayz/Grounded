@@ -195,12 +195,14 @@ export async function loginUser(data: LoginData): Promise<AuthResult> {
     });
 
     // Store session in both sessionStorage (for current session) and localStorage (for persistence)
+    // localStorage persists across app updates, cache clears, and Vercel deployments
     sessionStorage.setItem('userId', user.id);
     sessionStorage.setItem('username', user.username);
-    // Also store in localStorage so it persists across cache/history clears
+    // CRITICAL: Store in localStorage for persistence across app updates and deployments
     try {
       localStorage.setItem('userId', user.id);
       localStorage.setItem('username', user.username);
+      console.log('[AuthService] Credentials saved to localStorage for persistence across updates');
     } catch (error) {
       console.warn('Could not store userId in localStorage:', error);
       // Continue anyway - sessionStorage will work for current session
@@ -258,12 +260,14 @@ export async function getCurrentUser() {
           return bTime - aTime;
         });
         userId = sortedUsers[0].id;
-        // Restore to both storages
+        // Restore to both storages for persistence across app updates
         sessionStorage.setItem('userId', userId);
         sessionStorage.setItem('username', sortedUsers[0].username);
+        // CRITICAL: Ensure localStorage is updated for persistence across Vercel deployments
         try {
           localStorage.setItem('userId', userId);
           localStorage.setItem('username', sortedUsers[0].username);
+          console.log('[AuthService] Restored credentials to localStorage from database');
         } catch (error) {
           console.warn('Could not store userId in localStorage:', error);
         }
