@@ -66,7 +66,42 @@ export default function AppContent({ onHydrationReady }: { onHydrationReady?: ()
     }
   }, [isFirstTimeUser, currentView, authState, context]);
 
-  // Handle auth states
+  // Handle action clicks from AIResponseBubble - MUST be before early returns (Rules of Hooks)
+  const handleActionClick = useCallback((action: 'reflection' | 'values' | 'resources') => {
+    if (action === 'values') {
+      setCurrentView('values');
+    } else if (action === 'reflection') {
+      // Show Dashboard with reflection forms
+      setShowReflection(true);
+    } else if (action === 'resources') {
+      // Show crisis resources modal with emergency contacts
+      setShowResources(true);
+    }
+  }, [setCurrentView, setShowReflection, setShowResources]);
+
+  // Handle mood changes from AIResponseBubble - generate encouragement - MUST be before early returns (Rules of Hooks)
+  const handleMoodChange = useCallback(async (emotion: string, feeling: string) => {
+    console.log('[AppContent] Mood changed:', emotion, feeling);
+    setCurrentEmotion(emotion);
+    setCurrentFeeling(feeling);
+    
+    // Generate encouragement when emotion is selected
+    setEncouragementLoading(true);
+    setEncouragementText(null);
+    
+    try {
+      const encouragement = await generateEmotionalEncouragement(emotion, feeling);
+      setEncouragementText(encouragement);
+      console.log('[AppContent] Encouragement generated:', encouragement);
+    } catch (error) {
+      console.error('[AppContent] Error generating encouragement:', error);
+      setEncouragementText("Your feelings are valid. Take care of yourself.");
+    } finally {
+      setEncouragementLoading(false);
+    }
+  }, [setCurrentEmotion, setCurrentFeeling, setEncouragementLoading, setEncouragementText]);
+
+  // Handle auth states - AFTER all hooks
   if (authState === 'checking') {
     return (
       <div className="flex items-center justify-center h-screen text-text-primary dark:text-white bg-bg-primary dark:bg-dark-bg-primary">
@@ -90,41 +125,6 @@ export default function AppContent({ onHydrationReady }: { onHydrationReady?: ()
       </div>
     );
   }
-
-  // Handle action clicks from AIResponseBubble
-  const handleActionClick = (action: 'reflection' | 'values' | 'resources') => {
-    if (action === 'values') {
-      setCurrentView('values');
-    } else if (action === 'reflection') {
-      // Show Dashboard with reflection forms
-      setShowReflection(true);
-    } else if (action === 'resources') {
-      // Show crisis resources modal with emergency contacts
-      setShowResources(true);
-    }
-  };
-
-  // Handle mood changes from AIResponseBubble - generate encouragement
-  const handleMoodChange = useCallback(async (emotion: string, feeling: string) => {
-    console.log('[AppContent] Mood changed:', emotion, feeling);
-    setCurrentEmotion(emotion);
-    setCurrentFeeling(feeling);
-    
-    // Generate encouragement when emotion is selected
-    setEncouragementLoading(true);
-    setEncouragementText(null);
-    
-    try {
-      const encouragement = await generateEmotionalEncouragement(emotion, feeling);
-      setEncouragementText(encouragement);
-      console.log('[AppContent] Encouragement generated:', encouragement);
-    } catch (error) {
-      console.error('[AppContent] Error generating encouragement:', error);
-      setEncouragementText("Your feelings are valid. Take care of yourself.");
-    } finally {
-      setEncouragementLoading(false);
-    }
-  }, []);
 
   // Handle clear data with confirmation
   const handleClearData = () => {
