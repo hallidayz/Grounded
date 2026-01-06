@@ -137,7 +137,7 @@ const BottomNavigation: React.FC<BottomNavigationProps> = ({ currentView, onView
           <button
             onClick={(e) => {
               e.preventDefault();
-              if (window.confirm('Are you sure you want to lock the app?')) {
+              if (window.confirm('Are you sure you want to log out?')) {
                 onLogout();
               }
             }}

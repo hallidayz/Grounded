@@ -79,6 +79,12 @@ export default function AppContent({ onHydrationReady }: { onHydrationReady?: ()
     // Mood is already saved via handleMoodLoopEntry in AIResponseBubble
   };
 
+  // Memoize values to prevent hydration mismatches
+  const selectedValues = useMemo(() => 
+    (context?.selectedValueIds || []).map(id => ALL_VALUES.find(v => v.id === id)).filter(Boolean) as any[],
+    [context?.selectedValueIds]
+  );
+
   return (
     <div className="min-h-screen flex flex-col bg-neutral-900 text-neutral-100">
       <main className="flex-1 w-full overflow-y-auto p-4 pb-24">
@@ -96,10 +102,7 @@ export default function AppContent({ onHydrationReady }: { onHydrationReady?: ()
         {currentView === "goals" && (
           <GoalsSection
             goals={context?.goals || []}
-            values={useMemo(() => 
-              (context?.selectedValueIds || []).map(id => ALL_VALUES.find(v => v.id === id)).filter(Boolean) as any[],
-              [context?.selectedValueIds]
-            )}
+            values={selectedValues}
             onCompleteGoal={(goal) => {
               if (context) {
                 const updatedGoals = (context.goals || []).map(g => 
@@ -132,10 +135,7 @@ export default function AppContent({ onHydrationReady }: { onHydrationReady?: ()
         {currentView === "report" && (
           <ReportView
             logs={context?.logs || []}
-            values={useMemo(() => 
-              (context?.selectedValueIds || []).map(id => ALL_VALUES.find(v => v.id === id)).filter(Boolean) as any[],
-              [context?.selectedValueIds]
-            )}
+            values={selectedValues}
             goals={context?.goals || []}
           />
         )}
