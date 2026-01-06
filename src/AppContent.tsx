@@ -86,10 +86,13 @@ export default function AppContent({ onHydrationReady }: { onHydrationReady?: ()
     if (action === 'values') {
       setCurrentView('values');
     } else if (action === 'reflection') {
-      // Navigate to vault view where users can write reflections
-      setCurrentView('vault');
+      // Navigate to home view which should show Dashboard with reflection forms
+      // The Dashboard component handles reflection modals
+      setCurrentView('home');
+      // TODO: If Dashboard is separate, we may need to trigger opening a reflection modal
+      // For now, navigating to home should allow users to access reflections via value cards
     } else if (action === 'resources') {
-      // Could navigate to resources view or show help
+      // Show help overlay which contains resources and support
       setShowHelp(true);
     }
   };
