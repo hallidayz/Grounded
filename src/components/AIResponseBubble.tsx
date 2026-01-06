@@ -23,38 +23,34 @@ const AIResponseBubble: React.FC<AIResponseBubbleProps> = ({
   const { handleMoodLoopEntry } = useData();
   const [isVisible, setIsVisible] = useState(false);
   
-  // Thumb swipe mood selection loop state (works for both touch and mouse)
-  const bubbleRef = useRef<HTMLDivElement>(null);
-  const touchStartX = useRef<number>(0);
-  const mouseStartX = useRef<number>(0);
-  const isDragging = useRef<boolean>(false);
-  const [currentMoodIndex, setCurrentMoodIndex] = useState(0);
+  // Track selection level: 'primary' or 'sub'
+  const [selectionLevel, setSelectionLevel] = useState<'primary' | 'sub'>('primary');
   
-  // Get all available moods for the loop (memoized)
-  const availableMoods = React.useMemo(() => 
-    EMOTIONAL_STATES.flatMap(state => 
-      state.feelings.map(f => ({
-        emotion: state.state,
-        feeling: f,
-        emoji: state.emoji,
-        label: state.shortLabel
-      }))
-    ), []
-  );
+  // Track current primary emotion and sub-emotion indices
+  const [currentPrimaryIndex, setCurrentPrimaryIndex] = useState(0);
+  const [currentSubIndex, setCurrentSubIndex] = useState(0);
   
-  // Find initial mood index
+  // Get current primary emotion config
+  const currentPrimary = EMOTIONAL_STATES[currentPrimaryIndex] || EMOTIONAL_STATES[0];
+  
+  // Find initial indices
   useEffect(() => {
-    if (emotion && feeling) {
-      const index = availableMoods.findIndex(
-        m => m.emotion === emotion && m.feeling === feeling
-      );
-      if (index >= 0) {
-        setCurrentMoodIndex(index);
+    if (emotion) {
+      const primaryIndex = EMOTIONAL_STATES.findIndex(e => e.state === emotion);
+      if (primaryIndex >= 0) {
+        setCurrentPrimaryIndex(primaryIndex);
+        if (feeling) {
+          const subIndex = EMOTIONAL_STATES[primaryIndex].feelings.findIndex(f => f === feeling);
+          if (subIndex >= 0) {
+            setCurrentSubIndex(subIndex);
+            setSelectionLevel('sub'); // If both are provided, show sub level
+          }
+        }
       }
     }
-  }, [emotion, feeling, availableMoods]);
+  }, [emotion, feeling]);
   
-  // Handle swipe/drag for mood selection loop (works for both touch and mouse)
+  // Handle swipe/drag for mood selection (works for both touch and mouse)
   useEffect(() => {
     const bubble = bubbleRef.current;
     if (!bubble || !onMoodChange) return;
@@ -62,26 +58,34 @@ const AIResponseBubble: React.FC<AIResponseBubbleProps> = ({
     const changeMood = (deltaX: number) => {
       // Swipe threshold: 50px
       if (Math.abs(deltaX) > 50) {
-        let newIndex = currentMoodIndex;
-        
-        if (deltaX > 0) {
-          // Swipe right - previous mood
-          newIndex = currentMoodIndex > 0 ? currentMoodIndex - 1 : availableMoods.length - 1;
+        if (selectionLevel === 'primary') {
+          // Navigate primary emotions
+          let newIndex = currentPrimaryIndex;
+          if (deltaX > 0) {
+            newIndex = currentPrimaryIndex > 0 ? currentPrimaryIndex - 1 : EMOTIONAL_STATES.length - 1;
+          } else {
+            newIndex = currentPrimaryIndex < EMOTIONAL_STATES.length - 1 ? currentPrimaryIndex + 1 : 0;
+          }
+          setCurrentPrimaryIndex(newIndex);
+          setCurrentSubIndex(0); // Reset sub to first when changing primary
         } else {
-          // Swipe left - next mood
-          newIndex = currentMoodIndex < availableMoods.length - 1 ? currentMoodIndex + 1 : 0;
+          // Navigate sub-emotions within current primary
+          const feelings = EMOTIONAL_STATES[currentPrimaryIndex].feelings;
+          let newIndex = currentSubIndex;
+          if (deltaX > 0) {
+            newIndex = currentSubIndex > 0 ? currentSubIndex - 1 : feelings.length - 1;
+          } else {
+            newIndex = currentSubIndex < feelings.length - 1 ? currentSubIndex + 1 : 0;
+          }
+          setCurrentSubIndex(newIndex);
+          
+          // Save the selected sub-emotion
+          const selectedFeeling = feelings[newIndex];
+          onMoodChange?.(EMOTIONAL_STATES[currentPrimaryIndex].state, selectedFeeling);
+          handleMoodLoopEntry(EMOTIONAL_STATES[currentPrimaryIndex].state, selectedFeeling).catch((error) => {
+            console.error('[AIResponseBubble] Error saving mood entry:', error);
+          });
         }
-        
-        setCurrentMoodIndex(newIndex);
-        const newMood = availableMoods[newIndex];
-        
-        // Call the prop callback if provided
-        onMoodChange?.(newMood.emotion, newMood.feeling);
-        
-        // Also save to database via DataContext
-        handleMoodLoopEntry(newMood.emotion, newMood.feeling).catch((error) => {
-          console.error('[AIResponseBubble] Error saving mood entry:', error);
-        });
       }
     };
 
@@ -135,7 +139,7 @@ const AIResponseBubble: React.FC<AIResponseBubbleProps> = ({
       document.removeEventListener('mousemove', handleMouseMove);
       document.removeEventListener('mouseup', handleMouseUp);
     };
-  }, [currentMoodIndex, onMoodChange, availableMoods, handleMoodLoopEntry]);
+  }, [selectionLevel, currentPrimaryIndex, currentSubIndex, onMoodChange, handleMoodLoopEntry]);
 
   useEffect(() => {
     // Fade-in animation
@@ -147,14 +151,26 @@ const AIResponseBubble: React.FC<AIResponseBubbleProps> = ({
     onActionClick?.(action);
   }, [onActionClick]);
 
-  // Use current mood from loop, or fallback to provided props
-  const currentMood = availableMoods[currentMoodIndex] || { emotion: emotion || '', feeling: feeling || '', emoji: feelingEmoji || '💙', label: emotion || 'Reflection' };
-  // Display primary emotion label (e.g., "Calm") instead of just the feeling word
-  const displayText = currentMood.label || currentMood.emotion || emotion || 'Reflection';
-  const displayEmoji = currentMood.emoji || feelingEmoji || '💙';
+  // Handle quick selection clicks
+  const handlePrimaryClick = () => {
+    setSelectionLevel('primary');
+  };
+
+  const handleSubClick = () => {
+    setSelectionLevel('sub');
+    // When clicking sub, save it immediately
+    const selectedFeeling = currentPrimary.feelings[currentSubIndex];
+    onMoodChange?.(currentPrimary.state, selectedFeeling);
+    handleMoodLoopEntry(currentPrimary.state, selectedFeeling).catch((error) => {
+      console.error('[AIResponseBubble] Error saving mood entry:', error);
+    });
+  };
+
+  // Get current sub-emotion
+  const currentSubFeeling = currentPrimary.feelings[currentSubIndex] || currentPrimary.feelings[0];
   
   // Show swipe hint if onMoodChange is provided
-  const showSwipeHint = onMoodChange && availableMoods.length > 1;
+  const showSwipeHint = onMoodChange;
 
   return (
     <motion.div
@@ -166,16 +182,41 @@ const AIResponseBubble: React.FC<AIResponseBubbleProps> = ({
     >
       {showSwipeHint && (
         <div className="absolute top-2 right-2 text-xs text-text-secondary dark:text-white/50">
-          ← Swipe or drag to change mood →
+          ← Swipe or drag to change →
         </div>
       )}
-      <div className="flex items-center space-x-2">
-        <div className="w-8 h-8 bg-navy-primary dark:bg-yellow-warm rounded-full flex items-center justify-center flex-shrink-0">
-          <span className="text-white dark:text-navy-dark text-sm">{displayEmoji}</span>
+      
+      {/* Primary Emotion Line */}
+      <div 
+        className="flex items-center space-x-2 cursor-pointer hover:opacity-80 transition-opacity"
+        onClick={handlePrimaryClick}
+      >
+        <div className="flex items-center space-x-2">
+          {selectionLevel === 'primary' && (
+            <span className="text-navy-primary dark:text-yellow-warm text-lg">→</span>
+          )}
+          <div className="w-8 h-8 bg-navy-primary dark:bg-yellow-warm rounded-full flex items-center justify-center flex-shrink-0">
+            <span className="text-white dark:text-navy-dark text-sm">{currentPrimary.emoji}</span>
+          </div>
+          <span className="text-sm font-semibold text-navy-primary dark:text-yellow-warm capitalize">
+            {currentPrimary.shortLabel}
+          </span>
         </div>
-        <span className="text-sm font-semibold text-navy-primary dark:text-yellow-warm capitalize">
-          {displayText}
-        </span>
+      </div>
+      
+      {/* Sub-Emotion Line */}
+      <div 
+        className="flex items-center space-x-2 cursor-pointer hover:opacity-80 transition-opacity ml-6"
+        onClick={handleSubClick}
+      >
+        <div className="flex items-center space-x-2">
+          {selectionLevel === 'sub' && (
+            <span className="text-navy-primary dark:text-yellow-warm text-lg">→</span>
+          )}
+          <span className="text-sm text-text-secondary dark:text-white/70 capitalize">
+            {currentSubFeeling}
+          </span>
+        </div>
       </div>
       
       <p className="text-text-primary dark:text-white leading-relaxed">
