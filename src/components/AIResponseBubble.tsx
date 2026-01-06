@@ -23,6 +23,12 @@ const AIResponseBubble: React.FC<AIResponseBubbleProps> = ({
   const { handleMoodLoopEntry } = useData();
   const [isVisible, setIsVisible] = useState(false);
   
+  // Refs for swipe/drag handling
+  const bubbleRef = useRef<HTMLDivElement>(null);
+  const touchStartX = useRef<number>(0);
+  const mouseStartX = useRef<number>(0);
+  const isDragging = useRef<boolean>(false);
+  
   // Track selection level: 'primary' or 'sub'
   const [selectionLevel, setSelectionLevel] = useState<'primary' | 'sub'>('primary');
   
