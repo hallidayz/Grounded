@@ -39,16 +39,20 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({
 
   // Initialize: Check if user is already logged in (only once on mount)
   const hasInitializedRef = React.useRef(false);
+  const initializationPromiseRef = React.useRef<Promise<void> | null>(null);
   
   useEffect(() => {
     // Prevent multiple initializations
-    if (hasInitializedRef.current) {
+    if (hasInitializedRef.current || initializationPromiseRef.current) {
       return;
     }
     
     const initializeAuth = async () => {
       if (hasInitializedRef.current) return;
       hasInitializedRef.current = true;
+      
+      // Store the promise to prevent concurrent initializations
+      const initPromise = (async () => {
       
       try {
         console.log('[AuthContext] Initializing auth state...');
@@ -109,7 +113,14 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({
         console.error('[AuthContext] Error initializing auth:', error);
         setAuthState('login');
         hasInitializedRef.current = false; // Allow retry on error
+        initializationPromiseRef.current = null;
       }
+    })();
+    
+    initializationPromiseRef.current = initPromise;
+    initPromise.finally(() => {
+      initializationPromiseRef.current = null;
+    });
     };
 
     initializeAuth();

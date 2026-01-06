@@ -23,9 +23,11 @@ const AIResponseBubble: React.FC<AIResponseBubbleProps> = ({
   const { handleMoodLoopEntry } = useData();
   const [isVisible, setIsVisible] = useState(false);
   
-  // Thumb swipe mood selection loop state
+  // Thumb swipe mood selection loop state (works for both touch and mouse)
   const bubbleRef = useRef<HTMLDivElement>(null);
   const touchStartX = useRef<number>(0);
+  const mouseStartX = useRef<number>(0);
+  const isDragging = useRef<boolean>(false);
   const [currentMoodIndex, setCurrentMoodIndex] = useState(0);
   
   // Get all available moods for the loop (memoized)
@@ -52,22 +54,12 @@ const AIResponseBubble: React.FC<AIResponseBubbleProps> = ({
     }
   }, [emotion, feeling, availableMoods]);
   
-  // Handle thumb swipe for mood selection loop
+  // Handle swipe/drag for mood selection loop (works for both touch and mouse)
   useEffect(() => {
     const bubble = bubbleRef.current;
     if (!bubble || !onMoodChange) return;
 
-    const handleTouchStart = (e: TouchEvent) => {
-      const touch = e.touches[0];
-      touchStartX.current = touch.clientX;
-    };
-
-    const handleTouchEnd = (e: TouchEvent) => {
-      if (!touchStartX.current) return;
-      
-      const touch = e.changedTouches[0];
-      const deltaX = touch.clientX - touchStartX.current;
-      
+    const changeMood = (deltaX: number) => {
       // Swipe threshold: 50px
       if (Math.abs(deltaX) > 50) {
         let newIndex = currentMoodIndex;
@@ -91,16 +83,57 @@ const AIResponseBubble: React.FC<AIResponseBubbleProps> = ({
           console.error('[AIResponseBubble] Error saving mood entry:', error);
         });
       }
+    };
+
+    // Touch event handlers
+    const handleTouchStart = (e: TouchEvent) => {
+      const touch = e.touches[0];
+      touchStartX.current = touch.clientX;
+    };
+
+    const handleTouchEnd = (e: TouchEvent) => {
+      if (!touchStartX.current) return;
       
+      const touch = e.changedTouches[0];
+      const deltaX = touch.clientX - touchStartX.current;
+      changeMood(deltaX);
       touchStartX.current = 0;
     };
 
+    // Mouse event handlers for desktop
+    const handleMouseDown = (e: MouseEvent) => {
+      isDragging.current = true;
+      mouseStartX.current = e.clientX;
+      e.preventDefault();
+    };
+
+    const handleMouseMove = (e: MouseEvent) => {
+      if (!isDragging.current) return;
+      e.preventDefault();
+    };
+
+    const handleMouseUp = (e: MouseEvent) => {
+      if (!isDragging.current) return;
+      isDragging.current = false;
+      
+      const deltaX = e.clientX - mouseStartX.current;
+      changeMood(deltaX);
+      mouseStartX.current = 0;
+    };
+
+    // Add event listeners
     bubble.addEventListener('touchstart', handleTouchStart, { passive: true });
     bubble.addEventListener('touchend', handleTouchEnd, { passive: true });
+    bubble.addEventListener('mousedown', handleMouseDown);
+    document.addEventListener('mousemove', handleMouseMove);
+    document.addEventListener('mouseup', handleMouseUp);
 
     return () => {
       bubble.removeEventListener('touchstart', handleTouchStart);
       bubble.removeEventListener('touchend', handleTouchEnd);
+      bubble.removeEventListener('mousedown', handleMouseDown);
+      document.removeEventListener('mousemove', handleMouseMove);
+      document.removeEventListener('mouseup', handleMouseUp);
     };
   }, [currentMoodIndex, onMoodChange, availableMoods, handleMoodLoopEntry]);
 
@@ -116,7 +149,8 @@ const AIResponseBubble: React.FC<AIResponseBubbleProps> = ({
 
   // Use current mood from loop, or fallback to provided props
   const currentMood = availableMoods[currentMoodIndex] || { emotion: emotion || '', feeling: feeling || '', emoji: feelingEmoji || '💙', label: emotion || 'Reflection' };
-  const displayText = currentMood.feeling || feeling || emotion || 'Reflection';
+  // Display primary emotion label (e.g., "Calm") instead of just the feeling word
+  const displayText = currentMood.label || currentMood.emotion || emotion || 'Reflection';
   const displayEmoji = currentMood.emoji || feelingEmoji || '💙';
   
   // Show swipe hint if onMoodChange is provided
@@ -132,7 +166,7 @@ const AIResponseBubble: React.FC<AIResponseBubbleProps> = ({
     >
       {showSwipeHint && (
         <div className="absolute top-2 right-2 text-xs text-text-secondary dark:text-white/50">
-          ← Swipe to change mood →
+          ← Swipe or drag to change mood →
         </div>
       )}
       <div className="flex items-center space-x-2">
