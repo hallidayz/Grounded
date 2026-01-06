@@ -47,12 +47,10 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({
       return;
     }
     
-    const initializeAuth = async () => {
+    // Store the promise to prevent concurrent initializations
+    const initPromise = (async () => {
       if (hasInitializedRef.current) return;
       hasInitializedRef.current = true;
-      
-      // Store the promise to prevent concurrent initializations
-      const initPromise = (async () => {
       
       try {
         console.log('[AuthContext] Initializing auth state...');
@@ -113,7 +111,6 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({
         console.error('[AuthContext] Error initializing auth:', error);
         setAuthState('login');
         hasInitializedRef.current = false; // Allow retry on error
-        initializationPromiseRef.current = null;
       }
     })();
     
@@ -121,7 +118,6 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({
     initPromise.finally(() => {
       initializationPromiseRef.current = null;
     });
-    };
 
     initializeAuth();
   }, []); // Empty dependency array - only run once on mount
