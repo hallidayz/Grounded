@@ -1,7 +1,62 @@
 import React, { createContext, useContext, useState, useEffect, useCallback, useRef, useMemo, ReactNode } from 'react';
-import { LogEntry, Goal, AppSettings, LCSWConfig } from '../types';
+import { LogEntry, Goal, AppSettings, LCSWConfig, FeelingLog } from '../types';
 import { getDatabaseAdapter } from '../services/databaseAdapter';
+import React, {
+  createContext,
+  useContext,
+  useCallback,
+  useState,
+  useEffect,
+  useMemo,
+} from "react";
+import { adapter } from "../services/databaseAdapter";
 
+interface DataContextType {
+  logs: any[];
+  setLogs: React.Dispatch<React.SetStateAction<any[]>>;
+  handleMoodLoopEntry: (mood: string, emoji: string) => void;
+  settings: any;
+  setSettings: React.Dispatch<React.SetStateAction<any>>;
+}
+
+export const DataContext = createContext<DataContextType | undefined>(undefined);
+
+export const useDataContext = (): DataContextType => {
+  const context = useContext(DataContext);
+  if (!context) {
+    throw new Error("useDataContext must be used within a DataProvider");
+  }
+  return context;
+};
+
+export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
+  const [logs, setLogs] = useState<any[]>([]);
+  const [settings, setSettings] = useState({});
+
+  const handleMoodLoopEntry = useCallback((mood: string, emoji: string) => {
+    try {
+      const time = new Date().toISOString();
+      const newEntry = { id: time, mood, emoji, time };
+      setLogs((prev) => [...prev, newEntry]);
+      adapter?.saveFeelingLog?.(newEntry);
+    } catch (err) {
+      console.error("Error saving mood entry:", err);
+    }
+  }, []);
+
+  const value = useMemo(
+    () => ({
+      logs,
+      setLogs,
+      handleMoodLoopEntry,
+      settings,
+      setSettings,
+    }),
+    [logs, settings]
+  );
+
+  return <DataContext.Provider value={value}>{children}</DataContext.Provider>;
+};
 interface DataContextType {
   selectedValueIds: string[];
   logs: LogEntry[];
@@ -17,6 +72,7 @@ interface DataContextType {
   handleUpdateGoalProgress: (goalId: string, update: { date: string; note: string; progress?: number }) => void;
   handleClearData: () => void;
   handleSelectionComplete: (ids: string[]) => void;
+  handleMoodLoopEntry: (emotion: string, feeling: string) => Promise<void>; // Handle mood entry from thumb swipe loop
   persistData: () => Promise<void>; // Manual persistence trigger for exit handler
 }
 
@@ -227,6 +283,77 @@ export const DataProvider: React.FC<DataProviderProps> = ({
     }
   }, [userId, authState, adapter]);
 
+  // Handle mood entry from thumb swipe loop
+  // Type-safe implementation with proper FeelingLog structure
+  const handleMoodLoopEntry = useCallback(async (emotion: string, feeling: string): Promise<void> => {
+    if (!emotion || !feeling) {
+      console.warn('[DataContext] handleMoodLoopEntry called with invalid parameters', { emotion, feeling });
+      return;
+    }
+
+    try {
+      const timestamp = new Date().toISOString();
+      const logId = `mood-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
+
+      // Create feeling log entry for database with proper typing
+      const feelingLogData: Parameters<typeof adapter.saveFeelingLog>[0] = {
+        id: logId,
+        timestamp,
+        userId: userId || undefined,
+        emotionalState: emotion,
+        selectedFeeling: feeling || null,
+        aiResponse: '',
+        isAIResponse: false,
+        lowStateCount: 0,
+      };
+
+      // Persist to database if user is authenticated
+      if (userId && authState === 'app') {
+        try {
+          if (adapter && typeof adapter.saveFeelingLog === 'function') {
+            await adapter.saveFeelingLog(feelingLogData);
+            console.log('[DataContext] Mood entry saved to database', { emotion, feeling, userId, logId });
+          } else {
+            console.warn('[DataContext] saveFeelingLog method not available on adapter');
+          }
+        } catch (error) {
+          console.error('[DataContext] Error saving mood entry to database:', error);
+          // Don't throw - allow local state update even if DB save fails
+        }
+      } else {
+        console.warn('[DataContext] Cannot save mood entry - user not authenticated', { userId, authState });
+      }
+
+      // Also create a LogEntry for local state (if needed for UI display)
+      // Note: LogEntry uses different structure, so we create a minimal entry
+      // Type-safe emotionalState: only use if it matches allowed values
+      const allowedEmotionalStates: LogEntry['emotionalState'][] = [
+        'drained', 'heavy', 'overwhelmed', 'mixed', 'calm', 'hopeful', 'positive', 'energized'
+      ];
+      const validEmotionalState = allowedEmotionalStates.includes(emotion as LogEntry['emotionalState'])
+        ? (emotion as LogEntry['emotionalState'])
+        : undefined;
+
+      const logEntry: LogEntry = {
+        id: logId,
+        date: timestamp,
+        valueId: '', // No value associated with mood loop entry
+        livedIt: false,
+        note: `Mood: ${emotion} - ${feeling}`,
+        emotionalState: validEmotionalState,
+        selectedFeeling: feeling,
+      };
+
+      // Update local log state
+      setLogs((prev) => [logEntry, ...prev]);
+    } catch (err) {
+      const errorMessage = err instanceof Error ? err.message : String(err);
+      console.error('[DataContext] Error recording mood entry:', errorMessage, err);
+      // Re-throw to allow caller to handle if needed
+      throw new Error(`Failed to record mood entry: ${errorMessage}`);
+    }
+  }, [userId, authState, adapter]);
+
   // Manual persistence function for exit handler
   const persistData = useCallback(async () => {
     if (!userId || authState !== 'app') {
@@ -333,6 +460,7 @@ export const DataProvider: React.FC<DataProviderProps> = ({
         handleUpdateGoalProgress,
         handleClearData,
         handleSelectionComplete,
+        handleMoodLoopEntry,
         persistData,
       }}
     >
