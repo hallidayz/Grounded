@@ -1,0 +1,6 @@
+tree 390d21e0a4de7834c5191802e304c77123bef589
+parent 6e1fd3a01f18baf52ec8347898e448f5234ffb9f
+author ACHalliday <hallidayz@gmail.com> 1766549352 -0700
+committer ACHalliday <hallidayz@gmail.com> 1766549352 -0700
+
+Enhance InnerCompass with LCSW integration and on-device AI capabilities. Added user authentication flow, crisis detection, and improved UI components. Updated README for new features and installation instructions. Implemented local storage for user data and refined app settings management.
