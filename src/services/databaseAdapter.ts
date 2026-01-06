@@ -1276,10 +1276,17 @@ export class EncryptedAdapter implements DatabaseAdapter {
 
   // Values operations - Phase 2: Add values methods to EncryptedAdapter
   async getActiveValues(userId: string): Promise<string[]> {
-    const results = await this.encryptedDb.query(
-      'SELECT value_id FROM values_encrypted WHERE user_id = ? AND active = 1 ORDER BY priority ASC',
-      [userId]
-    );
+    // Validate userId before querying
+    if (!userId || typeof userId !== 'string') {
+      console.warn('[EncryptedAdapter] Invalid userId for getActiveValues:', userId);
+      return [];
+    }
+    
+    try {
+      const results = await this.encryptedDb.query(
+        'SELECT value_id FROM values_encrypted WHERE user_id = ? AND active = 1 ORDER BY priority ASC',
+        [userId]
+      );
     
     return results.map((row: any) => row.value_id);
   }
