@@ -1,3 +1,5 @@
+import plugin from 'tailwindcss/plugin';
+
 /** @type {import('tailwindcss').Config} */
 export default {
   content: [
@@ -62,8 +64,52 @@ export default {
       fontFamily: {
         sans: ['-apple-system', 'BlinkMacSystemFont', 'Segoe UI', 'Roboto', 'Oxygen', 'Ubuntu', 'Cantarell', 'Fira Sans', 'Droid Sans', 'Helvetica Neue', 'sans-serif'],
       },
+      transitionTimingFunction: {
+        'sheet-open': 'cubic-bezier(0.22, 0.61, 0.36, 1)',
+      },
+      keyframes: {
+        'sheet-slide-up': {
+          '0%': { transform: 'translateY(100%)' },
+          '100%': { transform: 'translateY(0)' },
+        },
+        'sheet-slide-down': {
+          '0%': { transform: 'translateY(0)' },
+          '100%': { transform: 'translateY(100%)' },
+        },
+        'fade-in': { '0%': { opacity: '0' }, '100%': { opacity: '1' } },
+        'fade-out': { '0%': { opacity: '1' }, '100%': { opacity: '0' } },
+      },
+      animation: {
+        'sheet-up': 'sheet-slide-up 0.35s cubic-bezier(0.22,0.61,0.36,1)',
+        'sheet-down': 'sheet-slide-down 0.35s ease-in',
+        'fade-in': 'fade-in 0.25s ease-out',
+        'fade-out': 'fade-out 0.25s ease-in',
+      },
+      height: { 'screen-dvh': '100dvh' },
     },
   },
-  plugins: [],
+  plugins: [
+    plugin(({ addUtilities }) => {
+      const safeArea = {
+        '.pt-safe': { paddingTop: 'env(safe-area-inset-top)' },
+        '.pb-safe': { paddingBottom: 'env(safe-area-inset-bottom)' },
+        '.pl-safe': { paddingLeft: 'env(safe-area-inset-left)' },
+        '.pr-safe': { paddingRight: 'env(safe-area-inset-right)' },
+        '.px-safe': {
+          paddingLeft: 'env(safe-area-inset-left)',
+          paddingRight: 'env(safe-area-inset-right)',
+        },
+        '.py-safe': {
+          paddingTop: 'env(safe-area-inset-top)',
+          paddingBottom: 'env(safe-area-inset-bottom)',
+        },
+      };
+      addUtilities(safeArea);
+    }),
+    plugin(({ addVariant }) => {
+      addVariant('motion-safe', '@media (prefers-reduced-motion: no-preference)');
+      addVariant('motion-reduce', '@media (prefers-reduced-motion: reduce)');
+    }),
+  ],
   darkMode: 'class', // better theme control
 };

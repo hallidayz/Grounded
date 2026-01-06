@@ -1,0 +1,44 @@
+/* src/styles/safe-area.css */
+
+.emotion-modal {
+  -webkit-overflow-scrolling: touch;
+  touch-action: manipulation;
+}
+.emotion-modal * {
+  -webkit-tap-highlight-color: transparent;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .emotion-modal {
+    transition: none !important;
+    animation: none !important;
+  }
+}
+
+@media (prefers-reduced-motion: no-preference) {
+  .emotion-modal.open {
+    animation: sheet-slide-up 0.35s cubic-bezier(0.22, 0.61, 0.36, 1);
+  }
+  .emotion-modal.closing {
+    animation: sheet-slide-down 0.3s ease-in forwards;
+  }
+}
+
+@keyframes sheet-slide-up {
+  0% {
+    transform: translateY(100%);
+  }
+  100% {
+    transform: translateY(0);
+  }
+}
+
+@keyframes sheet-slide-down {
+  0% {
+    transform: translateY(0);
+  }
+  100% {
+    transform: translateY(100%);
+  }
+}
+
