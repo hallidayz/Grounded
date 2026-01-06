@@ -124,15 +124,16 @@ export async function registerUser(data: RegisterData): Promise<AuthResult> {
       // Auto-login: Store session immediately after creation
       // CRITICAL: Store in both sessionStorage and localStorage for persistence
       // localStorage persists across app updates, cache clears, and Vercel deployments
-      sessionStorage.setItem('userId', userId);
-      sessionStorage.setItem('username', data.username);
       try {
+        sessionStorage.setItem('userId', userId);
+        sessionStorage.setItem('username', data.username);
         localStorage.setItem('userId', userId);
         localStorage.setItem('username', data.username);
-        console.log('[AuthService] New user credentials saved to localStorage for persistence across updates');
+        console.log('[AuthService] CRITICAL: New user credentials saved to both sessionStorage and localStorage:', { userId, username: data.username });
       } catch (error) {
-        console.warn('Could not store userId in localStorage:', error);
-        // Continue anyway - sessionStorage will work for current session
+        console.error('[AuthService] CRITICAL ERROR: Failed to save new user credentials to storage:', error);
+        // This is critical - if we can't save, user will need to login again
+        console.warn('[AuthService] Continuing despite storage error - user may need to login again on next visit');
       }
     } catch (error) {
       console.error('Error creating user:', error);
@@ -200,16 +201,18 @@ export async function loginUser(data: LoginData): Promise<AuthResult> {
 
     // Store session in both sessionStorage (for current session) and localStorage (for persistence)
     // localStorage persists across app updates, cache clears, and Vercel deployments
-    sessionStorage.setItem('userId', user.id);
-    sessionStorage.setItem('username', user.username);
-    // CRITICAL: Store in localStorage for persistence across app updates and deployments
     try {
+      sessionStorage.setItem('userId', user.id);
+      sessionStorage.setItem('username', user.username);
+      // CRITICAL: Store in localStorage for persistence across app updates and deployments
       localStorage.setItem('userId', user.id);
       localStorage.setItem('username', user.username);
-      console.log('[AuthService] Credentials saved to localStorage for persistence across updates');
+      console.log('[AuthService] CRITICAL: Credentials saved to both sessionStorage and localStorage:', { userId: user.id, username: user.username });
     } catch (error) {
-      console.warn('Could not store userId in localStorage:', error);
-      // Continue anyway - sessionStorage will work for current session
+      console.error('[AuthService] CRITICAL ERROR: Failed to save credentials to storage:', error);
+      // This is critical - if we can't save, user will need to login again
+      // But we'll still return success since auth worked, just storage failed
+      console.warn('[AuthService] Continuing despite storage error - user may need to login again on next visit');
     }
 
     // Note: Database unlock happens separately in useAuth.login() using the same password
