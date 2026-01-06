@@ -37,7 +37,17 @@ const requestPersistentStorage = async (): Promise<boolean> => {
   if (navigator.storage && typeof navigator.storage.persist === 'function') {
     try {
       const isPersisted = await navigator.storage.persist();
-      console.log(`[AuthContext] Persistent storage ${isPersisted ? 'granted' : 'denied'} (platform: ${navigator.platform})`);
+      const isMobile = /Android|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent);
+      
+      if (isPersisted) {
+        console.log(`[AuthContext] Persistent storage granted (platform: ${navigator.platform})`);
+      } else if (isMobile) {
+        // On mobile, denial is more concerning
+        console.warn(`[AuthContext] Persistent storage denied on mobile (platform: ${navigator.platform}) - credentials may be lost on app updates`);
+      } else {
+        // On desktop, denial is expected and not critical
+        console.log(`[AuthContext] Persistent storage denied on desktop (platform: ${navigator.platform}) - this is expected, credentials will still persist in localStorage/IndexedDB`);
+      }
       return isPersisted;
     } catch (error) {
       console.warn('[AuthContext] Error requesting persistent storage:', error);
@@ -45,7 +55,7 @@ const requestPersistentStorage = async (): Promise<boolean> => {
     }
   }
   // API not supported - log but don't treat as error (older browsers/fallback)
-  console.log('[AuthContext] Persistent Storage API not supported - using standard storage (may be cleared by browser)');
+  console.log('[AuthContext] Persistent Storage API not supported - using standard storage (credentials will persist in localStorage/IndexedDB)');
   return false;
 };
 
@@ -87,10 +97,8 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({
       try {
         console.log('[AuthContext] Initializing auth state...');
         // Request persistent storage for Android PWA credential persistence
-        const isPersisted = await requestPersistentStorage();
-        if (!isPersisted) {
-          console.warn('[AuthContext] Persistent storage not granted - credentials may be lost');
-        }
+        // Note: On desktop, denial is expected and not critical
+        await requestPersistentStorage();
         // Ensure auth store is initialized before getting user
         const { authStore } = await import('../services/authStore');
         try {
