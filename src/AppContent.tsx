@@ -34,11 +34,27 @@ export default function AppContent({ onHydrationReady }: { onHydrationReady?: ()
   const [showHelp, setShowHelp] = useState(false);
   const [showSettings, setShowSettings] = useState(false);
 
+  // Memoize values to prevent hydration mismatches - MUST be called before any early returns
+  const selectedValues = useMemo(() => 
+    (context?.selectedValueIds || []).map(id => ALL_VALUES.find(v => v.id === id)).filter(Boolean) as any[],
+    [context?.selectedValueIds]
+  );
+
+  // Check if this is a first-time user (no values selected)
+  const isFirstTimeUser = context ? (!context.selectedValueIds || context.selectedValueIds.length === 0) : false;
+
   useEffect(() => {
     if (context && authState === 'app' && onHydrationReady) {
       onHydrationReady();
     }
   }, [context, authState, onHydrationReady]);
+
+  // Auto-navigate to values for first-time users
+  useEffect(() => {
+    if (isFirstTimeUser && currentView === 'home' && authState === 'app' && context) {
+      setCurrentView('values');
+    }
+  }, [isFirstTimeUser, currentView, authState, context]);
 
   // Handle auth states
   if (authState === 'checking') {
@@ -65,9 +81,6 @@ export default function AppContent({ onHydrationReady }: { onHydrationReady?: ()
     );
   }
 
-  // Check if this is a first-time user (no values selected) - only after context is available
-  const isFirstTimeUser = !context.selectedValueIds || context.selectedValueIds.length === 0;
-
   // Handle action clicks from AIResponseBubble
   const handleActionClick = (action: 'reflection' | 'values' | 'resources') => {
     if (action === 'values') {
@@ -86,19 +99,6 @@ export default function AppContent({ onHydrationReady }: { onHydrationReady?: ()
     console.log('Mood changed:', emotion, feeling);
     // Mood is already saved via handleMoodLoopEntry in AIResponseBubble
   };
-
-  // Memoize values to prevent hydration mismatches
-  const selectedValues = useMemo(() => 
-    (context?.selectedValueIds || []).map(id => ALL_VALUES.find(v => v.id === id)).filter(Boolean) as any[],
-    [context?.selectedValueIds]
-  );
-  
-  // Auto-navigate to values for first-time users
-  useEffect(() => {
-    if (isFirstTimeUser && currentView === 'home') {
-      setCurrentView('values');
-    }
-  }, [isFirstTimeUser, currentView]);
 
   // Handle clear data with confirmation
   const handleClearData = () => {
