@@ -235,6 +235,14 @@ export function logoutUser(): void {
 // Always uses auth store (separate, unencrypted) for user data
 // Falls back to localStorage if sessionStorage is empty (e.g., after cache clear)
 export async function getCurrentUser() {
+  // CRITICAL: Initialize auth store first to ensure it's ready
+  try {
+    await authStore.init();
+  } catch (error) {
+    console.error('[AuthService] Failed to initialize auth store:', error);
+    // Continue anyway - might still work if already initialized
+  }
+  
   // Try sessionStorage first (current session)
   let userId = sessionStorage.getItem('userId');
   
@@ -248,6 +256,7 @@ export async function getCurrentUser() {
       if (username) {
         sessionStorage.setItem('username', username);
       }
+      console.log('[AuthService] Restored userId from localStorage:', userId);
     }
   }
   
@@ -256,6 +265,7 @@ export async function getCurrentUser() {
     try {
       // Get all users from auth store and use the most recent one
       const allUsers = await authStore.getAllUsers();
+      console.log('[AuthService] Found users in database:', allUsers?.length || 0);
       if (allUsers && allUsers.length > 0) {
         // Sort by lastLogin or createdAt to get most recent
         const sortedUsers = allUsers.sort((a, b) => {
@@ -264,25 +274,47 @@ export async function getCurrentUser() {
           return bTime - aTime;
         });
         userId = sortedUsers[0].id;
+        const username = sortedUsers[0].username;
         // Restore to both storages for persistence across app updates
         sessionStorage.setItem('userId', userId);
-        sessionStorage.setItem('username', sortedUsers[0].username);
+        sessionStorage.setItem('username', username);
         // CRITICAL: Ensure localStorage is updated for persistence across Vercel deployments
         try {
           localStorage.setItem('userId', userId);
-          localStorage.setItem('username', sortedUsers[0].username);
-          console.log('[AuthService] Restored credentials to localStorage from database');
+          localStorage.setItem('username', username);
+          console.log('[AuthService] Restored credentials to localStorage from database:', { userId, username });
         } catch (error) {
           console.warn('Could not store userId in localStorage:', error);
         }
+      } else {
+        console.log('[AuthService] No users found in database');
       }
     } catch (error) {
-      console.error('Error finding existing user:', error);
+      console.error('[AuthService] Error finding existing user:', error);
     }
   }
   
-  if (!userId) return null;
-  return await authStore.getUserById(userId);
+  if (!userId) {
+    console.log('[AuthService] No userId found - user needs to login');
+    return null;
+  }
+  
+  try {
+    const user = await authStore.getUserById(userId);
+    if (user) {
+      console.log('[AuthService] User found:', { userId: user.id, username: user.username, termsAccepted: user.termsAccepted });
+    } else {
+      console.warn('[AuthService] User ID found but user not in database:', userId);
+      // Clear invalid userId from storage
+      sessionStorage.removeItem('userId');
+      localStorage.removeItem('userId');
+      localStorage.removeItem('username');
+    }
+    return user;
+  } catch (error) {
+    console.error('[AuthService] Error getting user by ID:', error);
+    return null;
+  }
 }
 
 // Check if user is logged in
