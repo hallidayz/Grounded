@@ -81,9 +81,9 @@ export default function AppContent({ onHydrationReady }: { onHydrationReady?: ()
 
   return (
     <div className="min-h-screen flex flex-col bg-neutral-900 text-neutral-100">
-      <main className="flex-1 w-full overflow-y-auto p-4">
+      <main className="flex-1 w-full overflow-y-auto p-4 pb-24">
         {currentView === "home" && (
-          <div className="max-w-2xl mx-auto">
+          <div className="max-w-2xl mx-auto py-8">
             <AIResponseBubble 
               message="Welcome to Grounded. How are you feeling today?"
               emotion="calm"
