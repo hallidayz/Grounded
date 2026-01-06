@@ -98,8 +98,27 @@ class AuthStore {
       const store = transaction.objectStore('users');
       const request = store.add(user);
 
-      request.onsuccess = () => resolve(id);
-      request.onerror = () => reject(request.error);
+      request.onsuccess = async () => {
+        // Wait for transaction to complete before resolving
+        // This ensures the user is fully committed to IndexedDB
+        await new Promise(resolve => {
+          transaction.oncomplete = () => {
+            console.log('[AuthStore] User transaction completed:', { userId: id, username: userData.username });
+            resolve(undefined);
+          };
+          transaction.onerror = () => {
+            console.error('[AuthStore] User transaction error:', transaction.error);
+            reject(transaction.error);
+          };
+          // Safety timeout
+          setTimeout(() => resolve(undefined), 100);
+        });
+        resolve(id);
+      };
+      request.onerror = () => {
+        console.error('[AuthStore] Error adding user:', request.error);
+        reject(request.error);
+      };
     });
   }
 
