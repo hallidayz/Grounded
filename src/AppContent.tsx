@@ -1,4 +1,4 @@
-import React, { useEffect, useState, useMemo } from "react";
+import React, { useEffect, useState, useMemo, useCallback } from "react";
 import { useDataContext } from "./contexts/DataContext";
 import { useAuthContext } from "./contexts/AuthContext";
 import BottomNavigation from "./components/BottomNavigation";
