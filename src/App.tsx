@@ -78,7 +78,7 @@ const App: React.FC = () => {
     <>
       <ErrorBoundary>
         <Suspense fallback={
-          <div className="flex flex-col items-center justify-center h-screen bg-black text-gray-100">
+          <div className="flex flex-col items-center justify-center h-screen bg-bg-primary dark:bg-dark-bg-primary text-text-primary dark:text-white">
             <div className="animate-pulse text-lg tracking-wide">Loading Grounded ...</div>
           </div>
         }>
