@@ -9,9 +9,10 @@ interface ValueSelectionProps {
   isReorderingOnly?: boolean;
   onAddGoal?: (valueId: string) => void;
   goals?: Array<{ valueId: string }>;
+  onSave?: (ids: string[]) => void; // Optional: save without navigation
 }
 
-const ValueSelection: React.FC<ValueSelectionProps> = ({ initialSelected, onComplete, isReorderingOnly = false, onAddGoal, goals = [] }) => {
+const ValueSelection: React.FC<ValueSelectionProps> = ({ initialSelected, onComplete, isReorderingOnly = false, onAddGoal, goals = [], onSave }) => {
   const [selected, setSelected] = useState<string[]>(initialSelected);
   const [shakeId, setShakeId] = useState<string | null>(null);
   const [collapsedCategories, setCollapsedCategories] = useState<Set<string>>(new Set());
@@ -57,8 +58,13 @@ const ValueSelection: React.FC<ValueSelectionProps> = ({ initialSelected, onComp
       // Use setTimeout to debounce rapid changes and avoid blocking UI
       setTimeout(() => {
         if (newSelected.length > 0 || prev.length > 0) {
-          // Save current selection (even if empty, to clear old selections)
-          onComplete(newSelected);
+          // Use onSave if provided (saves without navigation), otherwise use onComplete
+          if (onSave) {
+            onSave(newSelected);
+          } else {
+            // Fallback: onComplete might navigate, but at least values are saved
+            onComplete(newSelected);
+          }
         }
       }, 200);
       
@@ -74,7 +80,11 @@ const ValueSelection: React.FC<ValueSelectionProps> = ({ initialSelected, onComp
     setSelected(newSelected);
     // Auto-save when reordering
     setTimeout(() => {
-      onComplete(newSelected);
+      if (onSave) {
+        onSave(newSelected);
+      } else {
+        onComplete(newSelected);
+      }
     }, 200);
   };
 
@@ -99,7 +109,11 @@ const ValueSelection: React.FC<ValueSelectionProps> = ({ initialSelected, onComp
     setDragOverIndex(null);
     // Auto-save when drag-drop reordering
     setTimeout(() => {
-      onComplete(newSelected);
+      if (onSave) {
+        onSave(newSelected);
+      } else {
+        onComplete(newSelected);
+      }
     }, 200);
   };
 

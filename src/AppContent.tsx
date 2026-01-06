@@ -223,7 +223,14 @@ export default function AppContent({ onHydrationReady }: { onHydrationReady?: ()
             )}
             <ValueSelection
               initialSelected={context?.selectedValueIds || []}
+              onSave={(ids) => {
+                // Auto-save without navigation (called on every selection change)
+                if (context) {
+                  context.handleSelectionComplete(ids);
+                }
+              }}
               onComplete={(ids) => {
+                // Save and navigate (called when user clicks "Confirm Compass")
                 if (context) {
                   context.handleSelectionComplete(ids);
                 }
@@ -231,6 +238,11 @@ export default function AppContent({ onHydrationReady }: { onHydrationReady?: ()
                 setCurrentView('home');
               }}
               onAddGoal={(valueId) => {
+                // CRITICAL: Save values before navigating to add goal
+                // This ensures values persist even if there's an error
+                if (context && context.selectedValueIds.length > 0) {
+                  context.handleSelectionComplete(context.selectedValueIds);
+                }
                 // Navigate to goals update view to add a goal for this value
                 setCurrentView('update');
                 // TODO: Pass valueId to GoalsUpdateView if it supports it
