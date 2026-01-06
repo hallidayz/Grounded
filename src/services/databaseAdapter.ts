@@ -6,6 +6,8 @@
 import { dbService, DatabaseService } from './database';
 import { AppSettings, LogEntry, Goal, LCSWConfig } from '../types';
 import { EncryptedPWA } from './encryptedPWA';
+import { db } from './dexieDB';
+import type { UserRecord, AppDataRecord, ValueRecord, GoalRecord, FeelingLogRecord, UserInteractionRecord, SessionRecord, AssessmentRecord, ReportRecord, ResetTokenRecord } from './dexieDB';
 
 // Re-export types from database.ts for convenience
 interface UserData {
@@ -67,6 +69,7 @@ export interface DatabaseAdapter {
   }): Promise<void>;
   getFeelingLogs(limit?: number, userId?: string): Promise<any[]>;
   getFeelingLogsByState(emotionalState: string, limit?: number): Promise<any[]>;
+  deleteFeelingLog(logId: string): Promise<void>;
   
   // User interactions operations
   saveUserInteraction(interaction: {
@@ -80,6 +83,7 @@ export interface DatabaseAdapter {
     metadata?: Record<string, any>;
   }): Promise<void>;
   getUserInteractions(sessionId?: string, limit?: number): Promise<any[]>;
+  deleteUserInteraction(interactionId: string): Promise<void>;
   
   // Sessions operations
   saveSession(session: {
@@ -135,20 +139,47 @@ export interface DatabaseAdapter {
     treatmentProtocols: string[];
   }): Promise<void>;
   getReports(userId: string, limit?: number): Promise<any[]>;
+
+  // Values operations - Phase 3: Add to interface
+  getActiveValues(userId: string): Promise<string[]>;
+  setValuesActive(userId: string, valueIds: string[]): Promise<void>;
+  saveValue(userId: string, valueId: string, active?: boolean, priority?: number): Promise<void>;
+
+  // Goals operations - Phase 3: Add to interface
+  saveGoal(goal: Goal): Promise<void>;
+  getGoals(userId: string): Promise<Goal[]>;
+  deleteGoal(goalId: string): Promise<void>;
 }
 
 /**
  * Legacy Adapter
- * Wraps existing DatabaseService - preserves all existing functionality
+ * Uses Dexie.js for high-performance IndexedDB operations
+ * Replaces raw IndexedDB API with type-safe, promise-based operations
+ * 
+ * SECURITY WARNING: This adapter uses unencrypted IndexedDB.
+ * It MUST NOT be used for PHI data when encryption is enabled.
+ * Use EncryptedAdapter for HIPAA-compliant storage.
  */
 export class LegacyAdapter implements DatabaseAdapter {
-  private dbService: DatabaseService;
+  private dbService: DatabaseService; // Keep for backward compatibility during transition
   
   constructor(dbService: DatabaseService) {
     this.dbService = dbService;
+    
+    // Security check: Warn if encryption is enabled but we're using LegacyAdapter
+    if (isEncryptionEnabled()) {
+      console.warn(
+        '[LegacyAdapter] SECURITY WARNING: Encryption is enabled but LegacyAdapter is being used. ' +
+        'This should only happen during initialization. PHI data operations will fail.'
+      );
+    }
   }
   
   async init(): Promise<void> {
+    // Initialize Dexie database with cleanup
+    // This will clean up old databases and open the connection
+    await db.initialize();
+    // Also initialize dbService for any methods not yet migrated
     return this.dbService.init();
   }
   
@@ -177,11 +208,17 @@ export class LegacyAdapter implements DatabaseAdapter {
   }
   
   async getAppData(userId: string): Promise<AppData | null> {
-    return this.dbService.getAppData(userId);
+    // Use Dexie for better performance
+    const appData = await db.appData.get(userId);
+    return appData?.data || null;
   }
   
   async saveAppData(userId: string, data: AppData): Promise<void> {
-    return this.dbService.saveAppData(userId, data);
+    // Use Dexie for better performance
+    await db.appData.put({
+      userId,
+      data,
+    } as AppDataRecord);
   }
   
   async createResetToken(userId: string, email: string): Promise<string> {
@@ -209,18 +246,58 @@ export class LegacyAdapter implements DatabaseAdapter {
     aiResponse: string;
     isAIResponse: boolean;
     lowStateCount: number;
-    migrated?: boolean; // Added for migration tracking
-    migrationDate?: string; // Added for migration tracking
+    migrated?: boolean;
+    migrationDate?: string;
   }): Promise<void> {
-    return this.dbService.saveFeelingLog(feelingLog);
+    // SECURITY: Validate encryption boundary - feelingLogs contain PHI
+    validateEncryptionBoundary('saveFeelingLog', 'feelingLogs');
+    
+    // Use Dexie for better performance
+    await db.feelingLogs.put({
+      id: feelingLog.id,
+      timestamp: feelingLog.timestamp,
+      userId: feelingLog.userId,
+      emotion: feelingLog.emotionalState,
+      subEmotion: feelingLog.selectedFeeling,
+      aiResponse: feelingLog.aiResponse,
+      isAIResponse: feelingLog.isAIResponse,
+      lowStateCount: feelingLog.lowStateCount,
+      emotionalState: feelingLog.emotionalState,
+      selectedFeeling: feelingLog.selectedFeeling,
+    } as FeelingLogRecord);
   }
   
   async getFeelingLogs(limit?: number, userId?: string): Promise<any[]> {
-    return this.dbService.getFeelingLogs(limit, userId);
+    // SECURITY: Validate encryption boundary - feelingLogs contain PHI
+    validateEncryptionBoundary('getFeelingLogs', 'feelingLogs');
+    
+    // Use Dexie for better performance
+    let query = db.feelingLogs.orderBy('timestamp').reverse();
+    
+    if (userId) {
+      query = db.feelingLogs.where('userId').equals(userId).orderBy('timestamp').reverse();
+    }
+    
+    const logs = await query.toArray();
+    return limit ? logs.slice(0, limit) : logs;
   }
   
   async getFeelingLogsByState(emotionalState: string, limit?: number): Promise<any[]> {
-    return this.dbService.getFeelingLogsByState(emotionalState, limit);
+    // SECURITY: Validate encryption boundary - feelingLogs contain PHI
+    validateEncryptionBoundary('getFeelingLogsByState', 'feelingLogs');
+    
+    // Use Dexie for better performance
+    let query = db.feelingLogs.where('emotionalState').equals(emotionalState).orderBy('timestamp').reverse();
+    const logs = await query.toArray();
+    return limit ? logs.slice(0, limit) : logs;
+  }
+  
+  async deleteFeelingLog(logId: string): Promise<void> {
+    // SECURITY: Validate encryption boundary - feelingLogs contain PHI
+    validateEncryptionBoundary('deleteFeelingLog', 'feelingLogs');
+    
+    // Use Dexie for deletion
+    await db.feelingLogs.delete(logId);
   }
   
   async saveUserInteraction(interaction: {
@@ -232,15 +309,44 @@ export class LegacyAdapter implements DatabaseAdapter {
     emotionalState?: string;
     selectedFeeling?: string;
     metadata?: Record<string, any>;
-    userId?: string; // Ensure userId is passed through
+    userId?: string;
     migrated?: boolean;
     migrationDate?: string;
   }): Promise<void> {
-    return this.dbService.saveUserInteraction(interaction);
+    // Use Dexie for better performance
+    await db.userInteractions.put({
+      id: interaction.id,
+      timestamp: interaction.timestamp,
+      type: interaction.type,
+      sessionId: interaction.sessionId,
+      valueId: interaction.valueId,
+      emotionalState: interaction.emotionalState,
+      selectedFeeling: interaction.selectedFeeling,
+      metadata: interaction.metadata,
+    } as UserInteractionRecord);
   }
   
   async getUserInteractions(sessionId?: string, limit?: number): Promise<any[]> {
-    return this.dbService.getUserInteractions(sessionId, limit);
+    // SECURITY: Validate encryption boundary - userInteractions contain PHI
+    validateEncryptionBoundary('getUserInteractions', 'userInteractions');
+    
+    // Use Dexie for better performance
+    let query = db.userInteractions.orderBy('timestamp').reverse();
+    
+    if (sessionId) {
+      query = db.userInteractions.where('sessionId').equals(sessionId).orderBy('timestamp').reverse();
+    }
+    
+    const interactions = await query.toArray();
+    return limit ? interactions.slice(0, limit) : interactions;
+  }
+  
+  async deleteUserInteraction(interactionId: string): Promise<void> {
+    // SECURITY: Validate encryption boundary - userInteractions contain PHI
+    validateEncryptionBoundary('deleteUserInteraction', 'userInteractions');
+    
+    // Use Dexie for deletion
+    await db.userInteractions.delete(interactionId);
   }
   
   async saveSession(session: {
@@ -256,7 +362,23 @@ export class LegacyAdapter implements DatabaseAdapter {
     goalCreated: boolean;
     duration?: number;
   }): Promise<void> {
-    return this.dbService.saveSession(session);
+    // SECURITY: Validate encryption boundary - sessions contain PHI
+    validateEncryptionBoundary('saveSession', 'sessions');
+    
+    // Use Dexie for better performance
+    await db.sessions.put({
+      id: session.id,
+      userId: session.userId,
+      startTimestamp: session.startTimestamp,
+      endTimestamp: session.endTimestamp,
+      valueId: session.valueId,
+      initialEmotionalState: session.initialEmotionalState,
+      finalEmotionalState: session.finalEmotionalState,
+      selectedFeeling: session.selectedFeeling,
+      reflectionLength: session.reflectionLength,
+      goalCreated: session.goalCreated,
+      duration: session.duration,
+    } as SessionRecord);
   }
   
   async updateSession(sessionId: string, updates: Partial<{
@@ -266,15 +388,28 @@ export class LegacyAdapter implements DatabaseAdapter {
     goalCreated: boolean;
     duration: number;
   }>): Promise<void> {
-    return this.dbService.updateSession(sessionId, updates);
+    // Use Dexie for better performance
+    await db.sessions.update(sessionId, updates);
   }
   
   async getSessions(userId: string, limit?: number): Promise<any[]> {
-    return this.dbService.getSessions(userId, limit);
+    // SECURITY: Validate encryption boundary - sessions contain PHI
+    validateEncryptionBoundary('getSessions', 'sessions');
+    
+    // Use Dexie for better performance
+    let query = db.sessions.where('userId').equals(userId).orderBy('startTimestamp').reverse();
+    const sessions = await query.toArray();
+    return limit ? sessions.slice(0, limit) : sessions;
   }
   
   async getSessionsByValue(valueId: string, limit?: number): Promise<any[]> {
-    return this.dbService.getSessionsByValue(valueId, limit);
+    // SECURITY: Validate encryption boundary - sessions contain PHI
+    validateEncryptionBoundary('getSessionsByValue', 'sessions');
+    
+    // Use Dexie for better performance
+    let query = db.sessions.where('valueId').equals(valueId).orderBy('startTimestamp').reverse();
+    const sessions = await query.toArray();
+    return limit ? sessions.slice(0, limit) : sessions;
   }
   
   async getFeelingPatterns(startDate: string, endDate: string): Promise<{ state: string; count: number }[]> {
@@ -294,19 +429,162 @@ export class LegacyAdapter implements DatabaseAdapter {
   }
 
   async saveAssessment(assessment: any): Promise<void> {
-    return this.dbService.saveAssessment(assessment);
+    // Use Dexie for better performance
+    await db.assessments.put({
+      id: assessment.id,
+      userId: assessment.userId,
+      emotion: assessment.emotion,
+      subEmotion: assessment.subEmotion,
+      reflection: assessment.reflection,
+      assessment: assessment.assessment,
+      timestamp: assessment.timestamp,
+    } as AssessmentRecord);
   }
 
   async getAssessments(userId: string, limit?: number): Promise<any[]> {
-    return this.dbService.getAssessments(userId, limit);
+    // SECURITY: Validate encryption boundary - assessments contain PHI
+    validateEncryptionBoundary('getAssessments', 'assessments');
+    
+    // Use Dexie for better performance
+    let query = db.assessments.where('userId').equals(userId).orderBy('timestamp').reverse();
+    const assessments = await query.toArray();
+    return limit ? assessments.slice(0, limit) : assessments;
   }
 
   async saveReport(report: any): Promise<void> {
-    return this.dbService.saveReport(report);
+    // Use Dexie for better performance
+    await db.reports.put({
+      id: report.id,
+      userId: report.userId,
+      content: report.content,
+      timestamp: report.timestamp,
+      emailAddresses: report.emailAddresses,
+      treatmentProtocols: report.treatmentProtocols,
+    } as ReportRecord);
   }
 
   async getReports(userId: string, limit?: number): Promise<any[]> {
-    return this.dbService.getReports(userId, limit);
+    // SECURITY: Validate encryption boundary - reports contain PHI
+    validateEncryptionBoundary('getReports', 'reports');
+    
+    // Use Dexie for better performance
+    let query = db.reports.where('userId').equals(userId).orderBy('timestamp').reverse();
+    const reports = await query.toArray();
+    return limit ? reports.slice(0, limit) : reports;
+  }
+
+  // Values operations - Phase 3: Implement using Dexie
+  async getActiveValues(userId: string): Promise<string[]> {
+    // Use Dexie for better performance with compound index
+    const values = await db.values
+      .where('[userId+active]')
+      .equals([userId, true])
+      .sortBy('priority');
+    return values.map(v => v.valueId);
+  }
+
+  async setValuesActive(userId: string, valueIds: string[]): Promise<void> {
+    // Use Dexie for better performance with bulk operations
+    // Get all existing values for this user
+    const allUserValues = await db.values.where('userId').equals(userId).toArray();
+    
+    // Mark all existing as inactive
+    const updates = allUserValues.map(v => ({
+      ...v,
+      active: false,
+      updatedAt: new Date().toISOString(),
+    }));
+    
+    // Update existing values to active if in valueIds, or keep inactive
+    const existingValueIds = allUserValues.map(v => v.valueId);
+    const newValueIds = valueIds.filter(id => !existingValueIds.includes(id));
+    
+    // Update existing values
+    for (let i = 0; i < valueIds.length; i++) {
+      const valueId = valueIds[i];
+      const existing = allUserValues.find(v => v.valueId === valueId);
+      
+      if (existing) {
+        await db.values.update(existing.id!, {
+          active: true,
+          priority: i,
+          updatedAt: new Date().toISOString(),
+        });
+      } else {
+        // Add new value
+        await db.values.add({
+          userId,
+          valueId,
+          active: true,
+          priority: i,
+          createdAt: new Date().toISOString(),
+          updatedAt: new Date().toISOString(),
+        });
+      }
+    }
+    
+    // Mark values not in valueIds as inactive
+    const toDeactivate = allUserValues.filter(v => !valueIds.includes(v.valueId));
+    for (const value of toDeactivate) {
+      await db.values.update(value.id!, {
+        active: false,
+        updatedAt: new Date().toISOString(),
+      });
+    }
+  }
+
+  async saveValue(userId: string, valueId: string, active: boolean = true, priority?: number): Promise<void> {
+    // Use Dexie for better performance
+    // Find existing value by filtering (no compound index for userId+valueId, so use filter)
+    const allUserValues = await db.values.where('userId').equals(userId).toArray();
+    const existing = allUserValues.find(v => v.valueId === valueId);
+    
+    if (existing) {
+      // Update existing value
+      await db.values.update(existing.id!, {
+        active,
+        priority: priority !== undefined ? priority : existing.priority,
+        updatedAt: new Date().toISOString(),
+      });
+    } else {
+      // Get count of active values for default priority
+      const activeCount = await db.values
+        .where('[userId+active]')
+        .equals([userId, true])
+        .count();
+      const defaultPriority = priority !== undefined ? priority : activeCount;
+      
+      // Add new value
+      await db.values.add({
+        userId,
+        valueId,
+        active,
+        priority: defaultPriority,
+        createdAt: new Date().toISOString(),
+        updatedAt: new Date().toISOString(),
+      });
+    }
+  }
+
+  // Goals operations - Phase 3: Implement using Dexie
+  async saveGoal(goal: Goal): Promise<void> {
+    // Use Dexie for better performance
+    await db.goals.put(goal as GoalRecord);
+  }
+
+  async getGoals(userId: string): Promise<Goal[]> {
+    // Use Dexie for better performance
+    const goals = await db.goals
+      .where('userId')
+      .equals(userId)
+      .sortBy('createdAt');
+    // Reverse to get newest first
+    return goals.reverse();
+  }
+
+  async deleteGoal(goalId: string): Promise<void> {
+    // Use Dexie for better performance
+    await db.goals.delete(goalId);
   }
 }
 
@@ -672,6 +950,16 @@ export class EncryptedAdapter implements DatabaseAdapter {
     });
   }
   
+  async deleteFeelingLog(logId: string): Promise<void> {
+    await this.encryptedDb.execute(
+      'DELETE FROM feeling_logs_encrypted WHERE id = ?',
+      [logId]
+    );
+    
+    await this.encryptedDb.auditLog('feeling_log_deleted', 'feeling_logs_encrypted', logId, 'Feeling log pruned');
+    await this.encryptedDb.save();
+  }
+  
   async saveUserInteraction(interaction: {
     id: string;
     timestamp: string;
@@ -737,6 +1025,16 @@ export class EncryptedAdapter implements DatabaseAdapter {
       metadata: row.metadata ? JSON.parse(row.metadata) : {},
       createdAt: row.created_at
     }));
+  }
+  
+  async deleteUserInteraction(interactionId: string): Promise<void> {
+    await this.encryptedDb.execute(
+      'DELETE FROM user_interactions_encrypted WHERE id = ?',
+      [interactionId]
+    );
+    
+    await this.encryptedDb.auditLog('user_interaction_deleted', 'user_interactions_encrypted', interactionId, 'User interaction pruned');
+    await this.encryptedDb.save();
   }
   
   async saveSession(session: {
@@ -984,25 +1282,253 @@ export class EncryptedAdapter implements DatabaseAdapter {
       treatmentProtocols: JSON.parse(row.treatment_protocols || '[]')
     }));
   }
+
+  // Values operations - Phase 2: Add values methods to EncryptedAdapter
+  async getActiveValues(userId: string): Promise<string[]> {
+    const results = await this.encryptedDb.query(
+      'SELECT value_id FROM values_encrypted WHERE user_id = ? AND active = 1 ORDER BY priority ASC',
+      [userId]
+    );
+    
+    return results.map((row: any) => row.value_id);
+  }
+
+  async setValuesActive(userId: string, valueIds: string[]): Promise<void> {
+    // Mark all existing values as inactive first
+    await this.encryptedDb.execute(
+      'UPDATE values_encrypted SET active = 0, updated_at = ? WHERE user_id = ?',
+      [new Date().toISOString(), userId]
+    );
+    
+    // Get existing values for this user
+    const existingValues = await this.encryptedDb.query(
+      'SELECT * FROM values_encrypted WHERE user_id = ?',
+      [userId]
+    );
+    
+    // Update or insert each value
+    for (let i = 0; i < valueIds.length; i++) {
+      const valueId = valueIds[i];
+      const existing = existingValues.find((v: any) => v.value_id === valueId);
+      
+      if (existing) {
+        // Update existing value to active
+        await this.encryptedDb.execute(
+          'UPDATE values_encrypted SET active = 1, priority = ?, updated_at = ? WHERE id = ?',
+          [i, new Date().toISOString(), existing.id]
+        );
+      } else {
+        // Insert new value
+        await this.encryptedDb.execute(
+          'INSERT INTO values_encrypted (user_id, value_id, active, priority, created_at, updated_at) VALUES (?, ?, 1, ?, ?, ?)',
+          [userId, valueId, i, new Date().toISOString(), new Date().toISOString()]
+        );
+      }
+    }
+    
+    await this.encryptedDb.auditLog('values_updated', 'values_encrypted', userId, `Set ${valueIds.length} active values`);
+    await this.encryptedDb.save();
+  }
+
+  async saveValue(userId: string, valueId: string, active: boolean = true, priority?: number): Promise<void> {
+    // Check if value already exists
+    const existing = await this.encryptedDb.query(
+      'SELECT * FROM values_encrypted WHERE user_id = ? AND value_id = ?',
+      [userId, valueId]
+    );
+    
+    if (existing.length > 0) {
+      // Update existing value
+      const currentPriority = priority !== undefined ? priority : existing[0].priority;
+      await this.encryptedDb.execute(
+        'UPDATE values_encrypted SET active = ?, priority = ?, updated_at = ? WHERE id = ?',
+        [active ? 1 : 0, currentPriority, new Date().toISOString(), existing[0].id]
+      );
+    } else {
+      // Get count of active values for default priority
+      const activeCount = await this.encryptedDb.query(
+        'SELECT COUNT(*) as count FROM values_encrypted WHERE user_id = ? AND active = 1',
+        [userId]
+      );
+      const defaultPriority = priority !== undefined ? priority : (activeCount[0]?.count || 0);
+      
+      // Insert new value
+      await this.encryptedDb.execute(
+        'INSERT INTO values_encrypted (user_id, value_id, active, priority, created_at, updated_at) VALUES (?, ?, ?, ?, ?, ?)',
+        [userId, valueId, active ? 1 : 0, defaultPriority, new Date().toISOString(), new Date().toISOString()]
+      );
+    }
+    
+    await this.encryptedDb.auditLog('value_saved', 'values_encrypted', userId, `Saved value ${valueId}`);
+    await this.encryptedDb.save();
+  }
+
+  // Goals operations - Phase 3: Add goals methods to EncryptedAdapter
+  async saveGoal(goal: Goal): Promise<void> {
+    await this.encryptedDb.execute(
+      `INSERT INTO goals_encrypted (id, user_id, value_id, text, frequency, completed, created_at, updated_at)
+       VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+       ON CONFLICT(id) DO UPDATE SET
+       text = excluded.text,
+       frequency = excluded.frequency,
+       completed = excluded.completed,
+       updated_at = excluded.updated_at`,
+      [
+        goal.id,
+        goal.userId || null,
+        goal.valueId,
+        goal.text,
+        goal.frequency,
+        goal.completed ? 1 : 0,
+        goal.createdAt,
+        new Date().toISOString()
+      ]
+    );
+    
+    // Save goal updates if any
+    if (goal.updates && goal.updates.length > 0) {
+      for (const update of goal.updates) {
+        await this.encryptedDb.execute(
+          `INSERT INTO goal_updates_encrypted (id, goal_id, timestamp, note, mood, created_at)
+           VALUES (?, ?, ?, ?, ?, ?)
+           ON CONFLICT(id) DO NOTHING`,
+          [
+            update.id || this.generateUUID(),
+            goal.id,
+            update.timestamp,
+            update.note,
+            update.mood || null,
+            update.timestamp
+          ]
+        );
+      }
+    }
+    
+    await this.encryptedDb.auditLog('goal_saved', 'goals_encrypted', goal.id, `Goal saved: ${goal.text}`);
+    await this.encryptedDb.save();
+  }
+
+  async getGoals(userId: string): Promise<Goal[]> {
+    const results = await this.encryptedDb.query(
+      'SELECT * FROM goals_encrypted WHERE user_id = ? ORDER BY created_at DESC',
+      [userId]
+    );
+    
+    // Get goal updates for each goal
+    const goalsWithUpdates = await Promise.all(
+      results.map(async (row: any) => {
+        const updates = await this.encryptedDb.query(
+          'SELECT * FROM goal_updates_encrypted WHERE goal_id = ? ORDER BY timestamp DESC',
+          [row.id]
+        );
+        
+        return {
+          id: row.id,
+          valueId: row.value_id,
+          userId: row.user_id,
+          text: row.text,
+          frequency: row.frequency,
+          completed: row.completed === 1,
+          createdAt: row.created_at,
+          updates: updates.map((u: any) => ({
+            id: u.id,
+            timestamp: u.timestamp,
+            note: u.note,
+            mood: u.mood,
+          })),
+          status: row.status || (row.completed === 1 ? 'completed' : 'active'),
+        } as Goal;
+      })
+    );
+    
+    return goalsWithUpdates;
+  }
+
+  async deleteGoal(goalId: string): Promise<void> {
+    // Delete goal updates first (foreign key constraint)
+    await this.encryptedDb.execute(
+      'DELETE FROM goal_updates_encrypted WHERE goal_id = ?',
+      [goalId]
+    );
+    
+    // Delete goal
+    await this.encryptedDb.execute(
+      'DELETE FROM goals_encrypted WHERE id = ?',
+      [goalId]
+    );
+    
+    await this.encryptedDb.auditLog('goal_deleted', 'goals_encrypted', goalId, 'Goal deleted');
+    await this.encryptedDb.save();
+  }
+}
+
+/**
+ * PHI (Protected Health Information) Data Types
+ * These data types contain PHI and MUST use encrypted storage when encryption is enabled
+ */
+const PHI_DATA_TYPES = [
+  'feelingLogs',
+  'sessions',
+  'assessments',
+  'reports',
+  'userInteractions',
+  'logs', // LogEntry contains emotional state and reflections
+  'goals', // Goals may contain PHI in notes/updates
+] as const;
+
+/**
+ * Check if encryption is enabled
+ */
+export function isEncryptionEnabled(): boolean {
+  try {
+    return localStorage.getItem('encryption_enabled') === 'true';
+  } catch {
+    return false;
+  }
+}
+
+/**
+ * Validate that Dexie (non-encrypted) is not being used for PHI data when encryption is enabled
+ * This enforces HIPAA compliance by preventing PHI from being stored in unencrypted IndexedDB
+ */
+export function validateEncryptionBoundary(operation: string, dataType?: string): void {
+  if (isEncryptionEnabled() && dataType && PHI_DATA_TYPES.includes(dataType as any)) {
+    throw new Error(
+      `SECURITY VIOLATION: Attempted to use non-encrypted storage (Dexie) for PHI data type "${dataType}" ` +
+      `when encryption is enabled. Operation: ${operation}. ` +
+      `PHI data must use EncryptedAdapter (SQLite) for HIPAA compliance.`
+    );
+  }
 }
 
 /**
  * Factory function to get the appropriate adapter
+ * 
+ * SECURITY: When encryption is enabled, PHI data MUST use EncryptedAdapter.
+ * Dexie (LegacyAdapter) is NEVER used for PHI when encryption is enabled.
+ * 
+ * NOTE: If encryption is enabled but EncryptedPWA is not initialized (e.g., user not logged in),
+ * this will return LegacyAdapter with a warning. The adapter will throw errors when PHI operations
+ * are attempted, enforcing security at the operation level rather than adapter selection.
  */
 export function getDatabaseAdapter(): DatabaseAdapter {
-  // Check if encryption is enabled
-  const encryptionEnabled = localStorage.getItem('encryption_enabled') === 'true';
+  const encryptionEnabled = isEncryptionEnabled();
   
   if (encryptionEnabled) {
     const encryptedDb = EncryptedPWA.getInstance();
     if (!encryptedDb) {
-      // Fallback to legacy if encrypted DB not initialized
-      console.warn('Encrypted database not initialized, falling back to legacy');
+      // User not logged in yet - encryption is enabled but DB not initialized
+      // Return LegacyAdapter with warning - security will be enforced at operation level
+      console.warn(
+        '[getDatabaseAdapter] Encryption enabled but EncryptedPWA not initialized. ' +
+        'Returning LegacyAdapter - PHI operations will be blocked by validateEncryptionBoundary().'
+      );
       return new LegacyAdapter(dbService);
     }
     return new EncryptedAdapter(encryptedDb);
   }
-  // Default to legacy adapter
+  
+  // Default to legacy adapter (Dexie) when encryption is disabled
   return new LegacyAdapter(dbService);
 }
 

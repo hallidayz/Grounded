@@ -2,6 +2,7 @@ import React, { Suspense, lazy } from 'react';
 import { ValueItem, LogEntry, Goal, LCSWConfig, GoalUpdate } from '../types';
 import ValueSelection from '../components/ValueSelection';
 import SkeletonCard from '../components/SkeletonCard';
+import { isDatabaseInspectorEnabled } from '../constants/environment';
 
 // Code splitting: Lazy load heavy components
 const Dashboard = lazy(() => import('../components/Dashboard'));
@@ -9,8 +10,9 @@ const ReportView = lazy(() => import('../components/ReportView'));
 const VaultControl = lazy(() => import('../components/VaultControl'));
 const GoalsUpdateView = lazy(() => import('../components/GoalsUpdateView'));
 const Settings = lazy(() => import('../components/Settings'));
+const DatabaseInspector = lazy(() => import('../components/DatabaseInspector'));
 
-export type ViewType = 'onboarding' | 'home' | 'report' | 'values' | 'vault' | 'goals' | 'settings';
+export type ViewType = 'onboarding' | 'home' | 'report' | 'values' | 'vault' | 'goals' | 'settings' | 'dev';
 
 interface AppRouterProps {
   view: ViewType;
@@ -149,6 +151,12 @@ export const AppRouter: React.FC<AppRouterProps> = ({
             onShowHelp={onOpenHelp}
             onClearData={onClearData}
           />
+        </Suspense>
+      )}
+
+      {isDatabaseInspectorEnabled() && view === 'dev' && (
+        <Suspense fallback={<SkeletonCard lines={5} showHeader={true} />}>
+          <DatabaseInspector />
         </Suspense>
       )}
     </>

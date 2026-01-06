@@ -66,7 +66,7 @@ export interface Report {
 class DatabaseService {
   // Database name: groundedDB - simple and descriptive
   private dbName = 'groundedDB';
-  private dbVersion = 7; // Incremented for new tables
+  private dbVersion = 8; // Incremented for values and goals tables
   private db: IDBDatabase | null = null;
   private oldDbName = 'com.acminds.grounded.therapy.db'; // Old database name for migration detection
   
@@ -256,11 +256,19 @@ class DatabaseService {
     }
 
     const platform = this.detectPlatform();
+    // Get version from Vite env variable (set in vite.config.ts) or use default
+    let version = '1.0.0';
+    if ((import.meta as any).env?.VITE_APP_VERSION) {
+      version = (import.meta as any).env.VITE_APP_VERSION;
+    } else if (typeof window !== 'undefined' && (window as any).__APP_VERSION__) {
+      version = (window as any).__APP_VERSION__;
+    }
+    
     const metadata: DatabaseMetadata = {
       appName: this.APP_NAME,
       appId: this.APP_ID,
-      platform,
-      version: '1.0.0', // Will be updated from package.json if needed
+      platform, // Uses actual detected platform (desktop/android/ios/pwa)
+      version, // Uses version from package.json via Vite env
       createdAt: new Date().toISOString(),
       lastValidated: new Date().toISOString(),
     };
@@ -337,6 +345,81 @@ class DatabaseService {
 
     // Default to web/PWA
     return 'pwa';
+  }
+
+  // Migration: Move existing values/goals from appData to new tables
+  private async migrateToNewTables(): Promise<void> {
+    if (!this.db) return;
+    
+    try {
+      // Check if migration has already been done
+      const migrationKey = 'values_goals_migration_complete';
+      const migrationDone = localStorage.getItem(migrationKey);
+      if (migrationDone === 'true') {
+        return; // Migration already completed
+      }
+      
+      console.log('[MIGRATION] Starting migration of values and goals to new tables...');
+      
+      // Get all appData entries
+      if (!this.db.objectStoreNames.contains('appData')) {
+        localStorage.setItem(migrationKey, 'true');
+        return;
+      }
+      
+      const transaction = this.db.transaction(['appData', 'values', 'goals'], 'readwrite');
+      const appDataStore = transaction.objectStore('appData');
+      const valuesStore = transaction.objectStore('values');
+      const goalsStore = transaction.objectStore('goals');
+      
+      const getAllRequest = appDataStore.getAll();
+      
+      await new Promise<void>((resolve, reject) => {
+        getAllRequest.onsuccess = async () => {
+          const allAppData = getAllRequest.result;
+          let migrated = 0;
+          
+          for (const appDataEntry of allAppData) {
+            const { userId, data } = appDataEntry;
+            if (!userId || !data) continue;
+            
+            // Migrate values
+            if (data.values && Array.isArray(data.values) && data.values.length > 0) {
+              try {
+                await this.setValuesActive(userId, data.values);
+                migrated++;
+              } catch (err) {
+                console.warn(`[MIGRATION] Failed to migrate values for user ${userId}:`, err);
+              }
+            }
+            
+            // Migrate goals
+            if (data.goals && Array.isArray(data.goals) && data.goals.length > 0) {
+              for (const goal of data.goals) {
+                try {
+                  await this.saveGoal(goal);
+                } catch (err) {
+                  console.warn(`[MIGRATION] Failed to migrate goal ${goal.id}:`, err);
+                }
+              }
+            }
+          }
+          
+          console.log(`[MIGRATION] Completed: migrated ${migrated} users' data`);
+          localStorage.setItem(migrationKey, 'true');
+          resolve();
+        };
+        
+        getAllRequest.onerror = () => {
+          console.warn('[MIGRATION] Failed to read appData for migration');
+          localStorage.setItem(migrationKey, 'true'); // Mark as done to prevent retries
+          resolve(); // Don't block on migration failure
+        };
+      });
+    } catch (error) {
+      console.warn('[MIGRATION] Migration error (non-critical):', error);
+      localStorage.setItem('values_goals_migration_complete', 'true'); // Mark as done
+    }
   }
 
   async init(): Promise<void> {
@@ -540,6 +623,26 @@ class DatabaseService {
           const reportStore = db.createObjectStore('reports', { keyPath: 'id' });
           reportStore.createIndex('userId', 'userId', { unique: false });
           reportStore.createIndex('timestamp', 'timestamp', { unique: false });
+        }
+
+        // Values store - tracks user value selections over time with active flag
+        if (!db.objectStoreNames.contains('values')) {
+          const valuesStore = db.createObjectStore('values', { keyPath: 'id', autoIncrement: true });
+          valuesStore.createIndex('userId', 'userId', { unique: false });
+          valuesStore.createIndex('valueId', 'valueId', { unique: false });
+          valuesStore.createIndex('active', 'active', { unique: false });
+          valuesStore.createIndex('createdAt', 'createdAt', { unique: false });
+          // Compound index for active values per user
+          valuesStore.createIndex('userId_active', ['userId', 'active'], { unique: false });
+        }
+
+        // Goals store - tracks goals separately from appData for better querying
+        if (!db.objectStoreNames.contains('goals')) {
+          const goalsStore = db.createObjectStore('goals', { keyPath: 'id' });
+          goalsStore.createIndex('userId', 'userId', { unique: false });
+          goalsStore.createIndex('valueId', 'valueId', { unique: false });
+          goalsStore.createIndex('completed', 'completed', { unique: false });
+          goalsStore.createIndex('createdAt', 'createdAt', { unique: false });
         }
         
         request.onblocked = () => {
@@ -1328,6 +1431,271 @@ class DatabaseService {
       }
     }
     return exportData;
+  }
+
+  // Values operations - track value selections over time
+  async saveValue(userId: string, valueId: string, active: boolean = true, priority?: number): Promise<void> {
+    const db = await this.ensureDB();
+    
+    if (!db.objectStoreNames.contains('values')) {
+      console.warn('Values object store does not exist');
+      return Promise.resolve();
+    }
+    
+    return new Promise((resolve, reject) => {
+      try {
+        const transaction = db.transaction(['values'], 'readwrite');
+        const store = transaction.objectStore('values');
+        
+        // Check if this value already exists for this user (check all, not just active)
+        const index = store.index('userId');
+        const range = IDBKeyRange.only(userId);
+        const getAllRequest = index.getAll(range);
+        
+        getAllRequest.onsuccess = () => {
+          const allUserValues = getAllRequest.result;
+          const existing = allUserValues.find((v: any) => v.valueId === valueId);
+          
+          if (existing) {
+            // Update existing value
+            existing.active = active;
+            if (priority !== undefined) existing.priority = priority;
+            existing.updatedAt = new Date().toISOString();
+            const updateRequest = store.put(existing);
+            updateRequest.onsuccess = () => resolve();
+            updateRequest.onerror = () => reject(updateRequest.error);
+          } else {
+            // Create new value entry (id will be auto-generated)
+            const valueEntry: any = {
+              userId,
+              valueId,
+              active,
+              priority: priority ?? allUserValues.filter((v: any) => v.active).length,
+              createdAt: new Date().toISOString(),
+              updatedAt: new Date().toISOString(),
+            };
+            const addRequest = store.add(valueEntry);
+            addRequest.onsuccess = () => resolve();
+            addRequest.onerror = () => reject(addRequest.error);
+          }
+        };
+        getAllRequest.onerror = () => reject(getAllRequest.error);
+      } catch (error) {
+        console.error('Error saving value:', error);
+        reject(error);
+      }
+    });
+  }
+
+  async getActiveValues(userId: string): Promise<string[]> {
+    const db = await this.ensureDB();
+    
+    if (!db.objectStoreNames.contains('values')) {
+      return [];
+    }
+    
+    return new Promise((resolve, reject) => {
+      try {
+        const transaction = db.transaction(['values'], 'readonly');
+        const store = transaction.objectStore('values');
+        const index = store.index('userId_active');
+        const range = IDBKeyRange.bound([userId, true], [userId, true]);
+        const request = index.getAll(range);
+        
+        request.onsuccess = () => {
+          const values = request.result
+            .sort((a: any, b: any) => (a.priority ?? 0) - (b.priority ?? 0))
+            .map((v: any) => v.valueId);
+          resolve(values);
+        };
+        request.onerror = () => reject(request.error);
+      } catch (error) {
+        console.error('Error getting active values:', error);
+        resolve([]); // Return empty array on error
+      }
+    });
+  }
+
+  async setValuesActive(userId: string, valueIds: string[]): Promise<void> {
+    const db = await this.ensureDB();
+    
+    if (!db.objectStoreNames.contains('values')) {
+      return Promise.resolve();
+    }
+    
+    return new Promise((resolve, reject) => {
+      try {
+        const transaction = db.transaction(['values'], 'readwrite');
+        const store = transaction.objectStore('values');
+        const index = store.index('userId');
+        const range = IDBKeyRange.only(userId);
+        const request = index.getAll(range);
+        
+        request.onsuccess = () => {
+          const allUserValues = request.result;
+          let completed = 0;
+          let errors = 0;
+          
+          if (allUserValues.length === 0 && valueIds.length === 0) {
+            resolve();
+            return;
+          }
+          
+          // Update all existing values: set active based on valueIds array
+          allUserValues.forEach((value: any) => {
+            const shouldBeActive = valueIds.includes(value.valueId);
+            if (value.active !== shouldBeActive) {
+              value.active = shouldBeActive;
+              value.updatedAt = new Date().toISOString();
+              const updateRequest = store.put(value);
+              updateRequest.onsuccess = () => {
+                completed++;
+                if (completed + errors === allUserValues.length) {
+                  // Now add any new values that aren't in the database yet
+                  const existingValueIds = allUserValues.map((v: any) => v.valueId);
+                  const newValueIds = valueIds.filter(id => !existingValueIds.includes(id));
+                  
+                  if (newValueIds.length === 0) {
+                    resolve();
+                    return;
+                  }
+                  
+                  let newCompleted = 0;
+                  newValueIds.forEach((valueId, index) => {
+                    const newValue = {
+                      userId,
+                      valueId,
+                      active: true,
+                      priority: index,
+                      createdAt: new Date().toISOString(),
+                      updatedAt: new Date().toISOString(),
+                    };
+                    const addRequest = store.add(newValue);
+                    addRequest.onsuccess = () => {
+                      newCompleted++;
+                      if (newCompleted === newValueIds.length) resolve();
+                    };
+                    addRequest.onerror = () => {
+                      errors++;
+                      if (newCompleted + errors === newValueIds.length) resolve(); // Continue even on errors
+                    };
+                  });
+                }
+              };
+              updateRequest.onerror = () => {
+                errors++;
+                if (completed + errors === allUserValues.length) resolve(); // Continue even on errors
+              };
+            } else {
+              completed++;
+              if (completed + errors === allUserValues.length) resolve();
+            }
+          });
+          
+          // If no existing values, add all new ones
+          if (allUserValues.length === 0) {
+            valueIds.forEach((valueId, index) => {
+              const newValue = {
+                userId,
+                valueId,
+                active: true,
+                priority: index,
+                createdAt: new Date().toISOString(),
+                updatedAt: new Date().toISOString(),
+              };
+              const addRequest = store.add(newValue);
+              addRequest.onsuccess = () => {
+                completed++;
+                if (completed === valueIds.length) resolve();
+              };
+              addRequest.onerror = () => {
+                errors++;
+                if (completed + errors === valueIds.length) resolve();
+              };
+            });
+          }
+        };
+        request.onerror = () => reject(request.error);
+      } catch (error) {
+        console.error('Error setting values active:', error);
+        resolve(); // Continue even on errors
+      }
+    });
+  }
+
+  // Goals operations - save goals to separate table
+  async saveGoal(goal: Goal): Promise<void> {
+    const db = await this.ensureDB();
+    
+    if (!db.objectStoreNames.contains('goals')) {
+      console.warn('Goals object store does not exist');
+      return Promise.resolve();
+    }
+    
+    return new Promise((resolve, reject) => {
+      try {
+        const transaction = db.transaction(['goals'], 'readwrite');
+        const store = transaction.objectStore('goals');
+        const request = store.put(goal);
+        
+        request.onsuccess = () => resolve();
+        request.onerror = () => reject(request.error);
+      } catch (error) {
+        console.error('Error saving goal:', error);
+        resolve(); // Continue even on errors
+      }
+    });
+  }
+
+  async getGoals(userId: string): Promise<Goal[]> {
+    const db = await this.ensureDB();
+    
+    if (!db.objectStoreNames.contains('goals')) {
+      return [];
+    }
+    
+    return new Promise((resolve, reject) => {
+      try {
+        const transaction = db.transaction(['goals'], 'readonly');
+        const store = transaction.objectStore('goals');
+        const index = store.index('userId');
+        const range = IDBKeyRange.only(userId);
+        const request = index.getAll(range);
+        
+        request.onsuccess = () => {
+          const goals = request.result.sort((a: Goal, b: Goal) => 
+            new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()
+          );
+          resolve(goals);
+        };
+        request.onerror = () => reject(request.error);
+      } catch (error) {
+        console.error('Error getting goals:', error);
+        resolve([]); // Return empty array on error
+      }
+    });
+  }
+
+  async deleteGoal(goalId: string): Promise<void> {
+    const db = await this.ensureDB();
+    
+    if (!db.objectStoreNames.contains('goals')) {
+      return Promise.resolve();
+    }
+    
+    return new Promise((resolve, reject) => {
+      try {
+        const transaction = db.transaction(['goals'], 'readwrite');
+        const store = transaction.objectStore('goals');
+        const request = store.delete(goalId);
+        
+        request.onsuccess = () => resolve();
+        request.onerror = () => reject(request.error);
+      } catch (error) {
+        console.error('Error deleting goal:', error);
+        resolve(); // Continue even on errors
+      }
+    });
   }
 }
 

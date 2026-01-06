@@ -26,7 +26,7 @@ import { CrisisResponse } from '../services/safetyService';
 import { shareViaEmail, generateGoalsEmail } from '../services/emailService';
 import { useDebounce } from './useDebounce';
 import { getItem, setItem, removeItem } from '../services/storage';
-import { dbService } from '../services/database';
+import { getDatabaseAdapter } from '../services/databaseAdapter';
 import { getCurrentUser } from '../services/authService';
 
 /**
@@ -135,7 +135,18 @@ export function useDashboard({
           lowStateCount,
         };
 
-        await dbService.saveFeelingLog(feelingLog);
+        // Use adapter for security (encryption boundary validation)
+        const adapter = getDatabaseAdapter();
+        await adapter.saveFeelingLog({
+          id: feelingLog.id,
+          timestamp: feelingLog.timestamp,
+          userId: feelingLog.userId,
+          emotionalState: feelingLog.emotion || feelingLog.emotionalState || '',
+          selectedFeeling: feelingLog.subEmotion || feelingLog.selectedFeeling || null,
+          aiResponse: feelingLog.jsonOut || '',
+          isAIResponse: feelingLog.isAIResponse !== undefined ? feelingLog.isAIResponse : true,
+          lowStateCount: feelingLog.lowStateCount || 0,
+        });
       } catch (err) {
         console.error('Error saving emotion interaction:', err);
       }
@@ -166,18 +177,17 @@ export function useDashboard({
         );
 
         setEncouragementText(encouragement);
-        const feelingLog: FeelingLog = {
+        // Use adapter for security (encryption boundary validation)
+        const adapter = getDatabaseAdapter();
+        await adapter.saveFeelingLog({
           id: `feeling-${Date.now()}`,
           timestamp: new Date().toISOString(),
-          emotion: state,
-          subEmotion: selectedFeeling,
           emotionalState: state,
-          selectedFeeling,
+          selectedFeeling: selectedFeeling || null,
           aiResponse: encouragement,
           isAIResponse: true,
           lowStateCount: newLowCount,
-        };
-        await dbService.saveFeelingLog(feelingLog);
+        });
       } catch (err) {
         console.error('Encouragement generation failed, fallback:', err);
         setEncouragementText("You're doing important work. One step at a time.");
@@ -233,21 +243,18 @@ export function useDashboard({
       };
       onLog(logEntry);
 
-      const feelingLog: FeelingLog = {
+      // Use adapter for security (encryption boundary validation)
+      const adapter = getDatabaseAdapter();
+      await adapter.saveFeelingLog({
         id: `${timestamp}-feeling`,
         timestamp,
-        userId: userId || undefined, // Add userId to feelingLog
-        emotion: emotionalState,
-        subEmotion: selectedFeeling,
-        reflection: reflectionText,
-        selfAdvocacy: goalText,
-        frequency: goalFreq,
-        emotionalState,
-        selectedFeeling,
+        userId: userId || undefined,
+        emotionalState: emotionalState || '',
+        selectedFeeling: selectedFeeling || null,
+        aiResponse: JSON.stringify({ reflection: reflectionText, selfAdvocacy: goalText }),
         isAIResponse: true,
         lowStateCount,
-      };
-      await dbService.saveFeelingLog(feelingLog);
+      });
 
       // Clear state
       setReflectionText('');
@@ -263,7 +270,6 @@ export function useDashboard({
       goals,
       onLog,
       onUpdateGoals,
-      dbService,
       lowStateCount,
     ]
   );

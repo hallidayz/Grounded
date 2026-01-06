@@ -6,6 +6,7 @@ import TermsAcceptance from './components/TermsAcceptance';
 import ErrorBoundary from './components/ErrorBoundary';
 import HelpOverlay from './components/HelpOverlay';
 import SkeletonCard from './components/SkeletonCard';
+import LoadingScreen from './components/LoadingScreen';
 import PWAInstallPrompt from './components/PWAInstallPrompt';
 import FeedbackButton from './components/FeedbackButton';
 import { MigrationScreen } from './components/MigrationScreen';
@@ -210,10 +211,16 @@ const AppContent: React.FC = () => {
     resetInitialization();
   };
 
-  // Handle accept terms - navigate to vault
+  // Handle accept terms - navigate to values selection for new users, home for returning users
   const handleAcceptTermsWithNavigation = async () => {
     await handleAcceptTerms();
-    setView('vault');
+    // Check if user has values - if not, go to values selection (onboarding)
+    // If they have values, go to home
+    if (data.selectedValueIds.length === 0) {
+      setView('onboarding'); // New user - go to values selection
+    } else {
+      setView('home'); // Returning user - go to home
+    }
   };
 
   // Show loading state while checking auth
@@ -274,6 +281,16 @@ const AppContent: React.FC = () => {
           </button>
         </div>
       </div>
+    );
+  }
+
+  // Show loading screen during data hydration (boot hydration)
+  if (authState === 'app' && (data.isHydrating || initResult.loading)) {
+    return (
+      <LoadingScreen 
+        message="Loading your data..."
+        progress={initResult.loading ? progressState.progress : undefined}
+      />
     );
   }
 

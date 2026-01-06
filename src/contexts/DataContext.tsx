@@ -1,12 +1,13 @@
-import React, { createContext, useContext, useState, useEffect, useCallback, useRef, ReactNode } from 'react';
+import React, { createContext, useContext, useState, useEffect, useCallback, useRef, useMemo, ReactNode } from 'react';
 import { LogEntry, Goal, AppSettings, LCSWConfig } from '../types';
-import { dbService } from '../services/database';
+import { getDatabaseAdapter } from '../services/databaseAdapter';
 
 interface DataContextType {
   selectedValueIds: string[];
   logs: LogEntry[];
   goals: Goal[];
   settings: AppSettings;
+  isHydrating: boolean; // Track if data is being loaded from database
   setSelectedValueIds: React.Dispatch<React.SetStateAction<string[]>>;
   setLogs: React.Dispatch<React.SetStateAction<LogEntry[]>>;
   setGoals: React.Dispatch<React.SetStateAction<Goal[]>>;
@@ -16,6 +17,7 @@ interface DataContextType {
   handleUpdateGoalProgress: (goalId: string, update: { date: string; note: string; progress?: number }) => void;
   handleClearData: () => void;
   handleSelectionComplete: (ids: string[]) => void;
+  persistData: () => Promise<void>; // Manual persistence trigger for exit handler
 }
 
 const DataContext = createContext<DataContextType | undefined>(undefined);
@@ -46,11 +48,16 @@ export const DataProvider: React.FC<DataProviderProps> = ({
   const [settings, setSettings] = useState<AppSettings>(
     initialData?.settings || { reminders: { enabled: false, frequency: 'daily', time: '09:00' } }
   );
+  const [isHydrating, setIsHydrating] = useState(true); // Start as true, set to false after initial load
+
+  // Get database adapter instance (memoized to avoid recreating on every render)
+  const adapter = useMemo(() => getDatabaseAdapter(), []);
 
   // Track if we've loaded initial data to prevent overwriting with empty arrays
   // This is set to true once we receive data from either initialData or via setters
   const hasLoadedInitialDataRef = useRef(false);
   const initializationTimeoutRef = useRef<NodeJS.Timeout | null>(null);
+  const pendingSaveRef = useRef<Promise<void> | null>(null); // Track pending save for exit handler
 
   // Update state when initialData changes (from initialization)
   useEffect(() => {
@@ -83,6 +90,10 @@ export const DataProvider: React.FC<DataProviderProps> = ({
         setSettings(initialData.settings);
       }
       hasLoadedInitialDataRef.current = true;
+      setIsHydrating(false); // Data loaded, hydration complete
+    } else if (initialData !== undefined && !hasData) {
+      // Initial data is explicitly empty/undefined - hydration complete but no data
+      setIsHydrating(false);
     }
   }, [initialData]);
 
@@ -107,6 +118,7 @@ export const DataProvider: React.FC<DataProviderProps> = ({
           userId: !!userId
         });
         hasLoadedInitialDataRef.current = true;
+        setIsHydrating(false); // Mark hydration as complete
       }, delay);
     }
     
@@ -136,24 +148,46 @@ export const DataProvider: React.FC<DataProviderProps> = ({
               goals: goals.length,
               userId
             });
-            await dbService.saveAppData(userId, {
+            // Save to appData (for backward compatibility and quick access)
+            await adapter.saveAppData(userId, {
               settings,
               logs,
               goals,
-              values: selectedValueIds,
+              values: selectedValueIds, // Keep in appData for quick access
               lcswConfig: settings.lcswConfig,
             });
+            
+            // Also save values to values table (for historical tracking)
+            if (selectedValueIds.length > 0) {
+              await adapter.setValuesActive(userId, selectedValueIds);
+            }
+            
+            // Also save goals to goals table (for better querying)
+            if (goals.length > 0) {
+              for (const goal of goals) {
+                await adapter.saveGoal(goal);
+              }
+            }
+            
+            // Clear pending save ref
+            pendingSaveRef.current = null;
           } catch (error) {
             console.error('Error saving app data:', error);
+            pendingSaveRef.current = null;
           }
         };
         
+        // Store save promise for exit handler
+        pendingSaveRef.current = saveData();
+        
         // Debounce saves
-        const timeoutId = setTimeout(saveData, 500);
+        const timeoutId = setTimeout(() => {
+          saveData();
+        }, 500);
         return () => clearTimeout(timeoutId);
       }
     }
-  }, [userId, settings, logs, goals, selectedValueIds, authState]);
+  }, [userId, settings, logs, goals, selectedValueIds, authState, adapter]);
 
   const handleLogEntry = useCallback((entry: LogEntry) => {
     setLogs(prev => [entry, ...prev]);
@@ -180,9 +214,107 @@ export const DataProvider: React.FC<DataProviderProps> = ({
     setSettings({ reminders: { enabled: false, frequency: 'daily', time: '09:00' } });
   }, []);
 
-  const handleSelectionComplete = useCallback((ids: string[]) => {
+  const handleSelectionComplete = useCallback(async (ids: string[]) => {
     setSelectedValueIds(ids);
-  }, []);
+    // Save to values table when user confirms selection
+    if (userId && authState === 'app') {
+      try {
+        await adapter.setValuesActive(userId, ids);
+        console.log('[DataContext] Saved values to values table', { userId, count: ids.length });
+      } catch (error) {
+        console.error('Error saving values to table:', error);
+      }
+    }
+  }, [userId, authState, adapter]);
+
+  // Manual persistence function for exit handler
+  const persistData = useCallback(async () => {
+    if (!userId || authState !== 'app') {
+      return;
+    }
+
+    // Wait for any pending save to complete
+    if (pendingSaveRef.current) {
+      try {
+        await pendingSaveRef.current;
+      } catch (error) {
+        console.error('[DataContext] Error waiting for pending save:', error);
+      }
+    }
+
+    // Force immediate save (no debounce)
+    try {
+      console.log('[DataContext] Persisting data on exit', {
+        values: selectedValueIds.length,
+        logs: logs.length,
+        goals: goals.length,
+        userId
+      });
+      
+      await adapter.saveAppData(userId, {
+        settings,
+        logs,
+        goals,
+        values: selectedValueIds,
+        lcswConfig: settings.lcswConfig,
+      });
+      
+      if (selectedValueIds.length > 0) {
+        await adapter.setValuesActive(userId, selectedValueIds);
+      }
+      
+      if (goals.length > 0) {
+        for (const goal of goals) {
+          await adapter.saveGoal(goal);
+        }
+      }
+      
+      console.log('[DataContext] Data persisted successfully');
+    } catch (error) {
+      console.error('[DataContext] Error persisting data on exit:', error);
+    }
+  }, [userId, authState, selectedValueIds, logs, goals, settings, adapter]);
+
+  // Exit persistence handler - save data before page unload
+  useEffect(() => {
+    const handleBeforeUnload = (event: BeforeUnloadEvent) => {
+      // Only persist if we have data and user is authenticated
+      if (userId && authState === 'app' && (selectedValueIds.length > 0 || logs.length > 0 || goals.length > 0)) {
+        // Use sendBeacon for reliable persistence (works even if page is closing)
+        const data = JSON.stringify({
+          userId,
+          values: selectedValueIds,
+          logs: logs.slice(0, 10), // Only save recent logs to avoid payload size issues
+          goals: goals.slice(0, 10), // Only save recent goals
+          settings,
+        });
+        
+        // Try to persist synchronously (limited time available)
+        persistData().catch((error) => {
+          console.error('[DataContext] Failed to persist on exit:', error);
+        });
+      }
+    };
+
+    window.addEventListener('beforeunload', handleBeforeUnload);
+    
+    // Also handle visibility change (tab switch, minimize, etc.)
+    const handleVisibilityChange = () => {
+      if (document.hidden && userId && authState === 'app') {
+        // Tab is hidden - persist data
+        persistData().catch((error) => {
+          console.error('[DataContext] Failed to persist on visibility change:', error);
+        });
+      }
+    };
+
+    document.addEventListener('visibilitychange', handleVisibilityChange);
+
+    return () => {
+      window.removeEventListener('beforeunload', handleBeforeUnload);
+      document.removeEventListener('visibilitychange', handleVisibilityChange);
+    };
+  }, [userId, authState, selectedValueIds, logs, goals, settings, persistData]);
 
   return (
     <DataContext.Provider
@@ -191,6 +323,7 @@ export const DataProvider: React.FC<DataProviderProps> = ({
         logs,
         goals,
         settings,
+        isHydrating,
         setSelectedValueIds,
         setLogs,
         setGoals,
@@ -200,6 +333,7 @@ export const DataProvider: React.FC<DataProviderProps> = ({
         handleUpdateGoalProgress,
         handleClearData,
         handleSelectionComplete,
+        persistData,
       }}
     >
       {children}

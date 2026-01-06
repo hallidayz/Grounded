@@ -293,6 +293,66 @@ export class EncryptedPWA {
         created_at TEXT NOT NULL
       );
       
+      CREATE TABLE IF NOT EXISTS values_encrypted (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        user_id TEXT NOT NULL,
+        value_id TEXT NOT NULL,
+        active INTEGER DEFAULT 1,
+        priority INTEGER DEFAULT 0,
+        created_at TEXT NOT NULL,
+        updated_at TEXT NOT NULL
+      );
+      
+      CREATE TABLE IF NOT EXISTS assessments_encrypted (
+        id TEXT PRIMARY KEY,
+        user_id TEXT NOT NULL,
+        emotion TEXT NOT NULL,
+        sub_emotion TEXT NOT NULL,
+        reflection TEXT NOT NULL,
+        assessment TEXT NOT NULL,
+        timestamp TEXT NOT NULL,
+        created_at TEXT NOT NULL
+      );
+      
+      CREATE TABLE IF NOT EXISTS reports_encrypted (
+        id TEXT PRIMARY KEY,
+        user_id TEXT NOT NULL,
+        content TEXT NOT NULL,
+        timestamp TEXT NOT NULL,
+        email_addresses TEXT,
+        treatment_protocols TEXT,
+        created_at TEXT NOT NULL
+      );
+      
+      CREATE TABLE IF NOT EXISTS metadata_encrypted (
+        id TEXT PRIMARY KEY,
+        app_name TEXT NOT NULL,
+        app_id TEXT NOT NULL,
+        platform TEXT NOT NULL,
+        version TEXT NOT NULL,
+        created_at TEXT NOT NULL,
+        last_validated TEXT NOT NULL,
+        local_storage_migrated INTEGER DEFAULT 0,
+        migration_date TEXT
+      );
+      
+      CREATE TABLE IF NOT EXISTS rule_based_usage_logs_encrypted (
+        id TEXT PRIMARY KEY,
+        user_id TEXT NOT NULL,
+        timestamp TEXT NOT NULL,
+        operation_type TEXT NOT NULL,
+        emotional_state TEXT,
+        sub_emotion TEXT,
+        value_id TEXT,
+        value_category TEXT,
+        frequency TEXT,
+        fallback_key TEXT NOT NULL,
+        fallback_response TEXT NOT NULL,
+        context TEXT,
+        ai_unavailable_reason TEXT,
+        created_at TEXT NOT NULL
+      );
+      
       CREATE TABLE IF NOT EXISTS audit_log (
         id TEXT PRIMARY KEY,
         timestamp TEXT NOT NULL,
@@ -314,6 +374,18 @@ export class EncryptedPWA {
       CREATE INDEX IF NOT EXISTS idx_sessions_user ON sessions_encrypted(user_id);
       CREATE INDEX IF NOT EXISTS idx_sessions_value ON sessions_encrypted(value_id);
       CREATE INDEX IF NOT EXISTS idx_sessions_start ON sessions_encrypted(start_timestamp);
+      CREATE INDEX IF NOT EXISTS idx_values_user_active ON values_encrypted(user_id, active);
+      CREATE INDEX IF NOT EXISTS idx_values_user ON values_encrypted(user_id);
+      CREATE INDEX IF NOT EXISTS idx_values_value ON values_encrypted(value_id);
+      CREATE INDEX IF NOT EXISTS idx_assessments_user ON assessments_encrypted(user_id);
+      CREATE INDEX IF NOT EXISTS idx_assessments_timestamp ON assessments_encrypted(timestamp);
+      CREATE INDEX IF NOT EXISTS idx_reports_user ON reports_encrypted(user_id);
+      CREATE INDEX IF NOT EXISTS idx_reports_timestamp ON reports_encrypted(timestamp);
+      CREATE INDEX IF NOT EXISTS idx_metadata_app_id ON metadata_encrypted(app_id);
+      CREATE INDEX IF NOT EXISTS idx_metadata_platform ON metadata_encrypted(platform);
+      CREATE INDEX IF NOT EXISTS idx_rule_based_logs_timestamp ON rule_based_usage_logs_encrypted(timestamp);
+      CREATE INDEX IF NOT EXISTS idx_rule_based_logs_type ON rule_based_usage_logs_encrypted(operation_type);
+      CREATE INDEX IF NOT EXISTS idx_rule_based_logs_user ON rule_based_usage_logs_encrypted(user_id);
     `;
     
     // Execute schema
