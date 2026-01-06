@@ -213,7 +213,7 @@ const ValueSelection: React.FC<ValueSelectionProps> = ({ initialSelected, onComp
         </div>
       )}
 
-      <div className="fixed bottom-0 left-0 right-0 p-3 z-50 safe-area-inset-bottom" style={{ paddingBottom: 'calc(env(safe-area-inset-bottom) + 0.75rem)' }}>
+      <div className="fixed bottom-0 left-0 right-0 p-3 z-[60] safe-area-inset-bottom" style={{ paddingBottom: 'calc(env(safe-area-inset-bottom) + 4rem)' }}>
         <div className="max-w-md mx-auto bg-white/95 dark:bg-dark-bg-primary/95 backdrop-blur shadow-2xl border border-border-soft dark:border-dark-border/30 rounded-xl sm:rounded-2xl p-3 flex items-center justify-between gap-3">
           <div className="px-2 sm:px-3 flex-shrink-0">
             <p className="text-xs text-text-primary/50 dark:text-white/50 font-black uppercase tracking-widest">Strength</p>
