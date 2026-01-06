@@ -54,6 +54,15 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({
       
       try {
         console.log('[AuthContext] Initializing auth state...');
+        // Ensure auth store is initialized before getting user
+        const { default: authStore } = await import('../services/authStore');
+        try {
+          await authStore.init();
+          console.log('[AuthContext] Auth store initialized');
+        } catch (initError) {
+          console.error('[AuthContext] Auth store init error:', initError);
+          // Continue anyway - getCurrentUser will try to init
+        }
         const user = await getCurrentUser();
         
         if (user) {
