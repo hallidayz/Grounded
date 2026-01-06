@@ -130,11 +130,28 @@ const Login: React.FC<LoginProps> = ({ onLogin }) => {
         return;
       }
 
-      const userId = parseInt(result.userId, 10);
-
       // Step 2: If encryption is enabled, unlock the database with the same password
+      // Note: EncryptedPWA expects a number, so we need to convert string userId to number
+      // For string IDs like "user_123...", we'll use a hash or the numeric part
       if (auth.isEncryptionEnabled) {
-        const unlockSuccess = await auth.login(password, userId);
+        // Extract numeric part from userId string (e.g., "user_1767729611091_abc" -> 1767729611091)
+        // Or use a simple hash if no numeric part exists
+        let numericUserId: number;
+        const numericMatch = result.userId.match(/\d+/);
+        if (numericMatch) {
+          numericUserId = parseInt(numericMatch[0], 10);
+        } else {
+          // Fallback: hash the string to a number
+          let hash = 0;
+          for (let i = 0; i < result.userId.length; i++) {
+            const char = result.userId.charCodeAt(i);
+            hash = ((hash << 5) - hash) + char;
+            hash = hash & hash; // Convert to 32-bit integer
+          }
+          numericUserId = Math.abs(hash);
+        }
+        
+        const unlockSuccess = await auth.login(password, numericUserId);
         if (!unlockSuccess) {
           setError(auth.error || 'Failed to unlock encrypted database');
           setLoading(false);

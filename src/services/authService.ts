@@ -184,15 +184,34 @@ export async function loginUser(data: LoginData): Promise<AuthResult> {
     }
 
     // Authenticate against auth store (separate, unencrypted)
+    // Ensure auth store is initialized before querying
+    try {
+      await authStore.init();
+    } catch (initError) {
+      console.error('[AuthService] Auth store init error during login:', initError);
+      // Continue anyway - might already be initialized
+    }
+    
     const user = await authStore.getUserByUsername(data.username);
     if (!user) {
+      console.error('[AuthService] User not found:', data.username);
+      // Try to list all users for debugging
+      try {
+        const allUsers = await authStore.getAllUsers();
+        console.log('[AuthService] Available users in database:', allUsers.map(u => u.username));
+      } catch (listError) {
+        console.error('[AuthService] Error listing users:', listError);
+      }
       return { success: false, error: 'Invalid username or password' };
     }
 
+    console.log('[AuthService] User found, verifying password...', { userId: user.id, username: user.username });
     const isValid = await verifyPassword(data.password, user.passwordHash);
     if (!isValid) {
+      console.error('[AuthService] Password verification failed for user:', data.username);
       return { success: false, error: 'Invalid username or password' };
     }
+    console.log('[AuthService] Password verified successfully');
 
     // Update last login in auth store
     await authStore.updateUser(user.id, {
