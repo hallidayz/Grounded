@@ -11,6 +11,7 @@ interface HelpOverlayProps {
 const HelpOverlay: React.FC<HelpOverlayProps> = ({ onClose }) => {
   const [showDebugLog, setShowDebugLog] = useState(false);
   const [showDatabaseViewer, setShowDatabaseViewer] = useState(false);
+  const [showSystemDanger, setShowSystemDanger] = useState(false);
   const [termsAcceptedDate, setTermsAcceptedDate] = useState<string | null>(null);
 
   useEffect(() => {
@@ -266,6 +267,77 @@ const HelpOverlay: React.FC<HelpOverlayProps> = ({ onClose }) => {
                 </p>
               </div>
             </div>
+          </div>
+
+          {/* System Danger Section - Collapsed by default, at the very end */}
+          <div className="pt-4 border-t-2 border-red-200 dark:border-red-800">
+            <button
+              onClick={() => setShowSystemDanger(!showSystemDanger)}
+              className="w-full flex items-center justify-between p-4 bg-red-50 dark:bg-red-900/20 rounded-2xl border-2 border-red-200 dark:border-red-800 hover:bg-red-100 dark:hover:bg-red-900/30 transition-colors"
+            >
+              <div className="flex items-center gap-3">
+                <span className="text-2xl">⚠️</span>
+                <div className="text-left">
+                  <p className="text-sm font-black text-red-600 dark:text-red-400">
+                    System Danger Zone
+                  </p>
+                  <p className="text-xs text-red-600/80 dark:text-red-400/80">
+                    Irreversible data deletion
+                  </p>
+                </div>
+              </div>
+              <svg 
+                className={`w-5 h-5 text-red-600 dark:text-red-400 transition-transform ${showSystemDanger ? 'rotate-180' : ''}`}
+                fill="none" 
+                viewBox="0 0 24 24" 
+                stroke="currentColor"
+              >
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
+              </svg>
+            </button>
+            
+            {showSystemDanger && (
+              <div className="mt-4 p-6 bg-red-50 dark:bg-red-900/20 rounded-2xl border-2 border-red-200 dark:border-red-800 space-y-4">
+                <div className="space-y-2">
+                  <p className="text-sm font-black text-red-600 dark:text-red-400">
+                    Hard Clear All Data
+                  </p>
+                  <p className="text-xs text-red-600/80 dark:text-red-400/80 leading-relaxed">
+                    Permanently delete ALL data from the database. This includes all logs, goals, settings, values, and user interactions. This action CANNOT be undone.
+                  </p>
+                </div>
+                <button
+                  onClick={async () => {
+                    if (window.confirm('⚠️ WARNING: This will permanently delete ALL data from the database. This includes logs, goals, settings, and values. This action CANNOT be undone. Are you absolutely sure?')) {
+                      if (window.confirm('This is your final warning. All data will be permanently deleted. Are you absolutely certain?')) {
+                        try {
+                          const { getDatabaseAdapter } = await import('../services/databaseAdapter');
+                          const adapter = getDatabaseAdapter();
+                          await adapter.init();
+                          const userId = sessionStorage.getItem('userId') || localStorage.getItem('userId');
+                          if (userId) {
+                            await adapter.clearAllData(userId);
+                            alert('All data has been cleared. The app will reload.');
+                            window.location.reload();
+                          } else {
+                            alert('Error: No user ID found. Please log in and try again.');
+                          }
+                        } catch (error) {
+                          console.error('Error clearing data:', error);
+                          alert('Error clearing data. Please check the console for details.');
+                        }
+                      }
+                    }
+                  }}
+                  className="w-full px-4 py-3 bg-red-600 dark:bg-red-700 text-white rounded-xl text-xs font-black uppercase tracking-widest hover:opacity-90 flex items-center justify-center gap-2 shadow-lg"
+                >
+                  <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+                  </svg>
+                  Hard Clear All Data
+                </button>
+              </div>
+            )}
           </div>
 
           <div className="pt-4">

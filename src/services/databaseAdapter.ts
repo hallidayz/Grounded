@@ -149,6 +149,9 @@ export interface DatabaseAdapter {
   saveGoal(goal: Goal): Promise<void>;
   getGoals(userId: string): Promise<Goal[]>;
   deleteGoal(goalId: string): Promise<void>;
+  
+  // Data management operations
+  clearAllData(userId: string): Promise<void>;
 }
 
 /**
@@ -576,6 +579,33 @@ export class LegacyAdapter implements DatabaseAdapter {
   async deleteGoal(goalId: string): Promise<void> {
     // Use Dexie for better performance
     await db.goals.delete(goalId);
+  }
+
+  async clearAllData(userId: string): Promise<void> {
+    if (!userId || typeof userId !== 'string') {
+      throw new Error('Invalid userId for clearAllData');
+    }
+    
+    try {
+      // Delete all user-specific data from Dexie
+      await Promise.all([
+        db.values.where('userId').equals(userId).delete(),
+        db.goals.where('userId').equals(userId).delete(),
+        db.feelingLogs.where('userId').equals(userId).delete(),
+        db.sessions.where('userId').equals(userId).delete(),
+        db.userInteractions.where('userId').equals(userId).delete(),
+        db.assessments.where('userId').equals(userId).delete(),
+        db.reports.where('userId').equals(userId).delete(),
+      ]);
+      
+      // Clear app data
+      await db.appData.where('userId').equals(userId).delete();
+      
+      console.log('[LegacyAdapter] Cleared all data for user:', userId);
+    } catch (error) {
+      console.error('[LegacyAdapter] Error clearing all data:', error);
+      throw error;
+    }
   }
 }
 
@@ -1460,6 +1490,43 @@ export class EncryptedAdapter implements DatabaseAdapter {
     
     await this.encryptedDb.auditLog('goal_deleted', 'goals_encrypted', goalId, 'Goal deleted');
     await this.encryptedDb.save();
+  }
+
+  async clearAllData(userId: string): Promise<void> {
+    if (!userId || typeof userId !== 'string') {
+      throw new Error('Invalid userId for clearAllData');
+    }
+    
+    try {
+      // Delete all user-specific data from encrypted database
+      // Note: Delete in order to respect foreign key constraints
+      
+      // Delete goal updates first (they reference goals)
+      await this.encryptedDb.execute(
+        'DELETE FROM goal_updates_encrypted WHERE goal_id IN (SELECT id FROM goals_encrypted WHERE user_id = ?)',
+        [userId]
+      );
+      
+      // Delete all user data
+      await Promise.all([
+        this.encryptedDb.execute('DELETE FROM values_encrypted WHERE user_id = ?', [userId]),
+        this.encryptedDb.execute('DELETE FROM goals_encrypted WHERE user_id = ?', [userId]),
+        this.encryptedDb.execute('DELETE FROM feeling_logs_encrypted WHERE user_id = ?', [userId]),
+        this.encryptedDb.execute('DELETE FROM sessions_encrypted WHERE user_id = ?', [userId]),
+        this.encryptedDb.execute('DELETE FROM user_interactions_encrypted WHERE user_id = ?', [userId]),
+        this.encryptedDb.execute('DELETE FROM assessments_encrypted WHERE user_id = ?', [userId]),
+        this.encryptedDb.execute('DELETE FROM reports_encrypted WHERE user_id = ?', [userId]),
+        this.encryptedDb.execute('DELETE FROM app_data_encrypted WHERE user_id = ?', [userId]),
+      ]);
+      
+      await this.encryptedDb.auditLog('data_cleared', 'all_tables', userId, 'All user data cleared');
+      await this.encryptedDb.save();
+      
+      console.log('[EncryptedAdapter] Cleared all data for user:', userId);
+    } catch (error) {
+      console.error('[EncryptedAdapter] Error clearing all data:', error);
+      throw error;
+    }
   }
 }
 

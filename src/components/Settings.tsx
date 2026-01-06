@@ -9,11 +9,10 @@ import { AppSettings, EmailSchedule, LCSWConfig } from '../types';
 interface SettingsProps {
   onLogout: () => void;
   onShowHelp: () => void;
-  onClearData: () => void;
   version?: string;
 }
 
-const Settings: React.FC<SettingsProps> = ({ onLogout, onShowHelp, onClearData, version = '1.0.0' }) => {
+const Settings: React.FC<SettingsProps> = ({ onLogout, onShowHelp, version = '1.0.0' }) => {
   const { theme, toggleTheme } = useContext(ThemeContext);
   const { isEncryptionEnabled } = useAuth();
   const context = useDataContext();
