@@ -1,7 +1,11 @@
-import React, { Suspense, useEffect } from "react";
+import React, { lazy, Suspense, useEffect } from "react";
 import { useDataContext } from "./contexts/DataContext";
 import BottomNavigation from "./components/BottomNavigation";
 import AIResponseBubble from "./components/AIResponseBubble";
+
+// ✅ Corrected lazy imports
+const GoalsView = lazy(() => import("./components/GoalsSection"));
+const VaultView = lazy(() => import("./components/VaultControl"));
 
 interface Props {
   onHydrationReady?: () => void;
@@ -16,16 +20,18 @@ export default function AppContent({ onHydrationReady }: Props) {
 
   if (!context)
     return (
-      <div className="flex items-center justify-center h-screen bg-neutral-900 text-neutral-400">
-        <span>Context initializing — please wait …</span>
+      <div className="flex items-center justify-center h-screen text-neutral-300 bg-neutral-900">
+        <span>Context not ready — initializing DataContext.</span>
       </div>
     );
 
   return (
-    <div className="flex flex-col min-h-screen bg-neutral-900 text-neutral-100">
+    <div className="min-h-screen flex flex-col bg-neutral-900 text-neutral-100">
       <main className="flex-1 flex flex-col items-center justify-center">
         <Suspense
-          fallback={<p className="text-neutral-500 text-sm">Loading interactive elements…</p>}
+          fallback={
+            <p className="text-neutral-500 text-sm">Loading interactive components…</p>
+          }
         >
           <AIResponseBubble 
             message="Welcome to Grounded. How are you feeling today?"
@@ -34,6 +40,7 @@ export default function AppContent({ onHydrationReady }: Props) {
           />
         </Suspense>
       </main>
+
       <footer>
         <BottomNavigation currentView="home" onViewChange={() => {}} />
       </footer>
