@@ -18,7 +18,21 @@ const GoalsSection: React.FC<GoalsSectionProps> = ({
   const activeGoals = goals.filter(g => !g.completed);
 
   if (activeGoals.length === 0) {
-    return null;
+    return (
+      <div className="space-y-4 pt-4 sm:pt-6">
+        <div className="bg-brand/10 dark:bg-brand/20 border border-brand/30 dark:border-brand/30 rounded-xl p-6">
+          <h2 className="text-lg font-black text-text-primary dark:text-white mb-2">
+            Set Goals Based on Your Values 🌱
+          </h2>
+          <p className="text-sm text-text-secondary dark:text-white/70 leading-relaxed mb-3">
+            Goals help you turn your values into actionable commitments. Create goals that align with your selected values to track your progress and build momentum.
+          </p>
+          <p className="text-sm text-text-secondary dark:text-white/70 leading-relaxed">
+            <strong>To get started:</strong> Navigate to your values, select a value, and add a goal. You can also write a reflection to generate AI-suggested goals based on your values.
+          </p>
+        </div>
+      </div>
+    );
   }
 
   return (

@@ -12,6 +12,26 @@ interface AIResponseBubbleProps {
   onMoodChange?: (emotion: string, feeling: string) => void; // Callback for mood loop changes
 }
 
+// Map feelings to emojis for better visual feedback
+const FEELING_EMOJIS: Record<string, string> = {
+  // Drained
+  'tired': '😴', 'empty': '🫗', 'numb': '😐', 'burned out': '🔥', 'exhausted': '😮‍💨', 'drained': '💧', 'flat': '➖', 'lifeless': '💀',
+  // Heavy
+  'sad': '😢', 'disappointed': '😞', 'lonely': '😔', 'discouraged': '😓', 'down': '⬇️', 'gloomy': '☁️', 'melancholy': '🌧️', 'weighed down': '⚖️',
+  // Overwhelmed
+  'anxious': '😰', 'stressed': '😓', 'scattered': '💨', 'pressured': '⏰', 'swamped': '🌊', 'flooded': '💦', 'chaotic': '🌀', 'unable to focus': '🎯',
+  // Mixed
+  'uncertain': '🤔', 'okay': '😐', 'conflicted': '⚖️', 'reflective': '🤔', 'neutral': '➖', 'ambivalent': '↔️', 'contemplative': '🧘', 'processing': '⚙️',
+  // Calm
+  'peaceful': '🕊️', 'centered': '🎯', 'balanced': '⚖️', 'serene': '🌊', 'grounded': '🌱', 'stable': '🏔️', 'tranquil': '🌸', 'at ease': '😌',
+  // Hopeful
+  'optimistic': '☀️', 'encouraged': '💪', 'motivated': '🚀', 'inspired': '✨', 'forward-looking': '👀', 'promising': '🌟', 'bright': '💡', 'upward': '📈',
+  // Positive
+  'hopeful': '🌱', 'curious': '🤔', 'calm': '🌿', 'engaged': '🎯', 'content': '😊', 'peaceful': '🕊️', 'optimistic': '☀️', 'grateful': '🙏',
+  // Energized
+  'joyful': '😄', 'excited': '🎉', 'inspired': '✨', 'proud': '🦁', 'elated': '🎊', 'enthusiastic': '🔥', 'motivated': '🚀', 'vibrant': '🌈'
+};
+
 const AIResponseBubble: React.FC<AIResponseBubbleProps> = ({ 
   message, 
   emotion, 
@@ -29,27 +49,29 @@ const AIResponseBubble: React.FC<AIResponseBubbleProps> = ({
   const mouseStartX = useRef<number>(0);
   const isDragging = useRef<boolean>(false);
   
-  // Track selection level: 'primary' or 'sub'
-  const [selectionLevel, setSelectionLevel] = useState<'primary' | 'sub'>('primary');
+  // Track selection level: 'primary' or 'sub' or 'none' (starting state)
+  const [selectionLevel, setSelectionLevel] = useState<'primary' | 'sub' | 'none'>('none');
   
   // Track current primary emotion and sub-emotion indices
-  const [currentPrimaryIndex, setCurrentPrimaryIndex] = useState(0);
+  // Start with -1 to indicate no selection
+  const [currentPrimaryIndex, setCurrentPrimaryIndex] = useState(-1);
   const [currentSubIndex, setCurrentSubIndex] = useState(0);
   
-  // Get current primary emotion config
-  const currentPrimary = EMOTIONAL_STATES[currentPrimaryIndex] || EMOTIONAL_STATES[0];
+  // Get current primary emotion config (or null if none selected)
+  const currentPrimary = currentPrimaryIndex >= 0 ? EMOTIONAL_STATES[currentPrimaryIndex] : null;
   
-  // Find initial indices
+  // Find initial indices if emotion/feeling provided
   useEffect(() => {
     if (emotion) {
       const primaryIndex = EMOTIONAL_STATES.findIndex(e => e.state === emotion);
       if (primaryIndex >= 0) {
         setCurrentPrimaryIndex(primaryIndex);
+        setSelectionLevel('primary');
         if (feeling) {
           const subIndex = EMOTIONAL_STATES[primaryIndex].feelings.findIndex(f => f === feeling);
           if (subIndex >= 0) {
             setCurrentSubIndex(subIndex);
-            setSelectionLevel('sub'); // If both are provided, show sub level
+            setSelectionLevel('sub');
           }
         }
       }
@@ -64,18 +86,25 @@ const AIResponseBubble: React.FC<AIResponseBubbleProps> = ({
     const changeMood = (deltaX: number) => {
       // Swipe threshold: 50px
       if (Math.abs(deltaX) > 50) {
-        if (selectionLevel === 'primary') {
+        if (selectionLevel === 'primary' || selectionLevel === 'none') {
           // Navigate primary emotions
           let newIndex = currentPrimaryIndex;
-          if (deltaX > 0) {
-            newIndex = currentPrimaryIndex > 0 ? currentPrimaryIndex - 1 : EMOTIONAL_STATES.length - 1;
+          if (currentPrimaryIndex < 0) {
+            // Start from first emotion
+            newIndex = deltaX > 0 ? EMOTIONAL_STATES.length - 1 : 0;
           } else {
-            newIndex = currentPrimaryIndex < EMOTIONAL_STATES.length - 1 ? currentPrimaryIndex + 1 : 0;
+            if (deltaX > 0) {
+              newIndex = currentPrimaryIndex > 0 ? currentPrimaryIndex - 1 : EMOTIONAL_STATES.length - 1;
+            } else {
+              newIndex = currentPrimaryIndex < EMOTIONAL_STATES.length - 1 ? currentPrimaryIndex + 1 : 0;
+            }
           }
           setCurrentPrimaryIndex(newIndex);
           setCurrentSubIndex(0); // Reset sub to first when changing primary
+          setSelectionLevel('primary');
         } else {
           // Navigate sub-emotions within current primary
+          if (currentPrimaryIndex < 0) return;
           const feelings = EMOTIONAL_STATES[currentPrimaryIndex].feelings;
           let newIndex = currentSubIndex;
           if (deltaX > 0) {
@@ -159,10 +188,15 @@ const AIResponseBubble: React.FC<AIResponseBubbleProps> = ({
 
   // Handle quick selection clicks
   const handlePrimaryClick = () => {
+    if (currentPrimaryIndex < 0) {
+      // Start with first emotion if none selected
+      setCurrentPrimaryIndex(0);
+    }
     setSelectionLevel('primary');
   };
 
   const handleSubClick = () => {
+    if (currentPrimaryIndex < 0) return;
     setSelectionLevel('sub');
     // When clicking sub, save it immediately
     const selectedFeeling = currentPrimary.feelings[currentSubIndex];
@@ -173,7 +207,8 @@ const AIResponseBubble: React.FC<AIResponseBubbleProps> = ({
   };
 
   // Get current sub-emotion
-  const currentSubFeeling = currentPrimary.feelings[currentSubIndex] || currentPrimary.feelings[0];
+  const currentSubFeeling = currentPrimary ? (currentPrimary.feelings[currentSubIndex] || currentPrimary.feelings[0]) : null;
+  const subFeelingEmoji = currentSubFeeling ? (FEELING_EMOJIS[currentSubFeeling] || '') : '';
   
   // Show swipe hint if onMoodChange is provided
   const showSwipeHint = onMoodChange;
@@ -186,44 +221,102 @@ const AIResponseBubble: React.FC<AIResponseBubbleProps> = ({
       transition={{ duration: 0.5, ease: 'easeOut' }}
       className="bg-navy-light/10 dark:bg-dark-bg-secondary rounded-3xl p-6 space-y-4 relative"
     >
+      {/* Swipe hint - left justified above arrows */}
       {showSwipeHint && (
-        <div className="absolute top-2 right-2 text-xs text-text-secondary dark:text-white/50">
+        <div className="text-left text-xs sm:text-sm text-text-secondary dark:text-white/50 mb-2">
           ← Swipe or drag to change →
         </div>
       )}
       
       {/* Primary Emotion Line */}
       <div 
-        className="flex items-center space-x-2 cursor-pointer hover:opacity-80 transition-opacity"
+        className="flex items-center space-x-3 cursor-pointer hover:opacity-80 transition-opacity"
         onClick={handlePrimaryClick}
       >
-        <div className="flex items-center space-x-2">
+        <div className="flex items-center space-x-3">
           {selectionLevel === 'primary' && (
-            <span className="text-navy-primary dark:text-yellow-warm text-lg">→</span>
+            <motion.span 
+              className="text-navy-primary dark:text-yellow-warm text-2xl sm:text-3xl font-bold"
+              animate={{ 
+                x: [0, 5, 0],
+              }}
+              transition={{ 
+                repeat: Infinity,
+                duration: 1.5,
+                ease: "easeInOut"
+              }}
+            >
+              →
+            </motion.span>
           )}
-          <div className="w-8 h-8 bg-navy-primary dark:bg-yellow-warm rounded-full flex items-center justify-center flex-shrink-0">
-            <span className="text-white dark:text-navy-dark text-sm">{currentPrimary.emoji}</span>
-          </div>
-          <span className="text-sm font-semibold text-navy-primary dark:text-yellow-warm capitalize">
-            {currentPrimary.shortLabel}
-          </span>
+          {selectionLevel === 'none' && (
+            <motion.span 
+              className="text-navy-primary dark:text-yellow-warm text-2xl sm:text-3xl font-bold"
+              animate={{ 
+                x: [0, 5, 0],
+              }}
+              transition={{ 
+                repeat: Infinity,
+                duration: 1.5,
+                ease: "easeInOut"
+              }}
+            >
+              →
+            </motion.span>
+          )}
+          {currentPrimaryIndex >= 0 ? (
+            <>
+              <div className="w-10 h-10 sm:w-12 sm:h-12 bg-navy-primary dark:bg-yellow-warm rounded-full flex items-center justify-center flex-shrink-0">
+                <span className="text-white dark:text-navy-dark text-lg sm:text-xl">{currentPrimary.emoji}</span>
+              </div>
+              <span className="text-base sm:text-lg font-semibold text-navy-primary dark:text-yellow-warm capitalize">
+                {currentPrimary.shortLabel}
+              </span>
+            </>
+          ) : (
+            <>
+              <div className="w-10 h-10 sm:w-12 sm:h-12 bg-bg-secondary dark:bg-dark-bg-secondary rounded-full flex items-center justify-center flex-shrink-0 border-2 border-dashed border-navy-primary/50 dark:border-yellow-warm/50">
+                <span className="text-text-secondary dark:text-white/50 text-lg sm:text-xl">?</span>
+              </div>
+              <span className="text-base sm:text-lg font-semibold text-text-secondary dark:text-white/70">
+                Select
+              </span>
+            </>
+          )}
         </div>
       </div>
       
-      {/* Sub-Emotion Line */}
-      <div 
-        className="flex items-center space-x-2 cursor-pointer hover:opacity-80 transition-opacity ml-6"
-        onClick={handleSubClick}
-      >
-        <div className="flex items-center space-x-2">
-          {selectionLevel === 'sub' && (
-            <span className="text-navy-primary dark:text-yellow-warm text-lg">→</span>
-          )}
-          <span className="text-sm text-text-secondary dark:text-white/70 capitalize">
-            {currentSubFeeling}
-          </span>
+      {/* Sub-Emotion Line - only show if primary is selected */}
+      {currentPrimaryIndex >= 0 && currentPrimary && (
+        <div 
+          className="flex items-center space-x-3 cursor-pointer hover:opacity-80 transition-opacity ml-8 sm:ml-10"
+          onClick={handleSubClick}
+        >
+          <div className="flex items-center space-x-3">
+            {selectionLevel === 'sub' && (
+              <motion.span 
+                className="text-navy-primary dark:text-yellow-warm text-2xl sm:text-3xl font-bold"
+                animate={{ 
+                  x: [0, 5, 0],
+                }}
+                transition={{ 
+                  repeat: Infinity,
+                  duration: 1.5,
+                  ease: "easeInOut"
+                }}
+              >
+                →
+              </motion.span>
+            )}
+            {subFeelingEmoji && (
+              <span className="text-lg sm:text-xl">{subFeelingEmoji}</span>
+            )}
+            <span className="text-sm sm:text-base text-text-secondary dark:text-white/70 capitalize">
+              {currentSubFeeling}
+            </span>
+          </div>
         </div>
-      </div>
+      )}
       
       <p className="text-text-primary dark:text-white leading-relaxed">
         {message}
@@ -261,4 +354,3 @@ const AIResponseBubble: React.FC<AIResponseBubbleProps> = ({
 };
 
 export default React.memo(AIResponseBubble);
-

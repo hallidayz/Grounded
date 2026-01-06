@@ -12,6 +12,8 @@ import ValueSelection from "./components/ValueSelection";
 import ReportView from "./components/ReportView";
 import Settings from "./components/Settings";
 import HelpOverlay from "./components/HelpOverlay";
+import Dashboard from "./components/Dashboard";
+import CrisisResourcesModal from "./components/CrisisResourcesModal";
 import { AppHeader } from "./components/Layout/AppHeader";
 import { ALL_VALUES } from "./constants";
 
@@ -33,6 +35,8 @@ export default function AppContent({ onHydrationReady }: { onHydrationReady?: ()
   const [currentView, setCurrentView] = useState<AppView>("home");
   const [showHelp, setShowHelp] = useState(false);
   const [showSettings, setShowSettings] = useState(false);
+  const [showResources, setShowResources] = useState(false);
+  const [showReflection, setShowReflection] = useState(false);
 
   // Memoize values to prevent hydration mismatches - MUST be called before any early returns
   const selectedValues = useMemo(() => 
@@ -86,14 +90,11 @@ export default function AppContent({ onHydrationReady }: { onHydrationReady?: ()
     if (action === 'values') {
       setCurrentView('values');
     } else if (action === 'reflection') {
-      // Navigate to home view which should show Dashboard with reflection forms
-      // The Dashboard component handles reflection modals
-      setCurrentView('home');
-      // TODO: If Dashboard is separate, we may need to trigger opening a reflection modal
-      // For now, navigating to home should allow users to access reflections via value cards
+      // Show Dashboard with reflection forms
+      setShowReflection(true);
     } else if (action === 'resources') {
-      // Show help overlay which contains resources and support
-      setShowHelp(true);
+      // Show crisis resources modal with emergency contacts
+      setShowResources(true);
     }
   };
 
@@ -248,6 +249,48 @@ export default function AppContent({ onHydrationReady }: { onHydrationReady?: ()
       )}
 
       {showHelp && <HelpOverlay onClose={() => setShowHelp(false)} />}
+      
+      {/* Reflection Dashboard Modal */}
+      {showReflection && context && (
+        <div className="fixed inset-0 z-50 bg-black/50 backdrop-blur-sm flex items-center justify-center p-4">
+          <div className="bg-bg-primary dark:bg-dark-bg-primary rounded-2xl max-w-4xl w-full max-h-[90vh] overflow-y-auto relative">
+            <button
+              onClick={() => setShowReflection(false)}
+              className="absolute top-4 right-4 w-8 h-8 flex items-center justify-center rounded-full bg-bg-secondary dark:bg-dark-bg-secondary hover:bg-bg-tertiary dark:hover:bg-dark-bg-tertiary"
+            >
+              <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+              </svg>
+            </button>
+            <div className="p-6">
+              <Dashboard
+                values={selectedValues}
+                logs={context.logs || []}
+                goals={context.goals || []}
+                lcswConfig={context.settings?.lcswConfig}
+                onLog={(entry) => {
+                  if (context) {
+                    context.handleLogEntry(entry);
+                  }
+                }}
+                onUpdateGoals={(updatedGoals) => {
+                  if (context) {
+                    context.handleUpdateGoals(updatedGoals);
+                  }
+                }}
+              />
+            </div>
+          </div>
+        </div>
+      )}
+      
+      {/* Crisis Resources Modal */}
+      {showResources && context && (
+        <CrisisResourcesModal
+          onClose={() => setShowResources(false)}
+          lcswConfig={context.settings?.lcswConfig}
+        />
+      )}
     </div>
   );
 }
