@@ -1,10 +1,7 @@
-import React, { lazy, Suspense, useEffect } from "react";
+import React, { Suspense, useEffect } from "react";
 import { useDataContext } from "./contexts/DataContext";
 import BottomNavigation from "./components/BottomNavigation";
 import AIResponseBubble from "./components/AIResponseBubble";
-
-const GoalsView = lazy(() => import("./components/Goals"));
-const VaultView = lazy(() => import("./components/Vault"));
 
 interface Props {
   onHydrationReady?: () => void;
