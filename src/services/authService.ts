@@ -122,13 +122,17 @@ export async function registerUser(data: RegisterData): Promise<AuthResult> {
       });
       
       // Auto-login: Store session immediately after creation
+      // CRITICAL: Store in both sessionStorage and localStorage for persistence
+      // localStorage persists across app updates, cache clears, and Vercel deployments
       sessionStorage.setItem('userId', userId);
       sessionStorage.setItem('username', data.username);
       try {
         localStorage.setItem('userId', userId);
         localStorage.setItem('username', data.username);
+        console.log('[AuthService] New user credentials saved to localStorage for persistence across updates');
       } catch (error) {
         console.warn('Could not store userId in localStorage:', error);
+        // Continue anyway - sessionStorage will work for current session
       }
     } catch (error) {
       console.error('Error creating user:', error);
