@@ -27,18 +27,20 @@ const DiagnosticOverlay: React.FC<{ status: string }> = ({ status }) => (
   <div
     style={{
       position: "fixed",
-      bottom: 8,
+      top: 8,
       right: 8,
       background: "rgba(0,0,0,0.65)",
       color: "#00ffff",
-      padding: "6px 10px",
-      fontSize: 12,
-      borderRadius: 5,
+      padding: "4px 8px",
+      fontSize: 10,
+      borderRadius: 4,
       fontFamily: "monospace",
       zIndex: 9999,
+      pointerEvents: "none",
+      opacity: 0.8,
     }}
   >
-    ⚙️ Grounded: {status}
+    ⚙️ {status}
   </div>
 );
 
@@ -53,12 +55,24 @@ const AppDataContext = React.createContext<{
 
 const App: React.FC = () => {
   const [status, setStatus] = React.useState("Initializing contexts...");
+  const [showStatus, setShowStatus] = React.useState(true);
   const [appData, setAppData] = React.useState<{
     values?: string[];
     logs?: any[];
     goals?: any[];
     settings?: any;
   } | null>(null);
+
+  // Auto-hide status after 5 seconds
+  React.useEffect(() => {
+    if (status) {
+      setShowStatus(true);
+      const timer = setTimeout(() => {
+        setShowStatus(false);
+      }, 5000);
+      return () => clearTimeout(timer);
+    }
+  }, [status]);
 
   return (
     <>
@@ -86,7 +100,7 @@ const App: React.FC = () => {
           </AppDataContext.Provider>
         </Suspense>
       </ErrorBoundary>
-      <DiagnosticOverlay status={status} />
+      {showStatus && <DiagnosticOverlay status={status} />}
     </>
   );
 };

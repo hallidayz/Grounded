@@ -65,6 +65,9 @@ export default function AppContent({ onHydrationReady }: { onHydrationReady?: ()
     );
   }
 
+  // Check if this is a first-time user (no values selected) - only after context is available
+  const isFirstTimeUser = !context.selectedValueIds || context.selectedValueIds.length === 0;
+
   // Handle action clicks from AIResponseBubble
   const handleActionClick = (action: 'reflection' | 'values' | 'resources') => {
     if (action === 'values') {
@@ -89,6 +92,13 @@ export default function AppContent({ onHydrationReady }: { onHydrationReady?: ()
     (context?.selectedValueIds || []).map(id => ALL_VALUES.find(v => v.id === id)).filter(Boolean) as any[],
     [context?.selectedValueIds]
   );
+  
+  // Auto-navigate to values for first-time users
+  useEffect(() => {
+    if (isFirstTimeUser && currentView === 'home') {
+      setCurrentView('values');
+    }
+  }, [isFirstTimeUser, currentView]);
 
   // Handle clear data with confirmation
   const handleClearData = () => {
@@ -155,15 +165,31 @@ export default function AppContent({ onHydrationReady }: { onHydrationReady?: ()
         {currentView === "update" && <GoalsUpdateView />}
         {currentView === "vault" && <VaultControl />}
         {currentView === "values" && (
-          <ValueSelection
-            initialSelected={context?.selectedValueIds || []}
-            onComplete={(ids) => {
-              if (context) {
-                context.handleSelectionComplete(ids);
-              }
-              setCurrentView('home');
-            }}
-          />
+          <div className="max-w-2xl mx-auto">
+            {isFirstTimeUser && (
+              <div className="mb-6 p-4 bg-brand/10 dark:bg-brand/20 border border-brand/30 dark:border-brand/30 rounded-xl">
+                <h2 className="text-lg font-black text-text-primary dark:text-white mb-2">
+                  Welcome to Grounded! 🌱
+                </h2>
+                <p className="text-sm text-text-secondary dark:text-white/70 leading-relaxed mb-2">
+                  To get started, select up to 10 values that matter most to you. These will guide your self-care journey.
+                </p>
+                <p className="text-sm text-text-secondary dark:text-white/70 leading-relaxed">
+                  Once you've selected your values, click <strong>"Confirm Compass"</strong> to save and begin tracking your self-care.
+                </p>
+              </div>
+            )}
+            <ValueSelection
+              initialSelected={context?.selectedValueIds || []}
+              onComplete={(ids) => {
+                if (context) {
+                  context.handleSelectionComplete(ids);
+                }
+                // Navigate to home after confirming values
+                setCurrentView('home');
+              }}
+            />
+          </div>
         )}
         {currentView === "report" && (
           <ReportView
