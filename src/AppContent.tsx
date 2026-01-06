@@ -86,11 +86,11 @@ export default function AppContent({ onHydrationReady }: { onHydrationReady?: ()
     if (action === 'values') {
       setCurrentView('values');
     } else if (action === 'reflection') {
-      // Could navigate to reflection form or show modal
-      console.log('Reflection action clicked');
+      // Navigate to vault view where users can write reflections
+      setCurrentView('vault');
     } else if (action === 'resources') {
-      // Could navigate to resources view
-      console.log('Resources action clicked');
+      // Could navigate to resources view or show help
+      setShowHelp(true);
     }
   };
 
@@ -188,6 +188,12 @@ export default function AppContent({ onHydrationReady }: { onHydrationReady?: ()
                 // Navigate to home after confirming values
                 setCurrentView('home');
               }}
+              onAddGoal={(valueId) => {
+                // Navigate to goals update view to add a goal for this value
+                setCurrentView('update');
+                // TODO: Pass valueId to GoalsUpdateView if it supports it
+              }}
+              goals={context?.goals || []}
             />
           </div>
         )}
