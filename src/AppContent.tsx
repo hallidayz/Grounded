@@ -92,16 +92,9 @@ export default function AppContent({ onHydrationReady }: { onHydrationReady?: ()
 
   // Handle clear data with confirmation
   const handleClearData = () => {
-    if (window.confirm('Are you sure you want to hard clear all data from the database? This action cannot be undone and will permanently delete all your logs, goals, and settings.')) {
+    if (window.confirm('Are you sure you want to clear all local data? This cannot be undone.')) {
       if (context) {
         context.handleClearData();
-        // Also clear from database
-        const adapter = require('./services/databaseAdapter').getDatabaseAdapter();
-        adapter.init().then(() => {
-          if (authContext.userId) {
-            adapter.clearAllData(authContext.userId).catch(console.error);
-          }
-        }).catch(console.error);
       }
     }
   };
