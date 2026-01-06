@@ -234,21 +234,11 @@ const ValueSelection: React.FC<ValueSelectionProps> = ({ initialSelected, onComp
                 {/* Plus button for adding goals - only in Values menu */}
                 {onAddGoal && (
                   <button
-                    onClick={async (e) => {
+                    onClick={(e) => {
                       e.stopPropagation();
-                      // CRITICAL: Save current selected values before navigating to add goal
-                      // This ensures values persist even if there's an error
-                      try {
-                        await new Promise(resolve => {
-                          onComplete(selected);
-                          setTimeout(resolve, 50); // Small delay to ensure save completes
-                        });
-                        onAddGoal(value.id);
-                      } catch (error) {
-                        console.error('[ValueSelection] Error saving values before adding goal:', error);
-                        // Still try to navigate, but log the error
-                        onAddGoal(value.id);
-                      }
+                      // Values are already auto-saved on selection, and AppContent saves before navigation
+                      // Just trigger the navigation
+                      onAddGoal(value.id);
                     }}
                     /* PREV: bg-yellow-warm text-text-primary */
                     className="w-6 h-6 sm:w-7 sm:h-7 flex items-center justify-center rounded-lg bg-brand dark:bg-brand-light text-white dark:text-navy-dark hover:opacity-90 transition-all shadow-sm active:scale-95 flex-shrink-0"
