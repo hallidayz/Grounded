@@ -29,20 +29,34 @@ interface AuthProviderProps {
   onLogoutComplete?: () => void;
 }
 
-// Persistent Storage API helpers for Android PWA credential persistence
+// Persistent Storage API helpers for cross-platform PWA credential persistence
+// Works on: Android, iOS, Desktop (Chrome, Firefox, Safari, Edge)
+// Protects localStorage, sessionStorage, and IndexedDB from being cleared
 const requestPersistentStorage = async (): Promise<boolean> => {
-  if (navigator.storage?.persist) {
-    const isPersisted = await navigator.storage.persist();
-    console.log(`[AuthContext] Persistent storage granted: ${isPersisted}`);
-    return isPersisted;
+  // Check if Storage Manager API is available (supported in modern browsers)
+  if (navigator.storage && typeof navigator.storage.persist === 'function') {
+    try {
+      const isPersisted = await navigator.storage.persist();
+      console.log(`[AuthContext] Persistent storage ${isPersisted ? 'granted' : 'denied'} (platform: ${navigator.platform})`);
+      return isPersisted;
+    } catch (error) {
+      console.warn('[AuthContext] Error requesting persistent storage:', error);
+      return false;
+    }
   }
-  console.warn('[AuthContext] Persistent Storage API not supported');
+  // API not supported - log but don't treat as error (older browsers/fallback)
+  console.log('[AuthContext] Persistent Storage API not supported - using standard storage (may be cleared by browser)');
   return false;
 };
 
 const checkStoragePersistence = async (): Promise<boolean> => {
-  if (navigator.storage?.persisted) {
-    return await navigator.storage.persisted();
+  if (navigator.storage && typeof navigator.storage.persisted === 'function') {
+    try {
+      return await navigator.storage.persisted();
+    } catch (error) {
+      console.warn('[AuthContext] Error checking storage persistence:', error);
+      return false;
+    }
   }
   return false;
 };
