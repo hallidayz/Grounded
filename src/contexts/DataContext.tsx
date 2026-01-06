@@ -225,11 +225,20 @@ export const DataProvider: React.FC<DataProviderProps> = ({
 
   const handleSelectionComplete = useCallback(async (ids: string[]) => {
     setSelectedValueIds(ids);
-    // Save to values table when user confirms selection
+    // Save to values table when user confirms selection with priority based on order
     if (userId && authState === 'app') {
       try {
+        // Save values with priority (index = priority, 0 is highest priority)
         await adapter.setValuesActive(userId, ids);
-        console.log('[DataContext] Saved values to values table', { userId, count: ids.length });
+        // Also save individual values with their priority for proper relationships
+        for (let i = 0; i < ids.length; i++) {
+          await adapter.saveValue(userId, ids[i], true, i);
+        }
+        console.log('[DataContext] Saved values to values table with priorities', { 
+          userId, 
+          count: ids.length,
+          priorities: ids.map((id, index) => ({ id, priority: index }))
+        });
       } catch (error) {
         console.error('Error saving values to table:', error);
       }
