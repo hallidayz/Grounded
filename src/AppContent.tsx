@@ -93,7 +93,29 @@ export default function AppContent({ onHydrationReady }: { onHydrationReady?: ()
             />
           </div>
         )}
-        {currentView === "goals" && <GoalsSection />}
+        {currentView === "goals" && (
+          <GoalsSection
+            goals={context?.goals || []}
+            values={useMemo(() => 
+              (context?.selectedValueIds || []).map(id => ALL_VALUES.find(v => v.id === id)).filter(Boolean) as any[],
+              [context?.selectedValueIds]
+            )}
+            onCompleteGoal={(goal) => {
+              if (context) {
+                const updatedGoals = (context.goals || []).map(g => 
+                  g.id === goal.id ? { ...g, completed: true } : g
+                );
+                context.handleUpdateGoals(updatedGoals);
+              }
+            }}
+            onDeleteGoal={(goalId) => {
+              if (context) {
+                const updatedGoals = (context.goals || []).filter(g => g.id !== goalId);
+                context.handleUpdateGoals(updatedGoals);
+              }
+            }}
+          />
+        )}
         {currentView === "update" && <GoalsUpdateView />}
         {currentView === "vault" && <VaultControl />}
         {currentView === "values" && (
