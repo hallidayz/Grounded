@@ -55,6 +55,8 @@ const Settings: React.FC<SettingsProps> = ({ onLogout, onShowHelp, version = '1.
         enabled: prev.emailSchedule?.enabled || false,
         frequency: prev.emailSchedule?.frequency || 'weekly',
         time: prev.emailSchedule?.time || '09:00',
+        dayOfWeek: prev.emailSchedule?.dayOfWeek ?? 1, // Default to Monday
+        dayOfMonth: prev.emailSchedule?.dayOfMonth ?? 1, // Default to 1st of month
         recipientEmails: prev.emailSchedule?.recipientEmails || [],
         sendGoalCompletions: prev.emailSchedule?.sendGoalCompletions || false,
         sendReports: prev.emailSchedule?.sendReports || false,
@@ -308,6 +310,46 @@ const Settings: React.FC<SettingsProps> = ({ onLogout, onShowHelp, version = '1.
                   className="w-full px-3 py-2 rounded-lg bg-bg-secondary dark:bg-dark-bg-primary border border-border-soft dark:border-dark-border text-text-primary dark:text-white"
                 />
               </div>
+
+              {settings.emailSchedule?.frequency === 'weekly' && (
+                <div>
+                  <label className="block text-sm font-medium text-text-primary dark:text-white mb-1">
+                    Day of Week
+                  </label>
+                  <select
+                    value={settings.emailSchedule?.dayOfWeek ?? 1}
+                    onChange={(e) => updateEmailSchedule({ dayOfWeek: parseInt(e.target.value) })}
+                    className="w-full px-3 py-2 rounded-lg bg-bg-secondary dark:bg-dark-bg-primary border border-border-soft dark:border-dark-border text-text-primary dark:text-white"
+                  >
+                    <option value={0}>Sunday</option>
+                    <option value={1}>Monday</option>
+                    <option value={2}>Tuesday</option>
+                    <option value={3}>Wednesday</option>
+                    <option value={4}>Thursday</option>
+                    <option value={5}>Friday</option>
+                    <option value={6}>Saturday</option>
+                  </select>
+                </div>
+              )}
+
+              {settings.emailSchedule?.frequency === 'monthly' && (
+                <div>
+                  <label className="block text-sm font-medium text-text-primary dark:text-white mb-1">
+                    Day of Month
+                  </label>
+                  <select
+                    value={settings.emailSchedule?.dayOfMonth ?? 1}
+                    onChange={(e) => updateEmailSchedule({ dayOfMonth: parseInt(e.target.value) })}
+                    className="w-full px-3 py-2 rounded-lg bg-bg-secondary dark:bg-dark-bg-primary border border-border-soft dark:border-dark-border text-text-primary dark:text-white"
+                  >
+                    {Array.from({ length: 31 }, (_, i) => i + 1).map(day => (
+                      <option key={day} value={day}>
+                        {day}{day === 1 ? 'st' : day === 2 ? 'nd' : day === 3 ? 'rd' : 'th'}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+              )}
 
               <div>
                 <label className="block text-sm font-medium text-text-primary dark:text-white mb-1">
