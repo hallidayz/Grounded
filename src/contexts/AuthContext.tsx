@@ -67,21 +67,38 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({
               await adapter.init();
               const appData = await adapter.getAppData(user.id);
               
+              // Also try to load values from the values table (new structure)
+              let activeValues: string[] = [];
+              try {
+                activeValues = await Promise.race([
+                  adapter.getActiveValues(user.id),
+                  new Promise<string[]>((_, reject) => setTimeout(() => reject(new Error('getActiveValues timeout')), 2000))
+                ]).catch(() => []);
+                console.log('[AuthContext] Active values from table:', activeValues.length);
+              } catch (error) {
+                console.warn('[AuthContext] Could not load values from table:', error);
+              }
+              
               if (appData) {
                 const loadedSettings = appData.settings || { reminders: { enabled: false, frequency: 'daily', time: '09:00' } };
                 if (loadedSettings.reminders && !loadedSettings.reminders.frequency) {
                   loadedSettings.reminders.frequency = 'daily';
                 }
                 
+                // Use values from table if available, otherwise fall back to appData
+                const values = activeValues.length > 0 ? activeValues : (appData.values || []);
+                
                 onLoginComplete?.(user.id, {
-                  values: appData.values || [],
+                  values: values,
                   logs: appData.logs || [],
                   goals: appData.goals || [],
                   settings: loadedSettings,
                 });
               } else {
+                // Even if no appData, use values from table if available
+                const values = activeValues.length > 0 ? activeValues : [];
                 onLoginComplete?.(user.id, {
-                  values: [],
+                  values: values,
                   logs: [],
                   goals: [],
                   settings: { reminders: { enabled: false, frequency: 'daily', time: '09:00' } },
@@ -154,22 +171,39 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({
             const appData = await Promise.race([appDataPromise, appDataTimeout]) as any;
             console.log('[LOGIN] App data loaded:', appData ? 'found' : 'not found');
             
+            // Also try to load values from the values table (new structure)
+            let activeValues: string[] = [];
+            try {
+              activeValues = await Promise.race([
+                adapter.getActiveValues(loggedInUserId),
+                new Promise<string[]>((_, reject) => setTimeout(() => reject(new Error('getActiveValues timeout')), 2000))
+              ]).catch(() => []);
+              console.log('[LOGIN] Active values from table:', activeValues.length);
+            } catch (error) {
+              console.warn('[LOGIN] Could not load values from table:', error);
+            }
+            
             if (appData) {
               const loadedSettings = appData.settings || { reminders: { enabled: false, frequency: 'daily', time: '09:00' } };
               if (loadedSettings.reminders && !loadedSettings.reminders.frequency) {
                 loadedSettings.reminders.frequency = 'daily';
               }
               
+              // Use values from table if available, otherwise fall back to appData
+              const values = activeValues.length > 0 ? activeValues : (appData.values || []);
+              
               onLoginComplete?.(loggedInUserId, {
-                values: appData.values || [],
+                values: values,
                 logs: appData.logs || [],
                 goals: appData.goals || [],
                 settings: loadedSettings,
               });
             } else {
-              console.log('[LOGIN] No app data found - using defaults');
+              // Even if no appData, use values from table if available
+              const values = activeValues.length > 0 ? activeValues : [];
+              console.log('[LOGIN] No app data found - using defaults with values from table:', values.length);
               onLoginComplete?.(loggedInUserId, {
-                values: [],
+                values: values,
                 logs: [],
                 goals: [],
                 settings: { reminders: { enabled: false, frequency: 'daily', time: '09:00' } },
