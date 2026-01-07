@@ -591,23 +591,41 @@ export class LegacyAdapter implements DatabaseAdapter {
       
       // Get userInteractions by filtering via sessions (userId is not indexed in userInteractions)
       // First get all session IDs for this user
-      const userSessionIds = sessionsToDelete.map(s => s.id);
-      const allUserInteractions = await db.userInteractions.toArray();
-      // Delete interactions that belong to this user's sessions
-      const userInteractionsToDelete = allUserInteractions.filter(interaction => 
-        userSessionIds.includes(interaction.sessionId)
-      );
+      const userSessionIds = new Set(sessionsToDelete.map(s => s.id));
       
-      // Delete all records
-      await Promise.all([
+      // Get all userInteractions and filter by sessionId (userId is not indexed)
+      let userInteractionsToDelete: any[] = [];
+      try {
+        const allUserInteractions = await db.userInteractions.toArray();
+        userInteractionsToDelete = allUserInteractions.filter(interaction => 
+          userSessionIds.has(interaction.sessionId)
+        );
+      } catch (interactionsError) {
+        console.warn('[LegacyAdapter] Could not fetch userInteractions, skipping:', interactionsError);
+        // Continue with other deletions even if userInteractions fetch fails
+      }
+      
+      // Delete all records - handle userInteractions separately to avoid schema errors
+      const deletePromises = [
         Promise.all(valuesToDelete.map(v => db.values.delete(v.id!))),
         Promise.all(goalsToDelete.map(g => db.goals.delete(g.id))),
         Promise.all(feelingLogsToDelete.map(f => db.feelingLogs.delete(f.id))),
         Promise.all(sessionsToDelete.map(s => db.sessions.delete(s.id))),
-        Promise.all(userInteractionsToDelete.map(u => db.userInteractions.delete(u.id))),
         Promise.all(assessmentsToDelete.map(a => db.assessments.delete(a.id))),
         Promise.all(reportsToDelete.map(r => db.reports.delete(r.id))),
-      ]);
+      ];
+      
+      // Delete userInteractions separately with error handling
+      if (userInteractionsToDelete.length > 0) {
+        deletePromises.push(
+          Promise.all(userInteractionsToDelete.map(u => db.userInteractions.delete(u.id))).catch(err => {
+            console.warn('[LegacyAdapter] Error deleting some userInteractions:', err);
+            // Continue even if some deletions fail
+          })
+        );
+      }
+      
+      await Promise.all(deletePromises);
       
       // Clear app data
       await db.appData.where('userId').equals(userId).delete();
