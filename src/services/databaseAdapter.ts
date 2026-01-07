@@ -579,14 +579,29 @@ export class LegacyAdapter implements DatabaseAdapter {
     
     try {
       // Delete all user-specific data from Dexie
+      // Note: userInteractions doesn't have userId indexed, so we filter manually
+      const [valuesToDelete, goalsToDelete, feelingLogsToDelete, sessionsToDelete, assessmentsToDelete, reportsToDelete] = await Promise.all([
+        db.values.where('userId').equals(userId).toArray(),
+        db.goals.where('userId').equals(userId).toArray(),
+        db.feelingLogs.where('userId').equals(userId).toArray(),
+        db.sessions.where('userId').equals(userId).toArray(),
+        db.assessments.where('userId').equals(userId).toArray(),
+        db.reports.where('userId').equals(userId).toArray(),
+      ]);
+      
+      // Get userInteractions by filtering (userId is not indexed)
+      const allUserInteractions = await db.userInteractions.toArray();
+      const userInteractionsToDelete = allUserInteractions.filter(interaction => interaction.userId === userId);
+      
+      // Delete all records
       await Promise.all([
-        db.values.where('userId').equals(userId).delete(),
-        db.goals.where('userId').equals(userId).delete(),
-        db.feelingLogs.where('userId').equals(userId).delete(),
-        db.sessions.where('userId').equals(userId).delete(),
-        db.userInteractions.where('userId').equals(userId).delete(),
-        db.assessments.where('userId').equals(userId).delete(),
-        db.reports.where('userId').equals(userId).delete(),
+        Promise.all(valuesToDelete.map(v => db.values.delete(v.id!))),
+        Promise.all(goalsToDelete.map(g => db.goals.delete(g.id))),
+        Promise.all(feelingLogsToDelete.map(f => db.feelingLogs.delete(f.id))),
+        Promise.all(sessionsToDelete.map(s => db.sessions.delete(s.id))),
+        Promise.all(userInteractionsToDelete.map(u => db.userInteractions.delete(u.id))),
+        Promise.all(assessmentsToDelete.map(a => db.assessments.delete(a.id))),
+        Promise.all(reportsToDelete.map(r => db.reports.delete(r.id))),
       ]);
       
       // Clear app data
