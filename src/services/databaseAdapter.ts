@@ -589,9 +589,14 @@ export class LegacyAdapter implements DatabaseAdapter {
         db.reports.where('userId').equals(userId).toArray(),
       ]);
       
-      // Get userInteractions by filtering (userId is not indexed)
+      // Get userInteractions by filtering via sessions (userId is not indexed in userInteractions)
+      // First get all session IDs for this user
+      const userSessionIds = sessionsToDelete.map(s => s.id);
       const allUserInteractions = await db.userInteractions.toArray();
-      const userInteractionsToDelete = allUserInteractions.filter(interaction => interaction.userId === userId);
+      // Delete interactions that belong to this user's sessions
+      const userInteractionsToDelete = allUserInteractions.filter(interaction => 
+        userSessionIds.includes(interaction.sessionId)
+      );
       
       // Delete all records
       await Promise.all([
