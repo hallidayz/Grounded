@@ -22,7 +22,8 @@ const DB_NAME = 'groundedDB';
 
 // Version constant for explicit version management
 // Version 3: Alpha wipe - clean schema with hook-based encryption
-export const CURRENT_DB_VERSION = 3;
+// Version 4: Add userId indexes to userInteractions and ruleBasedUsageLogs
+export const CURRENT_DB_VERSION = 4;
 
 // Type definitions matching schema v8
 
@@ -142,7 +143,8 @@ class GroundedDB extends Dexie {
     super(DB_NAME);
     
     // Version 3: Alpha wipe - clean schema with hook-based encryption
-    this.version(CURRENT_DB_VERSION).stores({
+    // Version 4: Add userId indexes to userInteractions and ruleBasedUsageLogs for proper user data linking
+    this.version(3).stores({
       // Users store - keyPath: id, indexes: username (unique), email (unique)
       users: 'id, username, email',
       
@@ -178,6 +180,34 @@ class GroundedDB extends Dexie {
       
       // RuleBasedUsageLogs store - keyPath: id, indexes: timestamp, type
       ruleBasedUsageLogs: 'id, timestamp, type',
+    });
+    
+    // Version 4: Add userId indexes to userInteractions and ruleBasedUsageLogs
+    this.version(4).stores({
+      // UserInteractions store - add userId index
+      userInteractions: 'id, timestamp, sessionId, type, userId',
+      
+      // RuleBasedUsageLogs store - add userId index
+      ruleBasedUsageLogs: 'id, timestamp, type, userId',
+    }).upgrade(async (tx) => {
+      // Migration: Add userId to existing records where possible
+      // For userInteractions, we can derive userId from sessions
+      const sessions = await tx.table('sessions').toCollection().toArray();
+      const sessionUserIdMap = new Map(sessions.map(s => [s.id, s.userId]));
+      
+      const interactions = await tx.table('userInteractions').toCollection().toArray();
+      for (const interaction of interactions) {
+        if (!interaction.userId && interaction.sessionId) {
+          const userId = sessionUserIdMap.get(interaction.sessionId);
+          if (userId) {
+            await tx.table('userInteractions').update(interaction.id, { userId });
+          }
+        }
+      }
+      
+      // For ruleBasedUsageLogs, we can't derive userId, so leave as undefined
+      // Future logs will include userId when saved
+      console.log('[Dexie] Version 4 migration: Added userId indexes to userInteractions and ruleBasedUsageLogs');
     });
     
     // Hook-based encryption middleware for PHI data stores

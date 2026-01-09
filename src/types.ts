@@ -207,6 +207,7 @@ export interface UserInteraction {
   timestamp: string; // ISO string
   type: 'feeling_selected' | 'sub_feeling_selected' | 'suggest_clicked' | 'reflection_started' | 'reflection_committed' | 'card_opened' | 'card_closed' | 'goal_created';
   sessionId: string;
+  userId?: string; // User ID for indexing and querying
   valueId?: string;
   emotionalState?: string;
   selectedFeeling?: string;
@@ -216,6 +217,7 @@ export interface UserInteraction {
 export interface RuleBasedUsageLog {
   id: string;
   timestamp: string; // ISO datetime
+  userId?: string; // User ID for indexing and querying
   operationType: 'encouragement' | 'focusLens' | 'reflectionAnalysis' | 'goalSuggestion';
   emotionalState?: string;
   subEmotion?: string | null;
