@@ -13,7 +13,7 @@
  * 6. Load app only when ready
  */
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { 
   getInstallationStatus, 
   isPWAInstalled, 
@@ -21,6 +21,7 @@ import {
   waitForServiceWorkerReady,
   checkForUpdates
 } from '../utils/installCheck';
+import { isDevelopment } from '../constants/environment';
 
 interface InstallationGateProps {
   children: React.ReactNode;
@@ -35,6 +36,7 @@ const InstallationGate: React.FC<InstallationGateProps> = ({ children }) => {
     platform: 'ios' | 'android' | 'desktop' | 'unknown';
     checking: boolean;
     updating: boolean;
+    bypassed: boolean;
   }>({
     isInstalled: false,
     serviceWorkerActive: false,
@@ -43,52 +45,92 @@ const InstallationGate: React.FC<InstallationGateProps> = ({ children }) => {
     platform: 'unknown',
     checking: true,
     updating: false,
+    bypassed: false,
   });
+  
+  const hasCheckedRef = useRef(false);
+  const checkTimeoutRef = useRef<NodeJS.Timeout | null>(null);
 
   useEffect(() => {
-    const checkStatus = async () => {
-      setStatus(prev => ({ ...prev, checking: true }));
-      
-      const installationStatus = await getInstallationStatus();
-      
-      setStatus({
-        isInstalled: installationStatus.isInstalled,
-        serviceWorkerActive: installationStatus.serviceWorkerActive,
-        cacheReady: installationStatus.cacheReady,
-        needsUpdate: installationStatus.needsUpdate,
-        platform: installationStatus.platform,
+    // Skip installation check in development mode
+    if (isDevelopment()) {
+      console.log('[InstallationGate] Development mode - bypassing installation check');
+      setStatus(prev => ({
+        ...prev,
+        isInstalled: true,
+        serviceWorkerActive: true,
+        cacheReady: true,
         checking: false,
-        updating: false,
-      });
-      
-      // If installed but needs update, apply update
-      if (installationStatus.isInstalled && installationStatus.needsUpdate) {
-        await applyUpdate();
-      }
-      
-      // If not installed but service worker is ready, wait a bit for installation
-      if (!installationStatus.isInstalled && installationStatus.serviceWorkerActive) {
-        // Wait up to 3 seconds for user to install
-        setTimeout(async () => {
-          const newStatus = await getInstallationStatus();
-          if (newStatus.isInstalled) {
-            setStatus(prev => ({ ...prev, isInstalled: true }));
-          }
-        }, 3000);
+        bypassed: true,
+      }));
+      return;
+    }
+
+    // Only check once on mount
+    if (hasCheckedRef.current) return;
+    hasCheckedRef.current = true;
+
+    const checkStatus = async () => {
+      try {
+        setStatus(prev => ({ ...prev, checking: true }));
+        
+        const installationStatus = await getInstallationStatus();
+        
+        setStatus({
+          isInstalled: installationStatus.isInstalled,
+          serviceWorkerActive: installationStatus.serviceWorkerActive,
+          cacheReady: installationStatus.cacheReady,
+          needsUpdate: installationStatus.needsUpdate,
+          platform: installationStatus.platform,
+          checking: false,
+          updating: false,
+          bypassed: false,
+        });
+        
+        // If installed but needs update, apply update (but don't reload in dev)
+        if (installationStatus.isInstalled && installationStatus.needsUpdate && !isDevelopment()) {
+          await applyUpdate();
+        }
+      } catch (error) {
+        console.error('[InstallationGate] Error checking status:', error);
+        // On error, allow app to load anyway
+        setStatus(prev => ({
+          ...prev,
+          checking: false,
+          isInstalled: true,
+          serviceWorkerActive: true,
+          cacheReady: true,
+        }));
       }
     };
     
+    // Initial check with timeout
     checkStatus();
     
-    // Re-check every 2 seconds if not installed
-    const interval = setInterval(() => {
-      if (!status.isInstalled) {
-        checkStatus();
-      }
-    }, 2000);
+    // Only re-check once after 5 seconds if not installed (not in a loop)
+    if (checkTimeoutRef.current) {
+      clearTimeout(checkTimeoutRef.current);
+    }
     
-    return () => clearInterval(interval);
-  }, [status.isInstalled]);
+    checkTimeoutRef.current = setTimeout(async () => {
+      const currentStatus = await getInstallationStatus();
+      if (!currentStatus.isInstalled && !status.bypassed) {
+        // One more check after delay
+        setStatus(prev => ({
+          ...prev,
+          isInstalled: currentStatus.isInstalled,
+          serviceWorkerActive: currentStatus.serviceWorkerActive,
+          cacheReady: currentStatus.cacheReady,
+        }));
+      }
+    }, 5000);
+    
+    return () => {
+      if (checkTimeoutRef.current) {
+        clearTimeout(checkTimeoutRef.current);
+      }
+    };
+  }, []);
 
   const applyUpdate = async () => {
     setStatus(prev => ({ ...prev, updating: true }));
@@ -118,8 +160,13 @@ const InstallationGate: React.FC<InstallationGateProps> = ({ children }) => {
     }
   };
 
-  // If installed and ready, show app
-  if (status.isInstalled && status.serviceWorkerActive && status.cacheReady && !status.checking) {
+  // If installed and ready, or bypassed (dev mode), show app
+  // In development, be more lenient - only require service worker or cache, not both
+  const isReady = status.bypassed || 
+    (status.isInstalled && (status.serviceWorkerActive || status.cacheReady) && !status.checking) ||
+    (isDevelopment() && !status.checking); // In dev, allow if not checking
+    
+  if (isReady) {
     return <>{children}</>;
   }
 
@@ -213,7 +260,13 @@ const InstallationGate: React.FC<InstallationGateProps> = ({ children }) => {
           <button
             onClick={() => {
               // Allow user to proceed anyway (for development/testing)
-              setStatus(prev => ({ ...prev, isInstalled: true, serviceWorkerActive: true, cacheReady: true }));
+              setStatus(prev => ({ 
+                ...prev, 
+                isInstalled: true, 
+                serviceWorkerActive: true, 
+                cacheReady: true,
+                bypassed: true 
+              }));
             }}
             className="w-full mt-2 py-2 text-sm text-text-secondary dark:text-white/60 hover:text-text-primary dark:hover:text-white transition-colors"
           >

@@ -109,12 +109,20 @@ export async function checkServiceWorkerStatus(): Promise<boolean> {
  */
 export async function checkCacheReady(): Promise<boolean> {
   if (typeof window === 'undefined' || !('caches' in window)) {
+    // In development, be lenient - return true if caches API not available
+    if (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1') {
+      return true;
+    }
     return false;
   }
   
   try {
     const cacheNames = await caches.keys();
     if (cacheNames.length === 0) {
+      // In development, be lenient
+      if (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1') {
+        return true;
+      }
       return false;
     }
     
@@ -137,9 +145,18 @@ export async function checkCacheReady(): Promise<boolean> {
       }
     }
     
+    // In development, be lenient - return true even if cache not ready
+    if (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1') {
+      return true;
+    }
+    
     return false;
   } catch (error) {
     console.error('[installCheck] Error checking cache:', error);
+    // In development, be lenient
+    if (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1') {
+      return true;
+    }
     return false;
   }
 }
