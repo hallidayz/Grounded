@@ -232,7 +232,7 @@ export interface RuleBasedUsageLog {
     userPatterns?: any;
   };
   aiUnavailableReason?: 'notLoaded' | 'loading' | 'error' | 'timeout';
-  userId: string;
+  userId?: string; // User ID for indexing and querying
 }
 
 export interface Session {
