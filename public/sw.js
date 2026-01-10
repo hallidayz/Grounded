@@ -1,14 +1,14 @@
 // Manual Service Worker for Grounded App
-const CACHE_NAME = 'grounded-cache-v1';
-const RUNTIME_CACHE = 'grounded-runtime-v1';
+const CACHE_NAME = 'grounded-cache-v2';
+const RUNTIME_CACHE = 'grounded-runtime-v2';
 
-// Assets to precache (Critical core files)
+// Assets to precache (Critical core files - must be available offline)
 const PRECACHE_URLS = [
   '/',
   '/index.html',
   '/manifest.json',
   '/favicon.ico',
-  '/ac-minds-logo.png'
+  '/ac-minds-logo.png',
 ];
 
 self.addEventListener('install', event => {
