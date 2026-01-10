@@ -18,7 +18,7 @@ if (typeof globalThis !== 'undefined') {
   
   // Set up the environment configuration
   globalOrt.env = globalOrt.env || {};
-  globalOrt.env.logLevel = 'error'; // Suppress benign warnings (only show errors)
+  globalOrt.env.logLevel = 'fatal'; // Suppress all warnings (only show fatal errors)
   globalOrt.env.wasm = globalOrt.env.wasm || {};
   
   // Note: ONNX Runtime warnings are filtered in debugLog.ts to avoid cluttering debug logs

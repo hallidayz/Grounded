@@ -25,9 +25,9 @@ const FEELING_EMOJIS: Record<string, string> = {
   // Hopeful
   'optimistic': '☀️', 'encouraged': '💪', 'motivated': '🚀', 'inspired': '✨', 'forward-looking': '👀', 'promising': '🌟', 'bright': '💡', 'upward': '📈',
   // Positive
-  'hopeful': '🌱', 'curious': '🤔', 'calm': '🌿', 'engaged': '🎯', 'content': '😊', 'peaceful': '🕊️', 'optimistic': '☀️', 'grateful': '🙏',
+  'hopeful': '🌱', 'curious': '🤔', 'calm': '🌿', 'engaged': '🎯', 'content': '😊', 'grateful': '🙏',
   // Energized
-  'joyful': '😄', 'excited': '🎉', 'inspired': '✨', 'proud': '🦁', 'elated': '🎊', 'enthusiastic': '🔥', 'motivated': '🚀', 'vibrant': '🌈'
+  'joyful': '😄', 'excited': '🎉', 'proud': '🦁', 'elated': '🎊', 'enthusiastic': '🔥', 'vibrant': '🌈'
 };
 
 const EmotionSelection: React.FC<EmotionSelectionProps> = ({ 

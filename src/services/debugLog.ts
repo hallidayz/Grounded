@@ -120,20 +120,28 @@ export function initializeDebugLogging() {
       message.includes('ONNX Runtime') ||
       message.includes('CleanUnusedInitializersAndNodeArgs') ||
       message.includes('Removing initializer') ||
-      message.includes('It is not used by any node');
+      message.includes('It is not used by any node') ||
+      message.includes('/decoder/block.') ||
+      message.includes('/DenseReluDense/act/Constant') ||
+      message.includes('Constant_') ||
+      message.includes('_output_0');
     
     // Filter out other known benign warnings
     const isBenignWarning =
       message.includes('[W:onnxruntime:') ||
       message.includes('graph.cc:') ||
-      message.includes('should be removed from the model');
+      message.includes('should be removed from the model') ||
+      message.includes('aph.cc:');
     
     // Only log warnings that are actionable (not ONNX Runtime internal messages)
     if (!isOnnxRuntimeWarning && !isBenignWarning) {
       logEntry('warning', message, { args });
     }
-    // Still output to console so developers can see them if needed
-    originalWarn.apply(console, args);
+    // Suppress these warnings from console output entirely (they're not actionable)
+    if (!isOnnxRuntimeWarning && !isBenignWarning) {
+      originalWarn.apply(console, args);
+    }
+    // ONNX Runtime warnings are silently ignored - they're just model optimization messages
   };
 
   // Add event listeners (only once)

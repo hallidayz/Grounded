@@ -57,6 +57,7 @@
         if (typeof globalThis !== 'undefined') {
           const globalOrt = globalThis.ort = globalThis.ort || {};
           globalOrt.env = globalOrt.env || {};
+          globalOrt.env.logLevel = 'fatal'; // Suppress all ONNX Runtime warnings
           globalOrt.env.wasm = globalOrt.env.wasm || {};
           
           // Configure WASM backend settings

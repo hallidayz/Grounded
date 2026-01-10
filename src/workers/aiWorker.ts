@@ -1,9 +1,33 @@
 // src/workers/aiWorker.ts
 import { pipeline, env } from '@xenova/transformers';
 
+// Suppress ONNX Runtime warnings in worker thread
+if (typeof globalThis !== 'undefined') {
+  const globalOrt = (globalThis as any).ort = (globalThis as any).ort || {};
+  globalOrt.env = globalOrt.env || {};
+  globalOrt.env.logLevel = 'fatal'; // Suppress all ONNX Runtime warnings
+}
+
+// Wrap console.warn in worker to filter ONNX Runtime warnings
+const originalWarn = console.warn;
+console.warn = (...args: any[]) => {
+  const message = args.join(' ');
+  const isOnnxWarning = 
+    message.includes('onnxruntime') ||
+    message.includes('CleanUnusedInitializersAndNodeArgs') ||
+    message.includes('Removing initializer') ||
+    message.includes('/decoder/block.') ||
+    message.includes('graph.cc:') ||
+    message.includes('aph.cc:');
+  if (!isOnnxWarning) {
+    originalWarn.apply(console, args);
+  }
+};
+
 // Force remote models to prevent 404s on Vercel
 env.allowLocalModels = false;
 env.useBrowserCache = true;
+env.logLevel = 'error'; // Suppress transformers.js warnings
 
 // Cache for multiple models (prevents "wrong model" errors)
 const modelCache: Record<string, any> = {};

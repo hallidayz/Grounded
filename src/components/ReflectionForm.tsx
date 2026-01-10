@@ -6,6 +6,7 @@ import StatusIndicator, { StatusType } from './StatusIndicator';
 import MarkdownRenderer from './MarkdownRenderer';
 
 import EmotionPicker from './EmotionPicker';
+import EmotionSelection from './EmotionSelection';
 
 interface ReflectionFormProps {
   value: ValueItem;
