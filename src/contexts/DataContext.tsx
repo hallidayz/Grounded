@@ -59,6 +59,7 @@ export const DataProvider: React.FC<DataProviderProps> = ({
   const hasLoadedInitialDataRef = useRef(false);
   const initializationTimeoutRef = useRef<NodeJS.Timeout | null>(null);
   const pendingSaveRef = useRef<Promise<void> | null>(null); // Track pending save for exit handler
+  const hasTriedDatabaseLoadRef = useRef(false); // Track if we've tried loading from database
 
   // Update state when initialData changes (from initialization)
   useEffect(() => {
@@ -97,6 +98,55 @@ export const DataProvider: React.FC<DataProviderProps> = ({
       setIsHydrating(false);
     }
   }, [initialData]);
+
+  // CRITICAL FIX: Load values from database if initialData didn't have them
+  useEffect(() => {
+    // Only try once, and only if we haven't tried yet and user is authenticated
+    // Don't check hasLoadedInitialDataRef - we want to try database even if other effects marked it as loaded
+    if (hasTriedDatabaseLoadRef.current || !userId || authState !== 'app') {
+      return;
+    }
+
+    // If we have no values but user is authenticated, try loading from database
+    // This ensures we always check the database, even if initialData was empty
+    if (selectedValueIds.length === 0) {
+      hasTriedDatabaseLoadRef.current = true;
+      
+      const loadFromDatabase = async () => {
+        try {
+          console.log('[DataContext] No values in initialData, loading from database...');
+          await adapter.init();
+          const activeValues = await adapter.getActiveValues(userId);
+          
+          if (activeValues.length > 0) {
+            console.log('[DataContext] Loaded values from database:', activeValues.length);
+            setSelectedValueIds(activeValues);
+            hasLoadedInitialDataRef.current = true;
+            setIsHydrating(false);
+          } else {
+            console.log('[DataContext] No values found in database - user is first-time user');
+            hasLoadedInitialDataRef.current = true; // Mark as loaded even if no values found
+            setIsHydrating(false);
+          }
+        } catch (error) {
+          console.error('[DataContext] Error loading values from database:', error);
+          hasLoadedInitialDataRef.current = true; // Mark as loaded even on error to prevent retries
+          setIsHydrating(false);
+        }
+      };
+
+      // Small delay to ensure adapter is ready
+      const timeoutId = setTimeout(loadFromDatabase, 100);
+      return () => clearTimeout(timeoutId);
+    } else {
+      // We have values from initialData, mark as tried and loaded
+      hasTriedDatabaseLoadRef.current = true;
+      if (!hasLoadedInitialDataRef.current) {
+        hasLoadedInitialDataRef.current = true;
+        setIsHydrating(false);
+      }
+    }
+  }, [userId, authState, selectedValueIds.length, adapter]);
 
   // Track when data is set via setters (from sync in AppContent)
   // Mark as loaded when we have userId (user is authenticated) or after data appears

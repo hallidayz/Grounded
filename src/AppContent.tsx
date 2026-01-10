@@ -52,7 +52,13 @@ export default function AppContent({ onHydrationReady }: { onHydrationReady?: ()
   );
 
   // Check if this is a first-time user (no values selected)
-  const isFirstTimeUser = context ? (!context.selectedValueIds || context.selectedValueIds.length === 0) : false;
+  // CRITICAL: Only check after hydration is complete to avoid false positives
+  const isFirstTimeUser = useMemo(() => {
+    if (!context || context.isHydrating) {
+      return false; // Don't treat as first-time user while loading
+    }
+    return !context.selectedValueIds || context.selectedValueIds.length === 0;
+  }, [context?.selectedValueIds, context?.isHydrating]);
 
   useEffect(() => {
     if (context && authState === 'app' && onHydrationReady) {
