@@ -23,6 +23,9 @@ interface DashboardProps {
   onNavigate?: (screen: string) => void;
   onLog?: (entry: LogEntry) => void;
   onUpdateGoals?: (goals: Goal[]) => void;
+  initialEmotion?: string;
+  initialFeeling?: string;
+  initialEncouragement?: string | null;
 }
 
 /**
@@ -36,6 +39,9 @@ const Dashboard: React.FC<DashboardProps> = ({
   onNavigate,
   onLog,
   onUpdateGoals,
+  initialEmotion,
+  initialFeeling,
+  initialEncouragement,
 }) => {
   // ✅ useDashboard using object‑arg pattern
   const dashboard = useDashboard({ 

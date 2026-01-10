@@ -16,6 +16,7 @@ import Dashboard from "./components/Dashboard";
 import CrisisResourcesModal from "./components/CrisisResourcesModal";
 import { AppHeader } from "./components/Layout/AppHeader";
 import { ALL_VALUES } from "./constants";
+import { generateEmotionalEncouragement } from "./services/aiService";
 
 type AppView = "home" | "goals" | "vault" | "update" | "values" | "report";
 type BottomNavView = "home" | "values" | "report" | "vault" | "goals" | "onboarding" | "settings";

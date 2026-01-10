@@ -286,6 +286,7 @@ const Login: React.FC<LoginProps> = ({ onLogin }) => {
                   value={username}
                   onChange={(e) => setUsername(e.target.value)}
                   required
+                  autoComplete="username"
                   /* PREV: focus:ring-yellow-warm/50 */
                   className="w-full px-4 py-3 rounded-lg bg-bg-primary dark:bg-dark-bg-primary/50 border border-border-soft dark:border-dark-border/30 text-text-primary dark:text-white focus:ring-2 focus:ring-brand/50 dark:focus:ring-brand-light/50 outline-none"
                   placeholder="Enter your username"
@@ -365,6 +366,7 @@ const Login: React.FC<LoginProps> = ({ onLogin }) => {
                   onChange={(e) => setUsername(e.target.value)}
                   required
                   minLength={3}
+                  autoComplete="username"
                   /* PREV: focus:ring-yellow-warm/50 */
                   className="w-full px-4 py-3 rounded-lg bg-bg-primary dark:bg-dark-bg-primary/50 border border-border-soft dark:border-dark-border/30 text-text-primary dark:text-white focus:ring-2 focus:ring-brand/50 dark:focus:ring-brand-light/50 outline-none"
                   placeholder="Choose a username (min 3 characters)"
