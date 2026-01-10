@@ -5,6 +5,7 @@ import './styles/safe-area.css';
 import App from './App';
 import { ThemeProvider } from './contexts/ThemeContext';
 import { watchServiceWorkerVersion } from './utils/refresh-cache';
+import InstallationGate from './components/InstallationGate';
 
 // Global error handlers to catch any errors before React mounts
 window.addEventListener('error', (event) => {
@@ -89,7 +90,9 @@ const root = ReactDOM.createRoot(rootElement);
 try {
   root.render(
     <ThemeProvider>
-      <App />
+      <InstallationGate>
+        <App />
+      </InstallationGate>
     </ThemeProvider>
   );
   // Clear timeout if React renders successfully
