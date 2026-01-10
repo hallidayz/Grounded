@@ -273,7 +273,10 @@ export function useAppInitialization(options: UseAppInitializationOptions): AppI
         setModelLoadingProgress(30, 'Setting up service worker...', '');
         console.log('[INIT] Progress updated to 30%');
         
-        const swActive = await ensureServiceWorkerActive().catch(() => false);
+        const swActive = await ensureServiceWorkerActive().catch((error) => {
+          console.error('[INIT] Error ensuring service worker active:', error);
+          return false;
+        });
         
         if (swActive) {
           console.log('✅ Service Worker is active - starting background model loading');
@@ -332,8 +335,9 @@ export function useAppInitialization(options: UseAppInitializationOptions): AppI
                 setShouldShowMigration(true);
                 onSetShowMigrationScreen?.(true);
               }
-            }).catch(() => {
-              // Ignore errors in legacy detection
+            }).catch((error) => {
+              console.error('[INIT] Error detecting legacy data:', error);
+              // Continue initialization even if legacy detection fails
             });
           }
         }
@@ -502,17 +506,26 @@ export function useAppInitialization(options: UseAppInitializationOptions): AppI
                   Promise.race([
                     adapter.getAppData(user.id),
                     new Promise<any>((_, reject) => setTimeout(() => reject(new Error('getAppData timeout')), 5000))
-                  ]).catch(() => null),
+                  ]).catch((error) => {
+                    console.error('[INIT] Error loading appData:', error);
+                    return null;
+                  }),
                   // Try to load from values table (new structure) - use adapter for security
                   Promise.race([
                     adapter.getActiveValues(user.id),
                     new Promise<string[]>((_, reject) => setTimeout(() => reject(new Error('getActiveValues timeout')), 2000))
-                  ]).catch(() => []),
+                  ]).catch((error) => {
+                    console.error('[INIT] Error loading activeValues:', error);
+                    return [];
+                  }),
                   // Try to load from goals table (new structure) - use adapter for security
                   Promise.race([
                     adapter.getGoals(user.id),
                     new Promise<any[]>((_, reject) => setTimeout(() => reject(new Error('getGoals timeout')), 2000))
-                  ]).catch(() => [])
+                  ]).catch((error) => {
+                    console.error('[INIT] Error loading goals:', error);
+                    return [];
+                  })
                 ]);
                 
                 if (!isMountedRef.current) {
@@ -541,7 +554,8 @@ export function useAppInitialization(options: UseAppInitializationOptions): AppI
                     
                     if (loadedSettings.aiModel) {
                       setSelectedModel(loadedSettings.aiModel);
-                      initializeModels(false, loadedSettings.aiModel).catch(() => {
+                      initializeModels(false, loadedSettings.aiModel).catch((error) => {
+                        console.error('[INIT] Error initializing models:', error);
                         // Silently fail - models will retry later
                       });
                     }
@@ -662,11 +676,12 @@ export function useAppInitialization(options: UseAppInitializationOptions): AppI
               console.error('Error parsing deep link URL:', e);
             }
           }
-        }).catch(() => {
+        }).catch((error) => {
+          console.error('[INIT] Error handling deep link:', error);
           // No deep links on launch
         });
-      }).catch(() => {
-        console.warn('Deep-link plugin not available');
+      }).catch((error) => {
+        console.warn('[INIT] Deep-link plugin not available:', error);
       });
     }
     

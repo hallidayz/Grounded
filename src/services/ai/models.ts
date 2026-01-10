@@ -157,7 +157,8 @@ export function isTextGenerationModel(model: any): boolean {
     }
     
     return false;
-  } catch {
+  } catch (error) {
+    console.error('[models] Error checking model compatibility:', error);
     return false;
   }
 }
@@ -245,7 +246,8 @@ export async function initializeModels(forceReload: boolean = false, modelType?:
         initFailureCount = 0; // Reset failure count on success
         return true; // Already loaded with correct model and working
       }
-    } catch {
+    } catch (error) {
+      console.error('[models] Error checking if models are loaded:', error);
       // Models might be broken, continue to reload
     }
   }
@@ -259,7 +261,8 @@ export async function initializeModels(forceReload: boolean = false, modelType?:
         return result;
       }
       // If wrong model, we need to reload (but don't force reload here to avoid loop)
-    } catch {
+    } catch (error) {
+      console.error('[models] Error checking current model:', error);
       // Continue with new load attempt
     }
   }
@@ -885,7 +888,8 @@ export async function preloadModels(): Promise<boolean> {
     try {
       await modelLoadPromise;
       return areModelsLoaded();
-    } catch {
+    } catch (error) {
+      console.error('[models] Error waiting for model load:', error);
       return false;
     }
   }
@@ -949,7 +953,8 @@ export async function preloadModels(): Promise<boolean> {
             if (areModelsLoaded()) {
               return true;
             }
-          } catch {
+          } catch (error) {
+            console.error('[models] Error checking models during retry:', error);
             // Continue with new attempt
           }
         }
@@ -1063,7 +1068,10 @@ export async function preloadModelsContinuously(): Promise<void> {
   
   // Check if models are already loaded
   if (areModelsLoaded()) {
-    const modelsWork = await verifyModelsWork().catch(() => false);
+    const modelsWork = await verifyModelsWork().catch((error) => {
+      console.error('[models] Error verifying models work:', error);
+      return false;
+    });
     if (modelsWork) {
       console.log('✅ Models already loaded and working - skipping continuous loading.');
       currentDownloadProgress = 100;
@@ -1126,7 +1134,8 @@ export async function preloadModelsContinuously(): Promise<void> {
                   isContinuousLoadingActive = false;
                   return;
                 }
-              } catch {
+              } catch (error) {
+                console.error('[models] Error in continuous loading:', error);
                 // Continue retrying
               }
             }

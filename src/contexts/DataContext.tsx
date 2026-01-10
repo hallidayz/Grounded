@@ -208,7 +208,13 @@ export const DataProvider: React.FC<DataProviderProps> = ({
           try {
             // Only include values in save if we should save them
             // If we haven't loaded yet and have no values, skip values field to avoid overwriting
-            const appDataToSave: any = {
+            const appDataToSave: {
+              settings: AppSettings;
+              logs: LogEntry[];
+              goals: Goal[];
+              lcswConfig?: LCSWConfig;
+              values?: string[];
+            } = {
               settings,
               logs,
               goals,

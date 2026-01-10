@@ -27,11 +27,11 @@ const FEELING_EMOJIS: Record<string, string> = {
   // Calm
   'peaceful': '🕊️', 'centered': '🎯', 'balanced': '⚖️', 'serene': '🌊', 'grounded': '🌱', 'stable': '🏔️', 'tranquil': '🌸', 'at ease': '😌',
   // Hopeful
-  'optimistic': '☀️', 'encouraged': '💪', 'motivated': '🚀', 'inspired': '✨', 'forward-looking': '👀', 'promising': '🌟', 'bright': '💡', 'upward': '📈',
-  // Positive
-  'hopeful': '🌱', 'curious': '🤔', 'calm': '🌿', 'engaged': '🎯', 'content': '😊', 'peaceful': '🕊️', 'optimistic': '☀️', 'grateful': '🙏',
-  // Energized
-  'joyful': '😄', 'excited': '🎉', 'inspired': '✨', 'proud': '🦁', 'elated': '🎊', 'enthusiastic': '🔥', 'motivated': '🚀', 'vibrant': '🌈'
+    'optimistic': '☀️', 'encouraged': '💪', 'motivated': '🚀', 'inspired': '✨', 'forward-looking': '👀', 'promising': '🌟', 'bright': '💡', 'upward': '📈',
+    // Positive
+    'hopeful': '🌱', 'curious': '🤔', 'calm': '🌿', 'engaged': '🎯', 'content': '😊', 'peaceful': '🕊️', 'grateful': '🙏',
+    // Energized
+    'joyful': '😄', 'excited': '🎉', 'proud': '🦁', 'elated': '🎊', 'enthusiastic': '🔥', 'vibrant': '🌈'
 };
 
 const AIResponseBubble: React.FC<AIResponseBubbleProps> = ({ 

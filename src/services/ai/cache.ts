@@ -185,7 +185,8 @@ export async function clearExpiredCache(): Promise<void> {
           if (cached.expiresAt && cached.expiresAt < now) {
             keysToRemove.push(key);
           }
-        } catch {
+        } catch (error) {
+          console.error('[ai/cache] Invalid cache entry, removing:', key, error);
           // Invalid cache entry, remove it
           keysToRemove.push(key);
         }
@@ -241,7 +242,8 @@ export async function invalidateCache(
           if (conditions.emotionalStateChanged || conditions.protocolsChanged) {
             keysToRemove.push(key);
           }
-        } catch {
+        } catch (error) {
+          console.error('[ai/cache] Invalid cache entry, removing:', key, error);
           // Invalid cache entry, remove it
           keysToRemove.push(key);
         }

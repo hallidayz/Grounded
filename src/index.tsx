@@ -9,30 +9,8 @@ import InstallationGate from './components/InstallationGate';
 // Import cache service to make it available globally
 import './services/cacheService';
 
-// Global error handlers to catch any errors before React mounts
-window.addEventListener('error', (event) => {
-  console.error('Global error:', event.error, event.error?.stack);
-  // Log to help debug Vercel issues
-  if (event.error) {
-    console.error('Error details:', {
-      message: event.error.message,
-      stack: event.error.stack,
-      filename: event.filename,
-      lineno: event.lineno,
-      colno: event.colno
-    });
-  }
-});
-
-window.addEventListener('unhandledrejection', (event) => {
-  console.error('Unhandled promise rejection:', event.reason);
-  if (event.reason instanceof Error) {
-    console.error('Rejection details:', {
-      message: event.reason.message,
-      stack: event.reason.stack
-    });
-  }
-});
+// Global error handlers removed - handled by debugLog.ts to avoid duplicates
+// debugLog.ts initializes error handlers and provides better logging
 
 const rootElement = document.getElementById('root');
 if (!rootElement) {

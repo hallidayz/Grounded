@@ -3,10 +3,24 @@
  * Provides unified interface for both legacy IndexedDB and encrypted SQLite databases
  */
 
-import { dbService, DatabaseService } from './database';
 import { AppSettings, LogEntry, Goal, LCSWConfig } from '../types';
 import { EncryptedPWA } from './encryptedPWA';
-import { db } from './dexieDB';
+import { 
+  db,
+  createUser as dexieCreateUser,
+  getUserByUsername as dexieGetUserByUsername,
+  getUserByEmail as dexieGetUserByEmail,
+  getUserById as dexieGetUserById,
+  getAllUsers as dexieGetAllUsers,
+  updateUser as dexieUpdateUser,
+  createResetToken as dexieCreateResetToken,
+  getResetToken as dexieGetResetToken,
+  deleteResetToken as dexieDeleteResetToken,
+  cleanupExpiredTokens as dexieCleanupExpiredTokens,
+  getFeelingPatterns as dexieGetFeelingPatterns,
+  getProgressMetrics as dexieGetProgressMetrics,
+  getFeelingFrequency as dexieGetFeelingFrequency,
+} from './dexieDB';
 import type { UserRecord, AppDataRecord, ValueRecord, GoalRecord, FeelingLogRecord, UserInteractionRecord, SessionRecord, AssessmentRecord, ReportRecord, ResetTokenRecord } from './dexieDB';
 
 // Re-export types from database.ts for convenience
@@ -164,12 +178,12 @@ export interface DatabaseAdapter {
  * It MUST NOT be used for PHI data when encryption is enabled.
  * Use EncryptedAdapter for HIPAA-compliant storage.
  */
+// Global initialization guard to prevent race conditions
+let initializationPromise: Promise<void> | null = null;
+let isInitialized = false;
+
 export class LegacyAdapter implements DatabaseAdapter {
-  private dbService: DatabaseService; // Keep for backward compatibility during transition
-  
-  constructor(dbService: DatabaseService) {
-    this.dbService = dbService;
-    
+  constructor() {
     // Security check: Warn if encryption is enabled but we're using LegacyAdapter
     if (isEncryptionEnabled()) {
       console.warn(
@@ -180,35 +194,52 @@ export class LegacyAdapter implements DatabaseAdapter {
   }
   
   async init(): Promise<void> {
-    // Initialize Dexie database with cleanup
-    // This will clean up old databases and open the connection
-    await db.initialize();
-    // Don't call dbService.init() - it uses old database.ts with version conflicts
-    // All operations should go through Dexie now
+    // Singleton pattern: only initialize once, reuse promise if already initializing
+    if (isInitialized) {
+      return;
+    }
+    
+    if (initializationPromise) {
+      return initializationPromise;
+    }
+    
+    initializationPromise = (async () => {
+      try {
+        // Initialize Dexie database with cleanup
+        // This will clean up old databases and open the connection
+        await db.initialize();
+        isInitialized = true;
+      } catch (error) {
+        initializationPromise = null; // Reset on error to allow retry
+        throw error;
+      }
+    })();
+    
+    return initializationPromise;
   }
   
   async createUser(userData: Omit<UserData, 'id' | 'createdAt'>): Promise<string> {
-    return this.dbService.createUser(userData);
+    return dexieCreateUser(userData);
   }
   
   async getUserByUsername(username: string): Promise<UserData | null> {
-    return this.dbService.getUserByUsername(username);
+    return dexieGetUserByUsername(username);
   }
   
   async getUserByEmail(email: string): Promise<UserData | null> {
-    return this.dbService.getUserByEmail(email);
+    return dexieGetUserByEmail(email);
   }
   
   async getUserById(userId: string): Promise<UserData | null> {
-    return this.dbService.getUserById(userId);
+    return dexieGetUserById(userId);
   }
 
   async getAllUsers(): Promise<UserData[]> {
-    return this.dbService.getAllUsers();
+    return dexieGetAllUsers();
   }
   
   async updateUser(userId: string, updates: Partial<UserData>): Promise<void> {
-    return this.dbService.updateUser(userId, updates);
+    return dexieUpdateUser(userId, updates);
   }
   
   async getAppData(userId: string): Promise<AppData | null> {
@@ -226,19 +257,19 @@ export class LegacyAdapter implements DatabaseAdapter {
   }
   
   async createResetToken(userId: string, email: string): Promise<string> {
-    return this.dbService.createResetToken(userId, email);
+    return dexieCreateResetToken(userId, email);
   }
   
   async getResetToken(token: string): Promise<{ userId: string; email: string } | null> {
-    return this.dbService.getResetToken(token);
+    return dexieGetResetToken(token);
   }
   
   async deleteResetToken(token: string): Promise<void> {
-    return this.dbService.deleteResetToken(token);
+    return dexieDeleteResetToken(token);
   }
   
   async cleanupExpiredTokens(): Promise<void> {
-    return this.dbService.cleanupExpiredTokens();
+    return dexieCleanupExpiredTokens();
   }
   
   async saveFeelingLog(feelingLog: {
@@ -406,7 +437,7 @@ export class LegacyAdapter implements DatabaseAdapter {
   }
   
   async getFeelingPatterns(startDate: string, endDate: string): Promise<{ state: string; count: number }[]> {
-    return this.dbService.getFeelingPatterns(startDate, endDate);
+    return dexieGetFeelingPatterns(startDate, endDate);
   }
   
   async getProgressMetrics(startDate: string, endDate: string): Promise<{
@@ -414,11 +445,11 @@ export class LegacyAdapter implements DatabaseAdapter {
     averageDuration: number;
     valuesEngaged: string[];
   }> {
-    return this.dbService.getProgressMetrics(startDate, endDate);
+    return dexieGetProgressMetrics(startDate, endDate);
   }
   
   async getFeelingFrequency(limit?: number): Promise<{ feeling: string; count: number }[]> {
-    return this.dbService.getFeelingFrequency(limit);
+    return dexieGetFeelingFrequency(limit);
   }
 
   async saveAssessment(assessment: any): Promise<void> {
@@ -606,8 +637,14 @@ export class LegacyAdapter implements DatabaseAdapter {
       
       // Get userInteractions and ruleBasedUsageLogs by userId (now indexed)
       const [userInteractionsToDelete, ruleBasedUsageLogsToDelete] = await Promise.all([
-        db.userInteractions.where('userId').equals(userId).toArray().catch(() => []),
-        db.ruleBasedUsageLogs.where('userId').equals(userId).toArray().catch(() => []),
+        db.userInteractions.where('userId').equals(userId).toArray().catch((error) => {
+          console.error('[LegacyAdapter] Error getting userInteractions:', error);
+          return [];
+        }),
+        db.ruleBasedUsageLogs.where('userId').equals(userId).toArray().catch((error) => {
+          console.error('[LegacyAdapter] Error getting ruleBasedUsageLogs:', error);
+          return [];
+        }),
       ]);
       
       // Delete all records that have userId indexed
@@ -1574,7 +1611,8 @@ const PHI_DATA_TYPES = [
 export function isEncryptionEnabled(): boolean {
   try {
     return localStorage.getItem('encryption_enabled') === 'true';
-  } catch {
+  } catch (error) {
+    console.error('[databaseAdapter] Error checking encryption status:', error);
     return false;
   }
 }
@@ -1615,12 +1653,12 @@ export function getDatabaseAdapter(): DatabaseAdapter {
         '[getDatabaseAdapter] Encryption enabled but EncryptedPWA not initialized. ' +
         'Returning LegacyAdapter - PHI operations will be blocked by validateEncryptionBoundary().'
       );
-      return new LegacyAdapter(dbService);
+      return new LegacyAdapter();
     }
     return new EncryptedAdapter(encryptedDb);
   }
   
   // Default to legacy adapter (Dexie) when encryption is disabled
-  return new LegacyAdapter(dbService);
+  return new LegacyAdapter();
 }
 

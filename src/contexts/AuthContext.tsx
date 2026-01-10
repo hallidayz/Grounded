@@ -127,7 +127,10 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({
                 activeValues = await Promise.race([
                   adapter.getActiveValues(user.id),
                   new Promise<string[]>((_, reject) => setTimeout(() => reject(new Error('getActiveValues timeout')), 2000))
-                ]).catch(() => []);
+                ]).catch((error) => {
+                  console.error('[AuthContext] Error loading activeValues:', error);
+                  return [];
+                });
                 console.log('[AuthContext] Active values from table:', activeValues.length);
               } catch (error) {
                 console.warn('[AuthContext] Could not load values from table:', error);
@@ -273,7 +276,10 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({
               activeValues = await Promise.race([
                 adapter.getActiveValues(loggedInUserId),
                 new Promise<string[]>((_, reject) => setTimeout(() => reject(new Error('getActiveValues timeout')), 2000))
-              ]).catch(() => []);
+              ]).catch((error) => {
+                console.error('[AuthContext] Error loading activeValues (login):', error);
+                return [];
+              });
               console.log('[LOGIN] Active values from table:', activeValues.length);
             } catch (error) {
               console.warn('[LOGIN] Could not load values from table:', error);

@@ -33,7 +33,8 @@ let storageInitialized = false;
 if (typeof window !== 'undefined') {
   initStorage().then(() => {
     storageInitialized = true;
-  }).catch(() => {
+  }).catch((error) => {
+    console.error('[storage] Error initializing storage:', error);
     storageInitialized = true; // Continue even if Tauri store fails
   });
 }
@@ -56,7 +57,8 @@ export async function getItem<T = string>(key: string): Promise<T | null> {
       if (item === null) return null;
       try {
         return JSON.parse(item) as T;
-      } catch {
+      } catch (error) {
+        // Not JSON, return as string
         return item as T;
       }
     }
@@ -68,10 +70,12 @@ export async function getItem<T = string>(key: string): Promise<T | null> {
       if (item === null) return null;
       try {
         return JSON.parse(item) as T;
-      } catch {
+      } catch (error) {
+        // Not JSON, return as string
         return item as T;
       }
-    } catch {
+    } catch (error) {
+      console.error(`[storage] Error in fallback getItem for ${key}:`, error);
       return null;
     }
   }
@@ -177,7 +181,8 @@ export async function keys(): Promise<string[]> {
     // Fallback to localStorage
     try {
       return Object.keys(localStorage);
-    } catch {
+    } catch (error) {
+      console.error('[storage] Error getting all keys:', error);
       return [];
     }
   }

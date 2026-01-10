@@ -84,10 +84,15 @@
       status.innerHTML = '<p>Clearing storage...</p>';
       
       try {
-        // Clear IndexedDB
+        // Clear IndexedDB (EXCEPT auth database - users must be preserved)
         if ('indexedDB' in window) {
           const databases = await indexedDB.databases();
           for (const db of databases) {
+            // CRITICAL: Never delete the auth database - it contains user credentials
+            if (db.name === 'groundedAuthDB') {
+              console.log('[clear-cache] Preserving auth database:', db.name);
+              continue;
+            }
             indexedDB.deleteDatabase(db.name);
           }
         }

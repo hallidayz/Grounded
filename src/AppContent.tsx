@@ -29,7 +29,8 @@ export default function AppContent({ onHydrationReady }: { onHydrationReady?: ()
   let context;
   try {
     context = useDataContext();
-  } catch {
+  } catch (error) {
+    console.error('[AppContent] Error accessing DataContext:', error);
     context = null;
   }
   

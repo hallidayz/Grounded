@@ -5,7 +5,6 @@
  */
 
 import { authStore } from './authStore';
-import { dbService } from './database';
 import { getDatabaseAdapter } from './databaseAdapter';
 import { EncryptedPWA } from './encryptedPWA';
 import { isTauri } from './platform';

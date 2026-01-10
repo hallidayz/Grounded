@@ -1088,6 +1088,279 @@ if (typeof window !== 'undefined') {
   }
 }
 
+/**
+ * Helper methods for user operations using Dexie
+ * These replace the raw IndexedDB operations from database.ts
+ */
+export async function createUser(userData: Omit<UserRecord, 'id' | 'createdAt'>): Promise<string> {
+  try {
+    // Ensure database is open
+    if (!db.isOpen()) {
+      await db.open();
+    }
+    
+    const id = `user_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
+    const user: UserRecord = {
+      ...userData,
+      id,
+      createdAt: new Date().toISOString()
+    };
+    
+    await db.users.add(user);
+    return id;
+  } catch (error) {
+    console.error('[Dexie] Error creating user:', error);
+    throw error;
+  }
+}
+
+export async function getUserByUsername(username: string): Promise<UserRecord | null> {
+  try {
+    if (!db.isOpen()) {
+      await db.open();
+    }
+    const user = await db.users.where('username').equals(username).first();
+    return user || null;
+  } catch (error) {
+    console.error('[Dexie] Error getting user by username:', error);
+    return null;
+  }
+}
+
+export async function getUserByEmail(email: string): Promise<UserRecord | null> {
+  try {
+    if (!db.isOpen()) {
+      await db.open();
+    }
+    const user = await db.users.where('email').equals(email).first();
+    return user || null;
+  } catch (error) {
+    console.error('[Dexie] Error getting user by email:', error);
+    return null;
+  }
+}
+
+export async function getUserById(userId: string): Promise<UserRecord | null> {
+  try {
+    if (!db.isOpen()) {
+      await db.open();
+    }
+    const user = await db.users.get(userId);
+    return user || null;
+  } catch (error) {
+    console.error('[Dexie] Error getting user by id:', error);
+    return null;
+  }
+}
+
+export async function getAllUsers(): Promise<UserRecord[]> {
+  try {
+    if (!db.isOpen()) {
+      await db.open();
+    }
+    return await db.users.toArray();
+  } catch (error) {
+    console.error('[Dexie] Error getting all users:', error);
+    return [];
+  }
+}
+
+export async function updateUser(userId: string, updates: Partial<UserRecord>): Promise<void> {
+  try {
+    if (!db.isOpen()) {
+      await db.open();
+    }
+    const user = await db.users.get(userId);
+    if (!user) {
+      throw new Error('User not found');
+    }
+    await db.users.update(userId, updates);
+  } catch (error) {
+    console.error('[Dexie] Error updating user:', error);
+    throw error;
+  }
+}
+
+/**
+ * Helper methods for reset token operations using Dexie
+ */
+export async function createResetToken(userId: string, email: string): Promise<string> {
+  try {
+    if (!db.isOpen()) {
+      await db.open();
+    }
+    
+    const token = `token_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
+    const expires = Date.now() + 24 * 60 * 60 * 1000; // 24 hours
+    
+    await db.resetTokens.add({
+      token,
+      userId,
+      email,
+      expires: expires.toString(), // Store as string for consistency
+      createdAt: new Date().toISOString(),
+    });
+    
+    return token;
+  } catch (error) {
+    console.error('[Dexie] Error creating reset token:', error);
+    throw error;
+  }
+}
+
+export async function getResetToken(token: string): Promise<{ userId: string; email: string } | null> {
+  try {
+    if (!db.isOpen()) {
+      await db.open();
+    }
+    
+    const tokenRecord = await db.resetTokens.get(token);
+    if (!tokenRecord) {
+      return null;
+    }
+    
+    // Check if token is expired - handle both string and number formats
+    let expires: number;
+    if (typeof tokenRecord.expires === 'string') {
+      expires = parseInt(tokenRecord.expires, 10);
+    } else {
+      expires = tokenRecord.expires as number;
+    }
+    
+    if (isNaN(expires) || expires < Date.now()) {
+      return null;
+    }
+    
+    return { userId: tokenRecord.userId, email: tokenRecord.email };
+  } catch (error) {
+    console.error('[Dexie] Error getting reset token:', error);
+    return null;
+  }
+}
+
+export async function deleteResetToken(token: string): Promise<void> {
+  try {
+    if (!db.isOpen()) {
+      await db.open();
+    }
+    await db.resetTokens.delete(token);
+  } catch (error) {
+    console.error('[Dexie] Error deleting reset token:', error);
+    throw error;
+  }
+}
+
+export async function cleanupExpiredTokens(): Promise<void> {
+  try {
+    if (!db.isOpen()) {
+      await db.open();
+    }
+    
+    const now = Date.now();
+    const tokens = await db.resetTokens.toArray();
+    const expiredTokens = tokens.filter(t => {
+      let expires: number;
+      if (typeof t.expires === 'string') {
+        expires = parseInt(t.expires, 10);
+      } else {
+        expires = t.expires as number;
+      }
+      return !isNaN(expires) && expires < now;
+    });
+    
+    await Promise.all(expiredTokens.map(t => db.resetTokens.delete(t.token)));
+  } catch (error) {
+    console.error('[Dexie] Error cleaning up expired tokens:', error);
+    // Don't throw - cleanup is non-critical
+  }
+}
+
+/**
+ * Helper methods for analytics operations using Dexie
+ */
+export async function getFeelingPatterns(startDate: string, endDate: string): Promise<{ state: string; count: number }[]> {
+  try {
+    if (!db.isOpen()) {
+      await db.open();
+    }
+    
+    const logs = await db.feelingLogs
+      .where('timestamp')
+      .between(startDate, endDate, true, true)
+      .toArray();
+    
+    const patterns: Record<string, number> = {};
+    logs.forEach(log => {
+      const state = log.emotionalState || log.emotion || 'unknown';
+      patterns[state] = (patterns[state] || 0) + 1;
+    });
+    
+    return Object.entries(patterns).map(([state, count]) => ({ state, count }));
+  } catch (error) {
+    console.error('[Dexie] Error getting feeling patterns:', error);
+    return [];
+  }
+}
+
+export async function getProgressMetrics(startDate: string, endDate: string): Promise<{
+  totalSessions: number;
+  averageDuration: number;
+  valuesEngaged: string[];
+}> {
+  try {
+    if (!db.isOpen()) {
+      await db.open();
+    }
+    
+    const sessions = await db.sessions
+      .where('startTimestamp')
+      .between(startDate, endDate, true, true)
+      .toArray();
+    
+    const totalSessions = sessions.length;
+    const completedSessions = sessions.filter(s => s.duration !== undefined && s.duration !== null);
+    const averageDuration = completedSessions.length > 0
+      ? completedSessions.reduce((sum, s) => sum + (s.duration || 0), 0) / completedSessions.length
+      : 0;
+    const valuesEngaged = [...new Set(sessions.map(s => s.valueId).filter(Boolean))];
+    
+    return { totalSessions, averageDuration, valuesEngaged };
+  } catch (error) {
+    console.error('[Dexie] Error getting progress metrics:', error);
+    return { totalSessions: 0, averageDuration: 0, valuesEngaged: [] };
+  }
+}
+
+export async function getFeelingFrequency(limit?: number): Promise<{ feeling: string; count: number }[]> {
+  try {
+    if (!db.isOpen()) {
+      await db.open();
+    }
+    
+    const logs = await db.feelingLogs
+      .orderBy('timestamp')
+      .reverse()
+      .toArray();
+    
+    const frequency: Record<string, number> = {};
+    const logsToProcess = limit ? logs.slice(0, limit) : logs;
+    
+    logsToProcess.forEach(log => {
+      const feeling = log.selectedFeeling;
+      if (feeling) {
+        frequency[feeling] = (frequency[feeling] || 0) + 1;
+      }
+    });
+    
+    return Object.entries(frequency)
+      .map(([feeling, count]) => ({ feeling, count }))
+      .sort((a, b) => b.count - a.count);
+  } catch (error) {
+    console.error('[Dexie] Error getting feeling frequency:', error);
+    return [];
+  }
+}
+
 // Export types for use in other modules
 export type {
   UserRecord,
