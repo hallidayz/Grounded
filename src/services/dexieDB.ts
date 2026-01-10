@@ -348,22 +348,45 @@ class GroundedDB extends Dexie {
     
     // Check existing database version first to prevent VersionError
     const existingVersion = await this.checkExistingVersion();
-    if (existingVersion !== null && existingVersion > CURRENT_DB_VERSION) {
-      console.warn(
-        `[Dexie] Existing database version (${existingVersion}) is higher than requested (${CURRENT_DB_VERSION}). Resetting database...`
-      );
-      // Attempt to export data before reset
-      try {
-        const exportData = await exportFromRawIndexedDB();
-        if (exportData && Object.keys(exportData).length > 0) {
-          sessionStorage.setItem('dexie_export_before_recovery', JSON.stringify(exportData));
-          console.log('[Dexie] Data exported before reset - stored in sessionStorage');
+    
+    // CRITICAL FIX: Only reset if version is actually higher AND not a bug (like 40 from concatenation)
+    // Also handle case where version is 0 (new database) or null (doesn't exist)
+    if (existingVersion !== null && existingVersion !== 0) {
+      // Ensure we're comparing numbers, not strings
+      const existingVersionNum = typeof existingVersion === 'number' ? existingVersion : parseInt(String(existingVersion), 10);
+      const currentVersionNum = typeof CURRENT_DB_VERSION === 'number' ? CURRENT_DB_VERSION : parseInt(String(CURRENT_DB_VERSION), 10);
+      
+      // Only reset if version is legitimately higher (not a concatenation bug)
+      // Versions like 40, 400, etc. are likely bugs and should be treated as version 4
+      if (existingVersionNum > currentVersionNum && existingVersionNum < 100) {
+        console.warn(
+          `[Dexie] Existing database version (${existingVersionNum}) is higher than requested (${currentVersionNum}). Resetting database...`
+        );
+        // Attempt to export data before reset
+        try {
+          const exportData = await exportFromRawIndexedDB();
+          if (exportData && Object.keys(exportData).length > 0) {
+            sessionStorage.setItem('dexie_export_before_recovery', JSON.stringify(exportData));
+            console.log('[Dexie] Data exported before reset - stored in sessionStorage');
+          }
+        } catch (exportError) {
+          console.warn('[Dexie] Could not export data before reset:', exportError);
         }
-      } catch (exportError) {
-        console.warn('[Dexie] Could not export data before reset:', exportError);
+        // Reset database to current version
+        await this.resetDatabase();
+      } else if (existingVersionNum >= 100 || (existingVersionNum > 10 && existingVersionNum % 10 === 0)) {
+        // Likely a version concatenation bug (40, 400, etc.) - just reset without warning
+        console.warn(
+          `[Dexie] Detected invalid database version (${existingVersionNum}) - likely a bug. Resetting to version ${currentVersionNum}...`
+        );
+        await this.resetDatabase();
+      } else if (existingVersionNum === currentVersionNum) {
+        // Versions match - no action needed
+        console.log(`[Dexie] Database version matches current version (${currentVersionNum})`);
+      } else if (existingVersionNum < currentVersionNum) {
+        // Lower version - will be handled by Dexie's upgrade mechanism
+        console.log(`[Dexie] Database version (${existingVersionNum}) is lower than current (${currentVersionNum}) - will upgrade automatically`);
       }
-      // Reset database to current version
-      await this.resetDatabase();
     }
     
     // Check for version conflicts and reset if needed
@@ -385,19 +408,66 @@ class GroundedDB extends Dexie {
   /**
    * Check the existing database version using raw IndexedDB API
    * Returns null if database doesn't exist, or the version number if it does
+   * CRITICAL: Ensures version is parsed as a proper number (not string concatenation)
    */
   private async checkExistingVersion(): Promise<number | null> {
     return new Promise((resolve) => {
       const request = indexedDB.open(DB_NAME);
       request.onsuccess = () => {
         const db = request.result;
-        const version = db.version;
+        let version = db.version;
+        
+        // CRITICAL FIX: Ensure version is a proper number, not a string or concatenated value
+        // Parse as integer to prevent "40" from "4" + "0" string concatenation
+        if (typeof version === 'string') {
+          version = parseInt(version, 10);
+        } else if (typeof version === 'number') {
+          // Ensure it's an integer, not a float
+          version = Math.floor(version);
+        } else {
+          // Invalid version type - treat as no version
+          console.warn('[Dexie] Invalid version type:', typeof version, version);
+          db.close();
+          resolve(null);
+          return;
+        }
+        
+        // Additional safety check: if version is unreasonably high (likely a bug), reset it
+        // Versions should be small integers (1-10 typically)
+        if (version > 100 || version < 0) {
+          console.warn(`[Dexie] Suspicious database version detected: ${version}. This is likely a bug. Treating as version 0.`);
+          db.close();
+          resolve(0); // Treat as version 0 (needs migration)
+          return;
+        }
+        
+        // If version is 40, 400, etc. (ends in 0 and is > 10), it's likely a concatenation bug
+        // Check if it's a multiple of 10 and > 10, which suggests string concatenation
+        if (version > 10 && version % 10 === 0) {
+          // Likely a concatenation bug - try to extract the real version
+          const versionStr = String(version);
+          if (versionStr.length === 2 && versionStr[1] === '0') {
+            // "40" -> likely meant to be "4"
+            const correctedVersion = parseInt(versionStr[0], 10);
+            console.warn(`[Dexie] Detected likely version concatenation bug: ${version} -> correcting to ${correctedVersion}`);
+            db.close();
+            resolve(correctedVersion);
+            return;
+          }
+        }
+        
         db.close();
         resolve(version);
       };
       request.onerror = () => {
         // Database doesn't exist or can't be opened
         resolve(null);
+      };
+      request.onupgradeneeded = (event) => {
+        // Database is being created/upgraded - no existing version to check
+        const db = (event.target as IDBOpenDBRequest).result;
+        db.close();
+        resolve(0); // Version 0 means new database
       };
       request.onblocked = () => {
         // Another tab has the database open - we can't check version
