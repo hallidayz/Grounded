@@ -5,6 +5,7 @@ import { useAuth } from '../hooks/useAuth';
 import { useDataContext } from '../contexts/DataContext';
 import { getCurrentUser } from '../services/authService';
 import { AppSettings, EmailSchedule, LCSWConfig } from '../types';
+import { clearCacheAndReload } from '../services/cacheService';
 
 interface SettingsProps {
   onLogout: () => void;
@@ -22,6 +23,7 @@ const Settings: React.FC<SettingsProps> = ({ onLogout, onShowHelp, version = '1.
   const [settings, setSettings] = useState<AppSettings>(context.settings || {
     reminders: { enabled: false, frequency: 'daily', time: '09:00' }
   });
+  const [isClearingCache, setIsClearingCache] = useState(false);
   
   // Modal state for adding emails
   const [showEmailModal, setShowEmailModal] = useState(false);
@@ -119,6 +121,30 @@ const Settings: React.FC<SettingsProps> = ({ onLogout, onShowHelp, version = '1.
     updateEmailSchedule({
       recipientEmails: settings.emailSchedule?.recipientEmails?.filter((_, i) => i !== index) || []
     });
+  };
+
+  const handleClearCache = async () => {
+    const confirmed = window.confirm(
+      'Clear all caches?\n\n' +
+      'This will clear:\n' +
+      '• Browser cache\n' +
+      '• Service worker cache\n' +
+      '• AI model cache\n' +
+      '• AI response cache\n\n' +
+      'Your data (logs, goals, values) will NOT be deleted.\n\n' +
+      'The page will reload after clearing.'
+    );
+
+    if (!confirmed) return;
+
+    setIsClearingCache(true);
+    try {
+      await clearCacheAndReload();
+    } catch (error) {
+      console.error('[Settings] Failed to clear cache:', error);
+      alert('Failed to clear cache. Please try again.');
+      setIsClearingCache(false);
+    }
   };
 
   return (
@@ -492,6 +518,15 @@ const Settings: React.FC<SettingsProps> = ({ onLogout, onShowHelp, version = '1.
               <span className="text-xl">🔒</span>
             </button>
           )}
+
+          <button 
+            onClick={handleClearCache}
+            disabled={isClearingCache}
+            className="w-full flex items-center justify-between p-3 rounded-xl bg-bg-secondary dark:bg-dark-bg-primary/50 text-text-primary dark:text-white hover:bg-bg-secondary/80 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+          >
+            <span className="font-medium">{isClearingCache ? 'Clearing Cache...' : 'Clear Cache'}</span>
+            <span className="text-xl">🗑️</span>
+          </button>
 
         </div>
       </div>

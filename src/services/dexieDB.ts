@@ -347,11 +347,25 @@ class GroundedDB extends Dexie {
     await this.cleanupOldDatabase();
     
     // Check existing database version first to prevent VersionError
-    const existingVersion = await this.checkExistingVersion();
+    const { version: existingVersion, needsReset: versionNeedsReset } = await this.checkExistingVersion();
     
-    // CRITICAL FIX: Only reset if version is actually higher AND not a bug (like 40 from concatenation)
-    // Also handle case where version is 0 (new database) or null (doesn't exist)
-    if (existingVersion !== null && existingVersion !== 0) {
+    // CRITICAL FIX: Reset database if version concatenation bug was detected
+    // Even if corrected version matches current, the actual DB still has wrong version
+    if (versionNeedsReset) {
+      console.warn('[Dexie] Database version bug detected - resetting database to fix version...');
+      // Attempt to export data before reset
+      try {
+        const exportData = await exportFromRawIndexedDB();
+        if (exportData && Object.keys(exportData).length > 0) {
+          sessionStorage.setItem('dexie_export_before_recovery', JSON.stringify(exportData));
+          console.log('[Dexie] Data exported before reset - stored in sessionStorage');
+        }
+      } catch (exportError) {
+        console.warn('[Dexie] Could not export data before reset:', exportError);
+      }
+      // Reset database to current version
+      await this.resetDatabase();
+    } else if (existingVersion !== null && existingVersion !== 0) {
       // Ensure we're comparing numbers, not strings
       const existingVersionNum = typeof existingVersion === 'number' ? existingVersion : parseInt(String(existingVersion), 10);
       const currentVersionNum = typeof CURRENT_DB_VERSION === 'number' ? CURRENT_DB_VERSION : parseInt(String(CURRENT_DB_VERSION), 10);
@@ -410,7 +424,7 @@ class GroundedDB extends Dexie {
    * Returns null if database doesn't exist, or the version number if it does
    * CRITICAL: Ensures version is parsed as a proper number (not string concatenation)
    */
-  private async checkExistingVersion(): Promise<number | null> {
+  private async checkExistingVersion(): Promise<{ version: number | null; needsReset: boolean }> {
     return new Promise((resolve) => {
       const request = indexedDB.open(DB_NAME);
       request.onsuccess = () => {
@@ -428,7 +442,7 @@ class GroundedDB extends Dexie {
           // Invalid version type - treat as no version
           console.warn('[Dexie] Invalid version type:', typeof version, version);
           db.close();
-          resolve(null);
+          resolve({ version: null, needsReset: false });
           return;
         }
         
@@ -437,7 +451,7 @@ class GroundedDB extends Dexie {
         if (version > 100 || version < 0) {
           console.warn(`[Dexie] Suspicious database version detected: ${version}. This is likely a bug. Treating as version 0.`);
           db.close();
-          resolve(0); // Treat as version 0 (needs migration)
+          resolve({ version: 0, needsReset: true }); // Needs reset
           return;
         }
         
@@ -451,28 +465,29 @@ class GroundedDB extends Dexie {
             const correctedVersion = parseInt(versionStr[0], 10);
             console.warn(`[Dexie] Detected likely version concatenation bug: ${version} -> correcting to ${correctedVersion}`);
             db.close();
-            resolve(correctedVersion);
+            // Mark as needing reset because the actual DB still has wrong version
+            resolve({ version: correctedVersion, needsReset: true });
             return;
           }
         }
         
         db.close();
-        resolve(version);
+        resolve({ version, needsReset: false });
       };
       request.onerror = () => {
         // Database doesn't exist or can't be opened
-        resolve(null);
+        resolve({ version: null, needsReset: false });
       };
       request.onupgradeneeded = (event) => {
         // Database is being created/upgraded - no existing version to check
         const db = (event.target as IDBOpenDBRequest).result;
         db.close();
-        resolve(0); // Version 0 means new database
+        resolve({ version: 0, needsReset: false }); // Version 0 means new database
       };
       request.onblocked = () => {
         // Another tab has the database open - we can't check version
         // Return null to let normal flow handle it
-        resolve(null);
+        resolve({ version: null, needsReset: false });
       };
     });
   }

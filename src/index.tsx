@@ -6,6 +6,8 @@ import App from './App';
 import { ThemeProvider } from './contexts/ThemeContext';
 import { watchServiceWorkerVersion } from './utils/refresh-cache';
 import InstallationGate from './components/InstallationGate';
+// Import cache service to make it available globally
+import './services/cacheService';
 
 // Global error handlers to catch any errors before React mounts
 window.addEventListener('error', (event) => {
