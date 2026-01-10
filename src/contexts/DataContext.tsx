@@ -107,46 +107,52 @@ export const DataProvider: React.FC<DataProviderProps> = ({
       return;
     }
 
-    // If we have no values but user is authenticated, try loading from database
+    // Always try to load from database if we have no values, regardless of initialData
     // This ensures we always check the database, even if initialData was empty
-    if (selectedValueIds.length === 0) {
-      hasTriedDatabaseLoadRef.current = true;
-      
-      const loadFromDatabase = async () => {
-        try {
-          console.log('[DataContext] No values in initialData, loading from database...');
-          await adapter.init();
-          const activeValues = await adapter.getActiveValues(userId);
-          
-          if (activeValues.length > 0) {
-            console.log('[DataContext] Loaded values from database:', activeValues.length);
-            setSelectedValueIds(activeValues);
-            hasLoadedInitialDataRef.current = true;
-            setIsHydrating(false);
-          } else {
-            console.log('[DataContext] No values found in database - user is first-time user');
-            hasLoadedInitialDataRef.current = true; // Mark as loaded even if no values found
-            setIsHydrating(false);
-          }
-        } catch (error) {
-          console.error('[DataContext] Error loading values from database:', error);
-          hasLoadedInitialDataRef.current = true; // Mark as loaded even on error to prevent retries
+    hasTriedDatabaseLoadRef.current = true;
+    
+    const loadFromDatabase = async () => {
+      try {
+        console.log('[DataContext] Checking database for values...', { 
+          userId, 
+          currentValuesCount: selectedValueIds.length,
+          hasInitialData: !!initialData?.selectedValueIds?.length 
+        });
+        await adapter.init();
+        const activeValues = await adapter.getActiveValues(userId);
+        
+        console.log('[DataContext] Database query result:', { 
+          activeValuesCount: activeValues.length,
+          activeValues 
+        });
+        
+        if (activeValues.length > 0) {
+          console.log('[DataContext] Loaded values from database:', activeValues.length, activeValues);
+          setSelectedValueIds(activeValues);
+          hasLoadedInitialDataRef.current = true;
+          setIsHydrating(false);
+        } else if (selectedValueIds.length === 0) {
+          // Only log as first-time user if we truly have no values
+          console.log('[DataContext] No values found in database - user is first-time user');
+          hasLoadedInitialDataRef.current = true; // Mark as loaded even if no values found
+          setIsHydrating(false);
+        } else {
+          // We have values from initialData, just mark as loaded
+          console.log('[DataContext] Using values from initialData:', selectedValueIds.length);
+          hasLoadedInitialDataRef.current = true;
           setIsHydrating(false);
         }
-      };
-
-      // Small delay to ensure adapter is ready
-      const timeoutId = setTimeout(loadFromDatabase, 100);
-      return () => clearTimeout(timeoutId);
-    } else {
-      // We have values from initialData, mark as tried and loaded
-      hasTriedDatabaseLoadRef.current = true;
-      if (!hasLoadedInitialDataRef.current) {
-        hasLoadedInitialDataRef.current = true;
+      } catch (error) {
+        console.error('[DataContext] Error loading values from database:', error);
+        hasLoadedInitialDataRef.current = true; // Mark as loaded even on error to prevent retries
         setIsHydrating(false);
       }
-    }
-  }, [userId, authState, selectedValueIds.length, adapter]);
+    };
+
+    // Small delay to ensure adapter is ready, but also retry if adapter isn't ready
+    const timeoutId = setTimeout(loadFromDatabase, 200);
+    return () => clearTimeout(timeoutId);
+  }, [userId, authState, adapter]);
 
   // Track when data is set via setters (from sync in AppContent)
   // Mark as loaded when we have userId (user is authenticated) or after data appears
@@ -189,27 +195,46 @@ export const DataProvider: React.FC<DataProviderProps> = ({
         hasLoadedInitialDataRef.current = true;
       }
       
+      // CRITICAL: Don't save empty values array if we haven't finished loading yet
+      // This prevents overwriting existing values with empty array during initialization
+      // Only save values if:
+      // 1. We've loaded initial data (hydration complete), OR
+      // 2. We have values to save (user actively selected them)
+      const shouldSaveValues = hasLoadedInitialDataRef.current || selectedValueIds.length > 0;
+      
       // Save if flag is set OR if we have any data (user is actively using the app)
       if (hasLoadedInitialDataRef.current || selectedValueIds.length > 0 || logs.length > 0 || goals.length > 0) {
         const saveData = async () => {
           try {
-            console.log('[DataContext] Saving app data', {
-              values: selectedValueIds.length,
-              logs: logs.length,
-              goals: goals.length,
-              userId
-            });
-            // Save to appData (for backward compatibility and quick access)
-            await adapter.saveAppData(userId, {
+            // Only include values in save if we should save them
+            // If we haven't loaded yet and have no values, skip values field to avoid overwriting
+            const appDataToSave: any = {
               settings,
               logs,
               goals,
-              values: selectedValueIds, // Keep in appData for quick access
               lcswConfig: settings.lcswConfig,
+            };
+            
+            // Only add values if we should save them (prevents overwriting during init)
+            if (shouldSaveValues) {
+              appDataToSave.values = selectedValueIds;
+            }
+            
+            console.log('[DataContext] Saving app data', {
+              values: shouldSaveValues ? selectedValueIds.length : '(skipped - not loaded yet)',
+              logs: logs.length,
+              goals: goals.length,
+              userId,
+              hasLoadedInitialData: hasLoadedInitialDataRef.current,
+              shouldSaveValues
             });
             
+            // Save to appData (for backward compatibility and quick access)
+            await adapter.saveAppData(userId, appDataToSave);
+            
             // Also save values to values table (for historical tracking)
-            if (selectedValueIds.length > 0) {
+            // Only if we have values AND we should save them
+            if (shouldSaveValues && selectedValueIds.length > 0) {
               await adapter.setValuesActive(userId, selectedValueIds);
             }
             
