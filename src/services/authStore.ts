@@ -55,122 +55,148 @@ class AuthStore {
         this.initPromise = null;
         
         // CRITICAL: Verify database has data after opening
-        const verifyTransaction = this.db.transaction(['users'], 'readonly');
-        const verifyStore = verifyTransaction.objectStore('users');
-        const countRequest = verifyStore.count();
-        
-        await new Promise<void>((countResolve) => {
-          countRequest.onsuccess = async () => {
-            const userCount = countRequest.result;
-            console.log(`[AuthStore] Database opened. User count: ${userCount}`);
-            
-            // CRITICAL: If database is empty, immediately try to restore from localStorage backups
-            if (userCount === 0) {
-              console.warn('[AuthStore] WARNING: Database is empty - attempting recovery from localStorage backups...');
-              try {
-                const recoveredUsers: AuthUserData[] = [];
-                
-                // First, try to get the "latest user" marker (fastest path)
+        // Use try-catch for cross-platform compatibility (iOS Safari, Android WebView, etc.)
+        try {
+          const verifyTransaction = this.db.transaction(['users'], 'readonly');
+          const verifyStore = verifyTransaction.objectStore('users');
+          const countRequest = verifyStore.count();
+          
+          await new Promise<void>((countResolve) => {
+            countRequest.onsuccess = async () => {
+              const userCount = countRequest.result;
+              console.log(`[AuthStore] Database opened. User count: ${userCount}`);
+              
+              // CRITICAL: If database is empty, immediately try to restore from localStorage backups
+              if (userCount === 0 && typeof localStorage !== 'undefined') {
+                console.warn('[AuthStore] WARNING: Database is empty - attempting recovery from localStorage backups...');
                 try {
-                  const latestUserBackup = localStorage.getItem('auth_latest_user');
-                  if (latestUserBackup) {
-                    const latestUser = JSON.parse(latestUserBackup) as AuthUserData;
-                    recoveredUsers.push(latestUser);
-                    console.log('[AuthStore] Found latest user backup:', { userId: latestUser.id, username: latestUser.username });
+                  const recoveredUsers: AuthUserData[] = [];
+                  
+                  // First, try to get the "latest user" marker (fastest path)
+                  try {
+                    const latestUserBackup = localStorage.getItem('auth_latest_user');
+                    if (latestUserBackup) {
+                      const latestUser = JSON.parse(latestUserBackup) as AuthUserData;
+                      if (latestUser && latestUser.id && latestUser.username) {
+                        recoveredUsers.push(latestUser);
+                        console.log('[AuthStore] Found latest user backup:', { userId: latestUser.id, username: latestUser.username });
+                      }
+                    }
+                  } catch (latestError) {
+                    console.warn('[AuthStore] Failed to parse latest user backup:', latestError);
                   }
-                } catch (latestError) {
-                  console.warn('[AuthStore] Failed to parse latest user backup:', latestError);
-                }
-                
-                // Also check all individual user backups
-                for (let i = 0; i < localStorage.length; i++) {
-                  const key = localStorage.key(i);
-                  if (key && key.startsWith('auth_user_backup_')) {
+                  
+                  // Also check all individual user backups (cross-platform safe iteration)
+                  try {
+                    const keys: string[] = [];
+                    for (let i = 0; i < localStorage.length; i++) {
+                      const key = localStorage.key(i);
+                      if (key && key.startsWith('auth_user_backup_')) {
+                        keys.push(key);
+                      }
+                    }
+                    
+                    for (const key of keys) {
+                      try {
+                        const backup = localStorage.getItem(key);
+                        if (backup) {
+                          const user = JSON.parse(backup) as AuthUserData;
+                          if (user && user.id && user.username && !recoveredUsers.find(u => u.id === user.id)) {
+                            recoveredUsers.push(user);
+                            console.log('[AuthStore] Found user backup:', { userId: user.id, username: user.username });
+                          }
+                        }
+                      } catch (parseError) {
+                        console.warn('[AuthStore] Failed to parse backup:', key, parseError);
+                      }
+                    }
+                  } catch (storageError) {
+                    console.warn('[AuthStore] Error accessing localStorage:', storageError);
+                  }
+                  
+                  // Restore all found users to the database
+                  if (recoveredUsers.length > 0 && this.db) {
+                    console.log(`[AuthStore] Attempting to restore ${recoveredUsers.length} user(s) from backups...`);
                     try {
-                      const backup = localStorage.getItem(key);
-                      if (backup) {
-                        const user = JSON.parse(backup) as AuthUserData;
-                        // Avoid duplicates
-                        if (!recoveredUsers.find(u => u.id === user.id)) {
-                          recoveredUsers.push(user);
-                          console.log('[AuthStore] Found user backup:', { userId: user.id, username: user.username });
+                      const restoreTransaction = this.db.transaction(['users'], 'readwrite');
+                      const restoreStore = restoreTransaction.objectStore('users');
+                      let restoredCount = 0;
+                      let restoreErrors = 0;
+                      
+                      for (const user of recoveredUsers) {
+                        try {
+                          await new Promise<void>((restoreResolve) => {
+                            try {
+                              const restoreRequest = restoreStore.add(user);
+                              restoreRequest.onsuccess = () => {
+                                restoredCount++;
+                                restoreResolve();
+                              };
+                              restoreRequest.onerror = () => {
+                                // If user already exists (e.g., ConstraintError), that's OK
+                                if (restoreRequest.error?.name === 'ConstraintError' || restoreRequest.error?.name === 'DataError') {
+                                  console.log('[AuthStore] User already exists in database:', user.username);
+                                  restoredCount++;
+                                } else {
+                                  console.error('[AuthStore] Failed to restore user:', user.username, restoreRequest.error);
+                                  restoreErrors++;
+                                }
+                                restoreResolve(); // Continue even on error
+                              };
+                            } catch (addError) {
+                              console.error('[AuthStore] Error adding user:', user.username, addError);
+                              restoreErrors++;
+                              restoreResolve();
+                            }
+                          });
+                        } catch (restoreError) {
+                          console.error('[AuthStore] Error restoring user:', user.username, restoreError);
+                          restoreErrors++;
                         }
                       }
-                    } catch (parseError) {
-                      console.warn('[AuthStore] Failed to parse backup:', key, parseError);
-                    }
-                  }
-                }
-                
-                // Restore all found users to the database
-                if (recoveredUsers.length > 0) {
-                  console.log(`[AuthStore] Attempting to restore ${recoveredUsers.length} user(s) from backups...`);
-                  const restoreTransaction = this.db!.transaction(['users'], 'readwrite');
-                  const restoreStore = restoreTransaction.objectStore('users');
-                  let restoredCount = 0;
-                  let restoreErrors = 0;
-                  
-                  for (const user of recoveredUsers) {
-                    try {
-                      await new Promise<void>((restoreResolve, restoreReject) => {
-                        const restoreRequest = restoreStore.add(user);
-                        restoreRequest.onsuccess = () => {
-                          restoredCount++;
-                          restoreResolve();
+                      
+                      // Wait for transaction to complete (cross-platform safe)
+                      await new Promise<void>((txResolve) => {
+                        restoreTransaction.oncomplete = () => {
+                          console.log(`[AuthStore] Recovery complete: ${restoredCount} user(s) restored, ${restoreErrors} error(s)`);
+                          txResolve();
                         };
-                        restoreRequest.onerror = () => {
-                          // If user already exists (e.g., ConstraintError), that's OK
-                          if (restoreRequest.error?.name === 'ConstraintError') {
-                            console.log('[AuthStore] User already exists in database:', user.username);
-                            restoredCount++;
-                          } else {
-                            console.error('[AuthStore] Failed to restore user:', user.username, restoreRequest.error);
-                            restoreErrors++;
-                          }
-                          restoreResolve(); // Continue even on error
+                        restoreTransaction.onerror = () => {
+                          console.error('[AuthStore] Recovery transaction error:', restoreTransaction.error);
+                          txResolve(); // Continue anyway
                         };
+                        // Safety timeout for slow devices
+                        setTimeout(() => txResolve(), 2000);
                       });
-                    } catch (restoreError) {
-                      console.error('[AuthStore] Error restoring user:', user.username, restoreError);
-                      restoreErrors++;
+                      
+                      if (restoredCount > 0) {
+                        console.log(`[AuthStore] ✅ Successfully restored ${restoredCount} user(s) from localStorage backups`);
+                      } else {
+                        console.warn('[AuthStore] ⚠️ No users could be restored from backups');
+                      }
+                    } catch (dbError) {
+                      console.error('[AuthStore] Database error during recovery:', dbError);
                     }
+                  } else if (recoveredUsers.length === 0) {
+                    console.warn('[AuthStore] No user backups found in localStorage');
                   }
-                  
-                  // Wait for transaction to complete
-                  await new Promise<void>((txResolve) => {
-                    restoreTransaction.oncomplete = () => {
-                      console.log(`[AuthStore] Recovery complete: ${restoredCount} user(s) restored, ${restoreErrors} error(s)`);
-                      txResolve();
-                    };
-                    restoreTransaction.onerror = () => {
-                      console.error('[AuthStore] Recovery transaction error:', restoreTransaction.error);
-                      txResolve(); // Continue anyway
-                    };
-                    // Safety timeout
-                    setTimeout(() => txResolve(), 1000);
-                  });
-                  
-                  if (restoredCount > 0) {
-                    console.log(`[AuthStore] ✅ Successfully restored ${restoredCount} user(s) from localStorage backups`);
-                  } else {
-                    console.warn('[AuthStore] ⚠️ No users could be restored from backups');
-                  }
-                } else {
-                  console.warn('[AuthStore] No user backups found in localStorage');
+                } catch (recoveryError) {
+                  console.error('[AuthStore] Error during recovery from localStorage:', recoveryError);
+                  // Continue anyway - don't block initialization
                 }
-              } catch (recoveryError) {
-                console.error('[AuthStore] Error during recovery from localStorage:', recoveryError);
-                // Continue anyway - don't block initialization
               }
-            }
-            
-            countResolve();
-          };
-          countRequest.onerror = () => {
-            console.error('[AuthStore] Error counting users during init:', countRequest.error);
-            countResolve(); // Continue anyway
-          };
-        });
+              
+              countResolve();
+            };
+            countRequest.onerror = () => {
+              console.error('[AuthStore] Error counting users during init:', countRequest.error);
+              countResolve(); // Continue anyway
+            };
+          });
+        } catch (error) {
+          console.error('[AuthStore] Error during database verification:', error);
+          // Continue anyway - database is open, just couldn't verify
+        }
         
         resolve();
       };
@@ -253,15 +279,17 @@ class AuthStore {
       const request = store.add(user);
 
       request.onsuccess = async () => {
-        // CRITICAL: Backup user to localStorage immediately as safety net
-        try {
-          const backupKey = `auth_user_backup_${id}`;
-          localStorage.setItem(backupKey, JSON.stringify(user));
-          // Also store as "latest user" for easy recovery
-          localStorage.setItem('auth_latest_user', JSON.stringify(user));
-          console.log('[AuthStore] User backed up to localStorage:', { userId: id, username: userData.username });
-        } catch (backupError) {
-          console.warn('[AuthStore] Failed to backup user to localStorage:', backupError);
+        // CRITICAL: Backup user to localStorage immediately as safety net (cross-platform safe)
+        if (typeof localStorage !== 'undefined') {
+          try {
+            const backupKey = `auth_user_backup_${id}`;
+            localStorage.setItem(backupKey, JSON.stringify(user));
+            // Also store as "latest user" for easy recovery
+            localStorage.setItem('auth_latest_user', JSON.stringify(user));
+            console.log('[AuthStore] User backed up to localStorage:', { userId: id, username: userData.username });
+          } catch (backupError) {
+            console.warn('[AuthStore] Failed to backup user to localStorage:', backupError);
+          }
         }
         
         // Wait for transaction to complete before resolving
@@ -509,24 +537,26 @@ class AuthStore {
       const request = store.put(updated);
 
       request.onsuccess = () => {
-        // CRITICAL: Update localStorage backup when user is updated
-        try {
-          const backupKey = `auth_user_backup_${userId}`;
-          localStorage.setItem(backupKey, JSON.stringify(updated));
-          // Update "latest user" marker if this is the latest user
-          const latestUserBackup = localStorage.getItem('auth_latest_user');
-          if (latestUserBackup) {
-            try {
-              const latestUser = JSON.parse(latestUserBackup) as AuthUserData;
-              if (latestUser.id === userId) {
-                localStorage.setItem('auth_latest_user', JSON.stringify(updated));
+        // CRITICAL: Update localStorage backup when user is updated (cross-platform safe)
+        if (typeof localStorage !== 'undefined') {
+          try {
+            const backupKey = `auth_user_backup_${userId}`;
+            localStorage.setItem(backupKey, JSON.stringify(updated));
+            // Update "latest user" marker if this is the latest user
+            const latestUserBackup = localStorage.getItem('auth_latest_user');
+            if (latestUserBackup) {
+              try {
+                const latestUser = JSON.parse(latestUserBackup) as AuthUserData;
+                if (latestUser.id === userId) {
+                  localStorage.setItem('auth_latest_user', JSON.stringify(updated));
+                }
+              } catch (e) {
+                // Ignore parse errors
               }
-            } catch (e) {
-              // Ignore parse errors
             }
+          } catch (backupError) {
+            console.warn('[AuthStore] Failed to update user backup in localStorage:', backupError);
           }
-        } catch (backupError) {
-          console.warn('[AuthStore] Failed to update user backup in localStorage:', backupError);
         }
         resolve();
       };
