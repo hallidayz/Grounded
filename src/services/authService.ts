@@ -8,6 +8,7 @@ import { authStore } from './authStore';
 import { getDatabaseAdapter } from './databaseAdapter';
 import { EncryptedPWA } from './encryptedPWA';
 import { isTauri } from './platform';
+import { logger } from '../utils/logger';
 
 // Hash password using Web Crypto API
 async function hashPassword(password: string): Promise<string> {
@@ -49,7 +50,7 @@ export async function registerUser(data: RegisterData): Promise<AuthResult> {
       await authStore.init();
     } catch (error) {
       const errorMessage = error instanceof Error ? error.message : String(error);
-      console.error('Auth store initialization error:', error);
+      logger.error('Auth store initialization error:', error);
       
       if (errorMessage.includes('IndexedDB is not available')) {
         return { success: false, error: 'Your browser does not support local storage. Please use a modern browser like Chrome, Firefox, or Safari.' };
@@ -82,7 +83,7 @@ export async function registerUser(data: RegisterData): Promise<AuthResult> {
     try {
       existingUser = await authStore.getUserByUsername(data.username);
     } catch (error) {
-      console.error('Error checking username:', error);
+      logger.error('Error checking username:', error);
       return { success: false, error: 'Database error. Please try again.' };
     }
     if (existingUser) {
@@ -94,7 +95,7 @@ export async function registerUser(data: RegisterData): Promise<AuthResult> {
     try {
       existingEmail = await authStore.getUserByEmail(data.email);
     } catch (error) {
-      console.error('Error checking email:', error);
+      logger.error('Error checking email:', error);
       return { success: false, error: 'Database error. Please try again.' };
     }
     if (existingEmail) {
@@ -106,7 +107,7 @@ export async function registerUser(data: RegisterData): Promise<AuthResult> {
     try {
       passwordHash = await hashPassword(data.password);
     } catch (error) {
-      console.error('Error hashing password:', error);
+      logger.error('Error hashing password:', error);
       return { success: false, error: 'Password encryption failed. Please try again.' };
     }
 
@@ -120,24 +121,24 @@ export async function registerUser(data: RegisterData): Promise<AuthResult> {
         termsAccepted: false,
       });
       
-      console.log('[AuthService] User created successfully:', { userId, username: data.username });
+      logger.info('[AuthService] User created successfully:', { userId, username: data.username });
       
       // VERIFY: Immediately verify the user was saved by retrieving it
       try {
         const verifyUser = await authStore.getUserById(userId);
         if (!verifyUser) {
-          console.error('[AuthService] CRITICAL: User was created but cannot be retrieved!', { userId });
+          logger.error('[AuthService] CRITICAL: User was created but cannot be retrieved!', { userId });
           return { success: false, error: 'Account created but verification failed. Please try logging in.' };
         }
         if (verifyUser.username !== data.username) {
-          console.error('[AuthService] CRITICAL: Username mismatch after creation!', { 
+          logger.error('[AuthService] CRITICAL: Username mismatch after creation!', { 
             expected: data.username, 
             found: verifyUser.username 
           });
         }
-        console.log('[AuthService] User verification successful:', { userId, username: verifyUser.username });
+        logger.info('[AuthService] User verification successful:', { userId, username: verifyUser.username });
       } catch (verifyError) {
-        console.error('[AuthService] CRITICAL: Error verifying created user:', verifyError);
+        logger.error('[AuthService] CRITICAL: Error verifying created user:', verifyError);
         // Continue anyway - user was created, verification might be a timing issue
       }
       
@@ -149,26 +150,26 @@ export async function registerUser(data: RegisterData): Promise<AuthResult> {
         sessionStorage.setItem('username', data.username);
         localStorage.setItem('userId', userId);
         localStorage.setItem('username', data.username);
-        console.log('[AuthService] CRITICAL: New user credentials saved to both sessionStorage and localStorage:', { userId, username: data.username });
+        logger.info('[AuthService] CRITICAL: New user credentials saved to both sessionStorage and localStorage:', { userId, username: data.username });
         
         // VERIFY: Verify credentials were saved
         const savedUserId = localStorage.getItem('userId');
         const savedUsername = localStorage.getItem('username');
         if (savedUserId !== userId || savedUsername !== data.username) {
-          console.error('[AuthService] CRITICAL: Credentials saved but verification failed!', {
+          logger.error('[AuthService] CRITICAL: Credentials saved but verification failed!', {
             expected: { userId, username: data.username },
             found: { userId: savedUserId, username: savedUsername }
           });
         } else {
-          console.log('[AuthService] Credentials verification successful');
+          logger.info('[AuthService] Credentials verification successful');
         }
       } catch (error) {
-        console.error('[AuthService] CRITICAL ERROR: Failed to save new user credentials to storage:', error);
+        logger.error('[AuthService] CRITICAL ERROR: Failed to save new user credentials to storage:', error);
         // This is critical - if we can't save, user will need to login again
-        console.warn('[AuthService] Continuing despite storage error - user may need to login again on next visit');
+        logger.warn('[AuthService] Continuing despite storage error - user may need to login again on next visit');
       }
     } catch (error) {
-      console.error('Error creating user:', error);
+      logger.error('Error creating user:', error);
       const errorMessage = error instanceof Error ? error.message : String(error);
       if (errorMessage.includes('ConstraintError') || errorMessage.includes('already exists')) {
         return { success: false, error: 'Username or email already exists' };
@@ -182,7 +183,7 @@ export async function registerUser(data: RegisterData): Promise<AuthResult> {
 
     return { success: true, userId };
   } catch (error) {
-    console.error('Registration error:', error);
+    logger.error('Registration error:', error);
     const errorMessage = error instanceof Error ? error.message : String(error);
     return { success: false, error: `Registration failed: ${errorMessage}. Please try again.` };
   }
@@ -202,7 +203,7 @@ export async function loginUser(data: LoginData): Promise<AuthResult> {
       await authStore.init();
     } catch (error) {
       const errorMessage = error instanceof Error ? error.message : String(error);
-      console.error('Auth store initialization error during login:', error);
+      logger.error('Auth store initialization error during login:', error);
       
       if (errorMessage.includes('IndexedDB is not available')) {
         return { success: false, error: 'Your browser does not support local storage. Please use a modern browser.' };
@@ -220,30 +221,30 @@ export async function loginUser(data: LoginData): Promise<AuthResult> {
     try {
       await authStore.init();
     } catch (initError) {
-      console.error('[AuthService] Auth store init error during login:', initError);
+      logger.error('[AuthService] Auth store init error during login:', initError);
       // Continue anyway - might already be initialized
     }
     
     const user = await authStore.getUserByUsername(data.username);
     if (!user) {
-      console.error('[AuthService] User not found:', data.username);
+      logger.error('[AuthService] User not found:', data.username);
       // Try to list all users for debugging
       try {
         const allUsers = await authStore.getAllUsers();
-        console.log('[AuthService] Available users in database:', allUsers.map(u => u.username));
+        logger.info('[AuthService] Available users in database:', allUsers.map(u => u.username));
       } catch (listError) {
-        console.error('[AuthService] Error listing users:', listError);
+        logger.error('[AuthService] Error listing users:', listError);
       }
       return { success: false, error: 'Invalid username or password' };
     }
 
-    console.log('[AuthService] User found, verifying password...', { userId: user.id, username: user.username });
+    logger.info('[AuthService] User found, verifying password...', { userId: user.id, username: user.username });
     const isValid = await verifyPassword(data.password, user.passwordHash);
     if (!isValid) {
-      console.error('[AuthService] Password verification failed for user:', data.username);
+      logger.error('[AuthService] Password verification failed for user:', data.username);
       return { success: false, error: 'Invalid username or password' };
     }
-    console.log('[AuthService] Password verified successfully');
+    logger.info('[AuthService] Password verified successfully');
 
     // Update last login in auth store
     await authStore.updateUser(user.id, {
@@ -263,15 +264,15 @@ export async function loginUser(data: LoginData): Promise<AuthResult> {
       // This is needed for Dexie encryption hooks to work
       if (localStorage.getItem('encryption_enabled') === 'true') {
         sessionStorage.setItem('encryption_password', data.password);
-        console.log('[AuthService] Encryption password stored in sessionStorage for Dexie hooks');
+        logger.info('[AuthService] Encryption password stored in sessionStorage for Dexie hooks');
       }
       
-      console.log('[AuthService] CRITICAL: Credentials saved to both sessionStorage and localStorage:', { userId: user.id, username: user.username });
+      logger.info('[AuthService] CRITICAL: Credentials saved to both sessionStorage and localStorage:', { userId: user.id, username: user.username });
     } catch (error) {
-      console.error('[AuthService] CRITICAL ERROR: Failed to save credentials to storage:', error);
+      logger.error('[AuthService] CRITICAL ERROR: Failed to save credentials to storage:', error);
       // This is critical - if we can't save, user will need to login again
       // But we'll still return success since auth worked, just storage failed
-      console.warn('[AuthService] Continuing despite storage error - user may need to login again on next visit');
+      logger.warn('[AuthService] Continuing despite storage error - user may need to login again on next visit');
     }
 
     // Note: Database unlock happens separately in useAuth.login() using the same password
@@ -279,7 +280,7 @@ export async function loginUser(data: LoginData): Promise<AuthResult> {
 
     return { success: true, userId: user.id };
   } catch (error) {
-    console.error('Login error:', error);
+    logger.error('Login error:', error);
     return { success: false, error: 'Login failed. Please try again.' };
   }
 }

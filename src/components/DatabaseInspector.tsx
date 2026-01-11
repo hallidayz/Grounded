@@ -40,11 +40,15 @@ export const DatabaseInspector: React.FC = () => {
   const [stores, setStores] = useState<StoreInfo[]>([]);
   const [loading, setLoading] = useState(true);
   const [selectedStore, setSelectedStore] = useState<string | null>(null);
-  const [storeData, setStoreData] = useState<any[]>([]);
-  const [exportData, setExportData] = useState<any>(null);
+  const [storeData, setStoreData] = useState<unknown[]>([]);
+  const [exportData, setExportData] = useState<Record<string, unknown[]> | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [showDiagnostics, setShowDiagnostics] = useState(false);
-  const [diagnosticsResult, setDiagnosticsResult] = useState<any>(null);
+  const [diagnosticsResult, setDiagnosticsResult] = useState<{
+    issues: Array<{ type: string; message: string }>;
+    dexie: { versionMatch: boolean; version?: number };
+    [key: string]: unknown;
+  } | null>(null);
   const [importFile, setImportFile] = useState<File | null>(null);
   const [syncStatus, setSyncStatus] = useState<'idle' | 'syncing' | 'restoring' | 'success' | 'error'>('idle');
   const [syncMessage, setSyncMessage] = useState<string>('');
@@ -92,7 +96,7 @@ export const DatabaseInspector: React.FC = () => {
 
       for (const storeName of dexieStoreNames) {
         try {
-          const table = (db as any)[storeName];
+          const table = (db as Record<string, { count: () => Promise<number> }>)[storeName];
           if (table) {
             const count = await table.count();
             storeList.push({
@@ -101,7 +105,7 @@ export const DatabaseInspector: React.FC = () => {
               type: 'indexeddb',
             });
           }
-        } catch (err: any) {
+        } catch (err: unknown) {
           storeList.push({
             name: storeName,
             count: 0,
@@ -128,7 +132,7 @@ export const DatabaseInspector: React.FC = () => {
       }
 
       setStores(storeList);
-    } catch (err: any) {
+        } catch (err: unknown) {
       setError(err.message || 'Failed to load store information');
     } finally {
       setLoading(false);
@@ -141,14 +145,14 @@ export const DatabaseInspector: React.FC = () => {
     setError(null);
 
     try {
-      const table = (db as any)[storeName];
+      const table = (db as Record<string, { count: () => Promise<number>; toArray: () => Promise<unknown[]>; clear: () => Promise<void> }>)[storeName];
       if (!table) {
         throw new Error(`Store ${storeName} not found`);
       }
 
       const data = await table.toArray();
       setStoreData(data);
-    } catch (err: any) {
+        } catch (err: unknown) {
       setError(err.message || 'Failed to load store data');
       setStoreData([]);
     } finally {
@@ -162,7 +166,7 @@ export const DatabaseInspector: React.FC = () => {
     }
 
     try {
-      const table = (db as any)[storeName];
+      const table = (db as Record<string, { count: () => Promise<number>; toArray: () => Promise<unknown[]>; clear: () => Promise<void> }>)[storeName];
       if (!table) {
         throw new Error(`Store ${storeName} not found`);
       }
@@ -173,14 +177,14 @@ export const DatabaseInspector: React.FC = () => {
         setStoreData([]);
       }
       alert(`Store "${storeName}" cleared successfully.`);
-    } catch (err: any) {
+        } catch (err: unknown) {
       setError(err.message || 'Failed to clear store');
     }
   };
 
   const exportStore = async (storeName: string) => {
     try {
-      const table = (db as any)[storeName];
+      const table = (db as Record<string, { count: () => Promise<number>; toArray: () => Promise<unknown[]>; clear: () => Promise<void> }>)[storeName];
       if (!table) {
         throw new Error(`Store ${storeName} not found`);
       }
@@ -198,19 +202,19 @@ export const DatabaseInspector: React.FC = () => {
       a.click();
       document.body.removeChild(a);
       URL.revokeObjectURL(url);
-    } catch (err: any) {
+        } catch (err: unknown) {
       setError(err.message || 'Failed to export store');
     }
   };
 
   const exportAllData = async () => {
     try {
-      const allData: any = {};
+      const allData: Record<string, unknown[]> = {};
       
       for (const store of stores) {
         if (store.type === 'indexeddb' && !store.error) {
           try {
-            const table = (db as any)[store.name];
+            const table = (db as Record<string, { toArray: () => Promise<unknown[]> }>)[store.name];
             if (table) {
               allData[store.name] = await table.toArray();
             }
@@ -233,7 +237,7 @@ export const DatabaseInspector: React.FC = () => {
       a.click();
       document.body.removeChild(a);
       URL.revokeObjectURL(url);
-    } catch (err: any) {
+        } catch (err: unknown) {
       setError(err.message || 'Failed to export all data');
     }
   };
@@ -251,7 +255,7 @@ export const DatabaseInspector: React.FC = () => {
       await db.delete();
       alert('Database deleted. Please refresh the page.');
       window.location.reload();
-    } catch (err: any) {
+        } catch (err: unknown) {
       setError(err.message || 'Failed to delete database');
     }
   };
@@ -299,8 +303,8 @@ export const DatabaseInspector: React.FC = () => {
                     document.body.removeChild(a);
                     URL.revokeObjectURL(url);
                     alert('Database exported successfully! Use this file to restore data in another browser.');
-                  } catch (err: any) {
-                    setError(err.message || 'Failed to export database');
+                  } catch (err: unknown) {
+                    setError((err instanceof Error ? err.message : String(err)) || 'Failed to export database');
                   }
                 }}
                 className="px-4 py-2 bg-teal-600 text-white rounded hover:bg-teal-700 transition"
@@ -327,9 +331,9 @@ export const DatabaseInspector: React.FC = () => {
                           setSyncStatus('error');
                           setSyncMessage(result.error || 'Sync failed');
                         }
-                      } catch (err: any) {
+                      } catch (err: unknown) {
                         setSyncStatus('error');
-                        setSyncMessage(err.message || 'Sync failed');
+                        setSyncMessage((err instanceof Error ? err.message : String(err)) || 'Sync failed');
                       }
                     }}
                     disabled={syncStatus === 'syncing' || syncStatus === 'restoring'}
@@ -356,9 +360,9 @@ export const DatabaseInspector: React.FC = () => {
                           setSyncStatus('idle');
                           setSyncMessage('No backup found or restore skipped');
                         }
-                      } catch (err: any) {
+                      } catch (err: unknown) {
                         setSyncStatus('error');
-                        setSyncMessage(err.message || 'Restore failed');
+                        setSyncMessage((err instanceof Error ? err.message : String(err)) || 'Restore failed');
                       }
                     }}
                     disabled={syncStatus === 'syncing' || syncStatus === 'restoring'}
@@ -389,8 +393,8 @@ export const DatabaseInspector: React.FC = () => {
                       alert('Database imported successfully!');
                       await loadStoreInfo();
                       e.target.value = '';
-                    } catch (err: any) {
-                      setError(err.message || 'Failed to import database');
+                    } catch (err: unknown) {
+                      setError((err instanceof Error ? err.message : String(err)) || 'Failed to import database');
                       e.target.value = '';
                     }
                   }}

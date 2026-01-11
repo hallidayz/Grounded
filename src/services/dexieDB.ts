@@ -218,7 +218,7 @@ class GroundedDB extends Dexie {
       
       // For ruleBasedUsageLogs, we can't derive userId, so leave as undefined
       // Future logs will include userId when saved
-      console.log('[Dexie] Version 4 migration: Added userId indexes to userInteractions and ruleBasedUsageLogs');
+      logger.info('[Dexie] Version 4 migration: Added userId indexes to userInteractions and ruleBasedUsageLogs');
     });
     
     // Hook-based encryption middleware for PHI data stores
@@ -340,7 +340,7 @@ class GroundedDB extends Dexie {
           decrypted[field] = await this.decryptField(decrypted[field], field);
           delete decrypted[`${field}_encrypted`];
         } catch (error) {
-          console.error(`[Dexie] Failed to decrypt field ${field}:`, error);
+          logger.error(`[Dexie] Failed to decrypt field ${field}:`, error);
           // Return null if decryption fails
           decrypted[field] = null;
       }
@@ -355,7 +355,7 @@ class GroundedDB extends Dexie {
    * Use this to resolve version conflicts or start fresh
    */
   async resetDatabase(): Promise<void> {
-    console.log('[Dexie] Resetting database...');
+    logger.info('[Dexie] Resetting database...');
     
     // Close any open connections
     try {
@@ -368,15 +368,15 @@ class GroundedDB extends Dexie {
     await new Promise<void>((resolve, reject) => {
       const deleteRequest = indexedDB.deleteDatabase(DB_NAME);
       deleteRequest.onsuccess = () => {
-        console.log(`[Dexie] Database ${DB_NAME} deleted successfully`);
+        logger.info(`[Dexie] Database ${DB_NAME} deleted successfully`);
         resolve();
       };
       deleteRequest.onerror = () => {
-        console.error('[Dexie] Failed to delete database:', deleteRequest.error);
+        logger.error('[Dexie] Failed to delete database:', deleteRequest.error);
         reject(deleteRequest.error);
       };
       deleteRequest.onblocked = () => {
-        console.warn('[Dexie] Database deletion blocked - another tab may have it open');
+        logger.warn('[Dexie] Database deletion blocked - another tab may have it open');
         setTimeout(() => resolve(), 1000);
       };
     });
@@ -387,7 +387,7 @@ class GroundedDB extends Dexie {
     
     // Reopen with fresh schema
     await this.open();
-    console.log(`[Dexie] Database reset complete - opened with version ${CURRENT_DB_VERSION}`);
+    logger.info(`[Dexie] Database reset complete - opened with version ${CURRENT_DB_VERSION}`);
   }
 
   /**
@@ -405,16 +405,16 @@ class GroundedDB extends Dexie {
     // CRITICAL FIX: Reset database if version concatenation bug was detected
     // Even if corrected version matches current, the actual DB still has wrong version
     if (versionNeedsReset) {
-      console.warn('[Dexie] Database version bug detected - resetting database to fix version...');
+      logger.warn('[Dexie] Database version bug detected - resetting database to fix version...');
       // Attempt to export data before reset
       try {
         const exportData = await exportFromRawIndexedDB();
         if (exportData && Object.keys(exportData).length > 0) {
           sessionStorage.setItem('dexie_export_before_recovery', JSON.stringify(exportData));
-          console.log('[Dexie] Data exported before reset - stored in sessionStorage');
+          logger.info('[Dexie] Data exported before reset - stored in sessionStorage');
         }
       } catch (exportError) {
-        console.warn('[Dexie] Could not export data before reset:', exportError);
+        logger.warn('[Dexie] Could not export data before reset:', exportError);
       }
       // Reset database to current version
       await this.resetDatabase();
@@ -426,7 +426,7 @@ class GroundedDB extends Dexie {
       // Only reset if version is legitimately higher (not a concatenation bug)
       // Versions like 40, 400, etc. are likely bugs and should be treated as version 4
       if (existingVersionNum > currentVersionNum && existingVersionNum < 100) {
-        console.warn(
+        logger.warn(
           `[Dexie] Existing database version (${existingVersionNum}) is higher than requested (${currentVersionNum}). Resetting database...`
         );
         // Attempt to export data before reset
@@ -434,25 +434,25 @@ class GroundedDB extends Dexie {
           const exportData = await exportFromRawIndexedDB();
           if (exportData && Object.keys(exportData).length > 0) {
             sessionStorage.setItem('dexie_export_before_recovery', JSON.stringify(exportData));
-            console.log('[Dexie] Data exported before reset - stored in sessionStorage');
+            logger.info('[Dexie] Data exported before reset - stored in sessionStorage');
           }
         } catch (exportError) {
-          console.warn('[Dexie] Could not export data before reset:', exportError);
+          logger.warn('[Dexie] Could not export data before reset:', exportError);
         }
         // Reset database to current version
         await this.resetDatabase();
       } else if (existingVersionNum >= 100 || (existingVersionNum > 10 && existingVersionNum % 10 === 0)) {
         // Likely a version concatenation bug (40, 400, etc.) - just reset without warning
-        console.warn(
+        logger.warn(
           `[Dexie] Detected invalid database version (${existingVersionNum}) - likely a bug. Resetting to version ${currentVersionNum}...`
         );
         await this.resetDatabase();
       } else if (existingVersionNum === currentVersionNum) {
         // Versions match - no action needed
-        console.log(`[Dexie] Database version matches current version (${currentVersionNum})`);
+        logger.info(`[Dexie] Database version matches current version (${currentVersionNum})`);
       } else if (existingVersionNum < currentVersionNum) {
         // Lower version - will be handled by Dexie's upgrade mechanism
-        console.log(`[Dexie] Database version (${existingVersionNum}) is lower than current (${currentVersionNum}) - will upgrade automatically`);
+        logger.info(`[Dexie] Database version (${existingVersionNum}) is lower than current (${currentVersionNum}) - will upgrade automatically`);
       }
     }
     
@@ -462,7 +462,7 @@ class GroundedDB extends Dexie {
     } catch (error: any) {
       // If recovery failed, do a hard reset
       if (error?.name === 'VersionError' || error?.message?.includes('version')) {
-        console.warn('[Dexie] Version error persists after recovery attempt - performing hard reset');
+        logger.warn('[Dexie] Version error persists after recovery attempt - performing hard reset');
         await this.resetDatabase();
         // Try opening again after reset
         await this.open();
@@ -493,7 +493,7 @@ class GroundedDB extends Dexie {
           version = Math.floor(version);
         } else {
           // Invalid version type - treat as no version
-          console.warn('[Dexie] Invalid version type:', typeof version, version);
+          logger.warn('[Dexie] Invalid version type:', typeof version, version);
           db.close();
           resolve({ version: null, needsReset: false });
           return;
@@ -502,7 +502,7 @@ class GroundedDB extends Dexie {
         // Additional safety check: if version is unreasonably high (likely a bug), reset it
         // Versions should be small integers (1-10 typically)
         if (version > 100 || version < 0) {
-          console.warn(`[Dexie] Suspicious database version detected: ${version}. This is likely a bug. Treating as version 0.`);
+          logger.warn(`[Dexie] Suspicious database version detected: ${version}. This is likely a bug. Treating as version 0.`);
           db.close();
           resolve({ version: 0, needsReset: true }); // Needs reset
           return;
@@ -516,7 +516,7 @@ class GroundedDB extends Dexie {
           if (versionStr.length === 2 && versionStr[1] === '0') {
             // "40" -> likely meant to be "4"
             const correctedVersion = parseInt(versionStr[0], 10);
-            console.warn(`[Dexie] Detected likely version concatenation bug: ${version} -> correcting to ${correctedVersion}`);
+            logger.warn(`[Dexie] Detected likely version concatenation bug: ${version} -> correcting to ${correctedVersion}`);
             db.close();
             // Mark as needing reset because the actual DB still has wrong version
             resolve({ version: correctedVersion, needsReset: true });
@@ -552,13 +552,13 @@ class GroundedDB extends Dexie {
   private async openDatabaseWithRecovery(): Promise<void> {
     try {
       await this.open();
-      console.log(`[Dexie] Database opened successfully (version ${CURRENT_DB_VERSION})`);
+      logger.info(`[Dexie] Database opened successfully (version ${CURRENT_DB_VERSION})`);
     } catch (error: any) {
       if (error?.name === 'VersionError' || error?.message?.includes('version')) {
-        console.warn(
+        logger.warn(
           `[Dexie] Version mismatch detected: expected version ${CURRENT_DB_VERSION}, but existing version is different. Resetting database...`
         );
-        console.warn(`[Dexie] Error details: ${error.message}`);
+        logger.warn(`[Dexie] Error details: ${error.message}`);
 
         // Attempt to export data before deletion (if database is accessible)
         let dataExported = false;
@@ -569,24 +569,24 @@ class GroundedDB extends Dexie {
             // Store export in sessionStorage temporarily for recovery
             sessionStorage.setItem('dexie_export_before_recovery', JSON.stringify(exportData));
             dataExported = true;
-            console.log('[Dexie] Data exported before reset - stored in sessionStorage');
+            logger.info('[Dexie] Data exported before reset - stored in sessionStorage');
           }
         } catch (exportError) {
-          console.warn('[Dexie] Could not export data before reset (non-critical):', exportError);
+          logger.warn('[Dexie] Could not export data before reset (non-critical):', exportError);
         }
 
         // Reset the database (delete and recreate)
         await this.resetDatabase();
         
         if (dataExported) {
-          console.log('[Dexie] Data export available in sessionStorage - you can import it manually if needed');
+          logger.info('[Dexie] Data export available in sessionStorage - you can import it manually if needed');
         }
         
         // No reload needed - database is now reset and ready
         return;
       } else {
         // Not a version error - re-throw for logging
-        console.error('[Dexie] Failed to open database:', error);
+        logger.error('[Dexie] Failed to open database:', error);
         throw error;
       }
     }
@@ -614,20 +614,20 @@ class GroundedDB extends Dexie {
             await new Promise<void>((resolve, reject) => {
               const deleteRequest = indexedDB.deleteDatabase(oldDbName);
               deleteRequest.onsuccess = () => {
-                console.log('[Dexie] Old database cleaned up successfully');
+                logger.info('[Dexie] Old database cleaned up successfully');
                 resolve();
               };
               deleteRequest.onerror = () => {
-                console.warn('[Dexie] Failed to delete old database:', deleteRequest.error);
+                logger.warn('[Dexie] Failed to delete old database:', deleteRequest.error);
                 resolve(); // Don't block initialization
               };
               deleteRequest.onblocked = () => {
-                console.warn('[Dexie] Old database deletion blocked - another tab may have it open');
+                logger.warn('[Dexie] Old database deletion blocked - another tab may have it open');
                 setTimeout(() => resolve(), 1000); // Wait and resolve anyway
               };
             });
           } catch (error) {
-            console.warn('[Dexie] Error during old database cleanup:', error);
+            logger.warn('[Dexie] Error during old database cleanup:', error);
             // Don't throw - continue with initialization
           }
         }
@@ -666,16 +666,16 @@ export async function exportDatabase(): Promise<string> {
       try {
         exportData[table.name] = await table.toArray();
       } catch (err) {
-        console.warn(`[Dexie] Failed to export store ${table.name}:`, err);
+        logger.warn(`[Dexie] Failed to export store ${table.name}:`, err);
         exportData[table.name] = [];
       }
     }
     
     const jsonString = JSON.stringify(exportData, null, 2);
-    console.log('[Dexie] Export successful - all stores exported');
+    logger.info('[Dexie] Export successful - all stores exported');
     return jsonString;
   } catch (err) {
-    console.error('[Dexie] Export failed:', err);
+    logger.error('[Dexie] Export failed:', err);
     throw err;
   }
 }
@@ -740,13 +740,13 @@ async function exportFromRawIndexedDB(): Promise<Record<string, unknown[]> | nul
                 resolveStore();
               };
               getAllRequest.onerror = () => {
-                console.warn(`[Dexie] Could not read store ${storeName}`);
+                logger.warn(`[Dexie] Could not read store ${storeName}`);
                 exportData[storeName] = [];
                 resolveStore();
               };
             });
           } catch (err) {
-            console.warn(`[Dexie] Error exporting ${storeName}:`, err);
+            logger.warn(`[Dexie] Error exporting ${storeName}:`, err);
             exportData[storeName] = [];
           }
         }
@@ -756,17 +756,17 @@ async function exportFromRawIndexedDB(): Promise<Record<string, unknown[]> | nul
       };
       
       request.onerror = () => {
-        console.warn('[Dexie] Could not open database for export');
+        logger.warn('[Dexie] Could not open database for export');
         resolve(null);
       };
       
       request.onblocked = () => {
-        console.warn('[Dexie] Database open blocked');
+        logger.warn('[Dexie] Database open blocked');
         resolve(null);
       };
     });
   } catch (err) {
-    console.warn('[Dexie] Raw IndexedDB export failed:', err);
+    logger.warn('[Dexie] Raw IndexedDB export failed:', err);
     return null;
   }
 }
@@ -791,14 +791,14 @@ export async function importDatabase(jsonString: string, clearExisting: boolean 
     // Import each store
     for (const [storeName, records] of Object.entries(data)) {
       if (!Array.isArray(records)) {
-        console.warn(`[Dexie] Skipping invalid store data: ${storeName} (not an array)`);
+        logger.warn(`[Dexie] Skipping invalid store data: ${storeName} (not an array)`);
         continue;
       }
       
       const table = db.table(storeName);
       
       if (!table) {
-        console.warn(`[Dexie] Store ${storeName} does not exist in schema - skipping`);
+        logger.warn(`[Dexie] Store ${storeName} does not exist in schema - skipping`);
         continue;
       }
       
