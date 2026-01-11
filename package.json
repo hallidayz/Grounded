@@ -39,6 +39,7 @@
     "test": "jest",
     "test:watch": "jest --watch",
     "test:coverage": "jest --coverage",
+    "test:runtime": "node scripts/runtime-test.js",
     "test-local": "node --loader ts-node/esm src/tests/localIntegrity.test.ts",
     "tauri": "tauri"
   },

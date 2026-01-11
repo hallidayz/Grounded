@@ -113,39 +113,47 @@ export const DataProvider: React.FC<DataProviderProps> = ({
     
     const loadFromDatabase = async () => {
       try {
-        console.log('[DataContext] Checking database for values...', { 
-          userId, 
-          currentValuesCount: selectedValueIds.length,
-          hasInitialData: !!initialData?.selectedValueIds?.length 
-        });
+        console.log('[DataContext] Loading values from database...', { userId });
         await adapter.init();
-        const activeValues = await adapter.getActiveValues(userId);
         
-        console.log('[DataContext] Database query result:', { 
-          activeValuesCount: activeValues.length,
-          activeValues 
-        });
+        // Try loading from values table first
+        let activeValues = await adapter.getActiveValues(userId);
+        
+        // If no values found, try loading from appData as fallback
+        if (activeValues.length === 0) {
+          const appData = await adapter.getAppData(userId);
+          if (appData?.values && appData.values.length > 0) {
+            // Migrate from appData to values table
+            activeValues = appData.values;
+            await adapter.setValuesActive(userId, activeValues);
+            console.log('[DataContext] Migrated values from appData to values table');
+          }
+        }
         
         if (activeValues.length > 0) {
           console.log('[DataContext] Loaded values from database:', activeValues.length, activeValues);
           setSelectedValueIds(activeValues);
-          hasLoadedInitialDataRef.current = true;
-          setIsHydrating(false);
-        } else if (selectedValueIds.length === 0) {
-          // Only log as first-time user if we truly have no values
-          console.log('[DataContext] No values found in database - user is first-time user');
-          hasLoadedInitialDataRef.current = true; // Mark as loaded even if no values found
-          setIsHydrating(false);
         } else {
-          // We have values from initialData, just mark as loaded
-          console.log('[DataContext] Using values from initialData:', selectedValueIds.length);
+          console.log('[DataContext] No values found - user is first-time user');
+        }
+        
+        hasLoadedInitialDataRef.current = true;
+        setIsHydrating(false);
+      } catch (error) {
+        console.error('[DataContext] Error loading values:', error);
+        // Retry once after delay
+        setTimeout(async () => {
+          try {
+            const retryValues = await adapter.getActiveValues(userId);
+            if (retryValues.length > 0) {
+              setSelectedValueIds(retryValues);
+            }
+          } catch (retryError) {
+            console.error('[DataContext] Retry failed:', retryError);
+          }
           hasLoadedInitialDataRef.current = true;
           setIsHydrating(false);
-        }
-      } catch (error) {
-        console.error('[DataContext] Error loading values from database:', error);
-        hasLoadedInitialDataRef.current = true; // Mark as loaded even on error to prevent retries
-        setIsHydrating(false);
+        }, 1000);
       }
     };
 

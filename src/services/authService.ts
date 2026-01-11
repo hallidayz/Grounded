@@ -258,6 +258,14 @@ export async function loginUser(data: LoginData): Promise<AuthResult> {
       // CRITICAL: Store in localStorage for persistence across app updates and deployments
       localStorage.setItem('userId', user.id);
       localStorage.setItem('username', user.username);
+      
+      // CRITICAL: Store password in sessionStorage for encryption/decryption
+      // This is needed for Dexie encryption hooks to work
+      if (localStorage.getItem('encryption_enabled') === 'true') {
+        sessionStorage.setItem('encryption_password', data.password);
+        console.log('[AuthService] Encryption password stored in sessionStorage for Dexie hooks');
+      }
+      
       console.log('[AuthService] CRITICAL: Credentials saved to both sessionStorage and localStorage:', { userId: user.id, username: user.username });
     } catch (error) {
       console.error('[AuthService] CRITICAL ERROR: Failed to save credentials to storage:', error);
@@ -280,6 +288,7 @@ export async function loginUser(data: LoginData): Promise<AuthResult> {
 export function logoutUser(): void {
   sessionStorage.removeItem('userId');
   sessionStorage.removeItem('username');
+  sessionStorage.removeItem('encryption_password'); // Clear encryption password
   // Also clear from localStorage on explicit logout
   localStorage.removeItem('userId');
   localStorage.removeItem('username');

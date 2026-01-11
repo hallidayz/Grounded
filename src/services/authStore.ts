@@ -1,10 +1,16 @@
 /**
  * Authentication Store
- * Stores user credentials in a separate, unencrypted IndexedDB database
- * This allows authentication to happen BEFORE database unlock
  * 
- * Database: groundedAuthDB (always unencrypted, even when encryption is enabled)
+ * PRIVACY-FIRST: All user accounts stored locally in IndexedDB.
+ * NO user data is ever sent to external servers.
+ * 
+ * Now uses groundedDB.users instead of separate groundedAuthDB
+ * This consolidates all data into a single on-device database
  */
+
+import { db } from './dexieDB';
+import type { UserRecord } from './dexieDB';
+import { migrateAuthToDexie } from './migrateAuthToDexie';
 
 interface AuthUserData {
   id: string;
@@ -19,364 +25,159 @@ interface AuthUserData {
 }
 
 class AuthStore {
-  private dbName = 'groundedAuthDB';
-  private dbVersion = 1;
-  private db: IDBDatabase | null = null;
   private initPromise: Promise<void> | null = null;
+  private migrationRun = false;
 
   /**
-   * Initialize the authentication database
-   * CRITICAL: Never upgrades version to prevent data loss
+   * Initialize the authentication store
+   * Runs migration from groundedAuthDB on first init
    */
   async init(): Promise<void> {
-    if (this.db) {
-      return Promise.resolve();
-    }
-
     if (this.initPromise) {
       return this.initPromise;
     }
 
-    this.initPromise = new Promise((resolve, reject) => {
-      if (typeof indexedDB === 'undefined') {
-        reject(new Error('IndexedDB is not available'));
-        return;
+    this.initPromise = (async () => {
+      // Ensure groundedDB is open
+      await db.open();
+
+      // Run migration once on first init
+      if (!this.migrationRun) {
+        this.migrationRun = true;
+        try {
+          const result = await migrateAuthToDexie();
+          if (result.success && result.migrated > 0) {
+            console.log(`[AuthStore] Migrated ${result.migrated} user(s) from groundedAuthDB`);
+          }
+        } catch (error) {
+          console.error('[AuthStore] Migration error (non-fatal):', error);
+          // Continue even if migration fails
+        }
       }
 
-      const request = indexedDB.open(this.dbName, this.dbVersion);
-
-      request.onerror = () => {
-        this.initPromise = null;
-        reject(request.error);
-      };
-
-      request.onsuccess = async () => {
-        this.db = request.result;
-        this.initPromise = null;
+      // Verify database has users
+      try {
+        const userCount = await db.users.count();
+        console.log(`[AuthStore] Database initialized. User count: ${userCount}`);
         
-        // CRITICAL: Verify database has data after opening
-        // Use try-catch for cross-platform compatibility (iOS Safari, Android WebView, etc.)
-        try {
-          const verifyTransaction = this.db.transaction(['users'], 'readonly');
-          const verifyStore = verifyTransaction.objectStore('users');
-          const countRequest = verifyStore.count();
-          
-          await new Promise<void>((countResolve) => {
-            countRequest.onsuccess = async () => {
-              const userCount = countRequest.result;
-              console.log(`[AuthStore] Database opened. User count: ${userCount}`);
-              
-              // CRITICAL: If database is empty, immediately try to restore from localStorage backups
-              if (userCount === 0 && typeof localStorage !== 'undefined') {
-                console.warn('[AuthStore] WARNING: Database is empty - attempting recovery from localStorage backups...');
-                try {
-                  const recoveredUsers: AuthUserData[] = [];
-                  
-                  // First, try to get the "latest user" marker (fastest path)
-                  try {
-                    const latestUserBackup = localStorage.getItem('auth_latest_user');
-                    if (latestUserBackup) {
-                      const latestUser = JSON.parse(latestUserBackup) as AuthUserData;
-                      if (latestUser && latestUser.id && latestUser.username) {
-                        recoveredUsers.push(latestUser);
-                        console.log('[AuthStore] Found latest user backup:', { userId: latestUser.id, username: latestUser.username });
-                      }
-                    }
-                  } catch (latestError) {
-                    console.warn('[AuthStore] Failed to parse latest user backup:', latestError);
-                  }
-                  
-                  // Also check all individual user backups (cross-platform safe iteration)
-                  try {
-                    const keys: string[] = [];
-                    for (let i = 0; i < localStorage.length; i++) {
-                      const key = localStorage.key(i);
-                      if (key && key.startsWith('auth_user_backup_')) {
-                        keys.push(key);
-                      }
-                    }
-                    
-                    for (const key of keys) {
-                      try {
-                        const backup = localStorage.getItem(key);
-                        if (backup) {
-                          const user = JSON.parse(backup) as AuthUserData;
-                          if (user && user.id && user.username && !recoveredUsers.find(u => u.id === user.id)) {
-                            recoveredUsers.push(user);
-                            console.log('[AuthStore] Found user backup:', { userId: user.id, username: user.username });
-                          }
-                        }
-                      } catch (parseError) {
-                        console.warn('[AuthStore] Failed to parse backup:', key, parseError);
-                      }
-                    }
-                  } catch (storageError) {
-                    console.warn('[AuthStore] Error accessing localStorage:', storageError);
-                  }
-                  
-                  // Restore all found users to the database
-                  if (recoveredUsers.length > 0 && this.db) {
-                    console.log(`[AuthStore] Attempting to restore ${recoveredUsers.length} user(s) from backups...`);
-                    try {
-                      const restoreTransaction = this.db.transaction(['users'], 'readwrite');
-                      const restoreStore = restoreTransaction.objectStore('users');
-                      let restoredCount = 0;
-                      let restoreErrors = 0;
-                      
-                      for (const user of recoveredUsers) {
-                        try {
-                          await new Promise<void>((restoreResolve) => {
-                            try {
-                              const restoreRequest = restoreStore.add(user);
-                              restoreRequest.onsuccess = () => {
-                                restoredCount++;
-                                restoreResolve();
-                              };
-                              restoreRequest.onerror = () => {
-                                // If user already exists (e.g., ConstraintError), that's OK
-                                if (restoreRequest.error?.name === 'ConstraintError' || restoreRequest.error?.name === 'DataError') {
-                                  console.log('[AuthStore] User already exists in database:', user.username);
-                                  restoredCount++;
-                                } else {
-                                  console.error('[AuthStore] Failed to restore user:', user.username, restoreRequest.error);
-                                  restoreErrors++;
-                                }
-                                restoreResolve(); // Continue even on error
-                              };
-                            } catch (addError) {
-                              console.error('[AuthStore] Error adding user:', user.username, addError);
-                              restoreErrors++;
-                              restoreResolve();
-                            }
-                          });
-                        } catch (restoreError) {
-                          console.error('[AuthStore] Error restoring user:', user.username, restoreError);
-                          restoreErrors++;
-                        }
-                      }
-                      
-                      // Wait for transaction to complete (cross-platform safe)
-                      await new Promise<void>((txResolve) => {
-                        restoreTransaction.oncomplete = () => {
-                          console.log(`[AuthStore] Recovery complete: ${restoredCount} user(s) restored, ${restoreErrors} error(s)`);
-                          txResolve();
-                        };
-                        restoreTransaction.onerror = () => {
-                          console.error('[AuthStore] Recovery transaction error:', restoreTransaction.error);
-                          txResolve(); // Continue anyway
-                        };
-                        // Safety timeout for slow devices
-                        setTimeout(() => txResolve(), 2000);
-                      });
-                      
-                      if (restoredCount > 0) {
-                        console.log(`[AuthStore] ✅ Successfully restored ${restoredCount} user(s) from localStorage backups`);
-                      } else {
-                        console.warn('[AuthStore] ⚠️ No users could be restored from backups');
-                      }
-                    } catch (dbError) {
-                      console.error('[AuthStore] Database error during recovery:', dbError);
-                    }
-                  } else if (recoveredUsers.length === 0) {
-                    console.warn('[AuthStore] No user backups found in localStorage');
-                  }
-                } catch (recoveryError) {
-                  console.error('[AuthStore] Error during recovery from localStorage:', recoveryError);
-                  // Continue anyway - don't block initialization
-                }
-              }
-              
-              countResolve();
-            };
-            countRequest.onerror = () => {
-              console.error('[AuthStore] Error counting users during init:', countRequest.error);
-              countResolve(); // Continue anyway
-            };
-          });
-        } catch (error) {
-          console.error('[AuthStore] Error during database verification:', error);
-          // Continue anyway - database is open, just couldn't verify
+        // If no users and localStorage has backups, try recovery
+        if (userCount === 0 && typeof localStorage !== 'undefined') {
+          await this.recoverFromLocalStorage();
         }
-        
-        resolve();
-      };
-
-      request.onupgradeneeded = (event) => {
-        const db = (event.target as IDBOpenDBRequest).result;
-        const oldVersion = event.oldVersion;
-        
-        console.log(`[AuthStore] Database upgrade needed: ${oldVersion} -> ${this.dbVersion}`);
-        
-        // CRITICAL: If upgrading from version 0, this is a new database (OK)
-        // If upgrading from version > 0, preserve existing data
-        if (oldVersion > 0 && oldVersion < this.dbVersion) {
-          console.warn(`[AuthStore] WARNING: Upgrading from version ${oldVersion} - data should be preserved`);
-          
-          // CRITICAL: Check if we have existing users before upgrading
-          if (db.objectStoreNames.contains('users')) {
-            const checkTransaction = db.transaction(['users'], 'readonly');
-            const checkStore = checkTransaction.objectStore('users');
-            const countRequest = checkStore.count();
-            countRequest.onsuccess = () => {
-              const userCount = countRequest.result;
-              if (userCount > 0) {
-                console.warn(`[AuthStore] CRITICAL: Upgrading database with ${userCount} existing user(s) - data must be preserved!`);
-              }
-            };
-          }
-        }
-        
-        // Create users store
-        if (!db.objectStoreNames.contains('users')) {
-          const userStore = db.createObjectStore('users', { keyPath: 'id' });
-          userStore.createIndex('username', 'username', { unique: true });
-          userStore.createIndex('email', 'email', { unique: false });
-          console.log('[AuthStore] Created users object store');
-        } else {
-          console.log('[AuthStore] Users object store already exists - preserving data');
-        }
-
-        // Create reset tokens store
-        if (!db.objectStoreNames.contains('reset_tokens')) {
-          const tokenStore = db.createObjectStore('reset_tokens', { keyPath: 'token' });
-          tokenStore.createIndex('userId', 'userId', { unique: false });
-          tokenStore.createIndex('expires', 'expires', { unique: false });
-          console.log('[AuthStore] Created reset_tokens object store');
-        } else {
-          console.log('[AuthStore] reset_tokens object store already exists - preserving data');
-        }
-      };
-      
-      request.onblocked = () => {
-        console.warn('[AuthStore] Database open blocked - another tab may have it open');
-        // Don't reject - wait for it to unblock
-      };
-    });
+      } catch (error) {
+        console.error('[AuthStore] Error during verification:', error);
+      }
+    })();
 
     return this.initPromise;
   }
 
   /**
+   * Recover users from localStorage backups
+   */
+  private async recoverFromLocalStorage(): Promise<void> {
+    try {
+      const recoveredUsers: AuthUserData[] = [];
+      
+      // Get latest user marker
+      const latestUserBackup = localStorage.getItem('auth_latest_user');
+      if (latestUserBackup) {
+        try {
+          const latestUser = JSON.parse(latestUserBackup) as AuthUserData;
+          if (latestUser?.id && latestUser?.username) {
+            recoveredUsers.push(latestUser);
+            console.log('[AuthStore] Found latest user backup:', { userId: latestUser.id, username: latestUser.username });
+          }
+        } catch (e) {
+          console.warn('[AuthStore] Failed to parse latest user backup:', e);
+        }
+      }
+      
+      // Get all user backups
+      const keys: string[] = [];
+      for (let i = 0; i < localStorage.length; i++) {
+        const key = localStorage.key(i);
+        if (key && key.startsWith('auth_user_backup_')) {
+          keys.push(key);
+        }
+      }
+      
+      for (const key of keys) {
+        try {
+          const backup = localStorage.getItem(key);
+          if (backup) {
+            const user = JSON.parse(backup) as AuthUserData;
+            if (user?.id && user?.username && !recoveredUsers.find(u => u.id === user.id)) {
+              recoveredUsers.push(user);
+            }
+          }
+        } catch (e) {
+          console.warn('[AuthStore] Failed to parse backup:', key, e);
+        }
+      }
+      
+      // Restore to database
+      if (recoveredUsers.length > 0) {
+        console.log(`[AuthStore] Attempting to restore ${recoveredUsers.length} user(s) from backups...`);
+        for (const user of recoveredUsers) {
+          try {
+            const existing = await db.users.get(user.id);
+            if (!existing) {
+              await db.users.add(user as UserRecord);
+              console.log('[AuthStore] Restored user:', user.username);
+            }
+          } catch (error: any) {
+            if (error?.name !== 'ConstraintError') {
+              console.error('[AuthStore] Failed to restore user:', user.username, error);
+            }
+          }
+        }
+      }
+    } catch (error) {
+      console.error('[AuthStore] Error during localStorage recovery:', error);
+    }
+  }
+
+  /**
    * Create a new user
-   * CRITICAL: Includes verification to ensure user is actually saved
    */
   async createUser(userData: Omit<AuthUserData, 'id' | 'createdAt'>): Promise<string> {
     await this.init();
-    if (!this.db) {
-      throw new Error('Database not initialized');
-    }
-
+    
     const id = `user_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
-    const user: AuthUserData = {
+    const user: UserRecord = {
       ...userData,
       id,
       createdAt: new Date().toISOString()
     };
 
-    return new Promise((resolve, reject) => {
-      const transaction = this.db!.transaction(['users'], 'readwrite');
-      const store = transaction.objectStore('users');
-      const request = store.add(user);
-
-      request.onsuccess = async () => {
-        // CRITICAL: Backup user to localStorage immediately as safety net (cross-platform safe)
-        if (typeof localStorage !== 'undefined') {
-          try {
-            const backupKey = `auth_user_backup_${id}`;
-            localStorage.setItem(backupKey, JSON.stringify(user));
-            // Also store as "latest user" for easy recovery
-            localStorage.setItem('auth_latest_user', JSON.stringify(user));
-            console.log('[AuthStore] User backed up to localStorage:', { userId: id, username: userData.username });
-          } catch (backupError) {
-            console.warn('[AuthStore] Failed to backup user to localStorage:', backupError);
-          }
+    try {
+      await db.users.add(user);
+      
+      // Backup to localStorage
+      if (typeof localStorage !== 'undefined') {
+        try {
+          localStorage.setItem(`auth_user_backup_${id}`, JSON.stringify(user));
+          localStorage.setItem('auth_latest_user', JSON.stringify(user));
+        } catch (e) {
+          console.warn('[AuthStore] Failed to backup user:', e);
         }
-        
-        // Wait for transaction to complete before resolving
-        // This ensures the user is fully committed to IndexedDB
-        await new Promise<void>((txResolve, txReject) => {
-          transaction.oncomplete = async () => {
-            console.log('[AuthStore] User transaction completed:', { userId: id, username: userData.username });
-            
-            // CRITICAL: Verify user was actually saved by reading it back
-            try {
-              // Small delay to ensure IndexedDB has flushed to disk
-              await new Promise(resolve => setTimeout(resolve, 50));
-              
-              // Verify without closing connection (faster)
-              const verifyTransaction = this.db!.transaction(['users'], 'readonly');
-              const verifyStore = verifyTransaction.objectStore('users');
-              const verifyRequest = verifyStore.get(id);
-              
-              verifyRequest.onsuccess = () => {
-                const savedUser = verifyRequest.result;
-                if (!savedUser) {
-                  console.error('[AuthStore] CRITICAL: User was added but cannot be retrieved!', { userId: id, username: userData.username });
-                  // Try to restore from localStorage backup
-                  try {
-                    const backupKey = `auth_user_backup_${id}`;
-                    const backup = localStorage.getItem(backupKey);
-                    if (backup) {
-                      console.log('[AuthStore] Attempting to restore user from localStorage backup...');
-                      const backupUser = JSON.parse(backup);
-                      // Try to re-add the user
-                      const restoreTransaction = this.db!.transaction(['users'], 'readwrite');
-                      const restoreStore = restoreTransaction.objectStore('users');
-                      restoreStore.add(backupUser);
-                      restoreTransaction.oncomplete = () => {
-                        console.log('[AuthStore] User restored from backup');
-                        txResolve();
-                      };
-                      restoreTransaction.onerror = () => {
-                        console.error('[AuthStore] Failed to restore user from backup');
-                        txReject(new Error('User creation verification failed and restore failed'));
-                      };
-                      return;
-                    }
-                  } catch (restoreError) {
-                    console.error('[AuthStore] Error restoring from backup:', restoreError);
-                  }
-                  txReject(new Error('User creation verification failed - user not found after save'));
-                  return;
-                }
-                if (savedUser.username !== userData.username) {
-                  console.error('[AuthStore] CRITICAL: Username mismatch after save!', {
-                    expected: userData.username,
-                    found: savedUser.username
-                  });
-                }
-                console.log('[AuthStore] User verification successful:', { userId: id, username: savedUser.username });
-                txResolve();
-              };
-              
-              verifyRequest.onerror = () => {
-                console.error('[AuthStore] Error verifying user:', verifyRequest.error);
-                // Don't reject - user was added, verification might be a timing issue
-                txResolve();
-              };
-            } catch (verifyError) {
-              console.error('[AuthStore] Error during user verification:', verifyError);
-              // Don't reject - user was added, verification might be a timing issue
-              txResolve();
-            }
-          };
-          transaction.onerror = () => {
-            console.error('[AuthStore] User transaction error:', transaction.error);
-            txReject(transaction.error);
-          };
-          // Safety timeout - if transaction doesn't complete in 2 seconds, something is wrong
-          setTimeout(() => {
-            console.warn('[AuthStore] Transaction completion timeout - user may not be saved');
-            txReject(new Error('Transaction timeout - user may not be saved'));
-          }, 2000);
-        });
-        resolve(id);
-      };
-      request.onerror = () => {
-        console.error('[AuthStore] Error adding user:', request.error);
-        reject(request.error);
-      };
-    });
+      }
+      
+      // Verify user was saved
+      const saved = await db.users.get(id);
+      if (!saved) {
+        throw new Error('User was not saved correctly');
+      }
+      
+      console.log('[AuthStore] User created:', { userId: id, username: userData.username });
+      return id;
+    } catch (error: any) {
+      if (error?.name === 'ConstraintError') {
+        throw new Error('Username or email already exists');
+      }
+      throw error;
+    }
   }
 
   /**
@@ -384,21 +185,7 @@ class AuthStore {
    */
   async getUserByUsername(username: string): Promise<AuthUserData | null> {
     await this.init();
-    if (!this.db) {
-      throw new Error('Database not initialized');
-    }
-
-    return new Promise((resolve, reject) => {
-      const transaction = this.db!.transaction(['users'], 'readonly');
-      const store = transaction.objectStore('users');
-      const index = store.index('username');
-      const request = index.get(username);
-
-      request.onsuccess = () => {
-        resolve(request.result || null);
-      };
-      request.onerror = () => reject(request.error);
-    });
+    return await db.users.where('username').equals(username).first() || null;
   }
 
   /**
@@ -406,92 +193,23 @@ class AuthStore {
    */
   async getUserByEmail(email: string): Promise<AuthUserData | null> {
     await this.init();
-    if (!this.db) {
-      throw new Error('Database not initialized');
-    }
-
-    return new Promise((resolve, reject) => {
-      const transaction = this.db!.transaction(['users'], 'readonly');
-      const store = transaction.objectStore('users');
-      const index = store.index('email');
-      const request = index.get(email);
-
-      request.onsuccess = () => {
-        resolve(request.result || null);
-      };
-      request.onerror = () => reject(request.error);
-    });
+    return await db.users.where('email').equals(email).first() || null;
   }
 
   /**
-   * Get all users (for fallback when session is lost)
-   * CRITICAL: Includes recovery from localStorage backup if database is empty
+   * Get all users
    */
   async getAllUsers(): Promise<AuthUserData[]> {
     await this.init();
-    if (!this.db) {
-      throw new Error('Database not initialized');
+    const users = await db.users.toArray();
+    
+    // If empty, try recovery
+    if (users.length === 0) {
+      await this.recoverFromLocalStorage();
+      return await db.users.toArray();
     }
-
-    return new Promise(async (resolve, reject) => {
-      const transaction = this.db!.transaction(['users'], 'readonly');
-      const store = transaction.objectStore('users');
-      const request = store.getAll();
-
-      request.onsuccess = async () => {
-        const users = request.result || [];
-        
-        // CRITICAL: If database is empty, try to recover from localStorage backups
-        if (users.length === 0) {
-          console.warn('[AuthStore] Database is empty - attempting recovery from localStorage backups...');
-          try {
-            const recoveredUsers: AuthUserData[] = [];
-            for (let i = 0; i < localStorage.length; i++) {
-              const key = localStorage.key(i);
-              if (key && key.startsWith('auth_user_backup_')) {
-                try {
-                  const backup = localStorage.getItem(key);
-                  if (backup) {
-                    const user = JSON.parse(backup) as AuthUserData;
-                    recoveredUsers.push(user);
-                    console.log('[AuthStore] Recovered user from backup:', { userId: user.id, username: user.username });
-                    
-                    // Re-add to database
-                    try {
-                      const restoreTransaction = this.db!.transaction(['users'], 'readwrite');
-                      const restoreStore = restoreTransaction.objectStore('users');
-                      restoreStore.add(user);
-                      await new Promise<void>((restoreResolve, restoreReject) => {
-                        restoreTransaction.oncomplete = () => restoreResolve();
-                        restoreTransaction.onerror = () => restoreReject(restoreTransaction.error);
-                        setTimeout(() => restoreResolve(), 100); // Safety timeout
-                      });
-                      console.log('[AuthStore] Restored user to database:', { userId: user.id });
-                    } catch (restoreError) {
-                      console.error('[AuthStore] Failed to restore user to database:', restoreError);
-                    }
-                  }
-                } catch (parseError) {
-                  console.warn('[AuthStore] Failed to parse backup:', key, parseError);
-                }
-              }
-            }
-            
-            if (recoveredUsers.length > 0) {
-              console.log(`[AuthStore] Recovered ${recoveredUsers.length} user(s) from localStorage backups`);
-              // Return recovered users
-              resolve(recoveredUsers);
-              return;
-            }
-          } catch (recoveryError) {
-            console.error('[AuthStore] Error during recovery:', recoveryError);
-          }
-        }
-        
-        resolve(users);
-      };
-      request.onerror = () => reject(request.error);
-    });
+    
+    return users;
   }
 
   /**
@@ -499,20 +217,7 @@ class AuthStore {
    */
   async getUserById(userId: string): Promise<AuthUserData | null> {
     await this.init();
-    if (!this.db) {
-      throw new Error('Database not initialized');
-    }
-
-    return new Promise((resolve, reject) => {
-      const transaction = this.db!.transaction(['users'], 'readonly');
-      const store = transaction.objectStore('users');
-      const request = store.get(userId);
-
-      request.onsuccess = () => {
-        resolve(request.result || null);
-      };
-      request.onerror = () => reject(request.error);
-    });
+    return await db.users.get(userId) || null;
   }
 
   /**
@@ -520,59 +225,38 @@ class AuthStore {
    */
   async updateUser(userId: string, updates: Partial<AuthUserData>): Promise<void> {
     await this.init();
-    if (!this.db) {
-      throw new Error('Database not initialized');
-    }
-
-    const user = await this.getUserById(userId);
+    
+    const user = await db.users.get(userId);
     if (!user) {
       throw new Error('User not found');
     }
 
     const updated = { ...user, ...updates };
-
-    return new Promise((resolve, reject) => {
-      const transaction = this.db!.transaction(['users'], 'readwrite');
-      const store = transaction.objectStore('users');
-      const request = store.put(updated);
-
-      request.onsuccess = () => {
-        // CRITICAL: Update localStorage backup when user is updated (cross-platform safe)
-        if (typeof localStorage !== 'undefined') {
-          try {
-            const backupKey = `auth_user_backup_${userId}`;
-            localStorage.setItem(backupKey, JSON.stringify(updated));
-            // Update "latest user" marker if this is the latest user
-            const latestUserBackup = localStorage.getItem('auth_latest_user');
-            if (latestUserBackup) {
-              try {
-                const latestUser = JSON.parse(latestUserBackup) as AuthUserData;
-                if (latestUser.id === userId) {
-                  localStorage.setItem('auth_latest_user', JSON.stringify(updated));
-                }
-              } catch (e) {
-                // Ignore parse errors
-              }
-            }
-          } catch (backupError) {
-            console.warn('[AuthStore] Failed to update user backup in localStorage:', backupError);
+    await db.users.put(updated);
+    
+    // Update localStorage backup
+    if (typeof localStorage !== 'undefined') {
+      try {
+        localStorage.setItem(`auth_user_backup_${userId}`, JSON.stringify(updated));
+        const latest = localStorage.getItem('auth_latest_user');
+        if (latest) {
+          const latestUser = JSON.parse(latest) as AuthUserData;
+          if (latestUser.id === userId) {
+            localStorage.setItem('auth_latest_user', JSON.stringify(updated));
           }
         }
-        resolve();
-      };
-      request.onerror = () => reject(request.error);
-    });
+      } catch (e) {
+        console.warn('[AuthStore] Failed to update backup:', e);
+      }
+    }
   }
 
   /**
-   * Create reset token
+   * Create reset token (uses groundedDB.resetTokens)
    */
   async createResetToken(userId: string, email: string): Promise<string> {
     await this.init();
-    if (!this.db) {
-      throw new Error('Database not initialized');
-    }
-
+    
     const token = `reset_${Date.now()}_${Math.random().toString(36).substr(2, 16)}`;
     const expires = Date.now() + (24 * 60 * 60 * 1000); // 24 hours
 
@@ -580,18 +264,12 @@ class AuthStore {
       token,
       userId,
       email,
-      expires,
+      expires: new Date(expires).toISOString(),
       createdAt: new Date().toISOString()
     };
 
-    return new Promise((resolve, reject) => {
-      const transaction = this.db!.transaction(['reset_tokens'], 'readwrite');
-      const store = transaction.objectStore('reset_tokens');
-      const request = store.add(tokenData);
-
-      request.onsuccess = () => resolve(token);
-      request.onerror = () => reject(request.error);
-    });
+    await db.resetTokens.add(tokenData);
+    return token;
   }
 
   /**
@@ -599,35 +277,22 @@ class AuthStore {
    */
   async getResetToken(token: string): Promise<{ userId: string; email: string } | null> {
     await this.init();
-    if (!this.db) {
-      throw new Error('Database not initialized');
+    
+    const result = await db.resetTokens.get(token);
+    if (!result) {
+      return null;
     }
 
-    return new Promise((resolve, reject) => {
-      const transaction = this.db!.transaction(['reset_tokens'], 'readonly');
-      const store = transaction.objectStore('reset_tokens');
-      const request = store.get(token);
+    // Check if token is expired
+    const expires = new Date(result.expires).getTime();
+    if (expires < Date.now()) {
+      return null;
+    }
 
-      request.onsuccess = () => {
-        const result = request.result;
-        if (!result) {
-          resolve(null);
-          return;
-        }
-
-        // Check if token is expired
-        if (result.expires < Date.now()) {
-          resolve(null);
-          return;
-        }
-
-        resolve({
-          userId: result.userId,
-          email: result.email
-        });
-      };
-      request.onerror = () => reject(request.error);
-    });
+    return {
+      userId: result.userId,
+      email: result.email
+    };
   }
 
   /**
@@ -635,18 +300,7 @@ class AuthStore {
    */
   async deleteResetToken(token: string): Promise<void> {
     await this.init();
-    if (!this.db) {
-      throw new Error('Database not initialized');
-    }
-
-    return new Promise((resolve, reject) => {
-      const transaction = this.db!.transaction(['reset_tokens'], 'readwrite');
-      const store = transaction.objectStore('reset_tokens');
-      const request = store.delete(token);
-
-      request.onsuccess = () => resolve();
-      request.onerror = () => reject(request.error);
-    });
+    await db.resetTokens.delete(token);
   }
 
   /**
@@ -654,30 +308,15 @@ class AuthStore {
    */
   async cleanupExpiredTokens(): Promise<void> {
     await this.init();
-    if (!this.db) {
-      return;
+    const now = Date.now();
+    const expired = await db.resetTokens
+      .where('expires')
+      .below(new Date(now).toISOString())
+      .toArray();
+    
+    for (const token of expired) {
+      await db.resetTokens.delete(token.token);
     }
-
-    return new Promise((resolve, reject) => {
-      const transaction = this.db!.transaction(['reset_tokens'], 'readwrite');
-      const store = transaction.objectStore('reset_tokens');
-      const index = store.index('expires');
-      const request = index.openCursor();
-      const now = Date.now();
-
-      request.onsuccess = (event) => {
-        const cursor = (event.target as IDBRequest<IDBCursorWithValue>).result;
-        if (cursor) {
-          if (cursor.value.expires < now) {
-            cursor.delete();
-          }
-          cursor.continue();
-        } else {
-          resolve();
-        }
-      };
-      request.onerror = () => reject(request.error);
-    });
   }
 }
 

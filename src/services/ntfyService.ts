@@ -1,15 +1,23 @@
 /**
- * NTFY.SH PUSH NOTIFICATION SERVICE
+ * NTFY.SH PUSH NOTIFICATION SERVICE (OPTIONAL)
  * 
- * Secure, on-device push notifications using ntfy.sh
+ * PRIVACY NOTE: This is an OPTIONAL feature. If used, only notification text
+ * (not user data) is sent to ntfy.sh. User data never leaves the device.
+ * 
  * - Open-source, self-hostable push system
  * - Publish to a topic via HTTP
  * - Receive notifications on Android, iOS, or desktop
  * - Generous free public instance (https://ntfy.sh)
  * - No per-message charge
  * 
- * Security: Topics are private by default. Users should use a random topic name.
- * All data remains on-device; only notification text is sent to ntfy.sh.
+ * PRIVACY: 
+ * - Topics are private by default. Users should use a random topic name.
+ * - Only notification text is sent (e.g., "Reminder: Check in with your values")
+ * - NO user data, PHI, or database content is ever transmitted
+ * - This feature is completely optional and can be disabled
+ * 
+ * DEFAULT: This service is NOT used by default. It's only called if explicitly
+ * enabled by the user in settings.
  */
 
 export interface NtfyConfig {

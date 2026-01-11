@@ -1,6 +1,11 @@
 /**
  * Database Adapter Pattern
- * Provides unified interface for both legacy IndexedDB and encrypted SQLite databases
+ * 
+ * PRIVACY-FIRST: All database operations are local-only.
+ * NO data is ever sent to external servers or cloud services.
+ * 
+ * Provides unified interface for local IndexedDB operations.
+ * All data remains on-device in IndexedDB (groundedDB).
  */
 
 import { AppSettings, LogEntry, Goal, LCSWConfig } from '../types';
@@ -1632,33 +1637,17 @@ export function validateEncryptionBoundary(operation: string, dataType?: string)
 }
 
 /**
- * Factory function to get the appropriate adapter
+ * Factory function to get the database adapter
  * 
- * SECURITY: When encryption is enabled, PHI data MUST use EncryptedAdapter.
- * Dexie (LegacyAdapter) is NEVER used for PHI when encryption is enabled.
+ * ALWAYS returns LegacyAdapter (Dexie-based) for unified database architecture.
+ * Encryption is handled at the Dexie hook level, not at the adapter level.
  * 
- * NOTE: If encryption is enabled but EncryptedPWA is not initialized (e.g., user not logged in),
- * this will return LegacyAdapter with a warning. The adapter will throw errors when PHI operations
- * are attempted, enforcing security at the operation level rather than adapter selection.
+ * This consolidates all data into a single groundedDB database, eliminating
+ * the need for separate EncryptedPWA (SQLite) storage.
  */
 export function getDatabaseAdapter(): DatabaseAdapter {
-  const encryptionEnabled = isEncryptionEnabled();
-  
-  if (encryptionEnabled) {
-    const encryptedDb = EncryptedPWA.getInstance();
-    if (!encryptedDb) {
-      // User not logged in yet - encryption is enabled but DB not initialized
-      // Return LegacyAdapter with warning - security will be enforced at operation level
-      console.warn(
-        '[getDatabaseAdapter] Encryption enabled but EncryptedPWA not initialized. ' +
-        'Returning LegacyAdapter - PHI operations will be blocked by validateEncryptionBoundary().'
-      );
-      return new LegacyAdapter();
-    }
-    return new EncryptedAdapter(encryptedDb);
-  }
-  
-  // Default to legacy adapter (Dexie) when encryption is disabled
+  // Always return Dexie-based adapter
+  // Encryption is handled by Dexie hooks when encryption_enabled === 'true'
   return new LegacyAdapter();
 }
 

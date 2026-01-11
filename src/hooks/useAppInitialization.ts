@@ -368,19 +368,8 @@ export function useAppInitialization(options: UseAppInitializationOptions): AppI
           console.warn('[INIT] Data recovery check failed (non-critical):', recoveryError);
         }
         
-        // Attempt cloud restore if enabled (after local recovery)
-        try {
-          const { restoreFromCloud, startAutoSync } = await import('../services/dexieDB');
-          const cloudRestored = await restoreFromCloud();
-          if (cloudRestored) {
-            console.log('[INIT] Data restored from cloud backup');
-          }
-          // Start auto-sync after restore attempt (if not already started)
-          startAutoSync();
-        } catch (cloudError) {
-          // Non-critical - cloud sync is optional
-          console.warn('[INIT] Cloud restore check failed (non-critical):', cloudError);
-        }
+        // PRIVACY-FIRST: Cloud restore is disabled - all data remains on-device
+        // No cloud sync or restore functionality
         
         const dbInitPromise = adapter.init();
         const dbInitTimeout = new Promise((_, reject) => {
