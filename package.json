@@ -1,7 +1,7 @@
 {
   "name": "grounded",
   "private": true,
-  "version": "1.13.6",
+  "version": "1.13.7",
   "type": "module",
   "scripts": {
     "dev": "ulimit -n 10240 2>/dev/null || true && vite --open",
