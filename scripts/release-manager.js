@@ -113,37 +113,68 @@ function updateVersionInTextFile(filePath, oldVersion, newVersion) {
   try {
     let content = readFileSync(filePath, 'utf-8');
     const escapedOldVersion = oldVersion.replace(/\./g, '\\.');
+    const oldVersionWithV = `v${oldVersion}`;
+    const newVersionWithV = `v${newVersion}`;
     
-    // Handle various patterns
+    // Pattern 1: Version with 'v' prefix (v1.13.5)
     content = content.replace(
-      new RegExp(`(CURRENT_APP_VERSION|appVersion|Version)\\s*[:=]\\s*[^'"]*["']${escapedOldVersion}["']`, 'g'),
-      (match) => match.replace(oldVersion, newVersion)
+      new RegExp(`\\b${oldVersionWithV.replace(/\./g, '\\.')}\\b`, 'g'),
+      newVersionWithV
     );
     
-    // Escape special regex characters in patterns
-    const escapedPatterns = [
-      `Version\\s*[:]?\\s*${escapedOldVersion}`,
-      `\\*\\*Version\\*\\*\\s*[:]?\\s*${escapedOldVersion}`,
-      `Current Version\\s*[:]?\\s*${escapedOldVersion}`,
-      `\\*\\*Current Version\\*\\*\\s*[:]?\\s*${escapedOldVersion}`,
+    // Pattern 2: "Grounded PWA v1.13.5" or "Grounded PWA v1.13.5"
+    content = content.replace(
+      new RegExp(`Grounded(?:\\s+PWA)?\\s+v${escapedOldVersion}`, 'gi'),
+      (match) => match.replace(oldVersionWithV, newVersionWithV)
+    );
+    
+    // Pattern 3: "Grounded-PWA-v1.13.5.zip" or similar file names
+    content = content.replace(
+      new RegExp(`Grounded-PWA-v${escapedOldVersion}`, 'gi'),
+      `Grounded-PWA-${newVersionWithV}`
+    );
+    
+    // Pattern 4: Version in quotes or code blocks
+    content = content.replace(
+      new RegExp(`["'\`]v?${escapedOldVersion}["'\`]`, 'g'),
+      (match) => {
+        if (match.includes('v')) {
+          return match.replace(oldVersionWithV, newVersionWithV);
+        }
+        return match.replace(oldVersion, newVersion);
+      }
+    );
+    
+    // Pattern 5: Version with various prefixes and formats
+    const versionPatterns = [
+      { pattern: `(CURRENT_APP_VERSION|appVersion|Version)\\s*[:=]\\s*[^'"]*["']v?${escapedOldVersion}["']`, replace: (m) => m.replace(oldVersion, newVersion).replace(oldVersionWithV, newVersionWithV) },
+      { pattern: `Version\\s*[:]?\\s*v?${escapedOldVersion}`, replace: (m) => m.replace(oldVersion, newVersion).replace(oldVersionWithV, newVersionWithV) },
+      { pattern: `\\*\\*Version\\*\\*\\s*[:]?\\s*v?${escapedOldVersion}`, replace: (m) => m.replace(oldVersion, newVersion).replace(oldVersionWithV, newVersionWithV) },
+      { pattern: `Current Version\\s*[:]?\\s*v?${escapedOldVersion}`, replace: (m) => m.replace(oldVersion, newVersion).replace(oldVersionWithV, newVersionWithV) },
+      { pattern: `\\*\\*Current Version\\*\\*\\s*[:]?\\s*v?${escapedOldVersion}`, replace: (m) => m.replace(oldVersion, newVersion).replace(oldVersionWithV, newVersionWithV) },
+      { pattern: `App Version:\\s*v?${escapedOldVersion}`, replace: `App Version: ${newVersion}` },
+      { pattern: `**Version**:\\s*v?${escapedOldVersion}`, replace: `**Version**: ${newVersion}` },
+      { pattern: `- \\*\\*Version\\*\\*:\\s*v?${escapedOldVersion}`, replace: `- **Version**: ${newVersion}` },
     ];
     
-    escapedPatterns.forEach(pattern => {
+    versionPatterns.forEach(({ pattern, replace }) => {
       content = content.replace(
         new RegExp(pattern, 'gi'),
-        (match) => match.replace(oldVersion, newVersion)
+        (match) => typeof replace === 'function' ? replace(match) : replace
       );
     });
     
+    // Pattern 6: "Grounded by AC MiNDS" - Version X.Y.Z format
     content = content.replace(
-      new RegExp(`App Version:\\s*${escapedOldVersion}`, 'g'),
-      `App Version: ${newVersion}`
+      new RegExp(`(Grounded by AC MiNDS[^\\n]*[-–]\\s*)Version\\s+v?${escapedOldVersion}`, 'gi'),
+      `$1Version ${newVersion}`
     );
     
-    // General replacement for any remaining instances (be careful with this)
-    // Only replace if it's a standalone version number (not part of a larger number)
+    // Pattern 7: Standalone version number (be careful - only replace if it's clearly a version)
+    // This is a fallback for any remaining instances
+    // Only replace if it appears in context that suggests it's a version number
     content = content.replace(
-      new RegExp(`\\b${escapedOldVersion}\\b`, 'g'),
+      new RegExp(`\\b${escapedOldVersion}\\b(?=\\s|$|\\s|,|\\.|\\n|\\r)`, 'g'),
       newVersion
     );
     
@@ -189,15 +220,40 @@ export function updateAllVersions(oldVersion, newVersion) {
     }
   });
   
-  // Text files
-  const textFiles = [
+  // Text files - Core application files
+  const coreTextFiles = [
     join(rootDir, 'services', 'updateManager.ts'),
     join(rootDir, 'services', 'debugLog.ts'),
     join(rootDir, 'components', 'FeedbackButton.tsx'),
+  ];
+  
+  // Documentation files - Main documentation
+  const docFiles = [
     join(rootDir, 'README.md'),
     join(rootDir, 'USAGE_GUIDE.md'),
     join(rootDir, 'INSTALLATION_GUIDE.md'),
+    join(rootDir, 'QUICK_INSTALL_GUIDE.md'),
+    join(rootDir, 'QUICK_START.md'),
+    join(rootDir, 'PREREQUISITES.md'),
+    join(rootDir, 'PACKAGE_GUIDE.md'),
+    join(rootDir, 'MOBILE_PACKAGE_GUIDE.md'),
+    join(rootDir, 'DISTRIBUTION_README.md'),
+    join(rootDir, 'RELEASE.md'),
+    join(rootDir, 'GITHUB_VERCEL_DEPLOYMENT.md'),
+    join(rootDir, 'PWA_DEPLOYMENT.md'),
+    join(rootDir, 'SERVER_CONFIG.md'),
   ];
+  
+  // Package documentation files
+  const packageDocFiles = [
+    join(rootDir, 'package', 'README.md'),
+    join(rootDir, 'package', 'USAGE_GUIDE.md'),
+    join(rootDir, 'package', 'INSTALLATION_GUIDE.md'),
+    join(rootDir, 'package', 'PREREQUISITES.md'),
+  ];
+  
+  // Combine all text files
+  const textFiles = [...coreTextFiles, ...docFiles, ...packageDocFiles];
   
   textFiles.forEach(file => {
     if (updateVersionInTextFile(file, oldVersion, newVersion)) {
