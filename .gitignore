@@ -135,3 +135,5 @@ dist/models/
 
 # Archives
 *.zip
+.vercel
+.env*.local
