@@ -186,7 +186,7 @@ export interface DatabaseAdapter {
 // Global initialization guard to prevent race conditions
 let initializationPromise: Promise<void> | null = null;
 let isInitialized = false;
-
+  
 export class LegacyAdapter implements DatabaseAdapter {
   constructor() {
     // Security check: Warn if encryption is enabled but we're using LegacyAdapter
@@ -210,9 +210,9 @@ export class LegacyAdapter implements DatabaseAdapter {
     
     initializationPromise = (async () => {
       try {
-        // Initialize Dexie database with cleanup
-        // This will clean up old databases and open the connection
-        await db.initialize();
+    // Initialize Dexie database with cleanup
+    // This will clean up old databases and open the connection
+    await db.initialize();
         isInitialized = true;
       } catch (error) {
         initializationPromise = null; // Reset on error to allow retry

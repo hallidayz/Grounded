@@ -53,7 +53,7 @@ class AuthStore {
           console.error('[AuthStore] Migration error (non-fatal):', error);
           // Continue even if migration fails
         }
-      }
+        }
 
       // Verify database has users
       try {
@@ -66,7 +66,7 @@ class AuthStore {
         }
       } catch (error) {
         console.error('[AuthStore] Error during verification:', error);
-      }
+        }
     })();
 
     return this.initPromise;
@@ -143,7 +143,7 @@ class AuthStore {
    */
   async createUser(userData: Omit<AuthUserData, 'id' | 'createdAt'>): Promise<string> {
     await this.init();
-    
+
     const id = `user_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
     const user: UserRecord = {
       ...userData,
@@ -225,7 +225,7 @@ class AuthStore {
    */
   async updateUser(userId: string, updates: Partial<AuthUserData>): Promise<void> {
     await this.init();
-    
+
     const user = await db.users.get(userId);
     if (!user) {
       throw new Error('User not found');
@@ -256,7 +256,7 @@ class AuthStore {
    */
   async createResetToken(userId: string, email: string): Promise<string> {
     await this.init();
-    
+
     const token = `reset_${Date.now()}_${Math.random().toString(36).substr(2, 16)}`;
     const expires = Date.now() + (24 * 60 * 60 * 1000); // 24 hours
 
@@ -279,20 +279,20 @@ class AuthStore {
     await this.init();
     
     const result = await db.resetTokens.get(token);
-    if (!result) {
+        if (!result) {
       return null;
-    }
+        }
 
-    // Check if token is expired
+        // Check if token is expired
     const expires = new Date(result.expires).getTime();
     if (expires < Date.now()) {
       return null;
-    }
+        }
 
     return {
-      userId: result.userId,
-      email: result.email
-    };
+          userId: result.userId,
+          email: result.email
+      };
   }
 
   /**
@@ -308,7 +308,7 @@ class AuthStore {
    */
   async cleanupExpiredTokens(): Promise<void> {
     await this.init();
-    const now = Date.now();
+      const now = Date.now();
     const expired = await db.resetTokens
       .where('expires')
       .below(new Date(now).toISOString())
@@ -316,7 +316,7 @@ class AuthStore {
     
     for (const token of expired) {
       await db.resetTokens.delete(token.token);
-    }
+        }
   }
 }
 

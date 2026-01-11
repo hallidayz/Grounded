@@ -139,7 +139,7 @@ export function initializeDebugLogging() {
     }
     // Suppress these warnings from console output entirely (they're not actionable)
     if (!isOnnxRuntimeWarning && !isBenignWarning) {
-      originalWarn.apply(console, args);
+    originalWarn.apply(console, args);
     }
     // ONNX Runtime warnings are silently ignored - they're just model optimization messages
   };

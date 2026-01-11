@@ -342,10 +342,10 @@ class GroundedDB extends Dexie {
           console.error(`[Dexie] Failed to decrypt field ${field}:`, error);
           // Return null if decryption fails
           decrypted[field] = null;
-        }
+      }
       }
     }
-
+    
     return decrypted;
   }
 
@@ -912,7 +912,7 @@ export async function syncToCloud(): Promise<void> {
   // All data stays on-device in IndexedDB
   console.log('[Privacy] Cloud sync disabled - all data remains on-device');
   return Promise.resolve();
-}
+    }
 
 /**
  * Cloud restore is DISABLED for privacy-first architecture.
@@ -925,7 +925,7 @@ export async function restoreFromCloud(): Promise<boolean> {
   // All data stays on-device in IndexedDB
   console.log('[Privacy] Cloud restore disabled - all data remains on-device');
   return false;
-}
+    }
 
 /**
  * PRIVACY-FIRST: Auto-sync is DISABLED.
@@ -999,7 +999,7 @@ export async function createUser(userData: Omit<UserRecord, 'id' | 'createdAt'>)
     if (!db.isOpen()) {
       await db.open();
     }
-    
+
     const id = `user_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
     const user: UserRecord = {
       ...userData,
@@ -1051,7 +1051,7 @@ export async function getUserById(userId: string): Promise<UserRecord | null> {
   } catch (error) {
     console.error('[Dexie] Error getting user by id:', error);
     return null;
-  }
+    }
 }
 
 export async function getAllUsers(): Promise<UserRecord[]> {
@@ -1118,8 +1118,8 @@ export async function getResetToken(token: string): Promise<{ userId: string; em
     const tokenRecord = await db.resetTokens.get(token);
     if (!tokenRecord) {
       return null;
-    }
-    
+  }
+
     // Check if token is expired - handle both string and number formats
     let expires: number;
     if (typeof tokenRecord.expires === 'string') {
@@ -1155,8 +1155,8 @@ export async function cleanupExpiredTokens(): Promise<void> {
   try {
     if (!db.isOpen()) {
       await db.open();
-    }
-    
+}
+
     const now = Date.now();
     const tokens = await db.resetTokens.toArray();
     const expiredTokens = tokens.filter(t => {
@@ -1211,8 +1211,8 @@ export async function getProgressMetrics(startDate: string, endDate: string): Pr
   try {
     if (!db.isOpen()) {
       await db.open();
-    }
-    
+}
+
     const sessions = await db.sessions
       .where('startTimestamp')
       .between(startDate, endDate, true, true)
@@ -1250,7 +1250,7 @@ export async function getFeelingFrequency(limit?: number): Promise<{ feeling: st
       const feeling = log.selectedFeeling;
       if (feeling) {
         frequency[feeling] = (frequency[feeling] || 0) + 1;
-      }
+        }
     });
     
     return Object.entries(frequency)
