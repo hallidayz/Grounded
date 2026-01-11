@@ -633,7 +633,7 @@ class GroundedDB extends Dexie {
         }
       }
     } catch (error) {
-      console.warn('[Dexie] Error checking for old database:', error);
+      logger.warn('[Dexie] Error checking for old database:', error);
       // Don't throw - continue with initialization
     }
   }
@@ -811,17 +811,17 @@ export async function importDatabase(jsonString: string, clearExisting: boolean 
         // Import records using bulkPut (handles both inserts and updates)
         if (records.length > 0) {
           await table.bulkPut(records as any[]);
-          console.log(`[Dexie] Imported ${records.length} records into ${storeName}`);
+          logger.info(`[Dexie] Imported ${records.length} records into ${storeName}`);
         }
       } catch (err) {
-        console.error(`[Dexie] Failed to import ${storeName}:`, err);
+        logger.error(`[Dexie] Failed to import ${storeName}:`, err);
         // Continue with other stores even if one fails
       }
     }
     
-    console.log('[Dexie] Import successful – database restored.');
+    logger.info('[Dexie] Import successful – database restored.');
   } catch (err) {
-    console.error('[Dexie] Import failed:', err);
+    logger.error('[Dexie] Import failed:', err);
     throw err;
   }
 }
@@ -843,7 +843,7 @@ export async function recoverExportedData(): Promise<boolean> {
       return false;
     }
     
-    console.log('[Dexie] Found exported data from recovery - attempting to restore...');
+    logger.info('[Dexie] Found exported data from recovery - attempting to restore...');
     
     // Wait for database to be ready
     await db.open();
@@ -854,10 +854,10 @@ export async function recoverExportedData(): Promise<boolean> {
     // Clear the sessionStorage entry
     sessionStorage.removeItem('dexie_export_before_recovery');
     
-    console.log('[Dexie] Data recovery successful');
+    logger.info('[Dexie] Data recovery successful');
     return true;
   } catch (err) {
-    console.error('[Dexie] Data recovery failed:', err);
+    logger.error('[Dexie] Data recovery failed:', err);
     sessionStorage.removeItem('dexie_export_before_recovery');
     return false;
   }
@@ -911,7 +911,7 @@ function getCurrentUserId(): string | null {
 export async function syncToCloud(): Promise<void> {
   // Cloud sync is permanently disabled for privacy-first architecture
   // All data stays on-device in IndexedDB
-  console.log('[Privacy] Cloud sync disabled - all data remains on-device');
+  logger.info('[Privacy] Cloud sync disabled - all data remains on-device');
   return Promise.resolve();
     }
 
@@ -924,7 +924,7 @@ export async function syncToCloud(): Promise<void> {
 export async function restoreFromCloud(): Promise<boolean> {
   // Cloud restore is permanently disabled for privacy-first architecture
   // All data stays on-device in IndexedDB
-  console.log('[Privacy] Cloud restore disabled - all data remains on-device');
+  logger.info('[Privacy] Cloud restore disabled - all data remains on-device');
   return false;
     }
 
@@ -936,7 +936,7 @@ let syncIntervalId: NodeJS.Timeout | null = null;
 
 export function startAutoSync(): void {
   // Cloud sync is permanently disabled for privacy-first architecture
-  console.log('[Privacy] Auto-sync disabled - all data remains on-device');
+  logger.info('[Privacy] Auto-sync disabled - all data remains on-device');
 }
 
 /**
@@ -948,7 +948,7 @@ export function stopAutoSync(): void {
     clearInterval(syncIntervalId);
     syncIntervalId = null;
   }
-  console.log('[Privacy] Auto-sync already disabled - all data remains on-device');
+  logger.info('[Privacy] Auto-sync already disabled - all data remains on-device');
 }
 
 /**
@@ -957,7 +957,7 @@ export function stopAutoSync(): void {
  */
 export async function triggerManualSync(): Promise<{ success: boolean; error?: string }> {
   // Cloud sync is permanently disabled for privacy-first architecture
-  console.log('[Privacy] Manual sync disabled - all data remains on-device');
+  logger.info('[Privacy] Manual sync disabled - all data remains on-device');
   return { success: false, error: 'Cloud sync is disabled for privacy. All data stays on-device.' };
 }
 
@@ -987,7 +987,7 @@ export function getLastRestoreTime(): string | null {
 // All data remains on-device. Cloud sync is permanently disabled.
 if (typeof window !== 'undefined') {
   // Cloud sync is disabled - no auto-restore or auto-sync
-  console.log('[Privacy] Cloud sync disabled - all data remains on-device');
+  logger.info('[Privacy] Cloud sync disabled - all data remains on-device');
 }
 
 /**
@@ -1011,7 +1011,7 @@ export async function createUser(userData: Omit<UserRecord, 'id' | 'createdAt'>)
     await db.users.add(user);
     return id;
   } catch (error) {
-    console.error('[Dexie] Error creating user:', error);
+    logger.error('[Dexie] Error creating user:', error);
     throw error;
   }
 }
@@ -1024,7 +1024,7 @@ export async function getUserByUsername(username: string): Promise<UserRecord | 
     const user = await db.users.where('username').equals(username).first();
     return user || null;
   } catch (error) {
-    console.error('[Dexie] Error getting user by username:', error);
+    logger.error('[Dexie] Error getting user by username:', error);
     return null;
   }
 }
@@ -1037,7 +1037,7 @@ export async function getUserByEmail(email: string): Promise<UserRecord | null> 
     const user = await db.users.where('email').equals(email).first();
     return user || null;
   } catch (error) {
-    console.error('[Dexie] Error getting user by email:', error);
+    logger.error('[Dexie] Error getting user by email:', error);
     return null;
   }
 }
@@ -1050,7 +1050,7 @@ export async function getUserById(userId: string): Promise<UserRecord | null> {
     const user = await db.users.get(userId);
     return user || null;
   } catch (error) {
-    console.error('[Dexie] Error getting user by id:', error);
+    logger.error('[Dexie] Error getting user by id:', error);
     return null;
     }
 }
@@ -1062,7 +1062,7 @@ export async function getAllUsers(): Promise<UserRecord[]> {
     }
     return await db.users.toArray();
   } catch (error) {
-    console.error('[Dexie] Error getting all users:', error);
+    logger.error('[Dexie] Error getting all users:', error);
     return [];
   }
 }
@@ -1078,7 +1078,7 @@ export async function updateUser(userId: string, updates: Partial<UserRecord>): 
     }
     await db.users.update(userId, updates);
   } catch (error) {
-    console.error('[Dexie] Error updating user:', error);
+    logger.error('[Dexie] Error updating user:', error);
     throw error;
   }
 }
@@ -1105,7 +1105,7 @@ export async function createResetToken(userId: string, email: string): Promise<s
     
     return token;
   } catch (error) {
-    console.error('[Dexie] Error creating reset token:', error);
+    logger.error('[Dexie] Error creating reset token:', error);
     throw error;
   }
 }
@@ -1135,7 +1135,7 @@ export async function getResetToken(token: string): Promise<{ userId: string; em
     
     return { userId: tokenRecord.userId, email: tokenRecord.email };
   } catch (error) {
-    console.error('[Dexie] Error getting reset token:', error);
+    logger.error('[Dexie] Error getting reset token:', error);
     return null;
   }
 }
@@ -1147,7 +1147,7 @@ export async function deleteResetToken(token: string): Promise<void> {
     }
     await db.resetTokens.delete(token);
   } catch (error) {
-    console.error('[Dexie] Error deleting reset token:', error);
+    logger.error('[Dexie] Error deleting reset token:', error);
     throw error;
   }
 }
@@ -1172,7 +1172,7 @@ export async function cleanupExpiredTokens(): Promise<void> {
     
     await Promise.all(expiredTokens.map(t => db.resetTokens.delete(t.token)));
   } catch (error) {
-    console.error('[Dexie] Error cleaning up expired tokens:', error);
+    logger.error('[Dexie] Error cleaning up expired tokens:', error);
     // Don't throw - cleanup is non-critical
   }
 }
@@ -1199,7 +1199,7 @@ export async function getFeelingPatterns(startDate: string, endDate: string): Pr
     
     return Object.entries(patterns).map(([state, count]) => ({ state, count }));
   } catch (error) {
-    console.error('[Dexie] Error getting feeling patterns:', error);
+    logger.error('[Dexie] Error getting feeling patterns:', error);
     return [];
   }
 }
@@ -1228,7 +1228,7 @@ export async function getProgressMetrics(startDate: string, endDate: string): Pr
     
     return { totalSessions, averageDuration, valuesEngaged };
   } catch (error) {
-    console.error('[Dexie] Error getting progress metrics:', error);
+    logger.error('[Dexie] Error getting progress metrics:', error);
     return { totalSessions: 0, averageDuration: 0, valuesEngaged: [] };
   }
 }
@@ -1258,7 +1258,7 @@ export async function getFeelingFrequency(limit?: number): Promise<{ feeling: st
       .map(([feeling, count]) => ({ feeling, count }))
       .sort((a, b) => b.count - a.count);
   } catch (error) {
-    console.error('[Dexie] Error getting feeling frequency:', error);
+    logger.error('[Dexie] Error getting feeling frequency:', error);
     return [];
   }
 }

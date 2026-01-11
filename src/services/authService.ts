@@ -303,7 +303,7 @@ export async function getCurrentUser() {
   try {
     await authStore.init();
   } catch (error) {
-    console.error('[AuthService] Failed to initialize auth store:', error);
+    logger.error('[AuthService] Failed to initialize auth store:', error);
     // Continue anyway - might still work if already initialized
   }
   
@@ -320,7 +320,7 @@ export async function getCurrentUser() {
       if (username) {
         sessionStorage.setItem('username', username);
       }
-      console.log('[AuthService] Restored userId from localStorage:', userId);
+      logger.info('[AuthService] Restored userId from localStorage:', userId);
     }
   }
   
@@ -329,7 +329,7 @@ export async function getCurrentUser() {
     try {
       // Get all users from auth store and use the most recent one
       const allUsers = await authStore.getAllUsers();
-      console.log('[AuthService] Found users in database:', allUsers?.length || 0);
+      logger.info('[AuthService] Found users in database:', allUsers?.length || 0);
       if (allUsers && allUsers.length > 0) {
         // Sort by lastLogin or createdAt to get most recent
         const sortedUsers = allUsers.sort((a, b) => {
@@ -346,29 +346,29 @@ export async function getCurrentUser() {
         try {
           localStorage.setItem('userId', userId);
           localStorage.setItem('username', username);
-          console.log('[AuthService] Restored credentials to localStorage from database:', { userId, username });
+          logger.info('[AuthService] Restored credentials to localStorage from database:', { userId, username });
         } catch (error) {
-          console.warn('Could not store userId in localStorage:', error);
+          logger.warn('Could not store userId in localStorage:', error);
         }
       } else {
-        console.log('[AuthService] No users found in database');
+        logger.info('[AuthService] No users found in database');
       }
     } catch (error) {
-      console.error('[AuthService] Error finding existing user:', error);
+      logger.error('[AuthService] Error finding existing user:', error);
     }
   }
   
   if (!userId) {
-    console.log('[AuthService] No userId found - user needs to login');
+    logger.info('[AuthService] No userId found - user needs to login');
     return null;
   }
   
   try {
     const user = await authStore.getUserById(userId);
     if (user) {
-      console.log('[AuthService] User found:', { userId: user.id, username: user.username, termsAccepted: user.termsAccepted });
+      logger.info('[AuthService] User found:', { userId: user.id, username: user.username, termsAccepted: user.termsAccepted });
     } else {
-      console.warn('[AuthService] User ID found but user not in database:', userId);
+      logger.warn('[AuthService] User ID found but user not in database:', userId);
       // Clear invalid userId from storage
       sessionStorage.removeItem('userId');
       localStorage.removeItem('userId');
@@ -376,7 +376,7 @@ export async function getCurrentUser() {
     }
     return user;
   } catch (error) {
-    console.error('[AuthService] Error getting user by ID:', error);
+    logger.error('[AuthService] Error getting user by ID:', error);
     return null;
   }
 }
@@ -406,7 +406,7 @@ export async function requestPasswordReset(email: string): Promise<{ success: bo
       await authStore.init();
     } catch (error) {
       const errorMessage = error instanceof Error ? error.message : String(error);
-      console.error('Auth store initialization error during password reset:', error);
+      logger.error('Auth store initialization error during password reset:', error);
       
       if (errorMessage.includes('IndexedDB is not available')) {
         return { 
@@ -459,7 +459,7 @@ export async function requestPasswordReset(email: string): Promise<{ success: bo
     
     return { success: true, resetLink };
   } catch (error) {
-    console.error('Password reset error:', error);
+    logger.error('Password reset error:', error);
     const errorMessage = error instanceof Error ? error.message : 'Unknown error';
     return { success: false, error: `Failed to generate reset link: ${errorMessage}` };
   }
@@ -497,12 +497,12 @@ export async function resetPasswordWithToken(token: string, newPassword: string)
       // In a password reset scenario, we can't re-encrypt automatically
       // The database will need to be unlocked with the new password on next login
       // If the old password is lost, the encrypted data cannot be recovered
-      console.warn('Password reset with encryption enabled - database will need to be unlocked with new password');
+      logger.warn('Password reset with encryption enabled - database will need to be unlocked with new password');
     }
 
     return { success: true, userId: tokenData.userId };
   } catch (error) {
-    console.error('Password reset error:', error);
+    logger.error('Password reset error:', error);
     return { success: false, error: 'Failed to reset password' };
   }
 }
@@ -547,7 +547,7 @@ export async function changePassword(userId: string, currentPassword: string, ne
           await encryptedDb.changePassword(currentPassword, newPassword);
         }
       } catch (error) {
-        console.error('Error re-encrypting database with new password:', error);
+        logger.error('Error re-encrypting database with new password:', error);
         // Password is updated in auth store, but database re-encryption failed
         // User will need to unlock with new password on next login
         return { success: false, error: 'Password updated, but failed to update database encryption. Please unlock with new password on next login.' };
@@ -556,7 +556,7 @@ export async function changePassword(userId: string, currentPassword: string, ne
 
     return { success: true, userId };
   } catch (error) {
-    console.error('Password change error:', error);
+    logger.error('Password change error:', error);
     return { success: false, error: 'Failed to change password' };
   }
 }

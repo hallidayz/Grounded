@@ -423,7 +423,7 @@ export function useAppInitialization(options: UseAppInitializationOptions): AppI
         setModelLoadingProgress(40, 'Preparing AI models...', '');
         
         // Use adapter for cleanup operations (adapter already declared above)
-        adapter.cleanupExpiredTokens().catch(console.error);
+        adapter.cleanupExpiredTokens().catch((error) => logger.error('[INIT] Cleanup expired tokens failed:', error));
         
         cleanupIntervalRef.current = setInterval(() => {
           adapter.cleanupExpiredTokens().catch((error) => logger.error('[INIT] Cleanup expired tokens failed:', error));
@@ -431,9 +431,9 @@ export function useAppInitialization(options: UseAppInitializationOptions): AppI
         
         // Phase 7: Data Pruning - Run on initialization and schedule weekly
         if (isDataPruningEnabled()) {
-          console.log('[INIT] Running data pruning on initialization...');
+          logger.info('[INIT] Running data pruning on initialization...');
           runDataPruning().catch((error) => {
-            console.error('[INIT] Data pruning failed (non-critical):', error);
+            logger.error('[INIT] Data pruning failed (non-critical):', error);
           });
           
           // Schedule weekly pruning
@@ -446,7 +446,7 @@ export function useAppInitialization(options: UseAppInitializationOptions): AppI
             // For now, we'll just let the weekly pruning run independently
           }
         } else {
-          console.log('[INIT] Data pruning is disabled');
+          logger.info('[INIT] Data pruning is disabled');
         }
         
         if (!isMountedRef.current) return;
@@ -465,31 +465,31 @@ export function useAppInitialization(options: UseAppInitializationOptions): AppI
         
         if (isLoggedIn()) {
           setModelLoadingProgress(70, 'Loading user data...', 'AI models loading in background');
-          console.log('[INIT] Progress updated to 70%, loading user data...');
+          logger.info('[INIT] Progress updated to 70%, loading user data...');
           
           const userDataPromise = (async () => {
             try {
-              console.log('[INIT] Getting current user...');
+              logger.info('[INIT] Getting current user...');
               const user = await Promise.race([
                 getCurrentUser(),
                 new Promise<any>((_, reject) => setTimeout(() => reject(new Error('getCurrentUser timeout')), 5000))
               ]);
               if (!isMountedRef.current || !user) {
-                console.warn('[INIT] No user found or component unmounted');
+                logger.warn('[INIT] No user found or component unmounted');
                 return null;
               }
               
-              console.log('[INIT] User loaded:', user.id);
+              logger.info('[INIT] User loaded:', user.id);
               if (isMountedRef.current) {
                 setUserId(user.id);
               }
               
               setModelLoadingProgress(80, 'Loading app data...', 'AI models loading in background');
-              console.log('[INIT] Progress updated to 80%, loading app data...');
+              logger.info('[INIT] Progress updated to 80%, loading app data...');
               
               try {
                 const adapter = getDatabaseAdapter();
-                console.log('[INIT] Getting app data for user:', user.id);
+                logger.info('[INIT] Getting app data for user:', user.id);
                 
                 // Load from both appData (backward compatibility) and new tables
                 const [appData, activeValues, tableGoals] = await Promise.all([
@@ -497,7 +497,7 @@ export function useAppInitialization(options: UseAppInitializationOptions): AppI
                     adapter.getAppData(user.id),
                     new Promise<any>((_, reject) => setTimeout(() => reject(new Error('getAppData timeout')), 5000))
                   ]).catch((error) => {
-                    console.error('[INIT] Error loading appData:', error);
+                    logger.error('[INIT] Error loading appData:', error);
                     return null;
                   }),
                   // Try to load from values table (new structure) - use adapter for security
@@ -505,7 +505,7 @@ export function useAppInitialization(options: UseAppInitializationOptions): AppI
                     adapter.getActiveValues(user.id),
                     new Promise<string[]>((_, reject) => setTimeout(() => reject(new Error('getActiveValues timeout')), 2000))
                   ]).catch((error) => {
-                    console.error('[INIT] Error loading activeValues:', error);
+                    logger.error('[INIT] Error loading activeValues:', error);
                     return [];
                   }),
                   // Try to load from goals table (new structure) - use adapter for security
@@ -513,13 +513,13 @@ export function useAppInitialization(options: UseAppInitializationOptions): AppI
                     adapter.getGoals(user.id),
                     new Promise<any[]>((_, reject) => setTimeout(() => reject(new Error('getGoals timeout')), 2000))
                   ]).catch((error) => {
-                    console.error('[INIT] Error loading goals:', error);
+                    logger.error('[INIT] Error loading goals:', error);
                     return [];
                   })
                 ]);
                 
                 if (!isMountedRef.current) {
-                  console.warn('[INIT] Component unmounted during app data load');
+                  logger.warn('[INIT] Component unmounted during app data load');
                   return null;
                 }
               
@@ -545,19 +545,19 @@ export function useAppInitialization(options: UseAppInitializationOptions): AppI
                     if (loadedSettings.aiModel) {
                       setSelectedModel(loadedSettings.aiModel);
                       initializeModels(false, loadedSettings.aiModel).catch((error) => {
-                        console.error('[INIT] Error initializing models:', error);
+                        logger.error('[INIT] Error initializing models:', error);
                         // Silently fail - models will retry later
                       });
                     }
                   }
                 }
               } catch (appDataError) {
-                console.error('[INIT] Failed to load app data:', appDataError);
+                logger.error('[INIT] Failed to load app data:', appDataError);
               }
               
               return user;
             } catch (error) {
-              console.error('[INIT] Error loading user data:', error);
+              logger.error('[INIT] Error loading user data:', error);
               return null;
             }
           })();
@@ -574,13 +574,13 @@ export function useAppInitialization(options: UseAppInitializationOptions): AppI
           setInitializationComplete(true);
         }
       } catch (error) {
-        console.error('Initialization error:', error);
+        logger.error('Initialization error:', error);
         const errorMessage = error instanceof Error ? error.message : String(error);
         const isCriticalError = errorMessage.includes('Database initialization') && 
                                 errorMessage.includes('timeout');
         
         if (isCriticalError) {
-          console.warn('⚠️ Non-critical initialization issue - proceeding to login');
+          logger.warn('⚠️ Non-critical initialization issue - proceeding to login');
           setModelLoadingProgress(100, 'Ready!', 'Some features may be limited');
         } else {
           setProgressError('Initialization issue', 'Some features may be limited');
@@ -601,10 +601,10 @@ export function useAppInitialization(options: UseAppInitializationOptions): AppI
     const initializeWithTimeout = async () => {
       const initStartTime = Date.now();
       try {
-        console.log('[INIT] Starting initialize() function...');
+        logger.info('[INIT] Starting initialize() function...');
         await initialize();
         const duration = Date.now() - initStartTime;
-        console.log(`[INIT] initialize() completed successfully in ${duration}ms`);
+        logger.info(`[INIT] initialize() completed successfully in ${duration}ms`);
         if (isMountedRef.current) {
           setInitializationComplete(true);
         }
@@ -613,7 +613,7 @@ export function useAppInitialization(options: UseAppInitializationOptions): AppI
         }
       } catch (error) {
         const duration = Date.now() - initStartTime;
-        console.error(`[INIT] initialize() failed after ${duration}ms:`, error);
+        logger.error(`[INIT] initialize() failed after ${duration}ms:`, error);
         if (isMountedRef.current) {
           setInitializationComplete(true);
           setLoading(false);
@@ -642,10 +642,10 @@ export function useAppInitialization(options: UseAppInitializationOptions): AppI
                 }
               }
             } catch (e) {
-              console.error('Error parsing deep link URL:', e);
+              logger.error('Error parsing deep link URL:', e);
             }
           }
-        }).catch(console.error);
+        }).catch((error) => logger.error('[INIT] Deep link handler error:', error));
         
         getCurrent().then((urls) => {
           if (!isMountedRef.current || !urls || urls.length === 0) return;
@@ -663,15 +663,15 @@ export function useAppInitialization(options: UseAppInitializationOptions): AppI
                 }
               }
             } catch (e) {
-              console.error('Error parsing deep link URL:', e);
+              logger.error('Error parsing deep link URL:', e);
             }
           }
         }).catch((error) => {
-          console.error('[INIT] Error handling deep link:', error);
+          logger.error('[INIT] Error handling deep link:', error);
           // No deep links on launch
         });
       }).catch((error) => {
-        console.warn('[INIT] Deep-link plugin not available:', error);
+        logger.warn('[INIT] Deep-link plugin not available:', error);
       });
     }
     
