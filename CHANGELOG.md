@@ -5,6 +5,634 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.13.6] - 2026-01-11
+
+### Added
+
+- **release-manager**: enhance version update logic to handle multiple patterns and improve text file management| (808c307)
+
+- **tests**: add runtime test script to package.json and enhance DataContext for improved database loading and user recovery| (24c7c93)
+
+- **App**: integrate emotional encouragement service and enhance Dashboard props| (c51ceab)
+
+- **PWA**: add installation gate to ensure local installation before app loads, with iOS-specific instructions| (e5dd080)
+
+- **database**: add userId indexes to all 12 tables for proper user data linking| (2b143f5)
+
+- **HelpOverlay**: enhance clear data functionality to include user logout and redirect to login page| (06d3593)
+
+- **Settings**: add day of week for weekly reports and day of month for monthly reports| (f4a808f)
+
+- **clearData**: add clearAllData to adapters, remove from Settings, move to HelpOverlay System Danger section| (a5c58c3)
+
+- **encouragement**: show encouragement on home screen, generate when emotion selected, carry over to reflection| (5461e12)
+
+- **emotion**: create shared EmotionSelection component, replace ReflectionForm emotion picker, fix Lamini model path in encouragement generation| (6c23241)
+
+- **AuthContext**: add persistent storage API for Android PWA credential persistence| (27f8777)
+
+- **AIResponseBubble**: larger bouncing arrow, start with Select, add sub-emotion emojis, move swipe hint. feat(AppContent): fix reflection button to show Dashboard, fix resources to show CrisisResourcesModal. feat(GoalsSection): add instructions when no goals| (ffd944d)
+
+- **settings**: add email configs, emergency contacts, report settings, nudges settings, and standalone theme toggle. feat(help): add terms acceptance date display| (dacc109)
+
+- ensure new user registration saves credentials to localStorage for persistence| (749088f)
+
+- ensure credentials persist in localStorage across Vercel updates and deployments| (6681b60)
+
+- **App**: add auto-hide functionality for status overlay and welcome message for first-time users| (d4b1ad4)
+
+- **AIResponseBubble**: enhance mood selection with primary and sub-emotion navigation| (ff0b039)
+
+- restore top navigation with logo, settings, and help menu including hard clear data option| (4ffccda)
+
+- **App**: implement AppDataContext for managing appData state across components| (591a743)
+
+- **sw**: add auto-refresh cache helper for seamless PWA updates| (000963a)
+
+- enhance app functionality with new dependencies and first-run detection|- Added `dexie-react-hooks` for improved state management with Dexie. (46e02b6)
+
+- add database reset functionality to GroundedDB for version conflict resolution|- Implemented a resetDatabase method to delete and recreate the database, allowing users to resolve version conflicts or start fresh. (28efc54)
+
+- enhance Dashboard with logging and modal handling improvements|- Added debug logging for reflection modal state changes and emotion selection, improving traceability during user interactions. (05daee1)
+
+- integrate emotion context in Dashboard and enhance EmotionModal for improved user experience|- Removed the Grounded-PWA.zip file as it is no longer needed. (d75c0d3)
+
+- enhance Tailwind configuration and EmotionModal component for improved animations and safe area handling|- Updated Tailwind configuration to include custom animations for modal transitions and added safe area utilities. (c9b2ef9)
+
+- enhance DatabaseInspector with export/import and cloud sync functionalities|- Added export and import capabilities for the database in DatabaseInspector, allowing users to migrate data across browsers. (e24277a)
+
+- add deployment diagnostics functionality to DatabaseInspector and app initialization|- Integrated deployment diagnostics feature in DatabaseInspector, allowing users to run diagnostics and view results, including origin, Dexie database status, storage usage, issues, and recommendations. (8dcd212)
+
+- enhance DatabaseInspector and Login components with improved user feedback and accessibility|- Updated DatabaseInspector to provide clearer messaging about development mode availability, including additional context for users. (0afa585)
+
+- enhance data handling and loading states in App and DataContext|- Introduced a LoadingScreen component to provide user feedback during data hydration. (c4d5805)
+
+- add userId tracking to FeelingLog and goal creation in Dashboard|- Introduced optional userId field in FeelingLog for better data relationships. (6a6d4dc)
+
+- implement logout functionality and theme toggle in navigation|- Added a logout button in the BottomNavigation component, prompting user confirmation before executing the logout action. (f4aaf6c)
+
+- enhance Dashboard and EncourageSection with new emotion handling and UI updates|- Added new props to the Dashboard component for logging and goal updates, improving interaction capabilities. (9dec5b8)
+
+- enhance Dashboard with emotion handling and modal integration|- Added EmotionModal and ReflectionForm to the Dashboard for improved emotional state management and user interaction. (8bf0e2a)
+
+- enhance Dashboard component with improved state management and UI updates|- Refactored the Dashboard component to utilize TypeScript interfaces for better type safety and clarity. (f683516)
+
+- enhance Dashboard and EncourageSection with emotion handling improvements|- Refactored the Dashboard component to streamline emotion state management, integrating EmotionModal for better user interaction. (d025a92)
+
+- add dashboardActiveValueId prop to EncourageSection for conditional rendering|- Introduced dashboardActiveValueId prop to EncourageSection to manage the rendering of the EmotionSelector based on the active value card state. (c8c0436)
+
+- integrate EmotionContext into Dashboard and App components|- Added EmotionProvider to the App component to manage shared emotional state across the application. (078595c)
+
+- implement crisis alert handling in dashboard and AI services|- Added CrisisAlertModal to the Dashboard component to display alerts when a crisis is detected. (6d71b34)
+
+- add settings view and enhance navigation|- Introduced a new settings view in the App component, allowing users to access settings directly from the navigation. (e7bb78b)
+
+- introduce assessment and report management in database services|- Added new Assessment and CounselorReport interfaces to define data structures for AI assessments and reports. (bded675)
+
+- implement legacy data migration in user hook and database services|- Added legacy data migration checks in the useUser hook to handle orphaned data for new and existing users. (955c1a8)
+
+- add getAllUsers method to database services and adapters|- Implemented getAllUsers method in DatabaseService to retrieve all user data from the database. (c4fd8c1)
+
+- enhance user experience with auto-navigation and improved button feedback|- Implemented an auto-navigation feature to redirect users to the login screen after 5 seconds during the authentication check. (34bf8d9)
+
+- integrate goals into report generation and enhance email formatting|- Added goals parameter to report generation functions, allowing for comprehensive tracking of completed and active goals in reports. (29135d9)
+
+- enhance AI interaction lifecycle and improve reflection analysis handling|- Added a detailed AI interaction lifecycle section to the documentation, outlining user workflow from emotional check-in to clinical reporting. (5380945)
+
+- add goal editing functionality and enhance debug log features|- Implemented goal editing capability in the GoalsUpdateView component, allowing users to modify goal text directly. (15b2cb3)
+
+- add mock Tauri plugin for web builds to handle API imports|- Introduced a custom plugin to mock Tauri API imports, providing fallback implementations for various methods. (cd71d29)
+
+### Fixed
+
+- **vercel**: add headers for WebAssembly and service worker files to enhance cross-origin resource handling| (8eb5560)
+
+- **logging**: suppress ONNX Runtime warnings in various components and enhance WASM support checks| (3e51a08)
+
+- **authStore**: enhance localStorage backup handling for cross-platform compatibility and improve user recovery process| (643d082)
+
+- **clear-cache**: preserve auth database during cache clearing to prevent user data loss| (b65a607)
+
+- **dexie**: enhance database version handling to reset on detected version concatenation bug and export data before reset| (7be52d7)
+
+- **AppContent, DataContext**: improve first-time user detection and ensure database loading for authenticated users| (1cac252)
+
+- **dexie**: fix version check to prevent 40 instead of 4 bug, add proper number parsing and concatenation detection| (8f6bab2)
+
+- **PWA**: skip installation gate in dev mode, fix manifest icon paths, prevent refresh loop| (6108c9e)
+
+- **types**: make userId optional in RuleBasedUsageLog to match migration pattern| (1580b6b)
+
+- **databaseAdapter**: improve userInteractions deletion with fallback to clear all if schema error| (1f1b917)
+
+- **databaseAdapter**: add error handling for userInteractions deletion to prevent schema errors| (148d82c)
+
+- **databaseAdapter**: fix clearAllData to delete userInteractions via sessionId relationship| (dc8c1dc)
+
+- **databaseAdapter**: fix clearAllData to handle userInteractions without userId index| (e8f018e)
+
+- **dexieDB**: permanently resolve version mismatch by checking existing version before opening| (f17fbcb)
+
+- **Settings**: fix version display, add account data, replace prompt() with custom email modal| (ab1855e)
+
+- **databaseAdapter**: remove compound index query and use reliable filter approach for getActiveValues| (8f8c154)
+
+- **ValueSelection**: pass hideConfirm prop to hide confirm button when modals are open| (5008a07)
+
+- **ValueSelection**: hide confirm button when modals are open and lower z-index to prevent overlay issues| (2a24035)
+
+- **clearData**: remove all remaining onClearData references from Settings and AppContent| (f8d8cf1)
+
+- **clearData**: remove old clear data section from HelpOverlay and cleanup AppContent| (b14e92c)
+
+- **AppContent**: move all hooks before early returns to comply with Rules of Hooks| (4fd8972)
+
+- **databaseAdapter**: add missing catch block in EncryptedAdapter getActiveValues| (c3f6557)
+
+- **databaseAdapter**: add error handling to EncryptedAdapter getActiveValues| (a12b1c1)
+
+- **databaseAdapter**: add error handling and validation for getActiveValues to prevent IDBKeyRange errors| (6a967a4)
+
+- **AppContent**: add missing useCallback import| (9f2b64d)
+
+- **AuthContext**: improve persistent storage logging - distinguish mobile vs desktop, reduce false warnings| (5deb107)
+
+- **AuthContext**: correct authStore import - use named export instead of default| (95d8c89)
+
+- **Dashboard**: expose setEncouragementText and properly carry over encouragement from home screen| (98a2e33)
+
+- **ValueSelection**: add onSave prop to save without navigation, ensure values persist before add goal navigation| (da17e23)
+
+- **ValueSelection**: auto-save values immediately on selection/reorder, save before add goal, and fix GoalsUpdateView missing props| (4c23c1e)
+
+- **authStore**: ensure IndexedDB transaction completes before resolving user creation| (2950f5e)
+
+- **authService**: add user verification after creation and credential storage verification to debug login issues| (c952102)
+
+- **Login**: handle string userIds for encryption, add better error logging and ensure auth store is initialized before user lookup| (9e06ab3)
+
+- **AuthContext**: improve cross-platform compatibility for persistent storage API with better error handling and platform detection| (ca5a341)
+
+- **AuthContext**: add recovery logic to restore user from localStorage if initialization fails| (50b79ab)
+
+- **AuthContext**: ensure auth store is initialized before getCurrentUser call| (f258327)
+
+- **authService**: improve credential persistence error handling in login and registration| (f3325a5)
+
+- **authService**: ensure auth store is initialized before user lookup and improve credential persistence logging| (4b02c4b)
+
+- **AppContent**: update reflection button to navigate to home view and ensure onAddGoal is passed to ValueSelection| (b35114a)
+
+- **AppContent**: implement reflection button to navigate to vault, add onAddGoal prop to ValueSelection, and navigate to help for resources| (7cbc4a6)
+
+- **App**: use branding colors for loading screen instead of black/gray| (85156f3)
+
+- **AppContent**: restore branding-defined light mode background (bg-primary #fafaf9) instead of neutral-900| (7af5574)
+
+- **AppContent**: hide bottom navigation on values view to ensure confirm button is visible| (b26fc64)
+
+- **ValueSelection**: increase z-index above bottom navigation and add padding to prevent overlap| (8a8dafd)
+
+- **ValueSelection**: increase z-index and improve visibility of confirm button and value counter| (b1ac17b)
+
+- **AuthContext**: load values from values table on login to ensure persistence across sessions| (d319926)
+
+- **DataContext**: ensure value selection saves with priority for proper goal and self-care relationships| (955bb9b)
+
+- **AIResponseBubble**: add missing refs for bubbleRef, touchStartX, mouseStartX, and isDragging| (db3096f)
+
+- **AppContent**: move all hooks before early returns to fix Rules of Hooks violation| (dface5f)
+
+- **AuthContext**: remove undefined initializeAuth call| (b9f77d2)
+
+- simplify clear data handler to use DataContext method| (77481bd)
+
+- change logout text and prevent React hydration error by memoizing values| (8072811)
+
+- **AppContent**: pass required props to GoalsSection to prevent undefined filter error| (88cd8c4)
+
+- **AuthContext**: correct async initialization structure| (47c4dee)
+
+- add desktop drag support, fix emotion display, strengthen infinite loop prevention| (f1bfe3f)
+
+- **AuthContext**: prevent infinite initialization loop with ref guard| (2edc7be)
+
+- **AppContent**: improve layout spacing and ensure buttons are clickable| (fbd0da9)
+
+- **AppContent**: add interactivity, proper navigation, and all view components| (136e0f8)
+
+- **AuthContext**: add initialization logic to check existing authentication on startup| (4c693bd)
+
+- **AppContent**: restore auth flow - handle login, terms, and checking states| (0e9c54a)
+
+- **appcontent**: correct lazy imports for GoalsSection and VaultControl to match existing components| (6a37355)
+
+- **app**: restore rendering chain, add error boundary and diagnostics overlay| (a51df45)
+
+- **context**: add handleMoodLoopEntry and robust type safety| (27a383e)
+
+- export ThemeContext as named export to resolve build error| (83b0747)
+
+- add CrisisAlertModal to both locations to resolve build error| (60de0b5)
+
+- resolve AI memory offset crash and revert reflection layout| (b67cb2d)
+
+- prevent premature database deletion during migration| (dd44828)
+
+- disable keepNames for worker stability and enforce remote models on web| (e035e83)
+
+- resolve AI worker crash and enforce Xenova model paths| (eeb2621)
+
+- prevent database migration modal from reappearing after dismissal| (dbd8728)
+
+- force use of HuggingFace models in web production| (d68f791)
+
+- re-enable VitePWA plugin to fix build failure| (d0b9916)
+
+- set default AI model to distilbert for faster initial loading| (3d78de4)
+
+- update Vite configuration to disable minification and improve chunking logic|- Explicitly disable minification to resolve transformers initialization issues. (5606537)
+
+- update vite config to use virtual tauri mock plugin| (468cc1b)
+
+- use direct dynamic imports for tauri modules to allow virtual plugin mocking| (ab85552)
+
+- nuclear option for tauri mocks - resolve all api paths| (cb11384)
+
+### Changed
+
+- **DataContext**: enhance database loading logic and value saving conditions for improved user experience| (93a5a51)
+
+- **ValueSelection**: simplify onAddGoal handler since values are auto-saved| (d1ea5a9)
+
+- **DataContext**: remove redundant saveValue calls - setValuesActive already handles priority| (5152165)
+
+- **AppContent**: remove lazy loading for instant PWA experience - use direct imports| (d29a7fe)
+
+- **app**: streamline AppContent initialization and enhance lazy loading performance| (1a9b89a)
+
+- **app**: add AppContent with hydration-ready callback and simplified lazy loading| (3b9555e)
+
+- enhance app structure and improve user experience|- Refactored the useDashboard hook to optimize emotional encouragement generation and fallback handling. (4090464)
+
+- improve error handling and logging in database operations|- Enhanced error handling during database interactions to provide clearer feedback to users. (2cd8d3b)
+
+- improve data synchronization and initialization handling in App and DataContext components|- Enhanced the App component to prevent multiple data syncs by tracking userId with a ref. (5728fd8)
+
+- restructure App component for improved state management and modularity|- Refactored the App component to enhance state management by integrating DataProvider and AuthProvider for better context handling. (4035802)
+
+- simplify useDashboard hook with unified options interface|- Refactored the useDashboard hook to utilize a unified options interface, improving argument handling and reducing potential bugs related to argument order. (48f081f)
+
+- replace useEmotion with local state in Dashboard component|- Updated the Dashboard component to manage emotional state using local state instead of the useEmotion hook. (7685bf2)
+
+- update import statement for useDashboard in Dashboard component|- Changed the import of useDashboard to a named import for consistency and clarity in the Dashboard component. (5689559)
+
+- replace GoalProgress component with GoalsSection in Dashboard|- Updated the Dashboard component to replace the GoalProgress component with GoalsSection for improved organization and clarity. (c51af68)
+
+- remove unused components and files to streamline the project|- Deleted the App, constants, index.css, index.tsx, and various component files to clean up the codebase. (b4569e6)
+
+- remove assessment and report operations from DatabaseService|- Deleted saveAssessment, getAssessments, saveReport, and getReports methods from DatabaseService to streamline the database operations. (b27a33b)
+
+- improve navigation handling and emotional state management|- Updated navigation button click handlers to prevent default actions and ensure clean state transitions when navigating to the home view. (30808cf)
+
+- optimize AI worker management and response handling|- Introduced a global worker instance to manage AI interactions more efficiently, reducing overhead from multiple worker initializations. (48e4799)
+
+- enhance AI prompt structures and response validation|- Updated the prompt structure for generating encouragement and focus lens messages to improve clarity and reduce hallucinations. (7ee96b1)
+
+- update Jest configuration and enhance type definitions|- Removed the coverage collection for declaration files in Jest configuration to streamline coverage reporting. (3cad617)
+
+- update default AI model and enhance EmotionSelector component|- Changed the default AI model from DistilBERT to LaMini to prioritize counseling features. (75422b3)
+
+- update UI components for improved consistency and branding|- Removed premature authentication state setting to ensure proper user session checks before displaying the login screen. (31d4de3)
+
+- enhance report extraction logic to improve content quality|- Updated the extraction process to remove additional prompt artifacts, including "OUTPUT FORMAT REQUIREMENTS" and repetitive phrases. (d4f4c47)
+
+- enhance AI prompt structures and validation logic|- Updated the useDashboard hook to allow "mixed" emotional states when a sub-feeling is selected, improving emotional context handling. (29acd50)
+
+- update AI model from LaMini to DistilBERT and enhance debug log functionality|- Changed the default AI model from LaMini to DistilBERT for improved performance and reliability in mood tracking. (aa23300)
+
+- enhance reflection analysis and report generation processes|- Improved the reflection analysis prompt structure to ensure clearer and more concise outputs. (5c10240)
+
+- optimize AI goal suggestion prompt and response validation|- Revised the goal suggestion prompt to focus on SMART criteria, enhancing clarity and structure. (c1b00e8)
+
+- improve AI encouragement prompt structure and response validation|- Updated the encouragement prompt format to a schema-only structure, reducing instruction repetition and enhancing clarity. (c2c29fb)
+
+- update AI model from TinyLlama to LaMini and adjust related documentation|- Changed the default AI model from TinyLlama to LaMini for improved performance and reduced package size. (b40eee2)
+
+- remove database migration modal and enhance email scheduling features|- Eliminated the database migration modal and its related state management to streamline the user experience. (1c48a2d)
+
+### Other
+
+- **vercel**: update build configuration to use Vite framework and simplify build command| (19d7429)
+
+- update .gitignore to exclude .vercel and .env*.local files; fix regex for workbox source in vercel.json| (aed948e)
+
+- **sw**: update cache version to v2 for installation verification| (f71977a)
+
+- **cleanup**: remove old caches and perform fresh rebuild| (85a1cdb)
+
+- update Vite configuration and Grounded-PWA.zip|- Explicitly define output file naming in vite.config.ts to avoid Rollup placeholder errors. (83144ad)
+
+- update Vite configuration and Grounded-PWA.zip|- Comment out the ONNX fix plugin in vite.config.ts for debugging purposes. (57c887c)
+
+- Trigger Vercel deployment| (6230157)
+
+- **AppContent**: re-integrate GoalsSection, GoalsUpdateView, VaultControl, and navigation flow| (b4e346a)
+
+-  (- Updat)
+
+-  (- Enhan)
+
+-  (- Modif)
+
+-  (- Updat)
+
+-  (- Impro)
+
+-  (- Updat)
+
+-  (- Refac)
+
+- push without workflow file| (8c1a68e)
+
+-  (- Intro)
+
+-  (- Inclu)
+
+-  (- Imple)
+
+-  (- Enhan)
+
+-  (- Updat)
+
+-  (- Enhan)
+
+-  (- Updat)
+
+-  (- Updat)
+
+-  (- Imple)
+
+-  (- Modif)
+
+-  (- Integ)
+
+-  (- Enhan)
+
+-  (- Updat)
+
+-  (- Modif)
+
+-  (- Integ)
+
+-  (- Imple)
+
+-  (- Updat)
+
+-  (- Updat)
+
+-  (- Enhan)
+
+-  (- Imple)
+
+-  (- Updat)
+
+-  (- Enhan)
+
+-  (- Imple)
+
+-  (- Refac)
+
+-  (- Updat)
+
+-  (- Enhan)
+
+-  (- Adjus)
+
+-  (- Updat)
+
+-  (- Impro)
+
+-  (- Added)
+
+-  (- Integ)
+
+-  (- Updat)
+
+-  (- Refac)
+
+-  (- Refac)
+
+-  (- Updat)
+
+-  (- Impro)
+
+-  (- Ensur)
+
+-  (- Simpl)
+
+-  (- Updat)
+
+-  (- Enhan)
+
+-  (- Remov)
+
+-  (- Enhan)
+
+-  (- Updat)
+
+-  (- Impro)
+
+-  (- This )
+
+-  (- This )
+
+-  (- Imple)
+
+-  (- Updat)
+
+-  (- Strea)
+
+-  (- This )
+
+-  (- Imple)
+
+-  (- Updat)
+
+-  (- Enhan)
+
+-  (- Simpl)
+
+-  (- Remov)
+
+-  (- Updat)
+
+-  (- Updat)
+
+-  (- Updat)
+
+-  (- Enhan)
+
+-  (- Impro)
+
+-  (- This )
+
+-  (- Updat)
+
+-  (- This )
+
+-  (- Enhan)
+
+-  (- Updat)
+
+-  (- Imple)
+
+-  (- Updat)
+
+-  (- Refac)
+
+-  (- Enhan)
+
+-  (- Imple)
+
+-  (- Updat)
+
+-  (- Enhan)
+
+-  (- Enhan)
+
+-  (- Intro)
+
+-  (- Refin)
+
+-  (- Updat)
+
+-  (- Intro)
+
+-  (- Enhan)
+
+-  (- Updat)
+
+-  (- Added)
+
+-  (- Imple)
+
+-  (- Updat)
+
+-  (- Simpl)
+
+-  (- Simpl)
+
+-  (- Enhan)
+
+-  (- Adjus)
+
+-  (- Added)
+
+-  (- Updat)
+
+-  (- Remov)
+
+-  (- Impro)
+
+-  (- Adjus)
+
+-  (- Refin)
+
+-  (- Exten)
+
+-  (- Updat)
+
+-  (- Enhan)
+
+-  (- Impro)
+
+-  (- Imple)
+
+-  (- Adjus)
+
+-  (- Impro)
+
+-  (- Simpl)
+
+-  (- Impro)
+
+-  (- Enhan)
+
+-  (- Updat)
+
+-  (- Enhan)
+
+-  (- Added)
+
+-  (- Updat)
+
+-  (- Enhan)
+
+-  (- Updat)
+
+-  (- Imple)
+
+-  (- Enhan)
+
+-  (- Enhan)
+
+-  (- Updat)
+
+-  (- Adjus)
+
+-  (- Impro)
+
+-  (- Added)
+
+-  (- Enhan)
+
+-  (- Imple)
+
+-  (- Imple)
+
+-  (- Updat)
+
+-  (- Intro)
+
+-  (- Enhan)
+
+-  (- Added)
+
+-  (- Enhan)
+
+-  (- Updat)
+
+-  (- Updat)
+
+-  (- Adjus)
+
+-  (- Ensur)
+
+-  (- Updat)
+
+-  (- Integ)
+
+-  (- Enhan)
+
+-  (- Adjus)
+
+-  (- Simpl)
+
+-  (- Refre)
+
+-  (- Updat)
+
+-  (- Remov)
+
+-  (- The m)
+
+-  (- Updat)
+
+-  (- Refre)
+
+-  (- Adjus)
+
 ## [1.13.5] - 2026-01-03
 
 ### Fixed

@@ -38,8 +38,11 @@ export function validateRelease(options = {}) {
 
 
   // Conventional commits format: type(scope?): description
-  if (lastCommitMsg && !/^(feat|fix|chore|refactor|docs|perf|style|test|build|ci):/.test(lastCommitMsg)) {
-    console.error('❌ Commit message must follow conventional commits format (e.g., "feat(auth): add login flow").');
+  // Allow optional scope in parentheses: feat(scope): or feat:
+  const conventionalCommitPattern = /^(feat|fix|chore|refactor|docs|perf|style|test|build|ci)(\([^)]+\))?:\s/;
+  if (lastCommitMsg && !conventionalCommitPattern.test(lastCommitMsg)) {
+    console.error('❌ Commit message must follow conventional commits format (e.g., "feat(auth): add login flow" or "feat: add feature").');
+    console.error(`   Last commit: "${lastCommitMsg.substring(0, 80)}${lastCommitMsg.length > 80 ? '...' : ''}"`);
     return { success: false };
   }
 
