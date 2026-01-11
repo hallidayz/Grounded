@@ -3,6 +3,7 @@ import ErrorBoundary from './components/ErrorBoundary';
 import { AuthProvider, useAuthContext } from './contexts/AuthContext';
 import { DataProvider } from './contexts/DataContext';
 import AppContent from './AppContent';
+import InstallationGate from './components/InstallationGate';
 import { LogEntry, Goal, AppSettings } from './types';
 
 // Export function to reset initialization (for logout, etc.)
@@ -83,22 +84,24 @@ const App: React.FC = () => {
             <div className="animate-pulse text-lg tracking-wide">Loading Grounded ...</div>
           </div>
         }>
-          <AppDataContext.Provider value={{ appData, setAppData }}>
-            <AuthProvider
-              onLoginComplete={(userId, loginAppData) => {
-                // Store appData to pass to DataProvider
-                setAppData(loginAppData);
-                setStatus("User authenticated");
-              }}
-              onLogoutComplete={() => {
-                // Clear appData on logout
-                setAppData(null);
-                setStatus("User logged out");
-              }}
-            >
-              <AppWithData onHydrationReady={() => setStatus("Rendering ready")} />
-            </AuthProvider>
-          </AppDataContext.Provider>
+          <InstallationGate>
+            <AppDataContext.Provider value={{ appData, setAppData }}>
+              <AuthProvider
+                onLoginComplete={(userId, loginAppData) => {
+                  // Store appData to pass to DataProvider
+                  setAppData(loginAppData);
+                  setStatus("User authenticated");
+                }}
+                onLogoutComplete={() => {
+                  // Clear appData on logout
+                  setAppData(null);
+                  setStatus("User logged out");
+                }}
+              >
+                <AppWithData onHydrationReady={() => setStatus("Rendering ready")} />
+              </AuthProvider>
+            </AppDataContext.Provider>
+          </InstallationGate>
         </Suspense>
       </ErrorBoundary>
       {showStatus && <DiagnosticOverlay status={status} />}

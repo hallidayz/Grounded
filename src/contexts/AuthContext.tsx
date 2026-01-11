@@ -109,6 +109,21 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({
           console.error('[AuthContext] Auth store init error:', initError);
           // Continue anyway - getCurrentUser will try to init
         }
+        // Check if app is installed
+        const { isPWAInstalled } = await import('../utils/installCheck');
+        const isInstalled = isPWAInstalled();
+        const installationCompleteKey = 'app_installation_complete';
+        const wasJustInstalled = !localStorage.getItem(installationCompleteKey);
+        
+        // Mark installation as complete if installed (for future checks)
+        if (isInstalled && !wasJustInstalled) {
+          localStorage.setItem(installationCompleteKey, 'true');
+          // If app was just installed, always go to login (account creation) - don't auto-login
+          console.log('[AuthContext] App just installed - going to login for account creation');
+          setAuthState('login');
+          return;
+        }
+        
         const user = await getCurrentUser();
         
         if (user) {

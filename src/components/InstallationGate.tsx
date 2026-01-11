@@ -25,9 +25,10 @@ import { isDevelopment } from '../constants/environment';
 
 interface InstallationGateProps {
   children: React.ReactNode;
+  onInstallComplete?: () => void;
 }
 
-const InstallationGate: React.FC<InstallationGateProps> = ({ children }) => {
+const InstallationGate: React.FC<InstallationGateProps> = ({ children, onInstallComplete }) => {
   const [status, setStatus] = useState<{
     isInstalled: boolean;
     serviceWorkerActive: boolean;
@@ -90,6 +91,11 @@ const InstallationGate: React.FC<InstallationGateProps> = ({ children }) => {
         // If installed but needs update, apply update (but don't reload in dev)
         if (installationStatus.isInstalled && installationStatus.needsUpdate && !isDevelopment()) {
           await applyUpdate();
+        }
+        
+        // Notify that installation check is complete
+        if (installationStatus.isInstalled && onInstallComplete) {
+          onInstallComplete();
         }
       } catch (error) {
         console.error('[InstallationGate] Error checking status:', error);
@@ -252,7 +258,25 @@ const InstallationGate: React.FC<InstallationGateProps> = ({ children }) => {
 
         <div className="pt-4 border-t border-border-soft dark:border-dark-border">
           <button
-            onClick={() => window.location.reload()}
+            onClick={async () => {
+              // Check if actually installed now
+              const currentStatus = await getInstallationStatus();
+              if (currentStatus.isInstalled) {
+                // Mark as installed and notify
+                setStatus(prev => ({
+                  ...prev,
+                  isInstalled: true,
+                  serviceWorkerActive: currentStatus.serviceWorkerActive,
+                  cacheReady: currentStatus.cacheReady,
+                }));
+                if (onInstallComplete) {
+                  onInstallComplete();
+                }
+              } else {
+                // Still not installed, reload to check again
+                window.location.reload();
+              }
+            }}
             className="w-full py-3 bg-brand dark:bg-brand-light text-white dark:text-navy-dark rounded-xl font-black uppercase tracking-widest hover:opacity-90 transition-opacity"
           >
             I've Installed It - Continue

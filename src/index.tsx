@@ -70,9 +70,7 @@ const root = ReactDOM.createRoot(rootElement);
 try {
   root.render(
     <ThemeProvider>
-      <InstallationGate>
-        <App />
-      </InstallationGate>
+      <App />
     </ThemeProvider>
   );
   // Clear timeout if React renders successfully
