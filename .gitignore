@@ -133,6 +133,10 @@ release/dist-for-hosting/models/
 public/models/
 dist/models/
 
+# Large files that should be excluded (add manually if needed)
+ziPXbrQu
+*ziPXbrQu*
+
 # Archives
 *.zip
 .vercel
