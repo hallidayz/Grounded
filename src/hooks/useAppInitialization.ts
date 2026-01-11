@@ -180,10 +180,10 @@ export function useAppInitialization(options: UseAppInitializationOptions): AppI
           if ('caches' in window) {
             const cacheNames = await caches.keys();
             await Promise.all(cacheNames.map(name => {
-              console.log(`[INIT] Deleting cache: ${name}`);
+              logger.info(`[INIT] Deleting cache: ${name}`);
               return caches.delete(name);
             }));
-            console.log(`[INIT] Cleared ${cacheNames.length} cache(s)`);
+            logger.info(`[INIT] Cleared ${cacheNames.length} cache(s)`);
           }
           
           // Clear service worker cache if available
@@ -193,12 +193,12 @@ export function useAppInitialization(options: UseAppInitializationOptions): AppI
               if (registration.active) {
                 // Unregister service worker to force fresh registration
                 await registration.unregister();
-                console.log('[INIT] Unregistered service worker for fresh load');
+                logger.info('[INIT] Unregistered service worker for fresh load');
               }
             }
           }
         } catch (cacheError) {
-          console.warn('[INIT] Cache clearing failed (non-critical):', cacheError);
+          logger.warn('[INIT] Cache clearing failed (non-critical):', cacheError);
           // Non-critical, continue initialization
         }
         
@@ -213,14 +213,14 @@ export function useAppInitialization(options: UseAppInitializationOptions): AppI
             }
           } catch (diagError) {
             // Non-critical - don't block initialization
-            console.warn('[INIT] Diagnostic check failed (non-critical):', diagError);
+            logger.warn('[INIT] Diagnostic check failed (non-critical):', diagError);
           }
         }
         
         setModelLoadingProgress(5, 'Starting...', 'Initializing app');
         
         // START AI MODEL LOADING IMMEDIATELY - don't wait, run in background
-        console.log('[INIT] 🚀 Starting AI model loading in background (non-blocking)...');
+        logger.info('[INIT] 🚀 Starting AI model loading in background (non-blocking)...');
         preloadModelsContinuously().catch((error) => {
           if (error instanceof Error && (
             error.message.includes('network') || 
@@ -228,25 +228,25 @@ export function useAppInitialization(options: UseAppInitializationOptions): AppI
             error.message.includes('Failed to fetch') ||
             error.message.includes('No internet')
           )) {
-            console.warn('[INIT] AI model loading stopped: No internet connection');
+            logger.warn('[INIT] AI model loading stopped: No internet connection');
           }
         });
         
         await new Promise(resolve => setTimeout(resolve, 50));
         
         setModelLoadingProgress(10, 'Initializing app...', 'Setting up core services');
-        console.log('[INIT] Progress updated to 10%');
+        logger.info('[INIT] Progress updated to 10%');
         
         // Initialize debug logging first
         try {
           initializeDebugLogging();
-          console.log('[INIT] Debug logging initialized');
+          logger.info('[INIT] Debug logging initialized');
         } catch (debugError) {
-          console.warn('[INIT] Debug logging failed (non-critical):', debugError);
+          logger.warn('[INIT] Debug logging failed (non-critical):', debugError);
         }
         
         setModelLoadingProgress(20, 'Checking for updates...', '');
-        console.log('[INIT] Progress updated to 20%');
+        logger.info('[INIT] Progress updated to 20%');
         
         // Initialize update manager to detect new install vs update
         let updateInfo: { isNewInstall: boolean; isUpdate: boolean; previousVersion: string | null; currentVersion?: string } | null = null;
@@ -258,68 +258,68 @@ export function useAppInitialization(options: UseAppInitializationOptions): AppI
           });
           
           updateInfo = await Promise.race([updateInitPromise, updateInitTimeout]) as any;
-          console.log('[INIT] Update manager initialized:', { isNewInstall: updateInfo?.isNewInstall, isUpdate: updateInfo?.isUpdate });
+          logger.info('[INIT] Update manager initialized:', { isNewInstall: updateInfo?.isNewInstall, isUpdate: updateInfo?.isUpdate });
         } catch (updateError) {
-          console.warn('[INIT] Update manager failed (non-critical):', updateError);
+          logger.warn('[INIT] Update manager failed (non-critical):', updateError);
           updateInfo = { isNewInstall: false, isUpdate: false, previousVersion: null };
         }
         
         if (updateInfo?.isNewInstall) {
-          console.log('🎉 New installation detected - setting up fresh app');
+          logger.info('🎉 New installation detected - setting up fresh app');
         } else if (updateInfo?.isUpdate) {
-          console.log(`🔄 App updated from v${updateInfo.previousVersion} to v${updateInfo.currentVersion || 'unknown'}`);
-          console.log('✅ User data preserved - database migrations applied');
+          logger.info(`🔄 App updated from v${updateInfo.previousVersion} to v${updateInfo.currentVersion || 'unknown'}`);
+          logger.info('✅ User data preserved - database migrations applied');
         }
         
         setModelLoadingProgress(30, 'Setting up service worker...', '');
-        console.log('[INIT] Progress updated to 30%');
+        logger.info('[INIT] Progress updated to 30%');
         
         const swActive = await ensureServiceWorkerActive().catch((error) => {
-          console.error('[INIT] Error ensuring service worker active:', error);
+          logger.error('[INIT] Error ensuring service worker active:', error);
           return false;
         });
         
         if (swActive) {
-          console.log('✅ Service Worker is active - starting background model loading');
+          logger.info('✅ Service Worker is active - starting background model loading');
         } else {
-          console.log('⚠️ Service Worker not active - starting model loading anyway');
+          logger.info('⚠️ Service Worker not active - starting model loading anyway');
         }
         
         try {
           listenForServiceWorkerUpdates();
         } catch (swError) {
-          console.warn('[INIT] Service worker listener failed (non-critical):', swError);
+          logger.warn('[INIT] Service worker listener failed (non-critical):', swError);
         }
         
         if (typeof window !== 'undefined' && 'serviceWorker' in navigator) {
           navigator.serviceWorker.getRegistration().then(registration => {
             if (registration) {
               registration.update().catch(error => {
-                console.warn('Service worker update check failed:', error);
+                logger.warn('Service worker update check failed:', error);
               });
             }
           }).catch(error => {
-            console.warn('Service worker registration check failed:', error);
+            logger.warn('Service worker registration check failed:', error);
           });
         }
         
         initializeShortcuts().catch((error) => {
-          console.warn('Failed to initialize shortcuts:', error);
+          logger.warn('Failed to initialize shortcuts:', error);
         });
         
         setModelLoadingProgress(40, 'Checking encryption...', '');
-        console.log('[INIT] Progress updated to 40%, checking encryption...');
+        logger.info('[INIT] Progress updated to 40%, checking encryption...');
         
         if (encryptionEnabled) {
           await new Promise(resolve => setTimeout(resolve, 100));
-          console.log('[INIT] Encryption enabled, auth state:', { isAuthenticated });
+          logger.info('[INIT] Encryption enabled, auth state:', { isAuthenticated });
         } else {
-          console.log('[INIT] Encryption not enabled');
+          logger.info('[INIT] Encryption not enabled');
         }
         
         if (encryptionEnabled) {
           if (!isAuthenticated) {
-            console.log('[INIT] Encryption enabled but not authenticated - user needs to login');
+            logger.info('[INIT] Encryption enabled but not authenticated - user needs to login');
             setModelLoadingProgress(100, 'Ready!', 'Please login to continue');
             await new Promise(resolve => setTimeout(resolve, 50));
             if (isMountedRef.current) {
@@ -327,7 +327,7 @@ export function useAppInitialization(options: UseAppInitializationOptions): AppI
             }
             return;
           }
-          console.log('[INIT] User authenticated, proceeding with database initialization');
+          logger.info('[INIT] User authenticated, proceeding with database initialization');
         } else {
           const migrationDismissed = localStorage.getItem('migration_prompt_dismissed') === 'true';
           if (!migrationDismissed) {
@@ -337,36 +337,36 @@ export function useAppInitialization(options: UseAppInitializationOptions): AppI
                 onSetShowMigrationScreen?.(true);
               }
             }).catch((error) => {
-              console.error('[INIT] Error detecting legacy data:', error);
+              logger.error('[INIT] Error detecting legacy data:', error);
               // Continue initialization even if legacy detection fails
             });
           }
         }
         
         setModelLoadingProgress(50, 'Initializing database...', 'Loading user data');
-        console.log('[INIT] Progress updated to 50%, initializing database...');
+        logger.info('[INIT] Progress updated to 50%, initializing database...');
         
         let adapter;
         try {
           adapter = getDatabaseAdapter();
-          console.log('[INIT] Database adapter obtained:', adapter.constructor.name);
+          logger.info('[INIT] Database adapter obtained:', adapter.constructor.name);
         } catch (error) {
-          console.error('[INIT] Failed to get database adapter:', error);
+          logger.error('[INIT] Failed to get database adapter:', error);
           throw error;
         }
         
-        console.log('[INIT] Starting database initialization with 10s timeout...');
+        logger.info('[INIT] Starting database initialization with 10s timeout...');
         
         // Attempt to recover exported data if available (from version recovery)
         try {
           const { recoverExportedData } = await import('../services/dexieDB');
           const recovered = await recoverExportedData();
           if (recovered) {
-            console.log('[INIT] Data recovered from previous version error');
+            logger.info('[INIT] Data recovered from previous version error');
           }
         } catch (recoveryError) {
           // Non-critical - recovery is optional
-          console.warn('[INIT] Data recovery check failed (non-critical):', recoveryError);
+          logger.warn('[INIT] Data recovery check failed (non-critical):', recoveryError);
         }
         
         // PRIVACY-FIRST: Cloud restore is disabled - all data remains on-device
@@ -379,43 +379,43 @@ export function useAppInitialization(options: UseAppInitializationOptions): AppI
         
         try {
           await Promise.race([dbInitPromise, dbInitTimeout]);
-          console.log('[INIT] Database initialization completed successfully');
+          logger.info('[INIT] Database initialization completed successfully');
         } catch (error) {
-          console.error('[INIT] Database initialization failed:', error);
-          console.log('[INIT] Retrying database initialization...');
+          logger.error('[INIT] Database initialization failed:', error);
+          logger.info('[INIT] Retrying database initialization...');
           try {
             await Promise.race([
               adapter.init(),
               new Promise((_, reject) => setTimeout(() => reject(new Error('Database retry timeout')), 5000))
             ]);
-            console.log('[INIT] Database initialization retry succeeded');
+            logger.info('[INIT] Database initialization retry succeeded');
           } catch (retryError) {
-            console.error('[INIT] Database retry failed:', retryError);
-            console.warn('[INIT] Continuing without database initialization - some features may be limited');
+            logger.error('[INIT] Database retry failed:', retryError);
+            logger.warn('[INIT] Continuing without database initialization - some features may be limited');
           }
         }
 
         // Phase 0.2: localStorage Migration (runs after database init, before data loading)
         setModelLoadingProgress(55, 'Checking for data migration...', '');
         if (!isLocalStorageMigrationComplete()) {
-          console.log('[INIT] Legacy localStorage keys detected - starting migration...');
+          logger.info('[INIT] Legacy localStorage keys detected - starting migration...');
           try {
             const migrationResult = await migrateLocalStorageToIndexedDB();
             if (migrationResult.success && migrationResult.migrated) {
-              console.log('[INIT] localStorage migration completed successfully:', {
+              logger.info('[INIT] localStorage migration completed successfully:', {
                 keysMigrated: migrationResult.keysMigrated.length,
               });
             } else if (migrationResult.keysFound.length > 0) {
-              console.warn('[INIT] localStorage migration had issues:', migrationResult.errors);
+              logger.warn('[INIT] localStorage migration had issues:', migrationResult.errors);
             } else {
-              console.log('[INIT] No legacy localStorage data found - migration not needed');
+              logger.info('[INIT] No legacy localStorage data found - migration not needed');
             }
           } catch (error) {
-            console.error('[INIT] localStorage migration failed (non-critical):', error);
+            logger.error('[INIT] localStorage migration failed (non-critical):', error);
             // Non-critical, continue initialization
           }
         } else {
-          console.log('[INIT] localStorage migration already complete or not needed');
+          logger.info('[INIT] localStorage migration already complete or not needed');
         }
         
         setModelLoadingProgress(60, 'Checking authentication...', '');
@@ -426,7 +426,7 @@ export function useAppInitialization(options: UseAppInitializationOptions): AppI
         adapter.cleanupExpiredTokens().catch(console.error);
         
         cleanupIntervalRef.current = setInterval(() => {
-          adapter.cleanupExpiredTokens().catch(console.error);
+          adapter.cleanupExpiredTokens().catch((error) => logger.error('[INIT] Cleanup expired tokens failed:', error));
         }, 60 * 60 * 1000);
         
         // Phase 7: Data Pruning - Run on initialization and schedule weekly

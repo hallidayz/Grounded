@@ -984,7 +984,16 @@ class DatabaseService {
   }
 
   // Feeling logs operations - for behavioral tracking and AI context
-  async saveFeelingLog(feelingLog: any): Promise<void> {
+  async saveFeelingLog(feelingLog: {
+    id: string;
+    timestamp: string;
+    userId?: string;
+    emotionalState: string;
+    selectedFeeling: string | null;
+    aiResponse: string;
+    isAIResponse: boolean;
+    lowStateCount: number;
+  }): Promise<void> {
     const db = await this.ensureDB();
     
     // Ensure object store exists
@@ -1059,7 +1068,21 @@ class DatabaseService {
     });
   }
 
-  async getRuleBasedUsageLogs(limit?: number, days?: number): Promise<any[]> {
+  async getRuleBasedUsageLogs(limit?: number, days?: number): Promise<Array<{
+    id: string;
+    timestamp: string;
+    userId?: string;
+    operationType: string;
+    emotionalState?: string;
+    subEmotion?: string | null;
+    valueId?: string;
+    valueCategory?: string;
+    frequency?: string;
+    fallbackKey: string;
+    fallbackResponse: string;
+    context?: Record<string, unknown>;
+    aiUnavailableReason?: string;
+  }>> {
     const db = await this.ensureDB();
     
     if (!db.objectStoreNames.contains('ruleBasedUsageLogs')) {
@@ -1096,7 +1119,16 @@ class DatabaseService {
     });
   }
 
-  async getFeelingLogs(limit?: number, userId?: string): Promise<any[]> {
+  async getFeelingLogs(limit?: number, userId?: string): Promise<Array<{
+    id: string;
+    timestamp: string;
+    userId?: string;
+    emotionalState: string;
+    selectedFeeling: string | null;
+    aiResponse: string;
+    isAIResponse: boolean;
+    lowStateCount: number;
+  }>> {
     const db = await this.ensureDB();
     return new Promise((resolve, reject) => {
       const transaction = db.transaction(['feelingLogs'], 'readonly');
@@ -1104,7 +1136,16 @@ class DatabaseService {
       const index = store.index('timestamp');
       const request = index.openCursor(null, 'prev'); // Get most recent first
 
-      const logs: any[] = [];
+      const logs: Array<{
+        id: string;
+        timestamp: string;
+        userId?: string;
+        emotionalState: string;
+        selectedFeeling: string | null;
+        aiResponse: string;
+        isAIResponse: boolean;
+        lowStateCount: number;
+      }> = [];
       request.onsuccess = (event) => {
         const cursor = (event.target as IDBRequest<IDBCursorWithValue>).result;
         if (cursor && (!limit || logs.length < limit)) {
@@ -1121,7 +1162,16 @@ class DatabaseService {
     });
   }
 
-  async getFeelingLogsByState(emotionalState: string, limit?: number): Promise<any[]> {
+  async getFeelingLogsByState(emotionalState: string, limit?: number): Promise<Array<{
+    id: string;
+    timestamp: string;
+    userId?: string;
+    emotionalState: string;
+    selectedFeeling: string | null;
+    aiResponse: string;
+    isAIResponse: boolean;
+    lowStateCount: number;
+  }>> {
     const db = await this.ensureDB();
     return new Promise((resolve, reject) => {
       const transaction = db.transaction(['feelingLogs'], 'readonly');
@@ -1129,7 +1179,16 @@ class DatabaseService {
       const index = store.index('emotionalState');
       const request = index.openCursor(IDBKeyRange.only(emotionalState));
 
-      const logs: any[] = [];
+      const logs: Array<{
+        id: string;
+        timestamp: string;
+        userId?: string;
+        emotionalState: string;
+        selectedFeeling: string | null;
+        aiResponse: string;
+        isAIResponse: boolean;
+        lowStateCount: number;
+      }> = [];
       request.onsuccess = (event) => {
         const cursor = (event.target as IDBRequest<IDBCursorWithValue>).result;
         if (cursor && (!limit || logs.length < limit)) {
