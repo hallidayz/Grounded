@@ -69,36 +69,47 @@ function checkWebGPU(): boolean {
  */
 function checkWASM(): boolean {
   try {
-    // Basic check
+    // Basic check - WebAssembly must exist
     if (typeof WebAssembly === 'undefined') {
+      console.warn('[BrowserCompatibility] WebAssembly object not found');
       return false;
     }
     
-    // Check for required methods
-    if (typeof WebAssembly.instantiate !== 'function' && 
-        typeof WebAssembly.compile !== 'function') {
+    // Check for required methods - at least one must exist
+    const hasInstantiate = typeof WebAssembly.instantiate === 'function';
+    const hasCompile = typeof WebAssembly.compile === 'function';
+    
+    if (!hasInstantiate && !hasCompile) {
+      console.warn('[BrowserCompatibility] WebAssembly methods not available');
       return false;
     }
     
-    // Try to create a minimal WASM module to verify it actually works
+    // Try to validate a minimal WASM module to verify it actually works
     // This catches cases where WASM is disabled by CSP or other policies
     try {
       // Create a minimal valid WASM binary (module with empty function)
       // This is a valid WASM module: (module)
       const wasmBytes = new Uint8Array([0x00, 0x61, 0x73, 0x6d, 0x01, 0x00, 0x00, 0x00]);
       
-      // Try to compile it (async, but we can't await here, so just check if method exists)
-      if (WebAssembly.validate) {
+      // Try to validate it if the method exists
+      if (typeof WebAssembly.validate === 'function') {
         const isValid = WebAssembly.validate(wasmBytes);
-        return isValid;
+        if (!isValid) {
+          console.warn('[BrowserCompatibility] WASM validation failed - module invalid');
+          return false;
+        }
+        // Validation passed
+        return true;
       }
       
-      // If validate doesn't exist, assume WASM is available if the object exists
+      // If validate doesn't exist, assume WASM is available if the object and methods exist
+      // This is a safe assumption for modern browsers
       return true;
     } catch (validationError) {
       // If validation fails, WASM might be blocked by CSP
-      console.warn('[BrowserCompatibility] WASM validation failed:', validationError);
+      console.warn('[BrowserCompatibility] WASM validation error (may be CSP blocked):', validationError);
       // Still return true if WebAssembly object exists - let runtime handle errors
+      // Many browsers support WASM even if validation throws
       return true;
     }
   } catch (error) {
