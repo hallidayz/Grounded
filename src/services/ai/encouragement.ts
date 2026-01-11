@@ -1,7 +1,7 @@
 import { ValueItem, LCSWConfig, ReflectionAnalysisResponse, CounselingGuidanceResponse } from '../types';
 import { generateText } from '../aiService';
-import { getSelectedModel, getModelConfig } from './models';
 import { CrisisResponse } from '../safetyService';
+import { logger } from '../../utils/logger';
 
 // Helper to get user's name (placeholder for now, will connect to user context)
 const getUserName = () => {
@@ -24,8 +24,6 @@ export async function analyzeReflection(
   selectedFeeling: string | null,
   lcswConfig?: LCSWConfig
 ): Promise<ReflectionAnalysisResponse | CrisisResponse> {
-  // Use text-generation model
-  const modelName = getSelectedModel() || 'Xenova/LaMini-Flan-T5-77M';
   const userName = getUserName();
   
   const prompt = `
@@ -46,7 +44,7 @@ export async function analyzeReflection(
   `;
 
   try {
-    const response = await generateText(prompt, modelName);
+    const response = await generateText(prompt);
     
     // Check if response is a CrisisResponse object
     if (typeof response === 'object' && 'isCrisis' in response) {
@@ -83,7 +81,6 @@ export async function generateFocusLens(
   emotionalState: string,
   selectedFeeling: string | null
 ): Promise<string> {
-  const modelName = getSelectedModel() || 'Xenova/LaMini-Flan-T5-77M';
   const userName = getUserName();
   
   const prompt = `
@@ -98,7 +95,7 @@ export async function generateFocusLens(
   `;
   
   try {
-    const response = await generateText(prompt, modelName);
+    const response = await generateText(prompt);
     // Crisis response handling for simple text generation?
     // Usually focus lens is generated from limited context, but user input is involved?
     // Focus lens inputs: mantra (string), selectedFeeling (string). 
@@ -127,7 +124,6 @@ export async function suggestGoal(
   selectedFeeling?: string | null,
   analysis?: ReflectionAnalysisResponse | null
 ): Promise<string> {
-  const modelName = getSelectedModel() || 'Xenova/LaMini-Flan-T5-77M';
   const userName = getUserName();
   
   const prompt = `
@@ -143,7 +139,7 @@ export async function suggestGoal(
   `;
 
   try {
-    const response = await generateText(prompt, modelName);
+    const response = await generateText(prompt);
     
     if (typeof response === 'object' && 'isCrisis' in response) {
        // Crisis detected in goal suggestion (which uses reflection text)
@@ -160,7 +156,6 @@ export async function suggestGoal(
 }
 
 export async function generateEncouragement(value: ValueItem): Promise<string> {
-  const modelName = getSelectedModel() || 'Xenova/LaMini-Flan-T5-77M';
   const userName = getUserName();
   
   const prompt = `
@@ -172,7 +167,7 @@ export async function generateEncouragement(value: ValueItem): Promise<string> {
   `;
   
   try {
-    const response = await generateText(prompt, modelName);
+    const response = await generateText(prompt);
     if (typeof response === 'object' && 'isCrisis' in response) {
       return `Remember that ${value.name} is important to you.`;
     }
@@ -186,16 +181,6 @@ export async function generateEmotionalEncouragement(
   emotion: string,
   subEmotion?: string | null
 ): Promise<string> {
-  // CRITICAL FIX: Get the actual model path, not just the model type
-  // getSelectedModel() returns 'lamini' or 'distilbert', but we need the path
-  const selectedModelType = getSelectedModel();
-  const modelConfig = getModelConfig(selectedModelType);
-  // For encouragement, always use Lamini (text2text-generation model)
-  // If Lamini isn't selected, use it anyway for counseling features
-  const modelName = modelConfig?.task === 'text2text-generation' 
-    ? modelConfig.path 
-    : 'Xenova/LaMini-Flan-T5-77M'; // Fallback to Lamini path
-  
   const userName = getUserName();
   
   // Enhanced prompt with emotion and sub-emotion context
@@ -210,30 +195,28 @@ export async function generateEmotionalEncouragement(
     ${subEmotion ? `Specifically acknowledge their feeling of ${subEmotion}.` : ''}
   `;
   
-  console.log('[generateEmotionalEncouragement] Generating with:', { 
+  logger.debug('[generateEmotionalEncouragement] Generating with:', { 
     emotion, 
     subEmotion, 
-    modelName,
     emotionContext 
   });
   
   try {
-    const response = await generateText(prompt, modelName);
+    const response = await generateText(prompt);
     if (typeof response === 'object' && 'isCrisis' in response) {
       console.warn('[generateEmotionalEncouragement] Crisis detected, using fallback');
       return `Your feelings are valid. Take care of yourself.`;
     }
     const encouragement = response as string;
-    console.log('[generateEmotionalEncouragement] Generated encouragement:', encouragement);
+    logger.debug('[generateEmotionalEncouragement] Generated encouragement:', encouragement);
     return encouragement;
   } catch (error) {
-    console.error('[generateEmotionalEncouragement] Error generating encouragement:', error);
+    logger.error('[generateEmotionalEncouragement] Error generating encouragement:', error);
     return `Your feelings are valid. Take care of yourself.`;
   }
 }
 
 export async function generateValueMantra(value: ValueItem): Promise<string> {
-  const modelName = getSelectedModel() || 'Xenova/LaMini-Flan-T5-77M';
   const userName = getUserName();
   
   const prompt = `
@@ -245,7 +228,7 @@ export async function generateValueMantra(value: ValueItem): Promise<string> {
   `;
   
   try {
-    const response = await generateText(prompt, modelName);
+    const response = await generateText(prompt);
     if (typeof response === 'object' && 'isCrisis' in response) {
       return `${value.name} guides you forward.`;
     }
@@ -262,7 +245,6 @@ export async function generateCounselingGuidance(
   selectedFeeling?: string | null,
   lcswConfig?: LCSWConfig
 ): Promise<CounselingGuidanceResponse> {
-  const modelName = getSelectedModel() || 'Xenova/LaMini-Flan-T5-77M';
   const userName = getUserName();
   
   const prompt = `
@@ -280,7 +262,7 @@ export async function generateCounselingGuidance(
   `;
   
   try {
-    const response = await generateText(prompt, modelName);
+    const response = await generateText(prompt);
     if (typeof response === 'object' && 'isCrisis' in response) {
       return {
         insight: `It sounds like you're going through a difficult time.`,

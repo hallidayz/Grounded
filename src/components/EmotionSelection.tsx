@@ -274,5 +274,8 @@ const EmotionSelection: React.FC<EmotionSelectionProps> = ({
   );
 };
 
-export default React.memo(EmotionSelection);
+// Export both the component and the memoized version
+const MemoizedEmotionSelection = React.memo(EmotionSelection);
+export default MemoizedEmotionSelection;
+export { EmotionSelection, MemoizedEmotionSelection };
 

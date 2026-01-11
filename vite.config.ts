@@ -149,6 +149,9 @@ export default defineConfig({
       strategies: 'injectManifest',
       srcDir: 'src',
       filename: 'sw.js',
+      injectManifest: {
+        maximumFileSizeToCacheInBytes: 10 * 1024 * 1024, // 10 MB (increased from default 2 MB)
+      },
       manifest: {
         name: 'Grounded',
         short_name: 'Grounded',

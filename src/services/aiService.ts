@@ -12,6 +12,7 @@
  */
 
 import { checkForCrisisKeywords, CrisisResponse } from './safetyService';
+import { logger } from '../utils/logger';
 
 interface AIWorkerResponse {
   id: string;
@@ -42,7 +43,8 @@ function getWorker(): Worker {
     };
     
     globalWorker.onerror = (err) => {
-      console.error('Global AI Worker Error:', err);
+      logger.error('[aiService] Global AI Worker Error (deprecated - using WebLLM now):', err);
+      // Worker is deprecated in favor of WebLLM, but kept for backward compatibility
     };
   }
   return globalWorker;
@@ -91,8 +93,51 @@ export function runAIWorker(
 }
 
 // Re-export generateText for backward compatibility
-export async function generateText(prompt: string, modelName: string): Promise<string | CrisisResponse> {
-  return runAIWorker(prompt, 'text2text-generation', modelName);
+// Updated to use WebLLM (TinyLlama) for better mobile performance
+export async function generateText(prompt: string, modelName?: string): Promise<string | CrisisResponse> {
+  // Check for crisis keywords FIRST (safety interceptor)
+  const crisisResponse = checkForCrisisKeywords(prompt);
+  if (crisisResponse) {
+    logger.warn('[aiService] Crisis keyword detected. Bypassing AI and returning safety response.');
+    return Promise.resolve(crisisResponse);
+  }
+
+  // Check cache first
+  const cacheKey = `text-generation-${modelName || 'default'}-${prompt}`;
+  const cached = responseCache.get(cacheKey);
+  if (cached && (Date.now() - cached.timestamp < CACHE_TTL)) {
+    logger.debug('[aiService] Returning cached response');
+    return Promise.resolve(cached.data);
+  }
+
+  try {
+    // Use WebLLM service for generation
+    const { generateText: webllmGenerate } = await import('./ai/webllmService');
+    
+    // System prompt for mental health support
+    const systemPrompt = 'You are a compassionate mental health support assistant. Be brief, supportive, and validating. Keep responses under 50 words.';
+    
+    const response = await webllmGenerate(prompt, {
+      systemPrompt,
+      temperature: 0.7,
+      maxTokens: 256,
+    });
+
+    // Cache successful response
+    responseCache.set(cacheKey, { data: response, timestamp: Date.now() });
+    
+    return response;
+  } catch (error) {
+    logger.error('[aiService] Error generating text with WebLLM:', error);
+    
+    // Return a helpful fallback message instead of using the old worker
+    // The old worker uses transformers which we've replaced with WebLLM
+    const errorMsg = error instanceof Error ? error.message : String(error);
+    logger.warn('[aiService] WebLLM unavailable, returning fallback response');
+    
+    // Return a supportive fallback message
+    return 'I understand you\'re going through something difficult. Your feelings are valid. Please take care of yourself.';
+  }
 }
 
 // Re-export model functions
@@ -145,3 +190,22 @@ export {
   analyzeReflection,
   generateFocusLens
 } from './ai/encouragement';
+
+// Re-export specialized counseling functions
+export {
+  startCounselingSession,
+  continueCounselingSession,
+  recommendSystemPrompt,
+  type CounselingSession,
+} from './ai/specializedCounseling';
+
+// Re-export system prompts
+export {
+  SYSTEM_PROMPTS,
+  getSystemPrompt,
+  getAllSystemPrompts,
+  getSystemPromptByName,
+  formatPromptForLLM,
+  type SystemPromptType,
+  type SystemPromptConfig,
+} from './ai/systemPrompts';
