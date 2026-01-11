@@ -85,7 +85,7 @@ self.onmessage = async (event) => {
 
     // Send back success with ID
     self.postMessage({ id, output: generatedText });
-  } catch (error: any) {
+  } catch (error: unknown) {
     console.error('[AIWorker] Inference error:', error);
     // Send back error with ID
     self.postMessage({ 

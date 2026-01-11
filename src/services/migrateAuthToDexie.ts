@@ -143,7 +143,7 @@ async function migrateUsersToDexie(users: AuthUserData[]): Promise<number> {
       await db.users.add(userRecord);
       migratedCount++;
       console.log(`[Migration] Migrated user: ${user.username} (${user.id})`);
-    } catch (error: any) {
+    } catch (error: unknown) {
       // If user already exists (ConstraintError), that's OK
       if (error?.name === 'ConstraintError' || error?.message?.includes('already exists')) {
         console.log(`[Migration] User ${user.username} already exists - skipping`);

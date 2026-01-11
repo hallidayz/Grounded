@@ -459,7 +459,7 @@ class GroundedDB extends Dexie {
     // Check for version conflicts and reset if needed
     try {
       await this.openDatabaseWithRecovery();
-    } catch (error: any) {
+    } catch (error: unknown) {
       // If recovery failed, do a hard reset
       if (error?.name === 'VersionError' || error?.message?.includes('version')) {
         logger.warn('[Dexie] Version error persists after recovery attempt - performing hard reset');
@@ -553,7 +553,7 @@ class GroundedDB extends Dexie {
     try {
       await this.open();
       logger.info(`[Dexie] Database opened successfully (version ${CURRENT_DB_VERSION})`);
-    } catch (error: any) {
+    } catch (error: unknown) {
       if (error?.name === 'VersionError' || error?.message?.includes('version')) {
         logger.warn(
           `[Dexie] Version mismatch detected: expected version ${CURRENT_DB_VERSION}, but existing version is different. Resetting database...`

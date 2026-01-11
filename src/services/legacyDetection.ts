@@ -25,7 +25,7 @@ export async function detectLegacyData(): Promise<LegacyDataInfo> {
     let db;
     try {
       db = await openDB('groundedDB', 5);
-    } catch (versionError: any) {
+    } catch (versionError: unknown) {
       // If version error (requested version < existing), try to open without version
       // This happens when database was upgraded but we're checking with old version
       if (versionError?.name === 'VersionError' || versionError?.message?.includes('version')) {
@@ -101,7 +101,7 @@ export async function createLegacyBackup(): Promise<void> {
     let db;
     try {
       db = await openDB('groundedDB', 5);
-    } catch (versionError: any) {
+    } catch (versionError: unknown) {
       if (versionError?.name === 'VersionError' || versionError?.message?.includes('version')) {
         // Database is newer - can't backup with old version
         throw new Error('Database version mismatch - cannot create backup');
@@ -183,7 +183,7 @@ export async function restoreLegacyBackup(): Promise<void> {
     let db;
     try {
       db = await openDB('groundedDB', 5);
-    } catch (versionError: any) {
+    } catch (versionError: unknown) {
       if (versionError?.name === 'VersionError' || versionError?.message?.includes('version')) {
         throw new Error('Database version mismatch - cannot restore backup');
       }

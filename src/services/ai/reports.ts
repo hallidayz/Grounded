@@ -14,7 +14,7 @@ import { detectCrisis } from "./crisis";
  * Handles both JSON objects (new) and Markdown strings (old)
  * Cleans up formatting issues
  */
-function formatAnalysisForReport(analysis: any): string {
+function formatAnalysisForReport(analysis: unknown): string {
   if (!analysis) return '';
   
   let content = analysis;

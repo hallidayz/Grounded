@@ -56,6 +56,7 @@ if (typeof process !== 'undefined' && process.env) {
 import { checkBrowserCompatibility, CompatibilityReport, getCompatibilitySummary } from './browserCompatibility';
 import { setModelLoadingProgress, setProgressSuccess, setProgressError } from '../progressTracker';
 import { AIModelType } from '../types';
+import { logger } from '../../utils/logger';
 
 // Model definitions
 export const MODEL_CONFIGS: Record<AIModelType, { 
@@ -140,7 +141,7 @@ export function getModelDownloadProgress(): {
 /**
  * Check if a model supports text generation
  */
-export function isTextGenerationModel(model: any): boolean {
+export function isTextGenerationModel(model: unknown): boolean {
   if (!model) return false;
   
   try {
@@ -158,7 +159,7 @@ export function isTextGenerationModel(model: any): boolean {
     
     return false;
   } catch (error) {
-    console.error('[models] Error checking model compatibility:', error);
+    logger.error('[models] Error checking model compatibility:', error);
     return false;
   }
 }
@@ -247,7 +248,7 @@ export async function initializeModels(forceReload: boolean = false, modelType?:
         return true; // Already loaded with correct model and working
       }
     } catch (error) {
-      console.error('[models] Error checking if models are loaded:', error);
+      logger.error('[models] Error checking if models are loaded:', error);
       // Models might be broken, continue to reload
     }
   }
@@ -262,7 +263,7 @@ export async function initializeModels(forceReload: boolean = false, modelType?:
       }
       // If wrong model, we need to reload (but don't force reload here to avoid loop)
     } catch (error) {
-      console.error('[models] Error checking current model:', error);
+      logger.error('[models] Error checking current model:', error);
       // Continue with new load attempt
     }
   }
@@ -272,7 +273,7 @@ export async function initializeModels(forceReload: boolean = false, modelType?:
   if (!forceReload && initFailureCount >= MAX_INIT_FAILURES) {
     const timeSinceLastAttempt = now - lastInitAttempt;
     if (timeSinceLastAttempt < INIT_COOLDOWN) {
-      console.log(`⏸️ Model initialization skipped - too many recent failures. Waiting ${Math.ceil((INIT_COOLDOWN - timeSinceLastAttempt) / 1000)}s before retry.`);
+      logger.info(`⏸️ Model initialization skipped - too many recent failures. Waiting ${Math.ceil((INIT_COOLDOWN - timeSinceLastAttempt) / 1000)}s before retry.`);
       return false; // Return false without attempting
     } else {
       // Reset failure count after cooldown period
@@ -283,7 +284,7 @@ export async function initializeModels(forceReload: boolean = false, modelType?:
   // Prevent rapid-fire initialization attempts
   // BUT: If models are already loaded, don't block - just return success
   if (!forceReload && areModelsLoaded()) {
-    console.log('✅ Models already loaded - skipping initialization');
+    logger.info('✅ Models already loaded - skipping initialization');
     // Update progress state to reflect that models are ready
     currentDownloadStatus = 'complete';
     currentDownloadProgress = 100;
@@ -296,7 +297,7 @@ export async function initializeModels(forceReload: boolean = false, modelType?:
   if (!forceReload && lastInitAttempt > 0) {
     const timeSinceLastAttempt = now - lastInitAttempt;
     if (timeSinceLastAttempt < INIT_COOLDOWN && !isModelLoading) {
-      console.log(`⏸️ Model initialization skipped - too soon after last attempt. Waiting ${Math.ceil((INIT_COOLDOWN - timeSinceLastAttempt) / 1000)}s.`);
+      logger.info(`⏸️ Model initialization skipped - too soon after last attempt. Waiting ${Math.ceil((INIT_COOLDOWN - timeSinceLastAttempt) / 1000)}s.`);
       return false;
     }
   }
@@ -325,14 +326,14 @@ export async function initializeModels(forceReload: boolean = false, modelType?:
     const timeoutRef = { current: loadingTimeout };
     try {
       // Run browser compatibility check first
-      console.log('[MODEL_DEBUG] Running browser compatibility check...');
+      logger.info('[MODEL_DEBUG] Running browser compatibility check...');
       compatibilityReport = checkBrowserCompatibility();
       lastErrorCategory = null;
       
       // Log compatibility summary
       const summary = getCompatibilitySummary(compatibilityReport);
-      console.log(`🔍 Browser compatibility: ${summary}`);
-      console.log('[MODEL_DEBUG] Compatibility details:', {
+      logger.info(`🔍 Browser compatibility: ${summary}`);
+      logger.info('[MODEL_DEBUG] Compatibility details:', {
         canUseAI: compatibilityReport?.canUseAI,
         wasm: compatibilityReport?.wasm,
         sharedArrayBuffer: compatibilityReport?.sharedArrayBuffer,
@@ -343,7 +344,7 @@ export async function initializeModels(forceReload: boolean = false, modelType?:
       
       // If WASM is not available, we cannot use AI models at all
       if (!compatibilityReport.wasm) {
-        console.warn('⚠️ WebAssembly not supported. AI models cannot be used on this browser.');
+        logger.warn('⚠️ WebAssembly not supported. AI models cannot be used on this browser.');
         lastErrorCategory = 'wasm';
         isModelLoading = false;
         setProgressError('AI models unavailable', 'WebAssembly not supported. Use a modern browser.');
@@ -353,24 +354,24 @@ export async function initializeModels(forceReload: boolean = false, modelType?:
       // If SharedArrayBuffer is not available, we can still try single-threaded mode
       // This is a fallback that should work even without COOP/COEP headers
       if (!compatibilityReport.sharedArrayBuffer) {
-        console.warn('⚠️ SharedArrayBuffer not available. Will attempt single-threaded mode.');
-        console.warn('⚠️ For better performance, enable COOP/COEP headers (see SERVER_CONFIG.md).');
+        logger.warn('⚠️ SharedArrayBuffer not available. Will attempt single-threaded mode.');
+        logger.warn('⚠️ For better performance, enable COOP/COEP headers (see SERVER_CONFIG.md).');
         lastErrorCategory = 'coop-coep';
         // Don't return false - continue with single-threaded mode
         // The transformers.js library should handle single-threaded execution automatically
       } else {
-        console.log('✓ SharedArrayBuffer available - multi-threaded mode enabled');
+        logger.info('✓ SharedArrayBuffer available - multi-threaded mode enabled');
       }
       
-      console.log('[MODEL_DEBUG] Browser compatibility check passed, proceeding with model loading...');
-      console.log('[MODEL_DEBUG] canUseAI:', compatibilityReport.canUseAI, 'suggestedStrategy:', compatibilityReport.suggestedStrategy);
+      logger.info('[MODEL_DEBUG] Browser compatibility check passed, proceeding with model loading...');
+      logger.info('[MODEL_DEBUG] canUseAI:', compatibilityReport.canUseAI, 'suggestedStrategy:', compatibilityReport.suggestedStrategy);
       
       // Import transformers.js - uses ONNX Runtime with WASM backend
       // ONNX Runtime is required, but configured to use WASM backend for compatibility
       let transformersModule;
       
       try {
-        console.log('[MODEL_DEBUG] Importing @xenova/transformers (using WASM backend)...');
+        logger.info('[MODEL_DEBUG] Importing @xenova/transformers (using WASM backend)...');
         
         // Ensure ONNX Runtime global is initialized before importing transformers
         // This must happen right before the import to ensure it's set up
@@ -390,17 +391,17 @@ export async function initializeModels(forceReload: boolean = false, modelType?:
           setTimeout(() => reject(new Error('Import timeout after 10 seconds')), 10000);
         });
         
-        transformersModule = await Promise.race([importPromise, timeoutPromise]) as any;
-        console.log('[MODEL_DEBUG] Transformers module imported successfully');
+        transformersModule = await Promise.race([importPromise, timeoutPromise]) as { pipeline?: unknown; env?: unknown };
+        logger.info('[MODEL_DEBUG] Transformers module imported successfully');
         
         // Verify the module loaded correctly
         if (!transformersModule || !transformersModule.pipeline) {
-          console.error('[MODEL_DEBUG] Transformers module structure invalid:', {
+          logger.error('[MODEL_DEBUG] Transformers module structure invalid:', {
             hasModule: !!transformersModule,
             hasPipeline: !!(transformersModule?.pipeline),
             moduleKeys: transformersModule ? Object.keys(transformersModule) : []
           });
-          console.info('ℹ️ Transformers module structure invalid. Using rule-based responses.');
+          logger.info('ℹ️ Transformers module structure invalid. Using rule-based responses.');
           // Clear timeout and reset loading state
           if (loadingTimeout) {
             clearTimeout(loadingTimeout);
@@ -409,27 +410,27 @@ export async function initializeModels(forceReload: boolean = false, modelType?:
           isModelLoading = false;
           return false;
         }
-        console.log('[MODEL_DEBUG] Transformers module verified - pipeline function available');
-      } catch (importError: any) {
+        logger.info('[MODEL_DEBUG] Transformers module verified - pipeline function available');
+      } catch (importError: unknown) {
         const importErrorMsg = importError?.message || String(importError);
         const importErrorStack = importError?.stack || '';
         
-        console.error('[MODEL_DEBUG] Failed to import @xenova/transformers:', importErrorMsg);
+        logger.error('[MODEL_DEBUG] Failed to import @xenova/transformers:', importErrorMsg);
         if (importErrorStack) {
-          console.error('[MODEL_DEBUG] Import error stack:', importErrorStack);
+          logger.error('[MODEL_DEBUG] Import error stack:', importErrorStack);
         }
         
         if (importErrorMsg.includes('memory') || importErrorMsg.includes('OOM') || importErrorMsg.includes('out of memory')) {
           lastErrorCategory = 'memory';
-          console.info('ℹ️ AI models unavailable: Insufficient device memory.');
-          console.info('ℹ️ App uses rule-based responses (fully functional).');
+          logger.info('ℹ️ AI models unavailable: Insufficient device memory.');
+          logger.info('ℹ️ App uses rule-based responses (fully functional).');
         } else if (importErrorMsg.includes('network') || importErrorMsg.includes('fetch') || importErrorMsg.includes('Failed to fetch')) {
           lastErrorCategory = 'network';
-          console.info('ℹ️ AI models unavailable: Network error during download.');
-          console.info('ℹ️ App uses rule-based responses (fully functional).');
+          logger.info('ℹ️ AI models unavailable: Network error during download.');
+          logger.info('ℹ️ App uses rule-based responses (fully functional).');
         } else {
           lastErrorCategory = 'unknown';
-          console.info('ℹ️ AI models unavailable. App uses rule-based responses (fully functional).');
+          logger.info('ℹ️ AI models unavailable. App uses rule-based responses (fully functional).');
         }
         
         // Clear loading state so retries can start fresh
@@ -467,19 +468,19 @@ export async function initializeModels(forceReload: boolean = false, modelType?:
         
         if (isWebProduction) {
           env.allowLocalModels = false; // Forces download from Hugging Face for web production
-          console.log('📦 Web Production: forcing HuggingFace download (allowLocalModels=false)');
+          logger.info('📦 Web Production: forcing HuggingFace download (allowLocalModels=false)');
         } else {
           env.allowLocalModels = true; // Allow local models for Tauri or Dev
           if (!isDev) {
-            console.log('📦 Using local bundled models from /models/ directory');
-            console.log('📦 Will fallback to HuggingFace if local model not available');
+            logger.info('📦 Using local bundled models from /models/ directory');
+            logger.info('📦 Will fallback to HuggingFace if local model not available');
           } else {
             // In dev mode, we're using HuggingFace directly
-            console.log('📦 Development mode: Downloading models from HuggingFace');
+            logger.info('📦 Development mode: Downloading models from HuggingFace');
           }
         }
       } catch (configError) {
-        console.warn('Could not configure transformers environment, using defaults:', configError);
+        logger.warn('Could not configure transformers environment, using defaults:', configError);
         // Continue anyway - library may have defaults
       }
       
@@ -495,22 +496,22 @@ export async function initializeModels(forceReload: boolean = false, modelType?:
         preferredDevice = 'cpu';
         deviceReason = 'ONNX Runtime WASM backend (CPU with optimizations)';
         if (compatibilityReport?.sharedArrayBuffer) {
-          console.log('[MODEL_DEBUG] ✅ ONNX Runtime WASM backend with multi-threading available');
+          logger.info('[MODEL_DEBUG] ✅ ONNX Runtime WASM backend with multi-threading available');
         } else {
-          console.log('[MODEL_DEBUG] ✅ ONNX Runtime WASM backend available (single-threaded mode)');
+          logger.info('[MODEL_DEBUG] ✅ ONNX Runtime WASM backend available (single-threaded mode)');
         }
       } else {
         // Fallback to CPU (transformers.js will handle this automatically)
         preferredDevice = 'cpu';
         deviceReason = 'CPU (fallback)';
-        console.log('[MODEL_DEBUG] ⚠️ Using CPU fallback - WASM optimizations unavailable');
+        logger.info('[MODEL_DEBUG] ⚠️ Using CPU fallback - WASM optimizations unavailable');
       }
       
       // Determine model loading order based on user preference
       // If LaMini is selected, load it FIRST (for counseling features)
       // Otherwise load DistilBERT FIRST (for mood tracking)
       const loadLaMiniFirst = targetModel === 'lamini';
-      console.log(`[MODEL_LOAD] Selected model: ${targetModel}, Loading order: ${loadLaMiniFirst ? 'LaMini -> DistilBERT' : 'DistilBERT -> LaMini'}`);
+      logger.info(`[MODEL_LOAD] Selected model: ${targetModel}, Loading order: ${loadLaMiniFirst ? 'LaMini -> DistilBERT' : 'DistilBERT -> LaMini'}`);
       
       // Progress tracking variables
       let totalProgress = 0;
@@ -520,7 +521,7 @@ export async function initializeModels(forceReload: boolean = false, modelType?:
       const THROTTLE_MS = 100; // Only update progress every 100ms
       
       // Progress callback
-      const progressCallback = (progress: any) => {
+      const progressCallback = (progress: { status?: string; name?: string; progress?: number; loaded?: number; total?: number }) => {
         const now = Date.now();
         const shouldUpdate = now - lastUpdateTime >= THROTTLE_MS;
         
@@ -539,7 +540,7 @@ export async function initializeModels(forceReload: boolean = false, modelType?:
           const modelName = progress.name || 'model';
           
           // Only log every update, but throttle state updates
-          console.log(`Model loading: ${modelName} - ${percent}%`);
+          logger.info(`Model loading: ${modelName} - ${percent}%`);
           
           // Update internal progress tracking
           currentDownloadProgress = totalProgress;
@@ -558,7 +559,7 @@ export async function initializeModels(forceReload: boolean = false, modelType?:
           }
         } else if (progress.status === 'done') {
           const modelName = progress.name || 'model';
-          console.log(`Model progress callback: ${modelName} reported done (files downloaded, initializing...)`);
+          logger.info(`Model progress callback: ${modelName} reported done (files downloaded, initializing...)`);
           
           if (shouldUpdate) {
             setModelLoadingProgress(
@@ -589,12 +590,12 @@ export async function initializeModels(forceReload: boolean = false, modelType?:
         const moodTrackingHuggingfaceId = HUGGINGFACE_MODEL_IDS[moodTrackingModelType];
         
         let moodTrackingModelPath = moodTrackingHuggingfaceId;
-        console.log(`[MODEL_DEBUG] Using Xenova DistilBERT for mood tracking: ${moodTrackingHuggingfaceId}`);
+        logger.info(`[MODEL_DEBUG] Using Xenova DistilBERT for mood tracking: ${moodTrackingHuggingfaceId}`);
         
         try {
-          console.log(`Attempting to load ${moodTrackingConfig.name} for mood tracking...`);
+          logger.info(`Attempting to load ${moodTrackingConfig.name} for mood tracking...`);
           
-          const pipelineOptions: any = {
+          const pipelineOptions: { quantized?: boolean; progress_callback?: (progress: { status?: string; name?: string; progress?: number; loaded?: number; total?: number }) => void } = {
             quantized: true,
             progress_callback: progressCallback,
           };
@@ -615,12 +616,12 @@ export async function initializeModels(forceReload: boolean = false, modelType?:
               throw new Error('Model pipeline returned null');
             }
             
-            console.log(`✓ ${moodTrackingConfig.name} model loaded successfully for mood tracking`);
-          } catch (pipelineError: any) {
+            logger.info(`✓ ${moodTrackingConfig.name} model loaded successfully for mood tracking`);
+          } catch (pipelineError: unknown) {
             // Check if error is due to HTML response (CORS/network issue)
             const errorMsg = pipelineError?.message || String(pipelineError);
             if (errorMsg.includes('<!DOCTYPE') || errorMsg.includes('Unexpected token')) {
-              console.warn(`[MODEL_DEBUG] ${moodTrackingConfig.name} loading failed - received HTML instead of model data. This may be a CORS or network issue.`);
+              logger.warn(`[MODEL_DEBUG] ${moodTrackingConfig.name} loading failed - received HTML instead of model data. This may be a CORS or network issue.`);
               throw new Error(`Network/CORS error: Received HTML response instead of model data. Check network connectivity and CORS settings.`);
             }
             throw pipelineError; // Re-throw other errors
@@ -638,9 +639,9 @@ export async function initializeModels(forceReload: boolean = false, modelType?:
             `Loading AI models...`,
             `${moodTrackingConfig.name} initialized`
           );
-        } catch (modelError: any) {
+        } catch (modelError: unknown) {
           const errorMsg = modelError?.message || String(modelError);
-          console.error(`[MODEL_DEBUG] Pipeline call failed for ${moodTrackingConfig.name}:`, errorMsg);
+          logger.error(`[MODEL_DEBUG] Pipeline call failed for ${moodTrackingConfig.name}:`, errorMsg);
           moodTrackerModel = null;
           // Don't throw, allow partial loading
         }
@@ -659,13 +660,13 @@ export async function initializeModels(forceReload: boolean = false, modelType?:
         // Check cache first
         if (allModelsCache.has(counselingModelType)) {
           counselingCoachModel = allModelsCache.get(counselingModelType);
-          console.log(`✓ Using cached ${counselingConfig.name} for counseling`);
+          logger.info(`✓ Using cached ${counselingConfig.name} for counseling`);
           modelsLoaded++; // Count as loaded
           return;
         }
         
         try {
-          console.log(`Attempting to load ${counselingConfig.name} for counseling...`);
+          logger.info(`Attempting to load ${counselingConfig.name} for counseling...`);
           
           let counselingModelPath = counselingConfig.path;
           const counselingHuggingfaceId = HUGGINGFACE_MODEL_IDS[counselingModelType];
@@ -674,7 +675,7 @@ export async function initializeModels(forceReload: boolean = false, modelType?:
             counselingModelPath = counselingHuggingfaceId;
           }
           
-          const counselingOptions: any = {
+          const counselingOptions: { quantized?: boolean; progress_callback?: (progress: { status?: string; name?: string; progress?: number; loaded?: number; total?: number }) => void } = {
             quantized: true,
             progress_callback: progressCallback,
             device: preferredDevice
@@ -696,12 +697,12 @@ export async function initializeModels(forceReload: boolean = false, modelType?:
               throw new Error('Model pipeline returned null');
             }
             
-            console.log(`✓ ${counselingConfig.name} loaded successfully for counseling`);
-          } catch (pipelineError: any) {
+            logger.info(`✓ ${counselingConfig.name} loaded successfully for counseling`);
+          } catch (pipelineError: unknown) {
             // Check if error is due to HTML response (CORS/network issue)
             const errorMsg = pipelineError?.message || String(pipelineError);
             if (errorMsg.includes('<!DOCTYPE') || errorMsg.includes('Unexpected token')) {
-              console.warn(`[MODEL_DEBUG] ${counselingConfig.name} loading failed - received HTML instead of model data. This may be a CORS or network issue.`);
+              logger.warn(`[MODEL_DEBUG] ${counselingConfig.name} loading failed - received HTML instead of model data. This may be a CORS or network issue.`);
               throw new Error(`Network/CORS error: Received HTML response instead of model data. Check network connectivity and CORS settings.`);
             }
             throw pipelineError; // Re-throw other errors
@@ -719,9 +720,9 @@ export async function initializeModels(forceReload: boolean = false, modelType?:
             `Loading AI models...`,
             `${counselingConfig.name} initialized`
           );
-        } catch (counselingError: any) {
+        } catch (counselingError: unknown) {
           const errorMsg = counselingError?.message || String(counselingError);
-          console.error(`[MODEL_DEBUG] Counseling model loading error:`, errorMsg);
+          logger.error(`[MODEL_DEBUG] Counseling model loading error:`, errorMsg);
           counselingCoachModel = null;
           // Don't throw, allow partial loading
         }
@@ -753,20 +754,20 @@ export async function initializeModels(forceReload: boolean = false, modelType?:
         
         // Update progress state immediately so UI reflects success
         setProgressSuccess('AI models loaded successfully!', 'All models are ready to use');
-        console.log('✅ All AI models loaded!');
-        console.log(`  - Mood tracker: ${moodTrackerModel ? '✓' : '✗'}`);
-        console.log(`  - Counseling coach: ${counselingCoachModel ? '✓' : '✗'}`);
+        logger.info('✅ All AI models loaded!');
+        logger.info(`  - Mood tracker: ${moodTrackerModel ? '✓' : '✗'}`);
+        logger.info(`  - Counseling coach: ${counselingCoachModel ? '✓' : '✗'}`);
         
         // Verify models work after updating state (non-blocking)
-        console.log('[MODEL_VERIFY] Verifying loaded models work...');
+        logger.info('[MODEL_VERIFY] Verifying loaded models work...');
         const modelsWork = await verifyModelsWork();
         
         if (modelsWork) {
           // Update version info since models are loaded and verified
           updateModelVersion();
-          console.log('✅ Model verification passed - all systems ready!');
+          logger.info('✅ Model verification passed - all systems ready!');
         } else {
-          console.warn('⚠️ Models loaded but verification failed - will retry...');
+          logger.warn('⚠️ Models loaded but verification failed - will retry...');
           // Clear models so they can be reloaded
           await clearModels();
           // Reset state since verification failed
@@ -779,13 +780,13 @@ export async function initializeModels(forceReload: boolean = false, modelType?:
         // Only set error if models truly failed (not just still loading)
         if (!isModelLoading) {
         setProgressError('AI models unavailable', 'App will use rule-based responses');
-        console.warn('⚠️ AI models not available. App will use rule-based responses.');
-        console.warn(`  - Mood tracker: ${moodTrackerModel ? '✓ Loaded' : '✗ Failed'}`);
-        console.warn(`  - Counseling coach: ${counselingCoachModel ? '✓ Loaded' : '✗ Failed'}`);
+        logger.warn('⚠️ AI models not available. App will use rule-based responses.');
+        logger.warn(`  - Mood tracker: ${moodTrackerModel ? '✓ Loaded' : '✗ Failed'}`);
+        logger.warn(`  - Counseling coach: ${counselingCoachModel ? '✓ Loaded' : '✗ Failed'}`);
         
         // If at least one model loaded, log that partial loading is available
         if (moodTrackerModel || counselingCoachModel) {
-          console.info('ℹ️ Partial model loading: Some AI features may be available.');
+          logger.info('ℹ️ Partial model loading: Some AI features may be available.');
             // Set status based on what actually loaded
             if (moodTrackerModel && counselingCoachModel) {
               currentDownloadStatus = 'complete';
@@ -797,7 +798,7 @@ export async function initializeModels(forceReload: boolean = false, modelType?:
               setModelLoadingProgress(50, 'Partial model loading', 'Some AI features available');
             }
         } else {
-          console.info('ℹ️ All models failed to load. The app will use rule-based responses which are fully functional.');
+          logger.info('ℹ️ All models failed to load. The app will use rule-based responses which are fully functional.');
             // Explicitly set error state when all models failed
             currentDownloadStatus = 'error';
             currentDownloadLabel = 'AI models unavailable';
@@ -810,7 +811,7 @@ export async function initializeModels(forceReload: boolean = false, modelType?:
       return modelsReady;
     } catch (error) {
       if (loadingTimeout) clearTimeout(loadingTimeout);
-      console.error('Model initialization error:', error);
+      logger.error('Model initialization error:', error);
       isModelLoading = false;
       modelLoadPromise = null; // Clear promise so retries can start fresh
       moodTrackerModel = null;
@@ -837,18 +838,18 @@ export async function initializeModels(forceReload: boolean = false, modelType?:
       // Provide specific error messages
       switch (lastErrorCategory) {
         case 'memory':
-          console.warn('⚠️ Insufficient memory for AI models. App will use rule-based responses.');
+          logger.warn('⚠️ Insufficient memory for AI models. App will use rule-based responses.');
           break;
         case 'network':
-          console.warn('⚠️ Failed to download AI models. Check your internet connection.');
-          console.warn('App will use rule-based responses.');
+          logger.warn('⚠️ Failed to download AI models. Check your internet connection.');
+          logger.warn('App will use rule-based responses.');
           break;
         case 'wasm':
-          console.warn('⚠️ WebAssembly not supported. AI models cannot run on this browser.');
-          console.warn('App will continue with rule-based responses.');
+          logger.warn('⚠️ WebAssembly not supported. AI models cannot run on this browser.');
+          logger.warn('App will continue with rule-based responses.');
           break;
         default:
-          console.warn('⚠️ Failed to load on-device models. App will use rule-based responses instead.');
+          logger.warn('⚠️ Failed to load on-device models. App will use rule-based responses instead.');
       }
       
       // Update progress to error state
@@ -884,12 +885,12 @@ export async function initializeModels(forceReload: boolean = false, modelType?:
 export async function preloadModels(): Promise<boolean> {
   // Don't preload if already loading (prevents duplicate attempts)
   if (isModelLoading && modelLoadPromise) {
-    console.log('🚀 Model loading already in progress, waiting for existing load...');
+    logger.info('🚀 Model loading already in progress, waiting for existing load...');
     try {
       await modelLoadPromise;
       return areModelsLoaded();
     } catch (error) {
-      console.error('[models] Error waiting for model load:', error);
+      logger.error('[models] Error waiting for model load:', error);
       return false;
     }
   }
@@ -898,35 +899,35 @@ export async function preloadModels(): Promise<boolean> {
   if (areModelsLoaded()) {
     const modelsWork = await verifyModelsWork();
     if (modelsWork) {
-      console.log('✅ Models already loaded and working - skipping preload.');
+      logger.info('✅ Models already loaded and working - skipping preload.');
       return true;
     }
   }
   
-  console.log('🚀 Starting background model preload...');
+  logger.info('🚀 Starting background model preload...');
   
   try {
     // Check if models are already loaded
     if (areModelsLoaded()) {
-      console.log('✅ Models already loaded, checking if current...');
+      logger.info('✅ Models already loaded, checking if current...');
       
       // Check if models are current
       const areCurrent = await areModelsCurrent();
       if (areCurrent) {
-        console.log('✅ Models are current, verifying they work...');
+        logger.info('✅ Models are current, verifying they work...');
         
         // Verify models actually work
         const modelsWork = await verifyModelsWork();
         if (modelsWork) {
-          console.log('✅ Models are loaded, current, and verified working - skipping preload.');
+          logger.info('✅ Models are loaded, current, and verified working - skipping preload.');
           return true;
         } else {
-          console.warn('⚠️ Models are loaded but verification failed - will reload...');
+          logger.warn('⚠️ Models are loaded but verification failed - will reload...');
           // Force reload to get fresh models
           await clearModels();
         }
       } else {
-        console.log('⚠️ Models are loaded but outdated - will update...');
+        logger.info('⚠️ Models are loaded but outdated - will update...');
         // Force reload to get latest models
         await clearModels();
       }
@@ -942,7 +943,7 @@ export async function preloadModels(): Promise<boolean> {
       
       // Log every 5th attempt to reduce console noise
       if (attempts === 1 || attempts % 5 === 0) {
-        console.log(`🚀 AI model preload attempt ${attempts}...`);
+        logger.info(`🚀 AI model preload attempt ${attempts}...`);
       }
       
       try {
@@ -954,7 +955,7 @@ export async function preloadModels(): Promise<boolean> {
               return true;
             }
           } catch (error) {
-            console.error('[models] Error checking models during retry:', error);
+            logger.error('[models] Error checking models during retry:', error);
             // Continue with new attempt
           }
         }
@@ -967,16 +968,16 @@ export async function preloadModels(): Promise<boolean> {
         
         if (loaded && moodModel && counselingModel) {
           // Verify models work before returning success
-          console.log(`[MODEL_VERIFY] Verifying models work after ${attempts} attempt${attempts !== 1 ? 's' : ''}...`);
+          logger.info(`[MODEL_VERIFY] Verifying models work after ${attempts} attempt${attempts !== 1 ? 's' : ''}...`);
           const modelsWork = await verifyModelsWork();
           
           if (modelsWork) {
             // Update version info since models are loaded and verified
             updateModelVersion();
-            console.log(`✅ AI models loaded, verified, and ready after ${attempts} attempt${attempts !== 1 ? 's' : ''}!`);
+            logger.info(`✅ AI models loaded, verified, and ready after ${attempts} attempt${attempts !== 1 ? 's' : ''}!`);
             return true;
           } else {
-            console.warn(`⚠️ Models loaded but verification failed after ${attempts} attempt${attempts !== 1 ? 's' : ''} - will retry...`);
+            logger.warn(`⚠️ Models loaded but verification failed after ${attempts} attempt${attempts !== 1 ? 's' : ''} - will retry...`);
             // Clear models so they can be reloaded
             await clearModels();
             // Continue to retry
@@ -984,7 +985,7 @@ export async function preloadModels(): Promise<boolean> {
         }
         
         if (moodModel || counselingModel) {
-          console.log(`ℹ️ Partial model loading: ${moodModel ? 'Mood tracker ✓' : 'Mood tracker ✗'}, ${counselingModel ? 'Counseling coach ✓' : 'Counseling coach ✗'}`);
+          logger.info(`ℹ️ Partial model loading: ${moodModel ? 'Mood tracker ✓' : 'Mood tracker ✗'}, ${counselingModel ? 'Counseling coach ✓' : 'Counseling coach ✗'}`);
           // Continue trying to load the missing model
         }
       } catch (error) {
@@ -1002,15 +1003,15 @@ export async function preloadModels(): Promise<boolean> {
         
         if (isNetworkError) {
           networkErrorDetected = true;
-          console.warn(`[MODEL_DEBUG] Network error detected on attempt ${attempts} - stopping retries (no internet).`);
-          console.warn('⚠️ AI models cannot be downloaded without internet connection.');
+          logger.warn(`[MODEL_DEBUG] Network error detected on attempt ${attempts} - stopping retries (no internet).`);
+          logger.warn('⚠️ AI models cannot be downloaded without internet connection.');
           break;
         }
         
         // For all other errors (ONNX Runtime, memory, etc.), keep retrying
         // Only log every 10th attempt to reduce noise
         if (attempts % 10 === 0) {
-          console.log(`[MODEL_DEBUG] Attempt ${attempts} failed (will retry):`, errorMsg.substring(0, 100));
+          logger.info(`[MODEL_DEBUG] Attempt ${attempts} failed (will retry):`, errorMsg.substring(0, 100));
         }
       }
       
@@ -1018,7 +1019,7 @@ export async function preloadModels(): Promise<boolean> {
         // Exponential backoff, but cap at 30 seconds between retries
         const delay = Math.min(1000 * Math.pow(1.5, attempts - 1), 30000);
         if (attempts % 5 === 0) {
-          console.log(`[MODEL_DEBUG] Waiting ${Math.round(delay/1000)}s before retry ${attempts + 1}...`);
+          logger.info(`[MODEL_DEBUG] Waiting ${Math.round(delay/1000)}s before retry ${attempts + 1}...`);
         }
         await new Promise(resolve => setTimeout(resolve, delay));
       }
@@ -1029,23 +1030,23 @@ export async function preloadModels(): Promise<boolean> {
     const finalCounselingModel = getCounselingCoachModel();
     
     if (finalMoodModel || finalCounselingModel) {
-      console.log(`⚠️ Model preload completed with partial loading after ${attempts} attempts:`);
-      console.log(`  - Mood tracker: ${finalMoodModel ? '✓' : '✗'}`);
-      console.log(`  - Counseling coach: ${finalCounselingModel ? '✓' : '✗'}`);
-      console.log(`  - Some AI features may be available.`);
+      logger.info(`⚠️ Model preload completed with partial loading after ${attempts} attempts:`);
+      logger.info(`  - Mood tracker: ${finalMoodModel ? '✓' : '✗'}`);
+      logger.info(`  - Counseling coach: ${finalCounselingModel ? '✓' : '✗'}`);
+      logger.info(`  - Some AI features may be available.`);
       return true;
     } else {
       if (networkErrorDetected) {
-        console.warn(`⚠️ AI models unavailable after ${attempts} attempts: No internet connection.`);
-        console.warn('⚠️ Connect to internet to enable AI features. App uses rule-based responses.');
+        logger.warn(`⚠️ AI models unavailable after ${attempts} attempts: No internet connection.`);
+        logger.warn('⚠️ Connect to internet to enable AI features. App uses rule-based responses.');
       } else {
-        console.warn(`⚠️ AI models unavailable after ${attempts} attempts. Will continue retrying in background.`);
+        logger.warn(`⚠️ AI models unavailable after ${attempts} attempts. Will continue retrying in background.`);
       }
     }
     
     return false;
   } catch (error) {
-    console.error('[MODEL_DEBUG] preloadModels() caught unexpected error:', error);
+    logger.error('[MODEL_DEBUG] preloadModels() caught unexpected error:', error);
     // Don't stop - let continuous retry handle it
     return false;
   }
@@ -1062,18 +1063,18 @@ let isContinuousLoadingActive = false;
 export async function preloadModelsContinuously(): Promise<void> {
   // Prevent multiple continuous loading attempts
   if (isContinuousLoadingActive) {
-    console.log('🚀 Continuous model loading already active, skipping duplicate call.');
+    logger.info('🚀 Continuous model loading already active, skipping duplicate call.');
     return;
   }
   
   // Check if models are already loaded
   if (areModelsLoaded()) {
     const modelsWork = await verifyModelsWork().catch((error) => {
-      console.error('[models] Error verifying models work:', error);
+      logger.error('[models] Error verifying models work:', error);
       return false;
     });
     if (modelsWork) {
-      console.log('✅ Models already loaded and working - skipping continuous loading.');
+      logger.info('✅ Models already loaded and working - skipping continuous loading.');
       currentDownloadProgress = 100;
       currentDownloadStatus = 'complete';
       currentDownloadLabel = 'Complete';
@@ -1084,12 +1085,12 @@ export async function preloadModelsContinuously(): Promise<void> {
   
   // Check if models are already loading
   if (isModelLoading && modelLoadPromise) {
-    console.log('🚀 Model loading already in progress, skipping duplicate call.');
+    logger.info('🚀 Model loading already in progress, skipping duplicate call.');
     return;
   }
   
   isContinuousLoadingActive = true;
-  console.log('🚀 Starting continuous AI model loading (will retry until loaded or no internet)...');
+  logger.info('🚀 Starting continuous AI model loading (will retry until loaded or no internet)...');
   
   // Initialize download progress
   currentDownloadProgress = 0;
@@ -1108,7 +1109,7 @@ export async function preloadModelsContinuously(): Promise<void> {
         if (areModelsLoaded()) {
           const modelsWork = await verifyModelsWork();
           if (modelsWork) {
-            console.log('✅ AI models loaded and verified! Continuous loading complete.');
+            logger.info('✅ AI models loaded and verified! Continuous loading complete.');
             isContinuousLoadingActive = false;
             return;
           }
@@ -1120,7 +1121,7 @@ export async function preloadModelsContinuously(): Promise<void> {
             const loaded = await preloadModels();
             
             if (loaded) {
-              console.log('✅ AI models loaded successfully! Continuous loading complete.');
+              logger.info('✅ AI models loaded successfully! Continuous loading complete.');
               isContinuousLoadingActive = false;
               return;
             }
@@ -1130,12 +1131,12 @@ export async function preloadModelsContinuously(): Promise<void> {
               try {
                 await modelLoadPromise;
                 if (areModelsLoaded()) {
-                  console.log('✅ Models loaded by another process. Continuous loading complete.');
+                  logger.info('✅ Models loaded by another process. Continuous loading complete.');
                   isContinuousLoadingActive = false;
                   return;
                 }
               } catch (error) {
-                console.error('[models] Error in continuous loading:', error);
+                logger.error('[models] Error in continuous loading:', error);
                 // Continue retrying
               }
             }
@@ -1159,11 +1160,11 @@ export async function preloadModelsContinuously(): Promise<void> {
         
         if (isNetworkError) {
           consecutiveNetworkErrors++;
-          console.warn(`[MODEL_DEBUG] Network error ${consecutiveNetworkErrors}/${maxNetworkErrors} - checking internet connection...`);
+          logger.warn(`[MODEL_DEBUG] Network error ${consecutiveNetworkErrors}/${maxNetworkErrors} - checking internet connection...`);
           
           if (consecutiveNetworkErrors >= maxNetworkErrors) {
-            console.warn('⚠️ Multiple network errors detected - stopping continuous model loading (no internet).');
-            console.warn('⚠️ AI models will be loaded when internet connection is restored.');
+            logger.warn('⚠️ Multiple network errors detected - stopping continuous model loading (no internet).');
+            logger.warn('⚠️ AI models will be loaded when internet connection is restored.');
             isContinuousLoadingActive = false;
             return;
           }
@@ -1206,20 +1207,20 @@ async function areModelsCurrent(): Promise<boolean> {
     // Check if version is older than 7 days - if so, consider outdated
     const daysSinceUpdate = (Date.now() - timestamp) / (1000 * 60 * 60 * 24);
     if (daysSinceUpdate > 7) {
-      console.log(`[MODEL_VERSION] Models are ${Math.round(daysSinceUpdate)} days old - checking for updates...`);
+      logger.info(`[MODEL_VERSION] Models are ${Math.round(daysSinceUpdate)} days old - checking for updates...`);
       return false;
     }
     
     // Check if model path changed (user switched models)
     const currentModelPath = MODEL_CONFIGS[selectedModel].path;
     if (modelPath !== currentModelPath) {
-      console.log(`[MODEL_VERSION] Model path changed from ${modelPath} to ${currentModelPath} - update needed`);
+      logger.info(`[MODEL_VERSION] Model path changed from ${modelPath} to ${currentModelPath} - update needed`);
       return false;
     }
     
     return true;
   } catch (error) {
-    console.warn('[MODEL_VERSION] Error checking model version:', error);
+    logger.warn('[MODEL_VERSION] Error checking model version:', error);
     // If we can't check, assume current to avoid unnecessary reloads
     return true;
   }
@@ -1237,9 +1238,9 @@ function updateModelVersion(): void {
       modelType: selectedModel
     };
     localStorage.setItem(versionKey, JSON.stringify(versionData));
-    console.log(`[MODEL_VERSION] Updated version info for ${selectedModel}`);
+    logger.info(`[MODEL_VERSION] Updated version info for ${selectedModel}`);
   } catch (error) {
-    console.warn('[MODEL_VERSION] Error updating model version:', error);
+    logger.warn('[MODEL_VERSION] Error updating model version:', error);
   }
 }
 
@@ -1253,7 +1254,7 @@ async function verifyModelsWork(): Promise<boolean> {
     const counselingModel = getCounselingCoachModel();
     
     if (!moodModel && !counselingModel) {
-      console.log('[MODEL_VERIFY] No models loaded to verify');
+      logger.info('[MODEL_VERIFY] No models loaded to verify');
       return false;
     }
     
@@ -1263,7 +1264,7 @@ async function verifyModelsWork(): Promise<boolean> {
     // Test mood tracker model
     if (moodModel) {
       try {
-        console.log('[MODEL_VERIFY] Testing mood tracker model...');
+        logger.info('[MODEL_VERIFY] Testing mood tracker model...');
         const testText = 'I feel happy and grateful today';
         const testResult = await Promise.race([
           moodModel(testText),
@@ -1273,21 +1274,21 @@ async function verifyModelsWork(): Promise<boolean> {
         // Check if result is valid (not null/undefined, has some structure)
         if (testResult !== null && testResult !== undefined) {
           moodWorks = true;
-          console.log('[MODEL_VERIFY] ✓ Mood tracker model works');
+          logger.info('[MODEL_VERIFY] ✓ Mood tracker model works');
         } else {
-          console.warn('[MODEL_VERIFY] ✗ Mood tracker returned invalid result');
+          logger.warn('[MODEL_VERIFY] ✗ Mood tracker returned invalid result');
         }
       } catch (error) {
-        console.warn('[MODEL_VERIFY] ✗ Mood tracker test failed:', error instanceof Error ? error.message : String(error));
+        logger.warn('[MODEL_VERIFY] ✗ Mood tracker test failed:', error instanceof Error ? error.message : String(error));
       }
     } else {
-      console.log('[MODEL_VERIFY] Mood tracker model not loaded');
+      logger.info('[MODEL_VERIFY] Mood tracker model not loaded');
     }
     
     // Test counseling coach model
     if (counselingModel) {
       try {
-        console.log('[MODEL_VERIFY] Testing counseling coach model...');
+        logger.info('[MODEL_VERIFY] Testing counseling coach model...');
         const testPrompt = 'Test prompt for counseling model';
         const testResult = await Promise.race([
           counselingModel(testPrompt, { max_new_tokens: 10, temperature: 0.7 }),
@@ -1300,29 +1301,29 @@ async function verifyModelsWork(): Promise<boolean> {
           (typeof testResult === 'object' && testResult.generated_text)
         )) {
           counselingWorks = true;
-          console.log('[MODEL_VERIFY] ✓ Counseling coach model works');
+          logger.info('[MODEL_VERIFY] ✓ Counseling coach model works');
         } else {
-          console.warn('[MODEL_VERIFY] ✗ Counseling coach returned invalid result');
+          logger.warn('[MODEL_VERIFY] ✗ Counseling coach returned invalid result');
         }
       } catch (error) {
-        console.warn('[MODEL_VERIFY] ✗ Counseling coach test failed:', error instanceof Error ? error.message : String(error));
+        logger.warn('[MODEL_VERIFY] ✗ Counseling coach test failed:', error instanceof Error ? error.message : String(error));
       }
     } else {
-      console.log('[MODEL_VERIFY] Counseling coach model not loaded');
+      logger.info('[MODEL_VERIFY] Counseling coach model not loaded');
     }
     
     // Return true if at least one model works, or if both are expected but both work
     const result = (moodModel ? moodWorks : true) && (counselingModel ? counselingWorks : true);
     
     if (result) {
-      console.log('[MODEL_VERIFY] ✓ All loaded models verified and working');
+      logger.info('[MODEL_VERIFY] ✓ All loaded models verified and working');
     } else {
-      console.warn('[MODEL_VERIFY] ✗ Some models failed verification');
+      logger.warn('[MODEL_VERIFY] ✗ Some models failed verification');
     }
     
     return result;
   } catch (error) {
-    console.error('[MODEL_VERIFY] Error during model verification:', error);
+    logger.error('[MODEL_VERIFY] Error during model verification:', error);
     return false;
   }
 }

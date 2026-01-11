@@ -1,7 +1,8 @@
 import React, { createContext, useContext, useState, useCallback, useEffect, useRef, ReactNode } from 'react';
 import { acceptTerms, logoutUser, getCurrentUser } from '../services/authService';
 import { getDatabaseAdapter } from '../services/databaseAdapter';
-import { AppSettings } from '../types';
+import { AppSettings, LogEntry, Goal } from '../types';
+import type { UserData, AppData } from '../services/adapters/types';
 
 export type AuthState = 'checking' | 'login' | 'terms' | 'app';
 
@@ -22,8 +23,8 @@ interface AuthProviderProps {
   children: ReactNode;
   onLoginComplete?: (userId: string, appData: {
     values: string[];
-    logs: any[];
-    goals: any[];
+    logs: LogEntry[];
+    goals: Goal[];
     settings: AppSettings;
   }) => void;
   onLogoutComplete?: () => void;
@@ -250,7 +251,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({
         setTimeout(() => reject(new Error('getCurrentUser timeout')), 5000);
       });
       
-      const user = await Promise.race([userDataPromise, userDataTimeout]) as any;
+      const user = await Promise.race([userDataPromise, userDataTimeout]) as UserData | null;
       console.log('[LOGIN] User data loaded:', user ? 'found' : 'not found');
       
       if (user) {
@@ -267,7 +268,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({
               setTimeout(() => reject(new Error('getAppData timeout')), 5000);
             });
             
-            const appData = await Promise.race([appDataPromise, appDataTimeout]) as any;
+            const appData = await Promise.race([appDataPromise, appDataTimeout]) as AppData | null;
             console.log('[LOGIN] App data loaded:', appData ? 'found' : 'not found');
             
             // Also try to load values from the values table (new structure)

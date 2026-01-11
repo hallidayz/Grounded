@@ -1,3 +1,4 @@
+import { logger } from '../utils/logger';
 /**
  * Local Secure Database Service
  * Uses IndexedDB for secure, structured local storage
@@ -126,7 +127,7 @@ class DatabaseService {
       this.oldDatabaseCheckCache = result;
       return result;
     } catch (error) {
-      console.warn('Error checking for old database:', error);
+      logger.warn('Error checking for old database:', error);
       this.oldDatabaseCheckCache = false;
       return false;
     }
@@ -146,16 +147,16 @@ class DatabaseService {
             deleteRequest.onsuccess = () => resolve();
             deleteRequest.onerror = () => reject(deleteRequest.error);
             deleteRequest.onblocked = () => {
-              console.warn('Old database deletion blocked - another tab may have it open');
+              logger.warn('Old database deletion blocked - another tab may have it open');
               // Wait a bit and try to resolve anyway
               setTimeout(() => resolve(), 1000);
             };
           });
-          console.log('✅ Old database deleted successfully');
+          logger.info('✅ Old database deleted successfully');
         }
       }
     } catch (error) {
-      console.warn('Error deleting old database:', error);
+      logger.warn('Error deleting old database:', error);
       // Don't throw - continue with new database creation
     }
   }
@@ -186,7 +187,7 @@ class DatabaseService {
         // No metadata means it's a new database - create it lazily (don't block)
         // Defer metadata creation to avoid blocking initialization
         this.setMetadata().catch(err => {
-          console.warn('Failed to set metadata (non-critical):', err);
+          logger.warn('Failed to set metadata (non-critical):', err);
         });
         this.metadataValidated = true; // Trust new database
         return true;
@@ -198,7 +199,7 @@ class DatabaseService {
         metadata.appName === this.APP_NAME;
       
       if (!isValid) {
-        console.error('Database validation failed - metadata mismatch');
+        logger.error('Database validation failed - metadata mismatch');
         return false;
       }
 
@@ -207,12 +208,12 @@ class DatabaseService {
       
       // Update last validated timestamp (non-blocking)
       this.updateMetadataValidation().catch(err => {
-        console.warn('Failed to update metadata validation timestamp (non-critical):', err);
+        logger.warn('Failed to update metadata validation timestamp (non-critical):', err);
       });
       
       return true;
     } catch (error) {
-      console.error('Error validating database:', error);
+      logger.error('Error validating database:', error);
       return false;
     }
   }
@@ -261,7 +262,7 @@ class DatabaseService {
 
     // Check if metadata store exists before trying to access it
     if (!this.db.objectStoreNames.contains('metadata')) {
-      console.warn('Metadata object store does not exist - database may need upgrade');
+      logger.warn('Metadata object store does not exist - database may need upgrade');
       return; // Silently fail - metadata is non-critical
     }
 
@@ -292,12 +293,12 @@ class DatabaseService {
       request.onsuccess = () => resolve();
         request.onerror = () => {
           // Silently fail - metadata is non-critical
-          console.warn('Failed to set metadata (non-critical):', request.error);
+          logger.warn('Failed to set metadata (non-critical):', request.error);
           resolve(); // Resolve instead of reject to prevent blocking
         };
       } catch (error) {
         // Silently fail - metadata is non-critical
-        console.warn('Failed to set metadata (non-critical):', error);
+        logger.warn('Failed to set metadata (non-critical):', error);
         resolve(); // Resolve instead of reject to prevent blocking
       }
     });
@@ -320,7 +321,7 @@ class DatabaseService {
       store.put({ id: 'app_metadata', ...metadata });
       } catch (error) {
         // Silently fail - metadata is non-critical
-        console.warn('Failed to update metadata validation (non-critical):', error);
+        logger.warn('Failed to update metadata validation (non-critical):', error);
       }
     }
   }
@@ -369,7 +370,7 @@ class DatabaseService {
         return; // Migration already completed
       }
       
-      console.log('[MIGRATION] Starting migration of values and goals to new tables...');
+      logger.info('[MIGRATION] Starting migration of values and goals to new tables...');
       
       // Get all appData entries
       if (!this.db.objectStoreNames.contains('appData')) {
@@ -399,7 +400,7 @@ class DatabaseService {
                 await this.setValuesActive(userId, data.values);
                 migrated++;
               } catch (err) {
-                console.warn(`[MIGRATION] Failed to migrate values for user ${userId}:`, err);
+                logger.warn(`[MIGRATION] Failed to migrate values for user ${userId}:`, err);
               }
             }
             
@@ -409,25 +410,25 @@ class DatabaseService {
                 try {
                   await this.saveGoal(goal);
                 } catch (err) {
-                  console.warn(`[MIGRATION] Failed to migrate goal ${goal.id}:`, err);
+                  logger.warn(`[MIGRATION] Failed to migrate goal ${goal.id}:`, err);
                 }
               }
             }
           }
           
-          console.log(`[MIGRATION] Completed: migrated ${migrated} users' data`);
+          logger.info(`[MIGRATION] Completed: migrated ${migrated} users' data`);
           localStorage.setItem(migrationKey, 'true');
           resolve();
         };
         
         getAllRequest.onerror = () => {
-          console.warn('[MIGRATION] Failed to read appData for migration');
+          logger.warn('[MIGRATION] Failed to read appData for migration');
           localStorage.setItem(migrationKey, 'true'); // Mark as done to prevent retries
           resolve(); // Don't block on migration failure
         };
       });
     } catch (error) {
-      console.warn('[MIGRATION] Migration error (non-critical):', error);
+      logger.warn('[MIGRATION] Migration error (non-critical):', error);
       localStorage.setItem('values_goals_migration_complete', 'true'); // Mark as done
     }
   }
@@ -456,7 +457,7 @@ class DatabaseService {
         // If it's a backing store error, wait and retry
         if (errorMessage.includes('backing store') || errorMessage.includes('Internal error')) {
           if (attempt < maxRetries - 1) {
-            console.warn(`Database initialization attempt ${attempt + 1} failed, retrying...`);
+            logger.warn(`Database initialization attempt ${attempt + 1} failed, retrying...`);
             // Reduced wait time: 500ms, 1000ms instead of 1000ms, 2000ms, 3000ms
             await new Promise(resolve => setTimeout(resolve, 500 * (attempt + 1)));
             continue;
@@ -482,7 +483,7 @@ class DatabaseService {
       request.onerror = () => {
         const error = request.error || new Error('Unknown database error');
         const errorMessage = error instanceof Error ? error.message : String(error);
-        console.error('Database open error:', error);
+        logger.error('Database open error:', error);
         
         // Handle specific IndexedDB errors with better messages
         if (errorMessage.includes('backing store') || errorMessage.includes('Internal error')) {
@@ -509,11 +510,11 @@ class DatabaseService {
           
           // Set up error handlers for the database connection
           this.db.onerror = (event) => {
-            console.error('Database error:', event);
+            logger.error('Database error:', event);
           };
           
           this.db.onclose = () => {
-            console.warn('Database connection closed');
+            logger.warn('Database connection closed');
             this.db = null;
             // Clear caches when connection closes
             this.metadataValidated = false;
@@ -532,7 +533,7 @@ class DatabaseService {
           
           resolve();
         } catch (error) {
-          console.error('Error setting up database:', error);
+          logger.error('Error setting up database:', error);
           reject(error);
         }
       };
@@ -656,7 +657,7 @@ class DatabaseService {
         }
         
         request.onblocked = () => {
-          console.warn('Database upgrade blocked - another tab may have the database open');
+          logger.warn('Database upgrade blocked - another tab may have the database open');
           // Don't reject - the upgrade will complete when the other tab closes
           // The onsuccess handler will still fire
         };
@@ -784,12 +785,12 @@ class DatabaseService {
       };
         request.onerror = () => {
           // Silently fail - return null if store access fails
-          console.warn('Failed to get app data (non-critical):', request.error);
+          logger.warn('Failed to get app data (non-critical):', request.error);
           resolve(null);
         };
       } catch (error) {
         // Silently fail - return null if store access fails
-        console.warn('Failed to get app data (non-critical):', error);
+        logger.warn('Failed to get app data (non-critical):', error);
         resolve(null);
       }
     });
@@ -801,7 +802,7 @@ class DatabaseService {
     // Check if appData store exists
     if (!db.objectStoreNames.contains('appData')) {
       // Store doesn't exist - silently fail (non-critical)
-      console.warn('App data store not available - data will not be saved');
+      logger.warn('App data store not available - data will not be saved');
       return;
     }
     
@@ -814,12 +815,12 @@ class DatabaseService {
       request.onsuccess = () => resolve();
         request.onerror = () => {
           // Silently fail - saving is non-critical
-          console.warn('Failed to save app data (non-critical):', request.error);
+          logger.warn('Failed to save app data (non-critical):', request.error);
           resolve(); // Resolve instead of reject to prevent blocking
         };
       } catch (error) {
         // Silently fail - saving is non-critical
-        console.warn('Failed to save app data (non-critical):', error);
+        logger.warn('Failed to save app data (non-critical):', error);
         resolve(); // Resolve instead of reject to prevent blocking
       }
     });
@@ -852,11 +853,11 @@ class DatabaseService {
       request.onsuccess = () => resolve(token);
       request.onerror = (event) => {
         const error = (event.target as IDBRequest).error;
-        console.error('Failed to create reset token:', error);
+        logger.error('Failed to create reset token:', error);
         reject(error || new Error('Failed to create reset token in database'));
       };
       } catch (error) {
-        console.error('Failed to create reset token:', error);
+        logger.error('Failed to create reset token:', error);
         reject(error);
       }
     });
@@ -894,12 +895,12 @@ class DatabaseService {
       };
         request.onerror = () => {
           // Silently fail - return null if store access fails
-          console.warn('Failed to get reset token (non-critical):', request.error);
+          logger.warn('Failed to get reset token (non-critical):', request.error);
           resolve(null);
         };
       } catch (error) {
         // Silently fail - return null if store access fails
-        console.warn('Failed to get reset token (non-critical):', error);
+        logger.warn('Failed to get reset token (non-critical):', error);
         resolve(null);
       }
     });
@@ -923,12 +924,12 @@ class DatabaseService {
       request.onsuccess = () => resolve();
         request.onerror = () => {
           // Silently fail - deletion is non-critical
-          console.warn('Failed to delete reset token (non-critical):', request.error);
+          logger.warn('Failed to delete reset token (non-critical):', request.error);
           resolve(); // Resolve instead of reject to prevent blocking
         };
       } catch (error) {
         // Silently fail - deletion is non-critical
-        console.warn('Failed to delete reset token (non-critical):', error);
+        logger.warn('Failed to delete reset token (non-critical):', error);
         resolve(); // Resolve instead of reject to prevent blocking
       }
     });
@@ -972,12 +973,12 @@ class DatabaseService {
       };
         request.onerror = () => {
           // Silently fail - cleanup is non-critical
-          console.warn('Failed to cleanup expired tokens (non-critical):', request.error);
+          logger.warn('Failed to cleanup expired tokens (non-critical):', request.error);
           resolve(); // Resolve instead of reject to prevent blocking
         };
       } catch (error) {
         // Silently fail - cleanup is non-critical
-        console.warn('Failed to cleanup expired tokens (non-critical):', error);
+        logger.warn('Failed to cleanup expired tokens (non-critical):', error);
         resolve(); // Resolve instead of reject to prevent blocking
       }
     });
@@ -998,7 +999,7 @@ class DatabaseService {
     
     // Ensure object store exists
     if (!db.objectStoreNames.contains('feelingLogs')) {
-      console.warn('feelingLogs object store does not exist');
+      logger.warn('feelingLogs object store does not exist');
       return Promise.resolve();
     }
     
@@ -1035,7 +1036,7 @@ class DatabaseService {
       request.onsuccess = () => resolve();
       request.onerror = () => reject(request.error);
       } catch (error) {
-        console.error('Error saving feeling log:', error);
+        logger.error('Error saving feeling log:', error);
         resolve(); // Fail silently for non-critical operations
       }
     });
@@ -1046,7 +1047,7 @@ class DatabaseService {
     
     // Ensure object store exists
     if (!db.objectStoreNames.contains('ruleBasedUsageLogs')) {
-      console.warn('ruleBasedUsageLogs object store does not exist - skipping save (non-critical)');
+      logger.warn('ruleBasedUsageLogs object store does not exist - skipping save (non-critical)');
       return Promise.resolve();
     }
     
@@ -1058,11 +1059,11 @@ class DatabaseService {
 
         request.onsuccess = () => resolve();
         request.onerror = () => {
-          console.error('Failed to save rule-based usage log:', request.error);
+          logger.error('Failed to save rule-based usage log:', request.error);
           resolve(); // Fail silently for non-critical logging
         };
       } catch (error) {
-        console.error('Error saving rule-based usage log:', error);
+        logger.error('Error saving rule-based usage log:', error);
         resolve(); // Fail silently
       }
     });
@@ -1113,7 +1114,7 @@ class DatabaseService {
         };
         request.onerror = () => reject(request.error);
       } catch (error) {
-        console.error('Error getting rule-based usage logs:', error);
+        logger.error('Error getting rule-based usage logs:', error);
         resolve([]); // Return empty array on error
       }
     });
@@ -1483,7 +1484,7 @@ class DatabaseService {
           request.onerror = () => reject(request.error);
         });
       } catch (error) {
-        console.warn(`Failed to export store ${storeName}:`, error);
+        logger.warn(`Failed to export store ${storeName}:`, error);
         exportData[storeName] = { error: String(error) };
       }
     }
@@ -1495,7 +1496,7 @@ class DatabaseService {
     const db = await this.ensureDB();
     
     if (!db.objectStoreNames.contains('values')) {
-      console.warn('Values object store does not exist');
+      logger.warn('Values object store does not exist');
       return Promise.resolve();
     }
     
@@ -1538,7 +1539,7 @@ class DatabaseService {
         };
         getAllRequest.onerror = () => reject(getAllRequest.error);
       } catch (error) {
-        console.error('Error saving value:', error);
+        logger.error('Error saving value:', error);
         reject(error);
       }
     });
@@ -1567,7 +1568,7 @@ class DatabaseService {
         };
         request.onerror = () => reject(request.error);
       } catch (error) {
-        console.error('Error getting active values:', error);
+        logger.error('Error getting active values:', error);
         resolve([]); // Return empty array on error
       }
     });
@@ -1674,7 +1675,7 @@ class DatabaseService {
         };
         request.onerror = () => reject(request.error);
       } catch (error) {
-        console.error('Error setting values active:', error);
+        logger.error('Error setting values active:', error);
         resolve(); // Continue even on errors
       }
     });
@@ -1685,7 +1686,7 @@ class DatabaseService {
     const db = await this.ensureDB();
     
     if (!db.objectStoreNames.contains('goals')) {
-      console.warn('Goals object store does not exist');
+      logger.warn('Goals object store does not exist');
       return Promise.resolve();
     }
     
@@ -1698,7 +1699,7 @@ class DatabaseService {
         request.onsuccess = () => resolve();
         request.onerror = () => reject(request.error);
       } catch (error) {
-        console.error('Error saving goal:', error);
+        logger.error('Error saving goal:', error);
         resolve(); // Continue even on errors
       }
     });
@@ -1727,7 +1728,7 @@ class DatabaseService {
         };
         request.onerror = () => reject(request.error);
       } catch (error) {
-        console.error('Error getting goals:', error);
+        logger.error('Error getting goals:', error);
         resolve([]); // Return empty array on error
       }
     });
@@ -1749,7 +1750,7 @@ class DatabaseService {
         request.onsuccess = () => resolve();
         request.onerror = () => reject(request.error);
       } catch (error) {
-        console.error('Error deleting goal:', error);
+        logger.error('Error deleting goal:', error);
         resolve(); // Continue even on errors
       }
     });
@@ -1761,7 +1762,7 @@ class DatabaseService {
    * Use with caution - this is irreversible!
    */
   async uninstallAppData(): Promise<void> {
-    console.log('[Uninstall] Starting complete data wipe...');
+    logger.info('[Uninstall] Starting complete data wipe...');
     
     try {
       // Step 1: Close any open database connections
@@ -1783,20 +1784,20 @@ class DatabaseService {
           await new Promise<void>((resolve, reject) => {
             const deleteRequest = indexedDB.deleteDatabase(dbName);
             deleteRequest.onsuccess = () => {
-              console.log(`[Uninstall] Deleted IndexedDB: ${dbName}`);
+              logger.info(`[Uninstall] Deleted IndexedDB: ${dbName}`);
               resolve();
             };
             deleteRequest.onerror = () => {
-              console.warn(`[Uninstall] Failed to delete IndexedDB: ${dbName}`, deleteRequest.error);
+              logger.warn(`[Uninstall] Failed to delete IndexedDB: ${dbName}`, deleteRequest.error);
               resolve(); // Continue even if deletion fails
             };
             deleteRequest.onblocked = () => {
-              console.warn(`[Uninstall] IndexedDB deletion blocked: ${dbName}`);
+              logger.warn(`[Uninstall] IndexedDB deletion blocked: ${dbName}`);
               setTimeout(() => resolve(), 1000);
             };
           });
         } catch (error) {
-          console.warn(`[Uninstall] Error deleting IndexedDB ${dbName}:`, error);
+          logger.warn(`[Uninstall] Error deleting IndexedDB ${dbName}:`, error);
         }
       }
       
@@ -1810,17 +1811,17 @@ class DatabaseService {
         try {
           localStorage.removeItem(key);
         } catch (error) {
-          console.warn(`[Uninstall] Failed to remove localStorage key ${key}:`, error);
+          logger.warn(`[Uninstall] Failed to remove localStorage key ${key}:`, error);
         }
       }
-      console.log('[Uninstall] Cleared localStorage');
+      logger.info('[Uninstall] Cleared localStorage');
       
       // Step 4: Clear sessionStorage
       try {
         sessionStorage.clear();
-        console.log('[Uninstall] Cleared sessionStorage');
+        logger.info('[Uninstall] Cleared sessionStorage');
       } catch (error) {
-        console.warn('[Uninstall] Failed to clear sessionStorage:', error);
+        logger.warn('[Uninstall] Failed to clear sessionStorage:', error);
       }
       
       // Step 5: Clear cache storage (Cache API)
@@ -1829,13 +1830,13 @@ class DatabaseService {
           const cacheNames = await caches.keys();
           await Promise.all(
             cacheNames.map(cacheName => {
-              console.log(`[Uninstall] Deleting cache: ${cacheName}`);
+              logger.info(`[Uninstall] Deleting cache: ${cacheName}`);
               return caches.delete(cacheName);
             })
           );
-          console.log('[Uninstall] Cleared cache storage');
+          logger.info('[Uninstall] Cleared cache storage');
         } catch (error) {
-          console.warn('[Uninstall] Failed to clear cache storage:', error);
+          logger.warn('[Uninstall] Failed to clear cache storage:', error);
         }
       }
       
@@ -1845,13 +1846,13 @@ class DatabaseService {
           const registrations = await navigator.serviceWorker.getRegistrations();
           await Promise.all(
             registrations.map(registration => {
-              console.log(`[Uninstall] Unregistering service worker: ${registration.scope}`);
+              logger.info(`[Uninstall] Unregistering service worker: ${registration.scope}`);
               return registration.unregister();
             })
           );
-          console.log('[Uninstall] Unregistered service workers');
+          logger.info('[Uninstall] Unregistered service workers');
         } catch (error) {
-          console.warn('[Uninstall] Failed to unregister service workers:', error);
+          logger.warn('[Uninstall] Failed to unregister service workers:', error);
         }
       }
       
@@ -1865,9 +1866,9 @@ class DatabaseService {
               await root.removeEntry(name, { recursive: true });
             }
           }
-          console.log('[Uninstall] Cleared OPFS');
+          logger.info('[Uninstall] Cleared OPFS');
         } catch (error) {
-          console.warn('[Uninstall] Failed to clear OPFS:', error);
+          logger.warn('[Uninstall] Failed to clear OPFS:', error);
         }
       }
       
@@ -1876,9 +1877,9 @@ class DatabaseService {
       this.oldDatabaseCheckCache = null;
       this.metadataCache = null;
       
-      console.log('[Uninstall] Complete data wipe finished successfully');
+      logger.info('[Uninstall] Complete data wipe finished successfully');
     } catch (error) {
-      console.error('[Uninstall] Error during data wipe:', error);
+      logger.error('[Uninstall] Error during data wipe:', error);
       throw new Error(`Failed to uninstall app data: ${error instanceof Error ? error.message : String(error)}`);
     }
   }

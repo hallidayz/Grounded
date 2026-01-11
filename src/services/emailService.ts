@@ -54,7 +54,7 @@ export async function shareViaEmail(
       try {
         await navigator.share(shareData);
         return true;
-      } catch (error: any) {
+      } catch (error: unknown) {
         // User cancelled or share failed, fallback to mailto
         if (error.name !== 'AbortError') {
           console.warn('Web Share failed, using mailto fallback:', error);

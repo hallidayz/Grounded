@@ -3,6 +3,7 @@ import ErrorBoundary from './components/ErrorBoundary';
 import { AuthProvider, useAuthContext } from './contexts/AuthContext';
 import { DataProvider } from './contexts/DataContext';
 import AppContent from './AppContent';
+import { LogEntry, Goal, AppSettings } from './types';
 
 // Export function to reset initialization (for logout, etc.)
 export { resetInitialization } from './hooks/useAppInitialization';
@@ -46,8 +47,8 @@ const DiagnosticOverlay: React.FC<{ status: string }> = ({ status }) => (
 
 // Create a context to pass appData from AuthProvider to AppWithData
 const AppDataContext = React.createContext<{
-  appData: { values?: string[]; logs?: any[]; goals?: any[]; settings?: any; } | null;
-  setAppData: (data: { values?: string[]; logs?: any[]; goals?: any[]; settings?: any; } | null) => void;
+  appData: { values?: string[]; logs?: LogEntry[]; goals?: Goal[]; settings?: AppSettings; } | null;
+  setAppData: (data: { values?: string[]; logs?: LogEntry[]; goals?: Goal[]; settings?: AppSettings; } | null) => void;
 }>({
   appData: null,
   setAppData: () => {},
@@ -58,9 +59,9 @@ const App: React.FC = () => {
   const [showStatus, setShowStatus] = React.useState(true);
   const [appData, setAppData] = React.useState<{
     values?: string[];
-    logs?: any[];
-    goals?: any[];
-    settings?: any;
+    logs?: LogEntry[];
+    goals?: Goal[];
+    settings?: AppSettings;
   } | null>(null);
 
   // Auto-hide status after 5 seconds

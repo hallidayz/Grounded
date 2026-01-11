@@ -1158,7 +1158,7 @@ const LCSWConfigComponent: React.FC<LCSWConfigProps> = ({ config, onUpdate, onCl
                           }
                           alert(message);
                         }
-                      } catch (error: any) {
+                      } catch (error: unknown) {
                         console.error('Model update error:', error);
                         const errorMsg = error?.message || String(error);
                         let message = 'Error updating model. ';

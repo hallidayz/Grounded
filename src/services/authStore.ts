@@ -126,7 +126,7 @@ class AuthStore {
               await db.users.add(user as UserRecord);
               console.log('[AuthStore] Restored user:', user.username);
             }
-          } catch (error: any) {
+          } catch (error: unknown) {
             if (error?.name !== 'ConstraintError') {
               console.error('[AuthStore] Failed to restore user:', user.username, error);
             }
@@ -172,7 +172,7 @@ class AuthStore {
       
       console.log('[AuthStore] User created:', { userId: id, username: userData.username });
       return id;
-    } catch (error: any) {
+    } catch (error: unknown) {
       if (error?.name === 'ConstraintError') {
         throw new Error('Username or email already exists');
       }
