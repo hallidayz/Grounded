@@ -2,7 +2,21 @@
 # Models are downloaded at runtime from HuggingFace, not bundled
 public/models/
 dist/models/
-**/models/**/*.onnx
-**/models/**/*.bin
-**/models/**/*.safetensors
+**/models/
+**/*.onnx
+**/*.onnx.data
+**/*.bin
+**/*.safetensors
+*.onnx
+*.onnx.data
 
+# Exclude large directories
+release/
+node_modules/
+.git/
+src-tauri/target/
+playwright-report/
+test-results/
+package/
+Grounded-Install/
+*.zip

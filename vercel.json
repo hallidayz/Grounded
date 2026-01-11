@@ -123,19 +123,6 @@
       ]
     },
     {
-      "source": "/workbox-.*\\.js",
-      "headers": [
-        {
-          "key": "Content-Type",
-          "value": "application/javascript"
-        },
-        {
-          "key": "Cross-Origin-Resource-Policy",
-          "value": "cross-origin"
-        }
-      ]
-    },
-    {
       "source": "/assets/(.*\\.wasm)",
       "headers": [
         {
