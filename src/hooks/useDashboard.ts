@@ -28,6 +28,7 @@ import { useDebounce } from './useDebounce';
 import { getItem, setItem, removeItem } from '../services/storage';
 import { getDatabaseAdapter } from '../services/databaseAdapter';
 import { getCurrentUser } from '../services/authService';
+import { generateUUID } from '../utils/uuid';
 
 /**
  * Unified hook configuration interface — prevents argument-order bugs.
@@ -78,17 +79,6 @@ export function useDashboard({
   const debouncedReflection = useDebounce(reflectionText, 1000);
   const valueCardRefs = useRef<Record<string, HTMLDivElement | null>>({});
 
-  /**
-   * Utility — safely generate UUIDs
-   */
-  const generateUUID = useCallback((): string => {
-    if (crypto?.randomUUID) return crypto.randomUUID();
-    return 'xxxxxx4xxxyxxxxxxx'.replace(/[xy]/g, (c) => {
-      const r = (Math.random() * 16) | 0;
-      const v = c === 'x' ? r : (r & 0x3) | 0x8;
-      return v.toString(16);
-    });
-  }, []);
 
   /**
    * Save emotion/feeling entries to the local database
@@ -106,9 +96,7 @@ export function useDashboard({
         }
 
         const timestamp = new Date().toISOString();
-        const logId = `feeling-${Date.now()}-${Math.random()
-          .toString(36)
-          .substring(2, 9)}`;
+        const logId = generateUUID();
 
         const jsonIn = JSON.stringify({ emotion, subEmotion, valueId, timestamp, userId });
         // generateEmotionalEncouragement only takes 2 parameters: emotion and subEmotion
@@ -181,7 +169,7 @@ export function useDashboard({
         // Use adapter for security (encryption boundary validation)
         const adapter = getDatabaseAdapter();
         await adapter.saveFeelingLog({
-          id: `feeling-${Date.now()}`,
+          id: generateUUID(),
           timestamp: new Date().toISOString(),
           emotionalState: state,
           selectedFeeling: feelingToUse || null,
@@ -204,7 +192,7 @@ export function useDashboard({
    */
   const handleCommit = useCallback(
     async (valueId: string) => {
-      if (!reflectionText.trim() && !goalText.trim()) return;
+      if (reflectionText.trim().length < MIN_REFLECTION_LENGTH && !goalText.trim()) return;
 
       // Get userId from getCurrentUser or sessionStorage
       let userId: string | null = null;
@@ -221,7 +209,7 @@ export function useDashboard({
 
       if (hasGoal) {
         const newGoal: Goal = {
-          id: `${Date.now()}-goal`,
+          id: generateUUID(),
           valueId,
           userId: userId || undefined, // Add userId to goal
           text: goalText,
@@ -234,7 +222,7 @@ export function useDashboard({
       }
 
       const logEntry: LogEntry = {
-        id: `${Date.now()}-log`,
+        id: generateUUID(),
         date: timestamp,
         valueId,
         livedIt: true,
@@ -247,7 +235,7 @@ export function useDashboard({
       // Use adapter for security (encryption boundary validation)
       const adapter = getDatabaseAdapter();
       await adapter.saveFeelingLog({
-        id: `${timestamp}-feeling`,
+        id: generateUUID(),
         timestamp,
         userId: userId || undefined,
         emotionalState: emotionalState || '',

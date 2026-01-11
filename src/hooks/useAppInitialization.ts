@@ -12,6 +12,7 @@ import { runDeploymentDiagnostics, logDeploymentDiagnostics } from '../utils/dep
 import { migrateLocalStorageToIndexedDB, isLocalStorageMigrationComplete } from '../services/localStorageMigration';
 import { runDataPruning, scheduleWeeklyPruning } from '../services/dataPruningService';
 import { isDataPruningEnabled } from '../constants/environment';
+import { logger } from '../utils/logger';
 
 // Module-level guard to prevent multiple initializations (persists across remounts)
 const INIT_STARTED_KEY = 'app_init_started';
@@ -31,7 +32,7 @@ function isInitializationStarted(): boolean {
       if (startTime) {
         const elapsed = Date.now() - parseInt(startTime, 10);
         if (elapsed > 30000) {
-          console.warn('[INIT] Initialization stuck for', elapsed, 'ms - resetting');
+          logger.warn('[INIT] Initialization stuck for', elapsed, 'ms - resetting');
           sessionStorage.removeItem(INIT_STARTED_KEY);
           sessionStorage.removeItem(INIT_STARTED_TIME_KEY);
           initializationWarningLogged = false; // Reset warning flag
@@ -39,7 +40,7 @@ function isInitializationStarted(): boolean {
         }
         return true;
       } else {
-        console.warn('[INIT] Initialization started flag exists but no timestamp - resetting');
+        logger.warn('[INIT] Initialization started flag exists but no timestamp - resetting');
         sessionStorage.removeItem(INIT_STARTED_KEY);
         initializationWarningLogged = false; // Reset warning flag
         return false;
@@ -127,7 +128,7 @@ export function useAppInitialization(options: UseAppInitializationOptions): AppI
     
     // If initialization is complete and user is authenticated, skip re-initialization
     if (isInitializationComplete() && isAuthenticated) {
-      console.log('[INIT] ⚠️ Initialization already completed and user authenticated, skipping...');
+      logger.info('[INIT] ⚠️ Initialization already completed and user authenticated, skipping...');
       setLoading(false);
       return;
     }
@@ -135,7 +136,7 @@ export function useAppInitialization(options: UseAppInitializationOptions): AppI
     // If initialization is complete but user is not authenticated (encryption enabled),
     // don't re-initialize
     if (isInitializationComplete() && !isAuthenticated && encryptionEnabled) {
-      console.log('[INIT] Initialization complete - user needs to login (encryption enabled)');
+      logger.info('[INIT] Initialization complete - user needs to login (encryption enabled)');
       setLoading(false);
       return;
     }
@@ -145,7 +146,7 @@ export function useAppInitialization(options: UseAppInitializationOptions): AppI
       // Debounce warning logs to prevent console spam
       const now = Date.now();
       if (!initializationWarningLogged || (now - lastWarningTime) > WARNING_DEBOUNCE_MS) {
-        console.log('[INIT] ⚠️ Initialization already in progress, skipping...');
+        logger.info('[INIT] ⚠️ Initialization already in progress, skipping...');
         initializationWarningLogged = true;
         lastWarningTime = now;
       }
@@ -156,24 +157,24 @@ export function useAppInitialization(options: UseAppInitializationOptions): AppI
     initializationWarningLogged = false;
     
     setInitializationStarted(true);
-    console.log('[INIT] ✅ Marking initialization as started');
+    logger.info('[INIT] ✅ Marking initialization as started');
     
     let initializationTimeout: NodeJS.Timeout | null = null;
     
     // Set a timeout to prevent infinite hanging (15 seconds max)
     initializationTimeout = setTimeout(() => {
       if (isMountedRef.current) {
-        console.error('⚠️ Initialization timeout after 15 seconds - proceeding');
+        logger.error('⚠️ Initialization timeout after 15 seconds - proceeding');
         setLoading(false);
       }
     }, 15000);
     
     const initialize = async () => {
       try {
-        console.log('[INIT] Starting initialization...');
+        logger.info('[INIT] Starting initialization...');
         
         // Clear all caches to ensure fresh load
-        console.log('[INIT] Clearing caches for fresh load...');
+        logger.info('[INIT] Clearing caches for fresh load...');
         try {
           // Clear browser caches (Cache API)
           if ('caches' in window) {

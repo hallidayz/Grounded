@@ -26,6 +26,7 @@
 import Dexie, { Table, Middleware } from 'dexie';
 import { Goal, FeelingLog, Assessment, CounselorReport, Session, UserInteraction, RuleBasedUsageLog, AppSettings, LogEntry, LCSWConfig } from '../types';
 import { encryptData, decryptData } from './encryption';
+import { logger } from '../utils/logger';
 
 // Database name constant for consistency
 const DB_NAME = 'groundedDB';
@@ -265,7 +266,7 @@ class GroundedDB extends Dexie {
   /**
    * Encrypt a field value
    */
-  private async encryptField(value: any, fieldName: string): Promise<string> {
+  private async encryptField(value: unknown, fieldName: string): Promise<string> {
     if (typeof value !== 'string') {
       value = JSON.stringify(value);
     }
@@ -276,7 +277,7 @@ class GroundedDB extends Dexie {
   /**
    * Decrypt a field value
    */
-  private async decryptField(encryptedValue: string, fieldName: string): Promise<any> {
+  private async decryptField(encryptedValue: string, fieldName: string): Promise<unknown> {
     const password = await this.getEncryptionPassword();
     const decrypted = await decryptData(encryptedValue, password);
     try {
@@ -289,7 +290,7 @@ class GroundedDB extends Dexie {
   /**
    * Encrypt an object's PHI fields
    */
-  private async encryptObject(obj: any): Promise<any> {
+  private async encryptObject(obj: Record<string, unknown>): Promise<Record<string, unknown>> {
     if (!this.shouldEncrypt()) {
       return obj;
     }
@@ -308,7 +309,7 @@ class GroundedDB extends Dexie {
           encrypted[field] = await this.encryptField(encrypted[field], field);
           encrypted[`${field}_encrypted`] = true;
         } catch (error) {
-          console.error(`[Dexie] Failed to encrypt field ${field}:`, error);
+          logger.error(`[Dexie] Failed to encrypt field ${field}:`, error);
           // Continue without encryption if it fails
         }
       }
@@ -320,7 +321,7 @@ class GroundedDB extends Dexie {
   /**
    * Decrypt an object's PHI fields
    */
-  private async decryptObject(obj: any): Promise<any> {
+  private async decryptObject(obj: Record<string, unknown>): Promise<Record<string, unknown>> {
     if (!this.shouldDecrypt()) {
       return obj;
     }
@@ -683,12 +684,12 @@ export async function exportDatabase(): Promise<string> {
  * Internal export function used during recovery
  * Attempts to export data even if database version is mismatched
  */
-async function exportDatabaseInternal(): Promise<Record<string, any[]> | null> {
+async function exportDatabaseInternal(): Promise<Record<string, unknown[]> | null> {
   try {
     // Try to open database (may fail with VersionError)
     try {
       await db.open();
-    } catch (openError: any) {
+    } catch (openError: unknown) {
       // If VersionError, try to access raw IndexedDB
       if (openError?.name === 'VersionError') {
         return await exportFromRawIndexedDB();
@@ -702,12 +703,12 @@ async function exportDatabaseInternal(): Promise<Record<string, any[]> | null> {
         exportData[table.name] = await table.toArray();
       } catch (err) {
         // Skip stores that can't be exported
-        console.warn(`[Dexie] Could not export ${table.name}:`, err);
+        logger.warn(`[Dexie] Could not export ${table.name}:`, err);
       }
     }
     return exportData;
   } catch (err) {
-    console.warn('[Dexie] Internal export failed:', err);
+    logger.warn('[Dexie] Internal export failed:', err);
     return null;
   }
 }
@@ -715,7 +716,7 @@ async function exportDatabaseInternal(): Promise<Record<string, any[]> | null> {
 /**
  * Export data directly from raw IndexedDB (bypasses Dexie version check)
  */
-async function exportFromRawIndexedDB(): Promise<Record<string, any[]> | null> {
+async function exportFromRawIndexedDB(): Promise<Record<string, unknown[]> | null> {
   try {
     const exportData: Record<string, any[]> = {};
     

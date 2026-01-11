@@ -72,7 +72,7 @@ export const DataProvider: React.FC<DataProviderProps> = ({
     );
     
     if (hasData && !hasLoadedInitialDataRef.current) {
-      console.log('[DataContext] Loading initial data from props', {
+      logger.info('[DataContext] Loading initial data from props', {
         values: initialData.selectedValueIds?.length || 0,
         logs: initialData.logs?.length || 0,
         goals: initialData.goals?.length || 0,
@@ -113,7 +113,7 @@ export const DataProvider: React.FC<DataProviderProps> = ({
     
     const loadFromDatabase = async () => {
       try {
-        console.log('[DataContext] Loading values from database...', { userId });
+        logger.info('[DataContext] Loading values from database...', { userId });
         await adapter.init();
         
         // Try loading from values table first
@@ -126,21 +126,21 @@ export const DataProvider: React.FC<DataProviderProps> = ({
             // Migrate from appData to values table
             activeValues = appData.values;
             await adapter.setValuesActive(userId, activeValues);
-            console.log('[DataContext] Migrated values from appData to values table');
+            logger.info('[DataContext] Migrated values from appData to values table');
           }
         }
         
         if (activeValues.length > 0) {
-          console.log('[DataContext] Loaded values from database:', activeValues.length, activeValues);
+          logger.info('[DataContext] Loaded values from database:', activeValues.length, activeValues);
           setSelectedValueIds(activeValues);
         } else {
-          console.log('[DataContext] No values found - user is first-time user');
+          logger.info('[DataContext] No values found - user is first-time user');
         }
         
         hasLoadedInitialDataRef.current = true;
         setIsHydrating(false);
       } catch (error) {
-        console.error('[DataContext] Error loading values:', error);
+        logger.error('[DataContext] Error loading values:', error);
         // Retry once after delay
         setTimeout(async () => {
           try {
@@ -149,7 +149,7 @@ export const DataProvider: React.FC<DataProviderProps> = ({
               setSelectedValueIds(retryValues);
             }
           } catch (retryError) {
-            console.error('[DataContext] Retry failed:', retryError);
+            logger.error('[DataContext] Retry failed:', retryError);
           }
           hasLoadedInitialDataRef.current = true;
           setIsHydrating(false);
@@ -176,7 +176,7 @@ export const DataProvider: React.FC<DataProviderProps> = ({
       // If userId is available, mark as loaded immediately; otherwise wait briefly for sync
       const delay = userId ? 100 : 1000;
       initializationTimeoutRef.current = setTimeout(() => {
-        console.log('[DataContext] Marking data as loaded after sync', {
+        logger.info('[DataContext] Marking data as loaded after sync', {
           values: selectedValueIds.length,
           logs: logs.length,
           goals: goals.length,
@@ -234,7 +234,7 @@ export const DataProvider: React.FC<DataProviderProps> = ({
               appDataToSave.values = selectedValueIds;
             }
             
-            console.log('[DataContext] Saving app data', {
+            logger.info('[DataContext] Saving app data', {
               values: shouldSaveValues ? selectedValueIds.length : '(skipped - not loaded yet)',
               logs: logs.length,
               goals: goals.length,
@@ -262,7 +262,7 @@ export const DataProvider: React.FC<DataProviderProps> = ({
             // Clear pending save ref
             pendingSaveRef.current = null;
           } catch (error) {
-            console.error('Error saving app data:', error);
+            logger.error('Error saving app data:', error);
             pendingSaveRef.current = null;
           }
         };
@@ -319,13 +319,13 @@ export const DataProvider: React.FC<DataProviderProps> = ({
     if (userId && authState === 'app') {
       try {
         await adapter.setValuesActive(userId, ids);
-        console.log('[DataContext] Saved values to values table with priorities', { 
+        logger.info('[DataContext] Saved values to values table with priorities', { 
           userId, 
           count: ids.length,
           priorities: ids.map((id, index) => ({ id, priority: index }))
         });
       } catch (error) {
-        console.error('Error saving values to table:', error);
+        logger.error('Error saving values to table:', error);
       }
     }
   }, [userId, authState, adapter]);
@@ -334,7 +334,7 @@ export const DataProvider: React.FC<DataProviderProps> = ({
   // Type-safe implementation with proper FeelingLog structure
   const handleMoodLoopEntry = useCallback(async (emotion: string, feeling: string): Promise<void> => {
     if (!emotion || !feeling) {
-      console.warn('[DataContext] handleMoodLoopEntry called with invalid parameters', { emotion, feeling });
+      logger.warn('[DataContext] handleMoodLoopEntry called with invalid parameters', { emotion, feeling });
       return;
     }
 
@@ -359,16 +359,16 @@ export const DataProvider: React.FC<DataProviderProps> = ({
         try {
           if (adapter && typeof adapter.saveFeelingLog === 'function') {
             await adapter.saveFeelingLog(feelingLogData);
-            console.log('[DataContext] Mood entry saved to database', { emotion, feeling, userId, logId });
+            logger.info('[DataContext] Mood entry saved to database', { emotion, feeling, userId, logId });
           } else {
-            console.warn('[DataContext] saveFeelingLog method not available on adapter');
+            logger.warn('[DataContext] saveFeelingLog method not available on adapter');
           }
         } catch (error) {
-          console.error('[DataContext] Error saving mood entry to database:', error);
+          logger.error('[DataContext] Error saving mood entry to database:', error);
           // Don't throw - allow local state update even if DB save fails
         }
       } else {
-        console.warn('[DataContext] Cannot save mood entry - user not authenticated', { userId, authState });
+        logger.warn('[DataContext] Cannot save mood entry - user not authenticated', { userId, authState });
       }
 
       // Also create a LogEntry for local state (if needed for UI display)
@@ -395,7 +395,7 @@ export const DataProvider: React.FC<DataProviderProps> = ({
       setLogs((prev) => [logEntry, ...prev]);
     } catch (err) {
       const errorMessage = err instanceof Error ? err.message : String(err);
-      console.error('[DataContext] Error recording mood entry:', errorMessage, err);
+      logger.error('[DataContext] Error recording mood entry:', errorMessage, err);
       // Re-throw to allow caller to handle if needed
       throw new Error(`Failed to record mood entry: ${errorMessage}`);
     }
@@ -412,13 +412,13 @@ export const DataProvider: React.FC<DataProviderProps> = ({
       try {
         await pendingSaveRef.current;
       } catch (error) {
-        console.error('[DataContext] Error waiting for pending save:', error);
+        logger.error('[DataContext] Error waiting for pending save:', error);
       }
     }
 
     // Force immediate save (no debounce)
     try {
-      console.log('[DataContext] Persisting data on exit', {
+      logger.info('[DataContext] Persisting data on exit', {
         values: selectedValueIds.length,
         logs: logs.length,
         goals: goals.length,
@@ -443,9 +443,9 @@ export const DataProvider: React.FC<DataProviderProps> = ({
         }
       }
       
-      console.log('[DataContext] Data persisted successfully');
+      logger.info('[DataContext] Data persisted successfully');
     } catch (error) {
-      console.error('[DataContext] Error persisting data on exit:', error);
+      logger.error('[DataContext] Error persisting data on exit:', error);
     }
   }, [userId, authState, selectedValueIds, logs, goals, settings, adapter]);
 
@@ -465,7 +465,7 @@ export const DataProvider: React.FC<DataProviderProps> = ({
         
         // Try to persist synchronously (limited time available)
         persistData().catch((error) => {
-          console.error('[DataContext] Failed to persist on exit:', error);
+          logger.error('[DataContext] Failed to persist on exit:', error);
         });
       }
     };
@@ -477,7 +477,7 @@ export const DataProvider: React.FC<DataProviderProps> = ({
       if (document.hidden && userId && authState === 'app') {
         // Tab is hidden - persist data
         persistData().catch((error) => {
-          console.error('[DataContext] Failed to persist on visibility change:', error);
+          logger.error('[DataContext] Failed to persist on visibility change:', error);
         });
       }
     };

@@ -2,10 +2,20 @@
  * Local Secure Database Service
  * Uses IndexedDB for secure, structured local storage
  * 
+ * @deprecated This file is deprecated. Use the adapter pattern via `getDatabaseAdapter()` instead.
+ * 
+ * Migration Guide:
+ * - Replace `dbService` imports with `getDatabaseAdapter()` from `databaseAdapter.ts`
+ * - Most methods are available through the adapter interface
+ * - For methods not in adapter (uninstallAppData, deleteOldDatabase, exportAllData), 
+ *   consider if they're still needed or migrate to adapter
+ * 
  * Database Name: groundedDB
  * - Simple, descriptive name that identifies this app
  * - Protected with metadata validation to ensure it's created by this app
  * - Validated across all platforms (PWA, iOS, Android, macOS)
+ * 
+ * Status: Legacy - Being phased out in favor of unified adapter pattern
  */
 
 import { AppSettings, LogEntry, Goal, LCSWConfig } from '../types';
@@ -663,18 +673,6 @@ class DatabaseService {
     return this.db;
   }
 
-  // Generate a UUID with fallback for environments without crypto.randomUUID
-  private generateUUID(): string {
-    if (typeof crypto !== 'undefined' && crypto.randomUUID) {
-      return crypto.randomUUID();
-    }
-    // Fallback UUID v4 generator
-    return 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, (c) => {
-      const r = Math.random() * 16 | 0;
-      const v = c === 'x' ? r : (r & 0x3 | 0x8);
-      return v.toString(16);
-    });
-  }
 
   // User operations
   async createUser(userData: Omit<UserData, 'id' | 'createdAt'>): Promise<string> {
@@ -836,7 +834,7 @@ class DatabaseService {
       throw new Error('Reset tokens store not available - database may need upgrade');
     }
     
-    const token = this.generateUUID();
+    const token = generateUUID();
     const expires = Date.now() + 24 * 60 * 60 * 1000; // 24 hours
 
     return new Promise((resolve, reject) => {

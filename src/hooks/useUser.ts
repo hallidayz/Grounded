@@ -1,7 +1,19 @@
 import { useState, useEffect } from 'react';
 import { getDatabaseAdapter } from '../services/databaseAdapter';
-import { UserData as User } from '../services/database';
 import { DatabaseMigrationService } from '../services/migrationService';
+
+// UserData type - matches database adapter interface
+interface User {
+  id: string;
+  username: string;
+  passwordHash: string;
+  email: string;
+  therapistEmails?: string[];
+  termsAccepted: boolean;
+  termsAcceptedDate?: string;
+  createdAt: string;
+  lastLogin?: string;
+}
 
 export const useUser = () => {
   const [user, setUser] = useState<User | null>(null);
