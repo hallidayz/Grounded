@@ -1,6 +1,7 @@
 import React, { createContext, useContext, useState, useEffect, useCallback, useRef, useMemo, ReactNode } from 'react';
 import { LogEntry, Goal, AppSettings, LCSWConfig, FeelingLog } from '../types';
 import { getDatabaseAdapter } from '../services/databaseAdapter';
+import { logger } from '../utils/logger';
 
 interface DataContextType {
   selectedValueIds: string[];
