@@ -46,13 +46,16 @@
         }
       }
     </style>
-    <script type="module" crossorigin src="/assets/index-WGdxYKHL.js"></script>
-    <link rel="modulepreload" crossorigin href="/assets/transformers-CgLRIXTl.js">
-    <link rel="modulepreload" crossorigin href="/assets/vendor-CFU3Mex3.js">
-    <link rel="modulepreload" crossorigin href="/assets/react-vendor-ByHOp49b.js">
-    <link rel="modulepreload" crossorigin href="/assets/ai-services-4hnf0_d4.js">
-    <link rel="stylesheet" crossorigin href="/assets/index-CXd8JJcB.css">
-  </head>
+    <script type="module" crossorigin src="/assets/index-WfZz5ZRF.js"></script>
+    <link rel="modulepreload" crossorigin href="/assets/db-vendor-CqkAjsCZ.js">
+    <link rel="modulepreload" crossorigin href="/assets/onnx-eBVVFwq3.js">
+    <link rel="modulepreload" crossorigin href="/assets/transformers-DYceLRQ3.js">
+    <link rel="modulepreload" crossorigin href="/assets/vendor-Dvad8g1z.js">
+    <link rel="modulepreload" crossorigin href="/assets/react-vendor-DI6xFhD6.js">
+    <link rel="modulepreload" crossorigin href="/assets/ai-services-COb65xmG.js">
+    <link rel="modulepreload" crossorigin href="/assets/animations-DuiRUzrK.js">
+    <link rel="stylesheet" crossorigin href="/assets/index-Bx9gEowS.css">
+  <link rel="manifest" href="/manifest.webmanifest"><script id="vite-plugin-pwa:register-sw" src="/registerSW.js"></script></head>
   <body>
     <div id="root"></div>
     <script>
@@ -63,6 +66,7 @@
         if (typeof globalThis !== 'undefined') {
           const globalOrt = globalThis.ort = globalThis.ort || {};
           globalOrt.env = globalOrt.env || {};
+          globalOrt.env.logLevel = 'fatal'; // Suppress all ONNX Runtime warnings
           globalOrt.env.wasm = globalOrt.env.wasm || {};
           
           // Configure WASM backend settings

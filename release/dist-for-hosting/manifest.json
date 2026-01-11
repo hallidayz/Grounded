@@ -1,73 +1,43 @@
 {
-  "name": "Grounded by AC MiNDS",
+  "name": "Grounded",
   "short_name": "Grounded",
   "description": "Privacy-first therapy integration app for values-based reflection and mental health support",
-  "theme_color": "#02295b",
-  "background_color": "#f6f7f9",
   "display": "standalone",
   "orientation": "portrait",
-  "scope": "/",
+  "theme_color": "#02295b",
+  "background_color": "#fafaf9",
   "start_url": "/",
-  "dir": "ltr",
-  "lang": "en",
+  "scope": "/",
   "icons": [
     {
-      "src": "pwa-192x192.png",
+      "src": "/pwa-192x192.png",
       "sizes": "192x192",
       "type": "image/png",
-      "purpose": "any maskable"
+      "purpose": "any"
     },
     {
-      "src": "pwa-512x512.png",
+      "src": "/pwa-512x512.png",
       "sizes": "512x512",
       "type": "image/png",
-      "purpose": "any maskable"
+      "purpose": "any"
     },
     {
-      "src": "apple-touch-icon.png",
+      "src": "/apple-touch-icon.png",
       "sizes": "180x180",
       "type": "image/png",
       "purpose": "any"
     }
   ],
-  "categories": ["health", "lifestyle", "medical"],
-  "screenshots": [],
   "shortcuts": [
     {
-      "name": "New Log Entry",
-      "short_name": "New Log",
-      "description": "Create a new reflection log entry",
-      "url": "/?action=new-log",
-      "icons": [
-        {
-          "src": "pwa-192x192.png",
-          "sizes": "192x192"
-        }
-      ]
-    },
-    {
-      "name": "View Reports",
-      "short_name": "Reports",
-      "description": "View clinical reports and summaries",
-      "url": "/?view=report",
-      "icons": [
-        {
-          "src": "pwa-192x192.png",
-          "sizes": "192x192"
-        }
-      ]
+      "name": "New Reflection",
+      "short_name": "Reflect",
+      "description": "Start a new reflection",
+      "url": "/?action=reflection",
+      "icons": [{ "src": "/pwa-192x192.png", "sizes": "192x192" }]
     }
   ],
-  "share_target": {
-    "action": "/",
-    "method": "POST",
-    "enctype": "application/x-www-form-urlencoded",
-    "params": {
-      "title": "title",
-      "text": "text",
-      "url": "url"
-    }
-  },
-  "prefer_related_applications": false
+  "prefer_related_applications": false,
+  "categories": ["health", "medical", "lifestyle"]
 }
 
