@@ -70,6 +70,7 @@ export interface DatabaseAdapter {
     lowStateCount: number;
   }): Promise<void>;
   getFeelingLogs(limit?: number, userId?: string): Promise<FeelingLog[]>;
+  getFirstFeelingLog(userId?: string): Promise<FeelingLog | null>;
   getFeelingLogsByState(emotionalState: string, limit?: number): Promise<FeelingLog[]>;
   deleteFeelingLog(logId: string): Promise<void>;
   

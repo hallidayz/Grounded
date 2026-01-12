@@ -103,13 +103,12 @@ export default function AppContent({ onHydrationReady }: { onHydrationReady?: ()
         const adapter = getDatabaseAdapter();
         await adapter.init();
         
-        // Get the most recent feeling log
-        const recentLogs = await adapter.getFeelingLogs(1, user.id);
+        // Get the FIRST (oldest) feeling log - the user's initial emotion selection
+        const firstLog = await adapter.getFirstFeelingLog(user.id);
         
-        if (recentLogs && recentLogs.length > 0) {
-          const lastLog = recentLogs[0];
-          const emotion = lastLog.emotionalState || lastLog.emotion;
-          const feeling = lastLog.selectedFeeling || lastLog.subEmotion;
+        if (firstLog) {
+          const emotion = firstLog.emotionalState || firstLog.emotion;
+          const feeling = firstLog.selectedFeeling || firstLog.subEmotion;
           
           if (emotion && feeling) {
             setCurrentEmotion(emotion);
@@ -120,7 +119,7 @@ export default function AppContent({ onHydrationReady }: { onHydrationReady?: ()
             try {
               const encouragement = await generateEmotionalEncouragement(emotion, feeling);
               setEncouragementText(encouragement);
-              logger.debug('[AppContent] Loaded last emotion and generated encouragement:', { emotion, feeling });
+              logger.debug('[AppContent] Loaded first emotion and generated encouragement:', { emotion, feeling });
             } catch (error) {
               logger.error('[AppContent] Error generating encouragement for loaded emotion:', error);
             } finally {

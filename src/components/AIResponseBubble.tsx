@@ -87,31 +87,30 @@ const AIResponseBubble: React.FC<AIResponseBubbleProps> = ({
         const adapter = getDatabaseAdapter();
         await adapter.init();
         
-        // Get the most recent feeling log (limit 1)
-        const recentLogs = await adapter.getFeelingLogs(1, user.id);
+        // Get the FIRST (oldest) feeling log - the user's initial emotion selection
+        const firstLog = await adapter.getFirstFeelingLog(user.id);
         
-        if (recentLogs && recentLogs.length > 0) {
-          const lastLog = recentLogs[0];
-          const lastEmotion = lastLog.emotionalState || lastLog.emotion;
-          const lastFeeling = lastLog.selectedFeeling || lastLog.subEmotion;
+        if (firstLog) {
+          const firstEmotion = firstLog.emotionalState || firstLog.emotion;
+          const firstFeeling = firstLog.selectedFeeling || firstLog.subEmotion;
           
-          if (lastEmotion && lastFeeling) {
+          if (firstEmotion && firstFeeling) {
             // Find the emotion index
-            const primaryIndex = EMOTIONAL_STATES.findIndex(e => e.state === lastEmotion);
+            const primaryIndex = EMOTIONAL_STATES.findIndex(e => e.state === firstEmotion);
             if (primaryIndex >= 0) {
               setCurrentPrimaryIndex(primaryIndex);
               
               // Find the feeling index
               const feelings = EMOTIONAL_STATES[primaryIndex].feelings;
-              const subIndex = feelings.findIndex(f => f === lastFeeling);
+              const subIndex = feelings.findIndex(f => f === firstFeeling);
               if (subIndex >= 0) {
                 setCurrentSubIndex(subIndex);
                 setSelectionLevel('sub');
                 
                 // Trigger the mood change callback to update parent state
-                onMoodChange?.(lastEmotion, lastFeeling);
+                onMoodChange?.(firstEmotion, firstFeeling);
                 
-                logger.debug('[AIResponseBubble] Loaded last emotion from database:', { lastEmotion, lastFeeling });
+                logger.debug('[AIResponseBubble] Loaded first emotion from database:', { firstEmotion, firstFeeling });
               } else {
                 setSelectionLevel('primary');
               }

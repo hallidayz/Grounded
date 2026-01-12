@@ -179,20 +179,52 @@ export class LegacyAdapter implements DatabaseAdapter {
   async getFeelingLogs(limit?: number, userId?: string): Promise<FeelingLog[]> {
     // Hooks manage encryption - adapter just reads
     // Decryption is handled by Dexie hooks if enabled
-    let query = db.feelingLogs.orderBy('timestamp').reverse();
     
+    // Dexie: Can't chain orderBy after where().equals() without compound index
+    // Solution: Get all logs ordered by timestamp, then filter by userId if needed
+    let logs = await db.feelingLogs.orderBy('timestamp').reverse().toArray();
+    
+    // Filter by userId if provided
     if (userId) {
-      query = db.feelingLogs.where('userId').equals(userId).orderBy('timestamp').reverse();
+      logs = logs.filter(log => log.userId === userId);
     }
     
-    const logs = await query.toArray();
+    // Apply limit
     return limit ? logs.slice(0, limit) : logs;
+  }
+  
+  async getFirstFeelingLog(userId?: string): Promise<FeelingLog | null> {
+    // Hooks manage encryption - adapter just reads
+    // Get the FIRST (oldest) feeling log, not the most recent
+    // Dexie: Can't chain orderBy after where().equals() without compound index
+    // Solution: Get all logs ordered by timestamp ascending (oldest first), then filter by userId if needed
+    let logs = await db.feelingLogs.orderBy('timestamp').toArray(); // No reverse = ascending (oldest first)
+    
+    // Filter by userId if provided
+    if (userId) {
+      logs = logs.filter(log => log.userId === userId);
+    }
+    
+    // Return the first one (oldest)
+    return logs.length > 0 ? logs[0] : null;
   }
   
   async getFeelingLogsByState(emotionalState: string, limit?: number): Promise<FeelingLog[]> {
     // Hooks manage encryption - adapter just reads
-    let query = db.feelingLogs.where('emotionalState').equals(emotionalState).orderBy('timestamp').reverse();
-    const logs = await query.toArray();
+    // Dexie: Can't chain orderBy after where().equals() without compound index
+    // Solution: Filter by emotionalState, then sort by timestamp
+    let logs = await db.feelingLogs
+      .where('emotionalState')
+      .equals(emotionalState)
+      .toArray();
+    
+    // Sort by timestamp descending (most recent first)
+    logs.sort((a, b) => {
+      const timeA = new Date(a.timestamp).getTime();
+      const timeB = new Date(b.timestamp).getTime();
+      return timeB - timeA; // Descending order
+    });
+    
     return limit ? logs.slice(0, limit) : logs;
   }
   
@@ -243,13 +275,14 @@ export class LegacyAdapter implements DatabaseAdapter {
   
   async getUserInteractions(sessionId?: string, limit?: number): Promise<UserInteraction[]> {
     // Hooks manage encryption - adapter just reads
-    let query = db.userInteractions.orderBy('timestamp').reverse();
+    // Dexie: Can't chain orderBy after where().equals() without compound index
+    let interactions = await db.userInteractions.orderBy('timestamp').reverse().toArray();
     
+    // Filter by sessionId if provided
     if (sessionId) {
-      query = db.userInteractions.where('sessionId').equals(sessionId).orderBy('timestamp').reverse();
+      interactions = interactions.filter(interaction => interaction.sessionId === sessionId);
     }
     
-    const interactions = await query.toArray();
     return limit ? interactions.slice(0, limit) : interactions;
   }
   
@@ -300,15 +333,37 @@ export class LegacyAdapter implements DatabaseAdapter {
   
   async getSessions(userId: string, limit?: number): Promise<Session[]> {
     // Hooks manage encryption - adapter just reads
-    let query = db.sessions.where('userId').equals(userId).orderBy('startTimestamp').reverse();
-    const sessions = await query.toArray();
+    // Dexie: Can't chain orderBy after where().equals() without compound index
+    let sessions = await db.sessions
+      .where('userId')
+      .equals(userId)
+      .toArray();
+    
+    // Sort by startTimestamp descending (most recent first)
+    sessions.sort((a, b) => {
+      const timeA = new Date(a.startTimestamp).getTime();
+      const timeB = new Date(b.startTimestamp).getTime();
+      return timeB - timeA; // Descending order
+    });
+    
     return limit ? sessions.slice(0, limit) : sessions;
   }
   
   async getSessionsByValue(valueId: string, limit?: number): Promise<Session[]> {
     // Hooks manage encryption - adapter just reads
-    let query = db.sessions.where('valueId').equals(valueId).orderBy('startTimestamp').reverse();
-    const sessions = await query.toArray();
+    // Dexie: Can't chain orderBy after where().equals() without compound index
+    let sessions = await db.sessions
+      .where('valueId')
+      .equals(valueId)
+      .toArray();
+    
+    // Sort by startTimestamp descending (most recent first)
+    sessions.sort((a, b) => {
+      const timeA = new Date(a.startTimestamp).getTime();
+      const timeB = new Date(b.startTimestamp).getTime();
+      return timeB - timeA; // Descending order
+    });
+    
     return limit ? sessions.slice(0, limit) : sessions;
   }
   
@@ -343,8 +398,19 @@ export class LegacyAdapter implements DatabaseAdapter {
 
   async getAssessments(userId: string, limit?: number): Promise<Assessment[]> {
     // Hooks manage encryption - adapter just reads
-    let query = db.assessments.where('userId').equals(userId).orderBy('timestamp').reverse();
-    const assessments = await query.toArray();
+    // Dexie: Can't chain orderBy after where().equals() without compound index
+    let assessments = await db.assessments
+      .where('userId')
+      .equals(userId)
+      .toArray();
+    
+    // Sort by timestamp descending (most recent first)
+    assessments.sort((a, b) => {
+      const timeA = new Date(a.timestamp).getTime();
+      const timeB = new Date(b.timestamp).getTime();
+      return timeB - timeA; // Descending order
+    });
+    
     return limit ? assessments.slice(0, limit) : assessments;
   }
 
@@ -362,8 +428,19 @@ export class LegacyAdapter implements DatabaseAdapter {
 
   async getReports(userId: string, limit?: number): Promise<CounselorReport[]> {
     // Hooks manage encryption - adapter just reads
-    let query = db.reports.where('userId').equals(userId).orderBy('timestamp').reverse();
-    const reports = await query.toArray();
+    // Dexie: Can't chain orderBy after where().equals() without compound index
+    let reports = await db.reports
+      .where('userId')
+      .equals(userId)
+      .toArray();
+    
+    // Sort by timestamp descending (most recent first)
+    reports.sort((a, b) => {
+      const timeA = new Date(a.timestamp).getTime();
+      const timeB = new Date(b.timestamp).getTime();
+      return timeB - timeA; // Descending order
+    });
+    
     return limit ? reports.slice(0, limit) : reports;
   }
 
