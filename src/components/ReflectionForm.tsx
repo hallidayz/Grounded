@@ -5,8 +5,6 @@ import SkeletonLoader from './SkeletonLoader';
 import StatusIndicator, { StatusType } from './StatusIndicator';
 import MarkdownRenderer from './MarkdownRenderer';
 
-import EmotionPicker from './EmotionPicker';
-import EmotionSelection from './EmotionSelection';
 
 interface ReflectionFormProps {
   value: ValueItem;
@@ -121,24 +119,6 @@ const ReflectionForm: React.FC<ReflectionFormProps> = ({
 
   return (
     <div className="mt-4 sm:mt-6 space-y-4 sm:space-y-6 animate-pop border-t border-border-soft dark:border-dark-border/30 pt-4 sm:pt-5">
-      {/* Emotional State Selection - Consistent with home page */}
-      <div className="space-y-3">
-        <label className="text-xs sm:text-sm font-black text-text-primary/50 dark:text-white/50 uppercase tracking-widest block px-1">
-          How are you feeling right now?
-        </label>
-        
-        <EmotionSelection
-          emotion={emotionalState === 'neutral' ? undefined : emotionalState}
-          feeling={selectedFeeling || undefined}
-          onEmotionChange={(emotion, feeling) => {
-            onEmotionalStateChange(emotion as EmotionalState);
-            onSelectedFeelingChange(feeling);
-          }}
-          showSwipeHint={true}
-          compact={false}
-        />
-      </div>
-
       <div className="bg-navy-primary dark:bg-navy-primary rounded-xl sm:rounded-2xl p-3 sm:p-4 shadow-md border border-navy-primary/20 dark:border-dark-border/50 relative overflow-hidden group">
         {/* PREV: text-yellow-warm/80 */}
         <p className="text-xs sm:text-sm font-black text-brand/80 dark:text-brand-light/80 uppercase tracking-widest mb-1.5">Focus Lens</p>

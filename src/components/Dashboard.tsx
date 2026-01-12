@@ -6,7 +6,6 @@ import CrisisResourcesModal from './CrisisResourcesModal';
 import CrisisAlertModal from './CrisisAlertModal';
 import GoalsSection from './GoalsSection';
 import ValueCard from './ValueCard';
-import EmotionModal from './EmotionModal';
 import ReflectionForm from './ReflectionForm';
 import { useDashboard } from '../hooks/useDashboard';
 import { useEmotion } from '../contexts/EmotionContext';
@@ -70,12 +69,10 @@ const Dashboard: React.FC<DashboardProps> = ({
   const { setPrimaryEmotion, setSubEmotion } = useEmotion();
 
   // Local UI state
-  const [showEmotionModal, setShowEmotionModal] = useState(false);
   const [showReflectionModal, setShowReflectionModal] = useState(false);
   const [selectedValue, setSelectedValue] = useState<ValueItem | null>(null);
   const [showResourcesModal, setShowResourcesModal] = useState(false);
   const [showCrisisAlert, setShowCrisisAlert] = useState(false);
-  const [preSelectedEmotion, setPreSelectedEmotion] = useState<string | null>(null);
 
   // Persist and restore the selected value card
   useEffect(() => {
@@ -101,71 +98,16 @@ const Dashboard: React.FC<DashboardProps> = ({
   }, [showReflectionModal, selectedValue, values.length]);
 
 
-  /**
-   * Handle emotion selection from EmotionModal
-   * Now receives strings: primary (emotion state) and sub (feeling word)
-   */
-  const handleEmotionSelect = async (primary: string, sub?: string) => {
-    console.log('[Dashboard] Emotion selected:', { primary, sub, valuesCount: values.length });
-    
-    // Update EmotionContext
-    setPrimaryEmotion(primary, 'dashboard');
-    if (sub) {
-      setSubEmotion(sub);
-    } else {
-      setSubEmotion(null);
-    }
-
-    // Update dashboard state
-    dashboard.setEmotionalState(primary);
-    if (sub) {
-      dashboard.setSelectedFeeling(sub);
-    }
-
-    // Close emotion modal first
-    setShowEmotionModal(false);
-
-    // Automatically generate encouragement when emotion is selected
-    // Pass both primary and sub-emotion to ensure encouragement uses the sub-emotion
-    // Don't await - let it run in background, but open modal immediately
-    dashboard.handleEmotionalEncourage(primary, sub).catch(err => {
-      console.error('[Dashboard] Encouragement generation failed (non-critical):', err);
-    });
-    
-    // After emotion selection, open reflection form
-    // If we have values, use the first one; otherwise create a placeholder
-    if (values.length > 0) {
-      console.log('[Dashboard] Opening reflection modal with value:', values[0].name);
-      setSelectedValue(values[0]);
-      dashboard.setActiveValueId(values[0].id);
-    } else {
-      console.warn('[Dashboard] No values available - opening reflection modal with placeholder');
-      // Create a placeholder value so the modal can still open
-      setSelectedValue({
-        id: 'placeholder',
-        name: 'Reflection',
-        description: 'General reflection',
-        category: 'general'
-      });
-    }
-    
-    // Use setTimeout to ensure state updates are processed
-    setTimeout(() => {
-      setShowReflectionModal(true);
-      console.log('[Dashboard] Reflection modal should now be open');
-    }, 100);
-  };
 
   /**
    * Value check‑in ("+") button handler
-   * Opens emotion modal for primary emotion selection (not sub-emotions)
+   * Opens reflection modal directly using the first emotion selection
    */
   const handleCheckInClick = (val: ValueItem) => {
     setSelectedValue(val);
     dashboard.setActiveValueId(val.id);
-    // Open emotion modal without pre-selection (shows primary emotions)
-    setPreSelectedEmotion(null);
-    setShowEmotionModal(true);
+    // Open reflection modal directly - uses first emotion selection
+    setShowReflectionModal(true);
   };
 
   const closeReflectionModal = () => {
@@ -220,23 +162,6 @@ const Dashboard: React.FC<DashboardProps> = ({
       {/* EncourageSection removed - encouragement now shows in reflection modal */}
 
       <GoalsSection goals={goals} />
-
-      {/* Emotion Modal for sub-emotion selection */}
-      <EmotionModal
-        isOpen={showEmotionModal}
-        onClose={() => {
-          setShowEmotionModal(false);
-          setPreSelectedEmotion(null);
-        }}
-        onEmotionSelect={handleEmotionSelect}
-        selectedEmotion={
-          // Only show as selected if there's been an explicit selection (has selectedFeeling or encouragementText)
-          dashboard.emotionalState && (dashboard.selectedFeeling || dashboard.encouragementText)
-            ? EMOTIONAL_STATES.find(e => e.state === dashboard.emotionalState) || null
-            : null
-        }
-        preSelectedEmotion={preSelectedEmotion}
-      />
 
       {/* Reflection Modal for value check-ins */}
       {showReflectionModal && selectedValue && (
