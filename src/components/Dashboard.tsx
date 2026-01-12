@@ -1,7 +1,6 @@
 import React, { useMemo, useState, useEffect } from 'react';
 import { ValueItem, LogEntry, Goal, LCSWConfig } from '../types';
-import { EMOTIONAL_STATES, getEmotionalState } from '../services/emotionalStates';
-import MoodTrendChart from './MoodTrendChart';
+import { EMOTIONAL_STATES } from '../services/emotionalStates';
 import EncourageSection from './EncourageSection';
 import CrisisResourcesModal from './CrisisResourcesModal';
 import CrisisAlertModal from './CrisisAlertModal';
@@ -101,15 +100,6 @@ const Dashboard: React.FC<DashboardProps> = ({
     });
   }, [showReflectionModal, selectedValue, values.length]);
 
-  /**
-   * Emotion button handler - opens EmotionModal with pre-selected emotion for sub-emotion selection
-   */
-  const handleEmotionClick = (emotionState: string) => {
-    // Pre-select the emotion so modal opens directly to sub-emotions
-    setShowEmotionModal(true);
-    // Store the pre-selected emotion to pass to modal
-    setPreSelectedEmotion(emotionState);
-  };
 
   /**
    * Handle emotion selection from EmotionModal
@@ -201,46 +191,8 @@ const Dashboard: React.FC<DashboardProps> = ({
     if (action === 'values') onNavigate?.('values');
   };
 
-  /**
-   * Build mood trend chart dataset
-   */
-  const moodData = useMemo(
-    () =>
-      logs.map((log) => ({
-        date: new Date(log.date),
-        emotion: getEmotionalState(log.emotion),
-      })),
-    [logs]
-  );
-
   return (
     <div className="dashboard-container px-4 pb-12">
-      {/* Emotion Section */}
-      <h2 className="text-xl font-semibold mb-3">How are you feeling?</h2>
-      <div className="flex flex-wrap gap-3 mb-6">
-        {EMOTIONAL_STATES.map((emotion) => {
-          // Only highlight if emotion was explicitly selected (has selectedFeeling or encouragementText indicates selection)
-          const isSelected = dashboard.emotionalState === emotion.state && 
-                            (dashboard.selectedFeeling || dashboard.encouragementText);
-          return (
-            <button
-              key={emotion.state}
-              onClick={() => handleEmotionClick(emotion.state)}
-              className={`px-4 py-2 rounded-md border text-sm capitalize transition-colors duration-150 ${
-                isSelected
-                  ? 'bg-blue-500 text-white border-blue-600'
-                  : 'bg-white hover:bg-blue-100 border-gray-300 text-gray-700'
-              }`}
-            >
-              {emotion.label}
-            </button>
-          );
-        })}
-      </div>
-
-      {/* Mood Trends - moved above values */}
-      <MoodTrendChart data={moodData} />
-
       {/* Values List Section - with priority indicators */}
       <div className="grid grid-cols-2 gap-4 mb-8">
         {values.map((val, index) => (
