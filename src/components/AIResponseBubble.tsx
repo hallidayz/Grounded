@@ -1,8 +1,6 @@
-import React, { useEffect, useState, useCallback, useRef } from 'react';
+import React, { useEffect, useState, useCallback } from 'react';
 import { motion } from 'framer-motion';
 import { EMOTIONAL_STATES } from '../services/emotionalStates';
-import { useData } from '../contexts/DataContext';
-import { logger } from '../utils/logger';
 
 interface AIResponseBubbleProps {
   message: string;
@@ -10,7 +8,7 @@ interface AIResponseBubbleProps {
   feeling?: string; // The selected feeling word (e.g., "tired", "anxious")
   feelingEmoji?: string; // The emoji for the emotional state
   onActionClick?: (action: 'reflection' | 'values' | 'resources') => void;
-  onMoodChange?: (emotion: string, feeling: string) => void; // Callback for mood loop changes
+  onMoodChange?: (emotion: string, feeling: string) => void; // Callback for mood loop changes (not used for selection)
   encouragement?: string | null; // Encouragement text to display
   encouragementLoading?: boolean; // Whether encouragement is loading
 }
@@ -30,9 +28,9 @@ const FEELING_EMOJIS: Record<string, string> = {
   // Hopeful
   'optimistic': '☀️', 'encouraged': '💪', 'motivated': '🚀', 'inspired': '✨', 'forward-looking': '👀', 'promising': '🌟', 'bright': '💡', 'upward': '📈',
   // Positive
-    'hopeful': '🌱', 'curious': '🤔', 'calm': '🌿', 'engaged': '🎯', 'content': '😊', 'grateful': '🙏',
+  'hopeful': '🌱', 'curious': '🤔', 'calm': '🌿', 'engaged': '🎯', 'content': '😊', 'grateful': '🙏',
   // Energized
-    'joyful': '😄', 'excited': '🎉', 'proud': '🦁', 'elated': '🎊', 'enthusiastic': '🔥', 'vibrant': '🌈'
+  'joyful': '😄', 'excited': '🎉', 'proud': '🦁', 'elated': '🎊', 'enthusiastic': '🔥', 'vibrant': '🌈'
 };
 
 const AIResponseBubble: React.FC<AIResponseBubbleProps> = ({ 
@@ -41,208 +39,14 @@ const AIResponseBubble: React.FC<AIResponseBubbleProps> = ({
   feeling, 
   feelingEmoji, 
   onActionClick,
-  onMoodChange,
   encouragement,
   encouragementLoading
 }) => {
-  const { handleMoodLoopEntry } = useData();
   const [isVisible, setIsVisible] = useState(false);
   
-  // Refs for swipe/drag handling
-  const bubbleRef = useRef<HTMLDivElement>(null);
-  const touchStartX = useRef<number>(0);
-  const mouseStartX = useRef<number>(0);
-  const isDragging = useRef<boolean>(false);
-  
-  // Track selection level: 'primary' or 'sub' or 'none' (starting state)
-  const [selectionLevel, setSelectionLevel] = useState<'primary' | 'sub' | 'none'>('none');
-  
-  // Track current primary emotion and sub-emotion indices
-  // Start with -1 to indicate no selection
-  const [currentPrimaryIndex, setCurrentPrimaryIndex] = useState(-1);
-  const [currentSubIndex, setCurrentSubIndex] = useState(0);
-  
-  // Get current primary emotion config (or null if none selected)
-  const currentPrimary = currentPrimaryIndex >= 0 ? EMOTIONAL_STATES[currentPrimaryIndex] : null;
-  
-  // Track if we've loaded the last emotion from database
-  const hasLoadedLastEmotionRef = useRef(false);
-
-  // Load the most recent emotion selection from database on mount
-  useEffect(() => {
-    // Only load if no emotion/feeling provided via props and we haven't loaded yet
-    if (emotion || feeling || hasLoadedLastEmotionRef.current) return;
-
-    const loadLastEmotion = async () => {
-      try {
-        const { getDatabaseAdapter } = await import('../services/databaseAdapter');
-        const { getCurrentUser } = await import('../services/authService');
-        
-        const user = await getCurrentUser();
-        if (!user?.id) {
-          hasLoadedLastEmotionRef.current = true;
-          return;
-        }
-        
-        const adapter = getDatabaseAdapter();
-        await adapter.init();
-        
-        // Get the FIRST (oldest) feeling log - the user's initial emotion selection
-        const firstLog = await adapter.getFirstFeelingLog(user.id);
-        
-        if (firstLog) {
-          const firstEmotion = firstLog.emotionalState || firstLog.emotion;
-          const firstFeeling = firstLog.selectedFeeling || firstLog.subEmotion;
-          
-          if (firstEmotion && firstFeeling) {
-            // Find the emotion index
-            const primaryIndex = EMOTIONAL_STATES.findIndex(e => e.state === firstEmotion);
-            if (primaryIndex >= 0) {
-              setCurrentPrimaryIndex(primaryIndex);
-              
-              // Find the feeling index
-              const feelings = EMOTIONAL_STATES[primaryIndex].feelings;
-              const subIndex = feelings.findIndex(f => f === firstFeeling);
-              if (subIndex >= 0) {
-                setCurrentSubIndex(subIndex);
-                setSelectionLevel('sub');
-                
-                // Trigger the mood change callback to update parent state
-                onMoodChange?.(firstEmotion, firstFeeling);
-                
-                logger.debug('[AIResponseBubble] Loaded first emotion from database:', { firstEmotion, firstFeeling });
-              } else {
-                setSelectionLevel('primary');
-              }
-            }
-          }
-        }
-        
-        hasLoadedLastEmotionRef.current = true;
-      } catch (error) {
-        logger.error('[AIResponseBubble] Error loading last emotion:', error);
-        hasLoadedLastEmotionRef.current = true; // Don't retry on error
-      }
-    };
-    
-    loadLastEmotion();
-  }, [emotion, feeling, onMoodChange]);
-
-  // Find initial indices if emotion/feeling provided via props (takes precedence over database load)
-  useEffect(() => {
-    if (emotion) {
-      const primaryIndex = EMOTIONAL_STATES.findIndex(e => e.state === emotion);
-      if (primaryIndex >= 0) {
-        setCurrentPrimaryIndex(primaryIndex);
-        setSelectionLevel('primary');
-        if (feeling) {
-          const subIndex = EMOTIONAL_STATES[primaryIndex].feelings.findIndex(f => f === feeling);
-          if (subIndex >= 0) {
-            setCurrentSubIndex(subIndex);
-            setSelectionLevel('sub');
-          }
-        }
-      }
-    }
-  }, [emotion, feeling]);
-  
-  // Handle swipe/drag for mood selection (works for both touch and mouse)
-  useEffect(() => {
-    const bubble = bubbleRef.current;
-    if (!bubble || !onMoodChange) return;
-
-    const changeMood = (deltaX: number) => {
-      // Swipe threshold: 50px
-      if (Math.abs(deltaX) > 50) {
-        if (selectionLevel === 'primary' || selectionLevel === 'none') {
-          // Navigate primary emotions
-          let newIndex = currentPrimaryIndex;
-          if (currentPrimaryIndex < 0) {
-            // Start from first emotion
-            newIndex = deltaX > 0 ? EMOTIONAL_STATES.length - 1 : 0;
-          } else {
-            if (deltaX > 0) {
-              newIndex = currentPrimaryIndex > 0 ? currentPrimaryIndex - 1 : EMOTIONAL_STATES.length - 1;
-            } else {
-              newIndex = currentPrimaryIndex < EMOTIONAL_STATES.length - 1 ? currentPrimaryIndex + 1 : 0;
-            }
-          }
-          setCurrentPrimaryIndex(newIndex);
-          setCurrentSubIndex(0); // Reset sub to first when changing primary
-          setSelectionLevel('primary');
-        } else {
-          // Navigate sub-emotions within current primary
-          if (currentPrimaryIndex < 0) return;
-          const feelings = EMOTIONAL_STATES[currentPrimaryIndex].feelings;
-          let newIndex = currentSubIndex;
-          if (deltaX > 0) {
-            newIndex = currentSubIndex > 0 ? currentSubIndex - 1 : feelings.length - 1;
-          } else {
-            newIndex = currentSubIndex < feelings.length - 1 ? currentSubIndex + 1 : 0;
-          }
-          setCurrentSubIndex(newIndex);
-          
-          // Save the selected sub-emotion
-          const selectedFeeling = feelings[newIndex];
-          onMoodChange?.(EMOTIONAL_STATES[currentPrimaryIndex].state, selectedFeeling);
-          handleMoodLoopEntry(EMOTIONAL_STATES[currentPrimaryIndex].state, selectedFeeling).catch((error) => {
-            console.error('[AIResponseBubble] Error saving mood entry:', error);
-          });
-        }
-      }
-    };
-
-    // Touch event handlers
-    const handleTouchStart = (e: TouchEvent) => {
-      const touch = e.touches[0];
-      touchStartX.current = touch.clientX;
-    };
-
-    const handleTouchEnd = (e: TouchEvent) => {
-      if (!touchStartX.current) return;
-      
-      const touch = e.changedTouches[0];
-      const deltaX = touch.clientX - touchStartX.current;
-      changeMood(deltaX);
-      touchStartX.current = 0;
-    };
-
-    // Mouse event handlers for desktop
-    const handleMouseDown = (e: MouseEvent) => {
-      isDragging.current = true;
-      mouseStartX.current = e.clientX;
-      e.preventDefault();
-    };
-
-    const handleMouseMove = (e: MouseEvent) => {
-      if (!isDragging.current) return;
-      e.preventDefault();
-    };
-
-    const handleMouseUp = (e: MouseEvent) => {
-      if (!isDragging.current) return;
-      isDragging.current = false;
-      
-      const deltaX = e.clientX - mouseStartX.current;
-      changeMood(deltaX);
-      mouseStartX.current = 0;
-    };
-
-    // Add event listeners
-    bubble.addEventListener('touchstart', handleTouchStart, { passive: true });
-    bubble.addEventListener('touchend', handleTouchEnd, { passive: true });
-    bubble.addEventListener('mousedown', handleMouseDown);
-    document.addEventListener('mousemove', handleMouseMove);
-    document.addEventListener('mouseup', handleMouseUp);
-
-    return () => {
-      bubble.removeEventListener('touchstart', handleTouchStart);
-      bubble.removeEventListener('touchend', handleTouchEnd);
-      bubble.removeEventListener('mousedown', handleMouseDown);
-      document.removeEventListener('mousemove', handleMouseMove);
-      document.removeEventListener('mouseup', handleMouseUp);
-    };
-  }, [selectionLevel, currentPrimaryIndex, currentSubIndex, onMoodChange, handleMoodLoopEntry]);
+  // Get emotion config for display (read-only)
+  const emotionConfig = emotion ? EMOTIONAL_STATES.find(e => e.state === emotion) : null;
+  const feelingEmojiDisplay = feeling ? (FEELING_EMOJIS[feeling] || '') : '';
 
   useEffect(() => {
     // Fade-in animation
@@ -254,134 +58,33 @@ const AIResponseBubble: React.FC<AIResponseBubbleProps> = ({
     onActionClick?.(action);
   }, [onActionClick]);
 
-  // Handle quick selection clicks
-  const handlePrimaryClick = () => {
-    if (currentPrimaryIndex < 0) {
-      // Start with first emotion if none selected
-      setCurrentPrimaryIndex(0);
-    }
-    setSelectionLevel('primary');
-  };
-
-  const handleSubClick = () => {
-    if (currentPrimaryIndex < 0) return;
-    setSelectionLevel('sub');
-    // When clicking sub, save it immediately
-    const selectedFeeling = currentPrimary.feelings[currentSubIndex];
-    onMoodChange?.(currentPrimary.state, selectedFeeling);
-    handleMoodLoopEntry(currentPrimary.state, selectedFeeling).catch((error) => {
-      console.error('[AIResponseBubble] Error saving mood entry:', error);
-    });
-  };
-
-  // Get current sub-emotion
-  const currentSubFeeling = currentPrimary ? (currentPrimary.feelings[currentSubIndex] || currentPrimary.feelings[0]) : null;
-  const subFeelingEmoji = currentSubFeeling ? (FEELING_EMOJIS[currentSubFeeling] || '') : '';
-  
-  // Show swipe hint if onMoodChange is provided
-  const showSwipeHint = onMoodChange;
-
   return (
     <motion.div
-      ref={bubbleRef}
       initial={{ opacity: 0, y: 20 }}
       animate={{ opacity: isVisible ? 1 : 0, y: isVisible ? 0 : 20 }}
       transition={{ duration: 0.5, ease: 'easeOut' }}
       className="bg-navy-light/10 dark:bg-dark-bg-secondary rounded-3xl p-6 space-y-4 relative"
     >
-      {/* Swipe hint - left justified above arrows */}
-      {showSwipeHint && (
-        <div className="text-left text-xs sm:text-sm text-text-secondary dark:text-white/50 mb-2">
-          ← Swipe or drag to change →
-        </div>
-      )}
-      
-      {/* Primary Emotion Line */}
-      <div 
-        className="flex items-center space-x-3 cursor-pointer hover:opacity-80 transition-opacity"
-        onClick={handlePrimaryClick}
-      >
+      {/* Display emotion (read-only) - only show if emotion is provided */}
+      {emotionConfig && (
         <div className="flex items-center space-x-3">
-          {selectionLevel === 'primary' && (
-            <motion.span 
-              className="text-navy-primary dark:text-yellow-warm text-2xl sm:text-3xl font-bold"
-              animate={{ 
-                x: [0, 5, 0],
-              }}
-              transition={{ 
-                repeat: Infinity,
-                duration: 1.5,
-                ease: "easeInOut"
-              }}
-            >
-              →
-            </motion.span>
-          )}
-          {selectionLevel === 'none' && (
-            <motion.span 
-              className="text-navy-primary dark:text-yellow-warm text-2xl sm:text-3xl font-bold"
-              animate={{ 
-                x: [0, 5, 0],
-              }}
-              transition={{ 
-                repeat: Infinity,
-                duration: 1.5,
-                ease: "easeInOut"
-              }}
-            >
-              →
-            </motion.span>
-          )}
-          {currentPrimaryIndex >= 0 ? (
-            <>
-              <div className="w-10 h-10 sm:w-12 sm:h-12 bg-navy-primary dark:bg-yellow-warm rounded-full flex items-center justify-center flex-shrink-0">
-                <span className="text-white dark:text-navy-dark text-lg sm:text-xl">{currentPrimary.emoji}</span>
-              </div>
-              <span className="text-base sm:text-lg font-semibold text-navy-primary dark:text-yellow-warm capitalize">
-                {currentPrimary.shortLabel}
-              </span>
-            </>
-          ) : (
-            <>
-              <div className="w-10 h-10 sm:w-12 sm:h-12 bg-bg-secondary dark:bg-dark-bg-secondary rounded-full flex items-center justify-center flex-shrink-0 border-2 border-dashed border-navy-primary/50 dark:border-yellow-warm/50">
-                <span className="text-text-secondary dark:text-white/50 text-lg sm:text-xl">?</span>
-              </div>
-              <span className="text-base sm:text-lg font-semibold text-text-secondary dark:text-white/70">
-                Select
-              </span>
-            </>
-          )}
-        </div>
-      </div>
-      
-      {/* Sub-Emotion Line - only show if primary is selected */}
-      {currentPrimaryIndex >= 0 && currentPrimary && (
-        <div 
-          className="flex items-center space-x-3 cursor-pointer hover:opacity-80 transition-opacity ml-8 sm:ml-10"
-          onClick={handleSubClick}
-        >
-          <div className="flex items-center space-x-3">
-            {selectionLevel === 'sub' && (
-              <motion.span 
-                className="text-navy-primary dark:text-yellow-warm text-2xl sm:text-3xl font-bold"
-                animate={{ 
-                  x: [0, 5, 0],
-                }}
-                transition={{ 
-                  repeat: Infinity,
-                  duration: 1.5,
-                  ease: "easeInOut"
-                }}
-              >
-                →
-              </motion.span>
-            )}
-            {subFeelingEmoji && (
-              <span className="text-lg sm:text-xl">{subFeelingEmoji}</span>
-            )}
-            <span className="text-sm sm:text-base text-text-secondary dark:text-white/70 capitalize">
-              {currentSubFeeling}
+          <div className="w-10 h-10 sm:w-12 sm:h-12 bg-navy-primary dark:bg-yellow-warm rounded-full flex items-center justify-center flex-shrink-0">
+            <span className="text-white dark:text-navy-dark text-lg sm:text-xl">{emotionConfig.emoji}</span>
+          </div>
+          <div className="flex flex-col">
+            <span className="text-base sm:text-lg font-semibold text-navy-primary dark:text-yellow-warm capitalize">
+              {emotionConfig.shortLabel}
             </span>
+            {feeling && (
+              <div className="flex items-center space-x-2 mt-1">
+                {feelingEmojiDisplay && (
+                  <span className="text-sm">{feelingEmojiDisplay}</span>
+                )}
+                <span className="text-sm text-text-secondary dark:text-white/70 capitalize">
+                  {feeling}
+                </span>
+              </div>
+            )}
           </div>
         </div>
       )}
