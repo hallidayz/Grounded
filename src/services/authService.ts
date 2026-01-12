@@ -368,7 +368,9 @@ export async function getCurrentUser() {
     if (user) {
       logger.info('[AuthService] User found:', { userId: user.id, username: user.username, termsAccepted: user.termsAccepted });
     } else {
-      logger.warn('[AuthService] User ID found but user not in database:', userId);
+      // User ID in storage but not in database - this can happen during recovery or after database reset
+      // System will attempt recovery from backups, but we clear invalid storage to prevent loops
+      logger.debug('[AuthService] User ID found but user not in database (will attempt recovery):', userId);
       // Clear invalid userId from storage
       sessionStorage.removeItem('userId');
       localStorage.removeItem('userId');
