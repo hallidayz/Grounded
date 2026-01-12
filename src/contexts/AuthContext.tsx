@@ -3,6 +3,7 @@ import { acceptTerms, logoutUser, getCurrentUser } from '../services/authService
 import { getDatabaseAdapter } from '../services/databaseAdapter';
 import { AppSettings, LogEntry, Goal } from '../types';
 import type { UserData, AppData } from '../services/adapters/types';
+import { logger } from '../utils/logger';
 
 export type AuthState = 'checking' | 'login' | 'terms' | 'app';
 
@@ -41,22 +42,22 @@ const requestPersistentStorage = async (): Promise<boolean> => {
       const isMobile = /Android|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent);
       
       if (isPersisted) {
-        console.log(`[AuthContext] Persistent storage granted (platform: ${navigator.platform})`);
+        logger.debug(`[AuthContext] Persistent storage granted (platform: ${navigator.platform})`);
       } else if (isMobile) {
         // On mobile, denial is more concerning
-        console.warn(`[AuthContext] Persistent storage denied on mobile (platform: ${navigator.platform}) - credentials may be lost on app updates`);
+        logger.warn(`[AuthContext] Persistent storage denied on mobile (platform: ${navigator.platform}) - credentials may be lost on app updates`);
       } else {
-        // On desktop, denial is expected and not critical
-        console.log(`[AuthContext] Persistent storage denied on desktop (platform: ${navigator.platform}) - this is expected, credentials will still persist in localStorage/IndexedDB`);
+        // On desktop, denial is expected and not critical - use debug level to reduce noise
+        logger.debug(`[AuthContext] Persistent storage denied on desktop (platform: ${navigator.platform}) - this is expected, credentials will still persist in localStorage/IndexedDB`);
       }
       return isPersisted;
     } catch (error) {
-      console.warn('[AuthContext] Error requesting persistent storage:', error);
+      logger.warn('[AuthContext] Error requesting persistent storage:', error);
       return false;
     }
   }
   // API not supported - log but don't treat as error (older browsers/fallback)
-  console.log('[AuthContext] Persistent Storage API not supported - using standard storage (credentials will persist in localStorage/IndexedDB)');
+  logger.debug('[AuthContext] Persistent Storage API not supported - using standard storage (credentials will persist in localStorage/IndexedDB)');
   return false;
 };
 
@@ -65,7 +66,7 @@ const checkStoragePersistence = async (): Promise<boolean> => {
     try {
       return await navigator.storage.persisted();
     } catch (error) {
-      console.warn('[AuthContext] Error checking storage persistence:', error);
+      logger.warn('[AuthContext] Error checking storage persistence:', error);
       return false;
     }
   }
@@ -382,7 +383,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({
   useEffect(() => {
     const checkOnResume = async () => {
       if (!(await checkStoragePersistence()) && userId) {
-        console.warn('[AuthContext] Storage permission lost - re-requesting');
+        logger.debug('[AuthContext] Storage permission lost - re-requesting');
         await requestPersistentStorage();
       }
     };
