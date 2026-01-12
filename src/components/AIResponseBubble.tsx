@@ -2,6 +2,7 @@ import React, { useEffect, useState, useCallback, useRef } from 'react';
 import { motion } from 'framer-motion';
 import { EMOTIONAL_STATES } from '../services/emotionalStates';
 import { useData } from '../contexts/DataContext';
+import { logger } from '../utils/logger';
 
 interface AIResponseBubbleProps {
   message: string;
@@ -64,7 +65,71 @@ const AIResponseBubble: React.FC<AIResponseBubbleProps> = ({
   // Get current primary emotion config (or null if none selected)
   const currentPrimary = currentPrimaryIndex >= 0 ? EMOTIONAL_STATES[currentPrimaryIndex] : null;
   
-  // Find initial indices if emotion/feeling provided
+  // Track if we've loaded the last emotion from database
+  const hasLoadedLastEmotionRef = useRef(false);
+
+  // Load the most recent emotion selection from database on mount
+  useEffect(() => {
+    // Only load if no emotion/feeling provided via props and we haven't loaded yet
+    if (emotion || feeling || hasLoadedLastEmotionRef.current) return;
+
+    const loadLastEmotion = async () => {
+      try {
+        const { getDatabaseAdapter } = await import('../services/databaseAdapter');
+        const { getCurrentUser } = await import('../services/authService');
+        
+        const user = await getCurrentUser();
+        if (!user?.id) {
+          hasLoadedLastEmotionRef.current = true;
+          return;
+        }
+        
+        const adapter = getDatabaseAdapter();
+        await adapter.init();
+        
+        // Get the most recent feeling log (limit 1)
+        const recentLogs = await adapter.getFeelingLogs(1, user.id);
+        
+        if (recentLogs && recentLogs.length > 0) {
+          const lastLog = recentLogs[0];
+          const lastEmotion = lastLog.emotionalState || lastLog.emotion;
+          const lastFeeling = lastLog.selectedFeeling || lastLog.subEmotion;
+          
+          if (lastEmotion && lastFeeling) {
+            // Find the emotion index
+            const primaryIndex = EMOTIONAL_STATES.findIndex(e => e.state === lastEmotion);
+            if (primaryIndex >= 0) {
+              setCurrentPrimaryIndex(primaryIndex);
+              
+              // Find the feeling index
+              const feelings = EMOTIONAL_STATES[primaryIndex].feelings;
+              const subIndex = feelings.findIndex(f => f === lastFeeling);
+              if (subIndex >= 0) {
+                setCurrentSubIndex(subIndex);
+                setSelectionLevel('sub');
+                
+                // Trigger the mood change callback to update parent state
+                onMoodChange?.(lastEmotion, lastFeeling);
+                
+                logger.debug('[AIResponseBubble] Loaded last emotion from database:', { lastEmotion, lastFeeling });
+              } else {
+                setSelectionLevel('primary');
+              }
+            }
+          }
+        }
+        
+        hasLoadedLastEmotionRef.current = true;
+      } catch (error) {
+        logger.error('[AIResponseBubble] Error loading last emotion:', error);
+        hasLoadedLastEmotionRef.current = true; // Don't retry on error
+      }
+    };
+    
+    loadLastEmotion();
+  }, [emotion, feeling, onMoodChange]);
+
+  // Find initial indices if emotion/feeling provided via props (takes precedence over database load)
   useEffect(() => {
     if (emotion) {
       const primaryIndex = EMOTIONAL_STATES.findIndex(e => e.state === emotion);

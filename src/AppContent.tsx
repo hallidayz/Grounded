@@ -17,6 +17,9 @@ import CrisisResourcesModal from "./components/CrisisResourcesModal";
 import { AppHeader } from "./components/Layout/AppHeader";
 import { ALL_VALUES } from "./constants";
 import { generateEmotionalEncouragement } from "./services/aiService";
+import { getDatabaseAdapter } from "./services/databaseAdapter";
+import { getCurrentUser } from "./services/authService";
+import { logger } from "./utils/logger";
 
 type AppView = "home" | "goals" | "vault" | "update" | "values" | "report";
 type BottomNavView = "home" | "values" | "report" | "vault" | "goals" | "onboarding" | "settings";
@@ -87,9 +90,55 @@ export default function AppContent({ onHydrationReady }: { onHydrationReady?: ()
     }
   }, [setCurrentView, setShowReflection, setShowResources]);
 
+  // Load last emotion selection on app load
+  useEffect(() => {
+    if (!context || context.isHydrating || authState !== 'app') return;
+    if (currentEmotion && currentFeeling) return; // Already have emotion loaded
+
+    const loadLastEmotion = async () => {
+      try {
+        const user = await getCurrentUser();
+        if (!user?.id) return;
+        
+        const adapter = getDatabaseAdapter();
+        await adapter.init();
+        
+        // Get the most recent feeling log
+        const recentLogs = await adapter.getFeelingLogs(1, user.id);
+        
+        if (recentLogs && recentLogs.length > 0) {
+          const lastLog = recentLogs[0];
+          const emotion = lastLog.emotionalState || lastLog.emotion;
+          const feeling = lastLog.selectedFeeling || lastLog.subEmotion;
+          
+          if (emotion && feeling) {
+            setCurrentEmotion(emotion);
+            setCurrentFeeling(feeling);
+            
+            // Generate encouragement for the loaded emotion
+            setEncouragementLoading(true);
+            try {
+              const encouragement = await generateEmotionalEncouragement(emotion, feeling);
+              setEncouragementText(encouragement);
+              logger.debug('[AppContent] Loaded last emotion and generated encouragement:', { emotion, feeling });
+            } catch (error) {
+              logger.error('[AppContent] Error generating encouragement for loaded emotion:', error);
+            } finally {
+              setEncouragementLoading(false);
+            }
+          }
+        }
+      } catch (error) {
+        logger.error('[AppContent] Error loading last emotion:', error);
+      }
+    };
+    
+    loadLastEmotion();
+  }, [authState, context, currentEmotion, currentFeeling]);
+
   // Handle mood changes from AIResponseBubble - generate encouragement - MUST be before early returns (Rules of Hooks)
   const handleMoodChange = useCallback(async (emotion: string, feeling: string) => {
-    console.log('[AppContent] Mood changed:', emotion, feeling);
+    logger.debug('[AppContent] Mood changed:', emotion, feeling);
     setCurrentEmotion(emotion);
     setCurrentFeeling(feeling);
     
@@ -100,9 +149,9 @@ export default function AppContent({ onHydrationReady }: { onHydrationReady?: ()
     try {
       const encouragement = await generateEmotionalEncouragement(emotion, feeling);
       setEncouragementText(encouragement);
-      console.log('[AppContent] Encouragement generated:', encouragement);
+      logger.debug('[AppContent] Encouragement generated:', encouragement);
     } catch (error) {
-      console.error('[AppContent] Error generating encouragement:', error);
+      logger.error('[AppContent] Error generating encouragement:', error);
       setEncouragementText("Your feelings are valid. Take care of yourself.");
     } finally {
       setEncouragementLoading(false);
