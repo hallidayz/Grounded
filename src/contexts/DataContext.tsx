@@ -1,5 +1,6 @@
 import React, { createContext, useContext, useState, useEffect, useCallback, useRef, useMemo, ReactNode } from 'react';
 import { LogEntry, Goal, AppSettings, LCSWConfig, FeelingLog } from '../types';
+import type { AppData } from '../services/adapters/types';
 import { getDatabaseAdapter } from '../services/databaseAdapter';
 import { logger } from '../utils/logger';
 
@@ -36,11 +37,11 @@ interface DataProviderProps {
   };
 }
 
-export const DataProvider: React.FC<DataProviderProps> = ({ 
-  children, 
-  userId, 
+export const DataProvider: React.FC<DataProviderProps> = ({
+  children,
+  userId,
   authState,
-  initialData 
+  initialData
 }) => {
   const [selectedValueIds, setSelectedValueIds] = useState<string[]>(
     initialData?.selectedValueIds || []
@@ -52,6 +53,11 @@ export const DataProvider: React.FC<DataProviderProps> = ({
   );
   const [isHydrating, setIsHydrating] = useState(true); // Start as true, set to false after initial load
 
+  // OPTIMIZATION: Memoize expensive derived data
+  const selectedValues = useMemo(() =>
+    selectedValueIds.map(id => ({ id, name: id })) // Simplified - can be enhanced with full value objects
+  , [selectedValueIds]);
+
   // Get database adapter instance (memoized to avoid recreating on every render)
   const adapter = useMemo(() => getDatabaseAdapter(), []);
 
@@ -62,95 +68,86 @@ export const DataProvider: React.FC<DataProviderProps> = ({
   const pendingSaveRef = useRef<Promise<void> | null>(null); // Track pending save for exit handler
   const hasTriedDatabaseLoadRef = useRef(false); // Track if we've tried loading from database
 
-  // Update state when initialData changes (from initialization)
+  // OPTIMIZATION: Consolidated initialization effect - eliminates race conditions
   useEffect(() => {
-    // Check if initialData has any actual data (not just empty object)
-    const hasData = initialData && (
-      (initialData.selectedValueIds && initialData.selectedValueIds.length > 0) ||
-      (initialData.logs && initialData.logs.length > 0) ||
-      (initialData.goals && initialData.goals.length > 0) ||
-      initialData.settings
-    );
-    
-    if (hasData && !hasLoadedInitialDataRef.current) {
-      logger.info('[DataContext] Loading initial data from props', {
-        values: initialData.selectedValueIds?.length || 0,
-        logs: initialData.logs?.length || 0,
-        goals: initialData.goals?.length || 0,
-        hasSettings: !!initialData.settings
-      });
-      
-      if (initialData.selectedValueIds !== undefined) {
-        setSelectedValueIds(initialData.selectedValueIds);
-      }
-      if (initialData.logs !== undefined) {
-        setLogs(initialData.logs);
-      }
-      if (initialData.goals !== undefined) {
-        setGoals(initialData.goals);
-      }
-      if (initialData.settings) {
-        setSettings(initialData.settings);
-      }
-      hasLoadedInitialDataRef.current = true;
-      setIsHydrating(false); // Data loaded, hydration complete
-    } else if (initialData !== undefined && !hasData) {
-      // Initial data is explicitly empty/undefined - hydration complete but no data
-      setIsHydrating(false);
-    }
-  }, [initialData]);
-
-  // CRITICAL FIX: Load values from database if initialData didn't have them
-  useEffect(() => {
-    // Only try once, and only if we haven't tried yet and user is authenticated
-    // Don't check hasLoadedInitialDataRef - we want to try database even if other effects marked it as loaded
-    if (hasTriedDatabaseLoadRef.current || !userId || authState !== 'app') {
+    // Early return if already initialized or not authenticated
+    if (hasLoadedInitialDataRef.current || !userId || authState !== 'app') {
       return;
     }
 
-    // Always try to load from database if we have no values, regardless of initialData
-    // This ensures we always check the database, even if initialData was empty
+    // Mark as tried to prevent multiple attempts
     hasTriedDatabaseLoadRef.current = true;
-    
-    const loadFromDatabase = async () => {
+
+    const initializeData = async () => {
       try {
-        logger.info('[DataContext] Loading values from database...', { userId });
+        logger.info('[DataContext] Starting consolidated data initialization');
+
+        // Step 1: Load from initialData if available
+        if (initialData) {
+          logger.info('[DataContext] Loading data from initial props');
+          if (initialData.selectedValueIds !== undefined) {
+            setSelectedValueIds(initialData.selectedValueIds);
+          }
+          if (initialData.logs !== undefined) {
+            setLogs(initialData.logs);
+          }
+          if (initialData.goals !== undefined) {
+            setGoals(initialData.goals);
+          }
+          if (initialData.settings) {
+            setSettings(initialData.settings);
+          }
+        }
+
+        // Step 2: Load additional data from database
         await adapter.init();
-        
-        // Try loading from values table first
+
+        // Load values from database (prioritize over initialData)
         let activeValues = await adapter.getActiveValues(userId);
-        
-        // If no values found, try loading from appData as fallback
+
         if (activeValues.length === 0) {
+          // Fallback to appData
           const appData = await adapter.getAppData(userId);
           if (appData?.values && appData.values.length > 0) {
-            // Migrate from appData to values table
             activeValues = appData.values;
+            // Migrate to values table for future loads
             await adapter.setValuesActive(userId, activeValues);
             logger.info('[DataContext] Migrated values from appData to values table');
           }
         }
-        
+
         if (activeValues.length > 0) {
-          logger.info('[DataContext] Loaded values from database:', activeValues.length, activeValues);
+          logger.info('[DataContext] Loaded values from database:', activeValues.length);
           setSelectedValueIds(activeValues);
-        } else {
-          logger.info('[DataContext] No values found - user is first-time user');
         }
-        
+
+        // Step 3: Load goals from database
+        const goalsData = await adapter.getGoals(userId);
+        if (goalsData.length > 0) {
+          logger.info('[DataContext] Loaded goals from database:', goalsData.length);
+          setGoals(goalsData);
+        }
+
         hasLoadedInitialDataRef.current = true;
         setIsHydrating(false);
+        logger.info('[DataContext] Data initialization complete');
+
       } catch (error) {
-        logger.error('[DataContext] Error loading values:', error);
-        // Retry once after delay
+        logger.error('[DataContext] Error during data initialization:', error);
+
+        // Single retry after delay
         setTimeout(async () => {
           try {
             const retryValues = await adapter.getActiveValues(userId);
             if (retryValues.length > 0) {
               setSelectedValueIds(retryValues);
             }
+            const retryGoals = await adapter.getGoals(userId);
+            if (retryGoals.length > 0) {
+              setGoals(retryGoals);
+            }
           } catch (retryError) {
-            logger.error('[DataContext] Retry failed:', retryError);
+            logger.error('[DataContext] Initialization retry failed:', retryError);
           }
           hasLoadedInitialDataRef.current = true;
           setIsHydrating(false);
@@ -158,42 +155,11 @@ export const DataProvider: React.FC<DataProviderProps> = ({
       }
     };
 
-    // Small delay to ensure adapter is ready, but also retry if adapter isn't ready
-    const timeoutId = setTimeout(loadFromDatabase, 200);
-    return () => clearTimeout(timeoutId);
-  }, [userId, authState, adapter]);
+    // Execute initialization
+    initializeData();
+  }, [userId, authState, initialData, adapter]);
 
-  // Track when data is set via setters (from sync in AppContent)
-  // Mark as loaded when we have userId (user is authenticated) or after data appears
-  useEffect(() => {
-    // If we have userId (authenticated) OR any data, mark as loaded
-    // This allows saves to happen immediately when user selects values, even before full initialization
-    if ((userId || selectedValueIds.length > 0 || logs.length > 0 || goals.length > 0) && !hasLoadedInitialDataRef.current) {
-      // Clear any existing timeout
-      if (initializationTimeoutRef.current) {
-        clearTimeout(initializationTimeoutRef.current);
-      }
-      
-      // If userId is available, mark as loaded immediately; otherwise wait briefly for sync
-      const delay = userId ? 100 : 1000;
-      initializationTimeoutRef.current = setTimeout(() => {
-        logger.info('[DataContext] Marking data as loaded after sync', {
-          values: selectedValueIds.length,
-          logs: logs.length,
-          goals: goals.length,
-          userId: !!userId
-        });
-        hasLoadedInitialDataRef.current = true;
-        setIsHydrating(false); // Mark hydration as complete
-      }, delay);
-    }
-    
-    return () => {
-      if (initializationTimeoutRef.current) {
-        clearTimeout(initializationTimeoutRef.current);
-      }
-    };
-  }, [selectedValueIds.length, logs.length, goals.length, userId]);
+
 
   // Save app data to database whenever it changes
   // Allow saves as soon as userId is available - don't wait for slow initialization flags
@@ -215,25 +181,14 @@ export const DataProvider: React.FC<DataProviderProps> = ({
       if (hasLoadedInitialDataRef.current || selectedValueIds.length > 0 || logs.length > 0 || goals.length > 0) {
         const saveData = async () => {
           try {
-            // Only include values in save if we should save them
-            // If we haven't loaded yet and have no values, skip values field to avoid overwriting
-            const appDataToSave: {
-              settings: AppSettings;
-              logs: LogEntry[];
-              goals: Goal[];
-              lcswConfig?: LCSWConfig;
-              values?: string[];
-            } = {
+            // Always include values in save (required by AppData interface)
+            const appDataToSave: AppData = {
               settings,
               logs,
               goals,
+              values: selectedValueIds, // Always provide values array
               lcswConfig: settings.lcswConfig,
             };
-            
-            // Only add values if we should save them (prevents overwriting during init)
-            if (shouldSaveValues) {
-              appDataToSave.values = selectedValueIds;
-            }
             
             logger.info('[DataContext] Saving app data', {
               values: shouldSaveValues ? selectedValueIds.length : '(skipped - not loaded yet)',

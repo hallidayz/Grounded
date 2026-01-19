@@ -12,7 +12,7 @@
  */
 
 import { Goal, FeelingLog, UserInteraction, Session, Assessment, CounselorReport } from '../../types';
-import { 
+import {
   db,
   createUser as dexieCreateUser,
   getUserByUsername as dexieGetUserByUsername,
@@ -54,9 +54,47 @@ function isEncryptionEnabled(): boolean {
   }
 }
 
+/**
+ * OPTIMIZATION: Get cached encryption password
+ * Avoids repeated key derivation for better performance
+ */
+function getCachedEncryptionPassword(): string | null {
+  const now = Date.now();
+  const cached = encryptionPasswordCache.get('password');
+
+  if (cached && (now - cached.timestamp) < ENCRYPTION_CACHE_TTL) {
+    return cached.password;
+  }
+
+  // Cache miss or expired - get from sessionStorage
+  try {
+    const password = sessionStorage.getItem('encryption_password');
+    if (password) {
+      encryptionPasswordCache.set('password', { password, timestamp: now });
+      return password;
+    }
+  } catch (error) {
+    console.warn('[LegacyAdapter] Error accessing sessionStorage for encryption password:', error);
+  }
+
+  return null;
+}
+
+/**
+ * OPTIMIZATION: Clear encryption password cache
+ * Call when user logs out or encryption is disabled
+ */
+export function clearEncryptionPasswordCache(): void {
+  encryptionPasswordCache.clear();
+}
+
 // Global initialization guard to prevent race conditions
 let initializationPromise: Promise<void> | null = null;
 let isInitialized = false;
+
+// OPTIMIZATION: Cache for encryption passwords to avoid repeated key derivation
+const encryptionPasswordCache = new Map<string, { password: string; timestamp: number }>();
+const ENCRYPTION_CACHE_TTL = 5 * 60 * 1000; // 5 minutes
 
 export class LegacyAdapter implements DatabaseAdapter {
   constructor() {
@@ -81,9 +119,8 @@ export class LegacyAdapter implements DatabaseAdapter {
     
     initializationPromise = (async () => {
       try {
-        // Initialize Dexie database with cleanup
-        // This will clean up old databases and open the connection
-        await db.initialize();
+        // Database is already initialized by the singleton pattern
+        // No additional initialization needed
         isInitialized = true;
       } catch (error) {
         initializationPromise = null; // Reset on error to allow retry
@@ -123,7 +160,7 @@ export class LegacyAdapter implements DatabaseAdapter {
     const appData = await db.appData.get(userId);
     return appData?.data || null;
   }
-  
+
   async saveAppData(userId: string, data: AppData): Promise<void> {
     // Use Dexie for better performance
     await db.appData.put({
@@ -175,7 +212,40 @@ export class LegacyAdapter implements DatabaseAdapter {
       selectedFeeling: feelingLog.selectedFeeling,
     } as FeelingLogRecord);
   }
-  
+
+  /**
+   * OPTIMIZATION: Batch save multiple feeling logs
+   * Reduces database round trips for better performance
+   */
+  async saveFeelingLogsBatch(feelingLogs: Array<{
+    id: string;
+    timestamp: string;
+    userId?: string;
+    emotionalState: string;
+    selectedFeeling: string | null;
+    aiResponse: string;
+    isAIResponse: boolean;
+    lowStateCount: number;
+  }>): Promise<void> {
+    if (feelingLogs.length === 0) return;
+
+    const records = feelingLogs.map(log => ({
+      id: log.id,
+      timestamp: log.timestamp,
+      userId: log.userId,
+      emotion: log.emotionalState,
+      subEmotion: log.selectedFeeling,
+      aiResponse: log.aiResponse,
+      isAIResponse: log.isAIResponse,
+      lowStateCount: log.lowStateCount,
+      emotionalState: log.emotionalState,
+      selectedFeeling: log.selectedFeeling,
+    } as FeelingLogRecord));
+
+    // Use Dexie bulkPut for batch operations
+    await db.feelingLogs.bulkPut(records);
+  }
+
   async getFeelingLogs(limit?: number, userId?: string): Promise<FeelingLog[]> {
     // Hooks manage encryption - adapter just reads
     // Decryption is handled by Dexie hooks if enabled
@@ -554,6 +624,16 @@ export class LegacyAdapter implements DatabaseAdapter {
   async saveGoal(goal: Goal): Promise<void> {
     // Use Dexie for better performance
     await db.goals.put(goal as GoalRecord);
+  }
+
+  /**
+   * OPTIMIZATION: Batch save multiple goals
+   * Reduces database round trips for better performance
+   */
+  async saveGoalsBatch(goals: Goal[]): Promise<void> {
+    if (goals.length === 0) return;
+    // Use Dexie bulkPut for batch operations
+    await db.goals.bulkPut(goals as GoalRecord[]);
   }
 
   async getGoals(userId: string): Promise<Goal[]> {

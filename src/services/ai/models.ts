@@ -105,6 +105,10 @@ let currentDownloadStatus: 'idle' | 'downloading' | 'complete' | 'error' = 'idle
 let currentDownloadLabel: string = '';
 let currentDownloadDetails: string = '';
 
+// Lazy loading state
+let lazyLoadingTriggered = false;
+let lazyLoadPromise: Promise<boolean> | null = null;
+
 /**
  * Get model references (for use by other modules)
  */
@@ -143,25 +147,51 @@ export function getModelDownloadProgress(): {
  */
 export function isTextGenerationModel(model: unknown): boolean {
   if (!model) return false;
-  
+
   try {
     // Check if model has task property indicating text-generation
-    if (model.task === 'text-generation' || model.task === 'text2text-generation') {
+    if ((model as any).task === 'text-generation' || (model as any).task === 'text2text-generation') {
       return true;
     }
-    
+
     // Check if model is a function that accepts generation options
-    // Text-generation models accept (text, options) signature
+    // Text-generation models typically accept (text, options) signature
     if (typeof model === 'function') {
       // Generation models typically accept options object
       return true; // Assume function models are generation-capable
     }
-    
+
     return false;
   } catch (error) {
     logger.error('[models] Error checking model compatibility:', error);
     return false;
   }
+}
+
+/**
+ * Trigger lazy loading of AI models
+ * Called on first user interaction to avoid blocking initial app load
+ */
+export function triggerLazyModelLoading(): Promise<boolean> {
+  if (lazyLoadingTriggered) {
+    return lazyLoadPromise || Promise.resolve(true);
+  }
+
+  if (lazyLoadPromise) {
+    return lazyLoadPromise;
+  }
+
+  lazyLoadingTriggered = true;
+  lazyLoadPromise = preloadModelsContinuously();
+
+  return lazyLoadPromise;
+}
+
+/**
+ * Check if lazy loading has been triggered
+ */
+export function isLazyLoadingTriggered(): boolean {
+  return lazyLoadingTriggered;
 }
 
 /**

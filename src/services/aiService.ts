@@ -140,7 +140,7 @@ export async function generateText(prompt: string, modelName?: string): Promise<
   }
 }
 
-// Re-export model functions
+// Re-export model functions with lazy loading support
 export {
   clearModels,
   initializeModels,
@@ -158,7 +158,10 @@ export {
   getMoodTrackerModel,
   getCounselingCoachModel,
   getIsModelLoading,
-  isTextGenerationModel
+  isTextGenerationModel,
+  // Lazy loading functions
+  triggerLazyModelLoading,
+  isLazyLoadingTriggered
 } from './ai/models';
 
 // Re-export compatibility functions
