@@ -1,12 +1,12 @@
 /**
- * Specialized Counseling Service
- * 
- * Uses system prompts to provide evidence-based, framework-driven mental health support.
- * Replaces generic AI advice with specialized psychological interventions.
- */
+  * Specialized Counseling Service
+  * 
+  * Uses system prompts to provide evidence-based, framework-driven mental health support.
+  * Replaces generic AI advice with specialized psychological interventions.
+  */
 
 import { SystemPromptType, getSystemPrompt } from './systemPrompts';
-import { generateText as webllmGenerate } from './webllmService';
+import { generateText as webllmGenerate, isModelReady } from './webllmService';
 import { checkForCrisisKeywords, CrisisResponse } from '../safetyService';
 import { routeUserInput } from './triageRouter';
 import { loadLastSessionToken, formatSessionContextForPrompt, saveSessionAndGenerateToken } from './sessionMemory';
@@ -43,12 +43,24 @@ export async function startCounselingSession(
 
   try {
     const systemPromptConfig = getSystemPrompt(promptType);
-    
+
     logger.debug('[specializedCounseling] Starting session:', {
       promptType,
       messageLength: initialMessage.length,
       hasContext: !!context,
     });
+
+    // Check if AI model is ready before attempting to generate
+    if (!isModelReady()) {
+      logger.warn('[specializedCounseling] AI model not ready, returning fallback response');
+      return `Thank you for sharing. I hear that you're going through "${initialMessage.substring(0, 50)}..."\n\n` +
+        `The AI assistant is still loading. In the meantime, here are some suggestions:\n\n` +
+        `• Take a few deep breaths\n` +
+        `• Consider writing down your thoughts in a journal\n` +
+        `• Reach out to a trusted friend or family member\n` +
+        `• If you're in crisis, please call 988 (Suicide & Crisis Lifeline)\n\n` +
+        `The AI will be ready to help you more specifically shortly.`;
+    }
 
     // Build context string if provided
     let contextString = '';
