@@ -2,7 +2,7 @@ var __defProp = Object.defineProperty;
 var __defNormalProp = (obj, key, value) => key in obj ? __defProp(obj, key, { enumerable: true, configurable: true, writable: true, value }) : obj[key] = value;
 var __publicField = (obj, key, value) => __defNormalProp(obj, typeof key !== "symbol" ? key + "" : key, value);
 import { o as ortWeb_min, O as ONNX_WEB } from "./onnx-eBVVFwq3.js";
-import { T as Template } from "./vendor-Dvad8g1z.js";
+import { T as Template } from "./vendor-BKChQSPc.js";
 const sharp = {};
 const ONNX_NODE = /* @__PURE__ */ Object.freeze(/* @__PURE__ */ Object.defineProperty({
   __proto__: null,

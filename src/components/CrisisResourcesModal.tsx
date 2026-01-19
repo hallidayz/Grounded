@@ -1,12 +1,88 @@
-import React from 'react';
+import React, { useState, useEffect } from 'react';
 import { LCSWConfig } from '../types';
+import { getCrisisResources, detectRegion, buildSMSUri, type Region } from '../services/crisisResources';
 
 interface CrisisResourcesModalProps {
   onClose: () => void;
   lcswConfig?: LCSWConfig;
+  region?: Region; // Override auto-detection
 }
 
-const CrisisResourcesModal: React.FC<CrisisResourcesModalProps> = ({ onClose, lcswConfig }) => {
+const CrisisResourcesModal: React.FC<CrisisResourcesModalProps> = ({ onClose, lcswConfig, region: overrideRegion }) => {
+  const [detectedRegion, setDetectedRegion] = useState<Region>('US');
+  const [resources, setResources] = useState(getCrisisResources('US'));
+
+  useEffect(() => {
+    const region = overrideRegion || detectRegion();
+    setDetectedRegion(region);
+    setResources(getCrisisResources(region));
+  }, [overrideRegion]);
+
+  const handleCall = (action: string) => {
+    if (action && action.startsWith('tel:')) {
+      window.location.href = action;
+    }
+  };
+
+  const handleText = (action: string, body?: string) => {
+    if (action && action.startsWith('sms:')) {
+      const number = action.replace('sms:', '').split(/[?&]/)[0];
+      const smsUri = buildSMSUri(number, body);
+      window.location.href = smsUri;
+    }
+  };
+
+  const renderResourceButton = (resource: typeof resources.primary) => {
+    if (!resource) return null;
+
+    if (resource.callAction) {
+      return (
+        <a
+          href={resource.callAction}
+          onClick={(e) => {
+            e.preventDefault();
+            handleCall(resource.callAction!);
+          }}
+          className="flex-1 flex items-center justify-center gap-2 py-3 px-4 bg-red-600 hover:bg-red-700 text-white font-bold text-base rounded-lg transition-all active:scale-95"
+        >
+          <span>📞</span>
+          {resource.buttonLabel}
+        </a>
+      );
+    }
+    
+    if (resource.textAction) {
+      return (
+        <a
+          href="#"
+          onClick={(e) => {
+            e.preventDefault();
+            handleText(resource.textAction!, resource.textBody);
+          }}
+          className="flex-1 flex items-center justify-center gap-2 py-3 px-4 bg-blue-600 hover:bg-blue-700 text-white font-bold text-base rounded-lg transition-all active:scale-95"
+        >
+          <span>💬</span>
+          {resource.buttonLabel}
+        </a>
+      );
+    }
+    
+    if (resource.url) {
+      return (
+        <a
+          href={resource.url}
+          target="_blank"
+          rel="noopener noreferrer"
+          className="flex-1 flex items-center justify-center gap-2 py-3 px-4 bg-navy-primary hover:bg-navy-dark text-white font-bold text-base rounded-lg transition-all active:scale-95"
+        >
+          <span>🌐</span>
+          {resource.buttonLabel}
+        </a>
+      );
+    }
+    
+    return null;
+  };
   return (
     <div 
       className="fixed inset-0 z-50 flex items-center justify-center p-4 sm:p-6 bg-navy-dark/60 backdrop-blur-sm animate-fade-in"
@@ -52,32 +128,128 @@ const CrisisResourcesModal: React.FC<CrisisResourcesModalProps> = ({ onClose, lc
               </div>
             </div>
 
-            {/* Crisis Hotlines */}
+            {/* Primary Crisis Resource */}
             <div className="bg-yellow-warm/10 dark:bg-yellow-warm/20 border-l-4 border-yellow-warm p-4 sm:p-5 rounded-xl">
               <h3 className="text-lg font-black text-text-primary dark:text-white mb-3">
-                📞 Crisis Hotlines (24/7, Free, Confidential)
+                📞 Immediate Help (24/7, Free, Confidential)
               </h3>
-              <div className="space-y-3 text-sm text-text-primary dark:text-white">
+              <div className="space-y-3">
                 <div>
-                  <p className="font-bold text-base">988 Suicide & Crisis Lifeline</p>
-                  <p className="text-xs text-text-secondary dark:text-text-secondary mt-1">
-                    Dial <strong>988</strong> or text 988. Available 24/7 for anyone in suicidal crisis or emotional distress.
+                  <p className="font-bold text-base text-text-primary dark:text-white mb-2">
+                    {resources.primary.displayName}
                   </p>
-                </div>
-                <div>
-                  <p className="font-bold text-base">Crisis Text Line</p>
-                  <p className="text-xs text-text-secondary dark:text-text-secondary mt-1">
-                    Text <strong>HOME</strong> to <strong>741741</strong>. Free, 24/7 crisis support via text message.
-                  </p>
-                </div>
-                <div>
-                  <p className="font-bold text-base">National Domestic Violence Hotline</p>
-                  <p className="text-xs text-text-secondary dark:text-text-secondary mt-1">
-                    Call <strong>1-800-799-SAFE (7233)</strong> or text START to 88788. 24/7 support for domestic violence.
+                  <div className="flex gap-2">
+                    {renderResourceButton(resources.primary)}
+                    {resources.primary.url && (
+                      <a
+                        href={resources.primary.url}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="flex items-center justify-center py-3 px-3 bg-white dark:bg-white/5 border border-border-soft dark:border-white/10 text-text-secondary dark:text-white/60 rounded-lg font-medium text-sm hover:bg-gray-50 dark:hover:bg-white/10 transition-colors"
+                      >
+                        🌐
+                      </a>
+                    )}
+                  </div>
+                  <p className="text-xs text-text-secondary dark:text-white/70 mt-2">
+                    {resources.primary.subtext}
                   </p>
                 </div>
               </div>
             </div>
+
+            {/* Secondary Resource */}
+            {resources.secondary && (
+              <div className="bg-navy-primary/10 dark:bg-navy-primary/20 border-l-4 border-navy-primary p-4 sm:p-5 rounded-xl">
+                <h3 className="text-lg font-black text-text-primary dark:text-white mb-3">
+                  Alternative Support
+                </h3>
+                <div className="space-y-2">
+                  <p className="font-bold text-base text-text-primary dark:text-white">
+                    {resources.secondary.displayName}
+                  </p>
+                  <div className="flex gap-2">
+                    {renderResourceButton(resources.secondary)}
+                    {resources.secondary.url && (
+                      <a
+                        href={resources.secondary.url}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="flex items-center justify-center py-3 px-3 bg-white dark:bg-white/5 border border-border-soft dark:border-white/10 text-text-secondary dark:text-white/60 rounded-lg font-medium text-sm hover:bg-gray-50 dark:hover:bg-white/10 transition-colors"
+                      >
+                        🌐
+                      </a>
+                    )}
+                  </div>
+                  <p className="text-xs text-text-secondary dark:text-white/70 mt-2">
+                    {resources.secondary.subtext}
+                  </p>
+                </div>
+              </div>
+            )}
+
+            {/* LGBTQ+ Resource */}
+            {resources.lgbtq && (
+              <div className="bg-purple-50 dark:bg-purple-900/20 border-l-4 border-purple-500 p-4 sm:p-5 rounded-xl">
+                <h3 className="text-lg font-black text-text-primary dark:text-white mb-3">
+                  LGBTQ+ Support
+                </h3>
+                <div className="space-y-2">
+                  <p className="font-bold text-base text-text-primary dark:text-white">
+                    {resources.lgbtq.displayName}
+                  </p>
+                  <div className="flex gap-2">
+                    {renderResourceButton(resources.lgbtq)}
+                    {resources.lgbtq.url && (
+                      <a
+                        href={resources.lgbtq.url}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="flex items-center justify-center py-3 px-3 bg-white dark:bg-white/5 border border-border-soft dark:border-white/10 text-text-secondary dark:text-white/60 rounded-lg font-medium text-sm hover:bg-gray-50 dark:hover:bg-white/10 transition-colors"
+                      >
+                        🌐
+                      </a>
+                    )}
+                  </div>
+                  <p className="text-xs text-text-secondary dark:text-white/70 mt-2">
+                    {resources.lgbtq.subtext}
+                  </p>
+                </div>
+              </div>
+            )}
+
+            {/* Domestic Violence Resource */}
+            {resources.domesticViolence && (
+              <div className="bg-yellow-50 dark:bg-yellow-900/20 border-l-4 border-yellow-500 p-4 sm:p-5 rounded-xl">
+                <h3 className="text-lg font-black text-text-primary dark:text-white mb-3">
+                  Domestic Violence Support
+                </h3>
+                <div className="space-y-2">
+                  <p className="font-bold text-base text-text-primary dark:text-white">
+                    {resources.domesticViolence.displayName}
+                  </p>
+                  <div className="flex gap-2">
+                    {renderResourceButton(resources.domesticViolence)}
+                    {resources.domesticViolence.url && (
+                      <a
+                        href={resources.domesticViolence.url}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="flex items-center justify-center py-3 px-3 bg-white dark:bg-white/5 border border-border-soft dark:border-white/10 text-text-secondary dark:text-white/60 rounded-lg font-medium text-sm hover:bg-gray-50 dark:hover:bg-white/10 transition-colors"
+                      >
+                        🌐
+                      </a>
+                    )}
+                  </div>
+                  <p className="text-xs text-text-secondary dark:text-white/70 mt-2">
+                    {resources.domesticViolence.subtext}
+                  </p>
+                  <p className="text-xs text-text-secondary dark:text-white/70 mt-2 italic">
+                    You can clear your browser history after visiting this page.
+                  </p>
+                </div>
+              </div>
+            )}
 
             {/* Therapist Contact */}
             {lcswConfig?.emergencyContact?.phone && (

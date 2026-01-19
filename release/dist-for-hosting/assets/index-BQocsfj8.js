@@ -1,10 +1,10 @@
-const __vite__mapDeps=(i,m=__vite__mapDeps,d=(m.f||(m.f=["assets/transformers-DYceLRQ3.js","assets/onnx-eBVVFwq3.js","assets/db-vendor-CqkAjsCZ.js","assets/vendor-Dvad8g1z.js","assets/useAppInitialization-D3PT5EF8.js","assets/react-vendor-DI6xFhD6.js","assets/ai-services-COb65xmG.js","assets/animations-DuiRUzrK.js"])))=>i.map(i=>d[i]);
-import { j as jsxRuntimeExports, r as reactExports, R as React, a as ReactDOM } from "./react-vendor-DI6xFhD6.js";
-import { _ as __vitePreload, g as getCurrentProgress, s as subscribeToProgress, A as ALL_CRISIS_PHRASES, a as getCategoryDisplayName, b as generateHumanReports, c as getModelStatus, d as getCompatibilityReport, e as generateEmotionalEncouragement } from "./ai-services-COb65xmG.js";
-import { D as Dexie } from "./db-vendor-CqkAjsCZ.js";
-import { v as initSqlJs } from "./vendor-Dvad8g1z.js";
-import { m as motion } from "./animations-DuiRUzrK.js";
-import "./transformers-DYceLRQ3.js";
+const __vite__mapDeps=(i,m=__vite__mapDeps,d=(m.f||(m.f=["assets/ai-services-DJUX-74P.js","assets/db-vendor-CqkAjsCZ.js","assets/vendor-BKChQSPc.js","assets/transformers-CdMs_eeA.js","assets/onnx-eBVVFwq3.js","assets/useAppInitialization-CmNh7W4F.js","assets/react-vendor-BgnRdV3Y.js"])))=>i.map(i=>d[i]);
+import { j as jsxRuntimeExports, r as reactExports, R as React, a as ReactDOM } from "./react-vendor-BgnRdV3Y.js";
+import { d as db, c as createUser, g as getUserByUsername, a as getUserByEmail, b as getUserById, e as getAllUsers, u as updateUser, f as createResetToken, h as getResetToken, i as deleteResetToken, j as cleanupExpiredTokens, k as getFeelingPatterns, l as getProgressMetrics, m as getFeelingFrequency, _ as __vitePreload, n as getCurrentUser, o as acceptTerms, p as logoutUser, q as logger, E as EncryptedPWA, r as getCurrentProgress, s as subscribeToProgress, t as loginUser, v as registerUser, w as requestPasswordReset, x as resetPasswordWithToken, A as ALL_CRISIS_PHRASES, y as getCategoryDisplayName, z as generateHumanReports, B as getModelStatus, C as getCompatibilityReport, D as generateEmotionalEncouragement, F as loadLastSessionToken, G as startCounselingSessionWithTriage, H as continueCounselingSession, I as formatSessionContextForPrompt } from "./ai-services-DJUX-74P.js";
+import { m as motion, A as AnimatePresence } from "./animations-DRv3JgZH.js";
+import "./vendor-BKChQSPc.js";
+import "./db-vendor-CqkAjsCZ.js";
+import "./transformers-CdMs_eeA.js";
 import "./onnx-eBVVFwq3.js";
 (function polyfill() {
   const relList = document.createElement("link").relList;
@@ -122,2324 +122,13 @@ class ErrorBoundary extends reactExports.Component {
     return this.props.children;
   }
 }
-async function deriveKeyFromPassword(password, salt) {
-  const encoder = new TextEncoder();
-  const passwordKey = await crypto.subtle.importKey(
-    "raw",
-    encoder.encode(password),
-    "PBKDF2",
-    false,
-    ["deriveBits", "deriveKey"]
-  );
-  return crypto.subtle.deriveKey(
-    {
-      name: "PBKDF2",
-      salt,
-      iterations: 1e5,
-      // OWASP recommended minimum
-      hash: "SHA-256"
-    },
-    passwordKey,
-    {
-      name: "AES-GCM",
-      length: 256
-    },
-    false,
-    ["encrypt", "decrypt"]
-  );
-}
-function generateSalt() {
-  return crypto.getRandomValues(new Uint8Array(16));
-}
-function generateIV() {
-  return crypto.getRandomValues(new Uint8Array(12));
-}
-async function encryptData(data, password, existingSalt) {
+function isEncryptionEnabled() {
   try {
-    const salt = existingSalt || generateSalt();
-    const key = await deriveKeyFromPassword(password, salt);
-    const iv = generateIV();
-    const encoder = new TextEncoder();
-    const dataBuffer = encoder.encode(data);
-    const encrypted = await crypto.subtle.encrypt(
-      {
-        name: "AES-GCM",
-        iv,
-        tagLength: 128
-        // 128-bit authentication tag
-      },
-      key,
-      dataBuffer
-    );
-    const combined = new Uint8Array(salt.length + iv.length + encrypted.byteLength);
-    combined.set(salt, 0);
-    combined.set(iv, salt.length);
-    combined.set(new Uint8Array(encrypted), salt.length + iv.length);
-    return btoa(String.fromCharCode(...combined));
-  } catch (error) {
-    console.error("Encryption error:", error);
-    throw new Error("Failed to encrypt data");
-  }
-}
-async function decryptData(encryptedData, password) {
-  try {
-    const combined = Uint8Array.from(
-      atob(encryptedData),
-      (c) => c.charCodeAt(0)
-    );
-    const salt = combined.slice(0, 16);
-    const iv = combined.slice(16, 28);
-    const encrypted = combined.slice(28);
-    const key = await deriveKeyFromPassword(password, salt);
-    const decrypted = await crypto.subtle.decrypt(
-      {
-        name: "AES-GCM",
-        iv,
-        tagLength: 128
-      },
-      key,
-      encrypted
-    );
-    const decoder = new TextDecoder();
-    return decoder.decode(decrypted);
-  } catch (error) {
-    console.error("Decryption error:", error);
-    throw new Error("Failed to decrypt data - incorrect password or corrupted data");
-  }
-}
-const DB_NAME = "groundedDB";
-const CURRENT_DB_VERSION = 4;
-class GroundedDB extends Dexie {
-  constructor() {
-    super(DB_NAME);
-    this.version(3).stores({
-      // Users store - keyPath: id, indexes: username (unique), email (unique)
-      users: "id, username, email",
-      // AppData store - keyPath: userId (for backward compatibility)
-      appData: "userId",
-      // Values store - auto-increment id, indexes: userId, valueId, active, createdAt, compound [userId+active]
-      values: "++id, userId, valueId, active, createdAt, [userId+active]",
-      // Goals store - keyPath: id, indexes: userId, valueId, completed, createdAt
-      goals: "id, userId, valueId, completed, createdAt",
-      // FeelingLogs store - keyPath: id, indexes: timestamp, emotionalState, userId
-      feelingLogs: "id, timestamp, emotionalState, userId",
-      // UserInteractions store - keyPath: id, indexes: timestamp, sessionId, type
-      userInteractions: "id, timestamp, sessionId, type",
-      // Sessions store - keyPath: id, indexes: startTimestamp, valueId, userId
-      sessions: "id, startTimestamp, valueId, userId",
-      // Assessments store - keyPath: id, indexes: userId, timestamp
-      assessments: "id, userId, timestamp",
-      // Reports store - keyPath: id, indexes: userId, timestamp
-      reports: "id, userId, timestamp",
-      // ResetTokens store - keyPath: token, indexes: userId, expires
-      resetTokens: "token, userId, expires",
-      // Metadata store - keyPath: id, indexes: appId, platform
-      metadata: "id, appId, platform",
-      // RuleBasedUsageLogs store - keyPath: id, indexes: timestamp, type
-      ruleBasedUsageLogs: "id, timestamp, type"
-    });
-    this.version(4).stores({
-      // UserInteractions store - add userId index
-      userInteractions: "id, timestamp, sessionId, type, userId",
-      // RuleBasedUsageLogs store - add userId index
-      ruleBasedUsageLogs: "id, timestamp, type, userId"
-    }).upgrade(async (tx) => {
-      const sessions = await tx.table("sessions").toCollection().toArray();
-      const sessionUserIdMap = new Map(sessions.map((s) => [s.id, s.userId]));
-      const interactions = await tx.table("userInteractions").toCollection().toArray();
-      for (const interaction of interactions) {
-        if (!interaction.userId && interaction.sessionId) {
-          const userId = sessionUserIdMap.get(interaction.sessionId);
-          if (userId) {
-            await tx.table("userInteractions").update(interaction.id, { userId });
-          }
-        }
-      }
-      console.log("[Dexie] Version 4 migration: Added userId indexes to userInteractions and ruleBasedUsageLogs");
-    });
-    this.setupEncryptionHooks();
-  }
-  /**
-   * Setup encryption hooks for PHI data stores
-   * Note: Encryption is now handled at the adapter level (LegacyAdapter)
-   * Hooks are kept for future use but currently just mark fields
-   */
-  setupEncryptionHooks() {
-  }
-  /**
-   * Check if encryption should be applied
-   */
-  shouldEncrypt() {
     return localStorage.getItem("encryption_enabled") === "true";
-  }
-  /**
-   * Check if decryption should be applied
-   */
-  shouldDecrypt() {
-    return localStorage.getItem("encryption_enabled") === "true";
-  }
-  /**
-   * Get encryption password from session storage
-   */
-  async getEncryptionPassword() {
-    const password = sessionStorage.getItem("encryption_password");
-    if (!password) {
-      throw new Error("Encryption password not available - user must be logged in");
-    }
-    return password;
-  }
-  /**
-   * Encrypt a field value
-   */
-  async encryptField(value, fieldName) {
-    if (typeof value !== "string") {
-      value = JSON.stringify(value);
-    }
-    const password = await this.getEncryptionPassword();
-    return await encryptData(value, password);
-  }
-  /**
-   * Decrypt a field value
-   */
-  async decryptField(encryptedValue, fieldName) {
-    const password = await this.getEncryptionPassword();
-    const decrypted = await decryptData(encryptedValue, password);
-    try {
-      return JSON.parse(decrypted);
-    } catch {
-      return decrypted;
-    }
-  }
-  /**
-   * Encrypt an object's PHI fields
-   */
-  async encryptObject(obj) {
-    if (!this.shouldEncrypt()) {
-      return obj;
-    }
-    const encrypted = { ...obj };
-    const fieldsToEncrypt = [
-      "passwordHash",
-      "email",
-      "therapistEmails",
-      // User data
-      "aiResponse",
-      "jsonIn",
-      "jsonOut",
-      // Feeling logs
-      "reflectionText",
-      "aiAnalysis",
-      // Sessions
-      "content",
-      "assessment",
-      "report"
-      // Assessments/Reports
-    ];
-    for (const field of fieldsToEncrypt) {
-      if (encrypted[field] && typeof encrypted[field] === "string" && !encrypted[`${field}_encrypted`]) {
-        try {
-          encrypted[field] = await this.encryptField(encrypted[field], field);
-          encrypted[`${field}_encrypted`] = true;
-        } catch (error) {
-          console.error(`[Dexie] Failed to encrypt field ${field}:`, error);
-        }
-      }
-    }
-    return encrypted;
-  }
-  /**
-   * Decrypt an object's PHI fields
-   */
-  async decryptObject(obj) {
-    if (!this.shouldDecrypt()) {
-      return obj;
-    }
-    const decrypted = { ...obj };
-    const fieldsToDecrypt = [
-      "passwordHash",
-      "email",
-      "therapistEmails",
-      "aiResponse",
-      "jsonIn",
-      "jsonOut",
-      "reflectionText",
-      "aiAnalysis",
-      "content",
-      "assessment",
-      "report"
-    ];
-    for (const field of fieldsToDecrypt) {
-      if (decrypted[`${field}_encrypted`] && decrypted[field] && typeof decrypted[field] === "string") {
-        try {
-          decrypted[field] = await this.decryptField(decrypted[field], field);
-          delete decrypted[`${field}_encrypted`];
-        } catch (error) {
-          console.error(`[Dexie] Failed to decrypt field ${field}:`, error);
-          decrypted[field] = null;
-        }
-      }
-    }
-    return decrypted;
-  }
-  /**
-   * Reset database - deletes and recreates with clean schema
-   * Use this to resolve version conflicts or start fresh
-   */
-  async resetDatabase() {
-    console.log("[Dexie] Resetting database...");
-    try {
-      this.close();
-    } catch (e) {
-    }
-    await new Promise((resolve, reject) => {
-      const deleteRequest = indexedDB.deleteDatabase(DB_NAME);
-      deleteRequest.onsuccess = () => {
-        console.log(`[Dexie] Database ${DB_NAME} deleted successfully`);
-        resolve();
-      };
-      deleteRequest.onerror = () => {
-        console.error("[Dexie] Failed to delete database:", deleteRequest.error);
-        reject(deleteRequest.error);
-      };
-      deleteRequest.onblocked = () => {
-        console.warn("[Dexie] Database deletion blocked - another tab may have it open");
-        setTimeout(() => resolve(), 1e3);
-      };
-    });
-    localStorage.removeItem("dexie_migration_v7_to_v8");
-    sessionStorage.removeItem("dexie_export_before_recovery");
-    await this.open();
-    console.log(`[Dexie] Database reset complete - opened with version ${CURRENT_DB_VERSION}`);
-  }
-  /**
-   * Initialize database and clean up old databases
-   * Should be called after construction to perform async cleanup
-   * Includes automatic version error recovery with data preservation option
-   */
-  async initialize() {
-    await this.cleanupOldDatabase();
-    const { version: existingVersion, needsReset: versionNeedsReset } = await this.checkExistingVersion();
-    if (versionNeedsReset) {
-      console.warn("[Dexie] Database version bug detected - resetting database to fix version...");
-      try {
-        const exportData = await exportFromRawIndexedDB();
-        if (exportData && Object.keys(exportData).length > 0) {
-          sessionStorage.setItem("dexie_export_before_recovery", JSON.stringify(exportData));
-          console.log("[Dexie] Data exported before reset - stored in sessionStorage");
-        }
-      } catch (exportError) {
-        console.warn("[Dexie] Could not export data before reset:", exportError);
-      }
-      await this.resetDatabase();
-    } else if (existingVersion !== null && existingVersion !== 0) {
-      const existingVersionNum = typeof existingVersion === "number" ? existingVersion : parseInt(String(existingVersion), 10);
-      const currentVersionNum = CURRENT_DB_VERSION;
-      if (existingVersionNum > currentVersionNum && existingVersionNum < 100) {
-        console.warn(
-          `[Dexie] Existing database version (${existingVersionNum}) is higher than requested (${currentVersionNum}). Resetting database...`
-        );
-        try {
-          const exportData = await exportFromRawIndexedDB();
-          if (exportData && Object.keys(exportData).length > 0) {
-            sessionStorage.setItem("dexie_export_before_recovery", JSON.stringify(exportData));
-            console.log("[Dexie] Data exported before reset - stored in sessionStorage");
-          }
-        } catch (exportError) {
-          console.warn("[Dexie] Could not export data before reset:", exportError);
-        }
-        await this.resetDatabase();
-      } else if (existingVersionNum >= 100 || existingVersionNum > 10 && existingVersionNum % 10 === 0) {
-        console.warn(
-          `[Dexie] Detected invalid database version (${existingVersionNum}) - likely a bug. Resetting to version ${currentVersionNum}...`
-        );
-        await this.resetDatabase();
-      } else if (existingVersionNum === currentVersionNum) {
-        console.log(`[Dexie] Database version matches current version (${currentVersionNum})`);
-      } else if (existingVersionNum < currentVersionNum) {
-        console.log(`[Dexie] Database version (${existingVersionNum}) is lower than current (${currentVersionNum}) - will upgrade automatically`);
-      }
-    }
-    try {
-      await this.openDatabaseWithRecovery();
-    } catch (error) {
-      if (error?.name === "VersionError" || error?.message?.includes("version")) {
-        console.warn("[Dexie] Version error persists after recovery attempt - performing hard reset");
-        await this.resetDatabase();
-        await this.open();
-      } else {
-        throw error;
-      }
-    }
-  }
-  /**
-   * Check the existing database version using raw IndexedDB API
-   * Returns null if database doesn't exist, or the version number if it does
-   * CRITICAL: Ensures version is parsed as a proper number (not string concatenation)
-   */
-  async checkExistingVersion() {
-    return new Promise((resolve) => {
-      const request = indexedDB.open(DB_NAME);
-      request.onsuccess = () => {
-        const db2 = request.result;
-        let version = db2.version;
-        if (typeof version === "string") {
-          version = parseInt(version, 10);
-        } else if (typeof version === "number") {
-          version = Math.floor(version);
-        } else {
-          console.warn("[Dexie] Invalid version type:", typeof version, version);
-          db2.close();
-          resolve({ version: null, needsReset: false });
-          return;
-        }
-        if (version > 100 || version < 0) {
-          console.warn(`[Dexie] Suspicious database version detected: ${version}. This is likely a bug. Treating as version 0.`);
-          db2.close();
-          resolve({ version: 0, needsReset: true });
-          return;
-        }
-        if (version > 10 && version % 10 === 0) {
-          const versionStr = String(version);
-          if (versionStr.length === 2 && versionStr[1] === "0") {
-            const correctedVersion = parseInt(versionStr[0], 10);
-            console.warn(`[Dexie] Detected likely version concatenation bug: ${version} -> correcting to ${correctedVersion}`);
-            db2.close();
-            resolve({ version: correctedVersion, needsReset: true });
-            return;
-          }
-        }
-        db2.close();
-        resolve({ version, needsReset: false });
-      };
-      request.onerror = () => {
-        resolve({ version: null, needsReset: false });
-      };
-      request.onupgradeneeded = (event) => {
-        const db2 = event.target.result;
-        db2.close();
-        resolve({ version: 0, needsReset: false });
-      };
-      request.onblocked = () => {
-        resolve({ version: null, needsReset: false });
-      };
-    });
-  }
-  /**
-   * Open database with automatic recovery from VersionError
-   * Automatically handles version mismatches by resetting the database
-   */
-  async openDatabaseWithRecovery() {
-    try {
-      await this.open();
-      console.log(`[Dexie] Database opened successfully (version ${CURRENT_DB_VERSION})`);
-    } catch (error) {
-      if (error?.name === "VersionError" || error?.message?.includes("version")) {
-        console.warn(
-          `[Dexie] Version mismatch detected: expected version ${CURRENT_DB_VERSION}, but existing version is different. Resetting database...`
-        );
-        console.warn(`[Dexie] Error details: ${error.message}`);
-        let dataExported = false;
-        try {
-          const exportData = await this.exportDatabaseInternal();
-          if (exportData && Object.keys(exportData).length > 0) {
-            sessionStorage.setItem("dexie_export_before_recovery", JSON.stringify(exportData));
-            dataExported = true;
-            console.log("[Dexie] Data exported before reset - stored in sessionStorage");
-          }
-        } catch (exportError) {
-          console.warn("[Dexie] Could not export data before reset (non-critical):", exportError);
-        }
-        await this.resetDatabase();
-        if (dataExported) {
-          console.log("[Dexie] Data export available in sessionStorage - you can import it manually if needed");
-        }
-        return;
-      } else {
-        console.error("[Dexie] Failed to open database:", error);
-        throw error;
-      }
-    }
-  }
-  /**
-   * Clean up old database if it exists
-   * Removes the old database name 'com.acminds.grounded.therapy.db' if present
-   */
-  async cleanupOldDatabase() {
-    try {
-      if (typeof indexedDB === "undefined") {
-        return;
-      }
-      const oldDbName = "com.acminds.grounded.therapy.db";
-      if ("databases" in indexedDB) {
-        const databases = await indexedDB.databases();
-        const oldDb = databases.find((db2) => db2.name === oldDbName);
-        if (oldDb) {
-          try {
-            await new Promise((resolve, reject) => {
-              const deleteRequest = indexedDB.deleteDatabase(oldDbName);
-              deleteRequest.onsuccess = () => {
-                console.log("[Dexie] Old database cleaned up successfully");
-                resolve();
-              };
-              deleteRequest.onerror = () => {
-                console.warn("[Dexie] Failed to delete old database:", deleteRequest.error);
-                resolve();
-              };
-              deleteRequest.onblocked = () => {
-                console.warn("[Dexie] Old database deletion blocked - another tab may have it open");
-                setTimeout(() => resolve(), 1e3);
-              };
-            });
-          } catch (error) {
-            console.warn("[Dexie] Error during old database cleanup:", error);
-          }
-        }
-      }
-    } catch (error) {
-      console.warn("[Dexie] Error checking for old database:", error);
-    }
-  }
-}
-const db = new GroundedDB();
-async function exportFromRawIndexedDB() {
-  try {
-    const exportData = {};
-    return new Promise((resolve) => {
-      const request = indexedDB.open(DB_NAME);
-      request.onsuccess = async () => {
-        const rawDb = request.result;
-        const storeNames = Array.from(rawDb.objectStoreNames);
-        for (const storeName of storeNames) {
-          try {
-            const transaction = rawDb.transaction([storeName], "readonly");
-            const store = transaction.objectStore(storeName);
-            const getAllRequest = store.getAll();
-            await new Promise((resolveStore) => {
-              getAllRequest.onsuccess = () => {
-                exportData[storeName] = getAllRequest.result;
-                resolveStore();
-              };
-              getAllRequest.onerror = () => {
-                console.warn(`[Dexie] Could not read store ${storeName}`);
-                exportData[storeName] = [];
-                resolveStore();
-              };
-            });
-          } catch (err) {
-            console.warn(`[Dexie] Error exporting ${storeName}:`, err);
-            exportData[storeName] = [];
-          }
-        }
-        rawDb.close();
-        resolve(exportData);
-      };
-      request.onerror = () => {
-        console.warn("[Dexie] Could not open database for export");
-        resolve(null);
-      };
-      request.onblocked = () => {
-        console.warn("[Dexie] Database open blocked");
-        resolve(null);
-      };
-    });
-  } catch (err) {
-    console.warn("[Dexie] Raw IndexedDB export failed:", err);
-    return null;
-  }
-}
-if (typeof window !== "undefined") {
-  console.log("[Privacy] Cloud sync disabled - all data remains on-device");
-}
-async function createUser(userData) {
-  try {
-    if (!db.isOpen()) {
-      await db.open();
-    }
-    const id = `user_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
-    const user = {
-      ...userData,
-      id,
-      createdAt: (/* @__PURE__ */ new Date()).toISOString()
-    };
-    await db.users.add(user);
-    return id;
   } catch (error) {
-    console.error("[Dexie] Error creating user:", error);
-    throw error;
-  }
-}
-async function getUserByUsername(username) {
-  try {
-    if (!db.isOpen()) {
-      await db.open();
-    }
-    const user = await db.users.where("username").equals(username).first();
-    return user || null;
-  } catch (error) {
-    console.error("[Dexie] Error getting user by username:", error);
-    return null;
-  }
-}
-async function getUserByEmail(email) {
-  try {
-    if (!db.isOpen()) {
-      await db.open();
-    }
-    const user = await db.users.where("email").equals(email).first();
-    return user || null;
-  } catch (error) {
-    console.error("[Dexie] Error getting user by email:", error);
-    return null;
-  }
-}
-async function getUserById(userId) {
-  try {
-    if (!db.isOpen()) {
-      await db.open();
-    }
-    const user = await db.users.get(userId);
-    return user || null;
-  } catch (error) {
-    console.error("[Dexie] Error getting user by id:", error);
-    return null;
-  }
-}
-async function getAllUsers() {
-  try {
-    if (!db.isOpen()) {
-      await db.open();
-    }
-    return await db.users.toArray();
-  } catch (error) {
-    console.error("[Dexie] Error getting all users:", error);
-    return [];
-  }
-}
-async function updateUser(userId, updates) {
-  try {
-    if (!db.isOpen()) {
-      await db.open();
-    }
-    const user = await db.users.get(userId);
-    if (!user) {
-      throw new Error("User not found");
-    }
-    await db.users.update(userId, updates);
-  } catch (error) {
-    console.error("[Dexie] Error updating user:", error);
-    throw error;
-  }
-}
-async function createResetToken(userId, email) {
-  try {
-    if (!db.isOpen()) {
-      await db.open();
-    }
-    const token = `token_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
-    const expires = Date.now() + 24 * 60 * 60 * 1e3;
-    await db.resetTokens.add({
-      token,
-      userId,
-      email,
-      expires: expires.toString(),
-      // Store as string for consistency
-      createdAt: (/* @__PURE__ */ new Date()).toISOString()
-    });
-    return token;
-  } catch (error) {
-    console.error("[Dexie] Error creating reset token:", error);
-    throw error;
-  }
-}
-async function getResetToken(token) {
-  try {
-    if (!db.isOpen()) {
-      await db.open();
-    }
-    const tokenRecord = await db.resetTokens.get(token);
-    if (!tokenRecord) {
-      return null;
-    }
-    let expires;
-    if (typeof tokenRecord.expires === "string") {
-      expires = parseInt(tokenRecord.expires, 10);
-    } else {
-      expires = tokenRecord.expires;
-    }
-    if (isNaN(expires) || expires < Date.now()) {
-      return null;
-    }
-    return { userId: tokenRecord.userId, email: tokenRecord.email };
-  } catch (error) {
-    console.error("[Dexie] Error getting reset token:", error);
-    return null;
-  }
-}
-async function deleteResetToken(token) {
-  try {
-    if (!db.isOpen()) {
-      await db.open();
-    }
-    await db.resetTokens.delete(token);
-  } catch (error) {
-    console.error("[Dexie] Error deleting reset token:", error);
-    throw error;
-  }
-}
-async function cleanupExpiredTokens() {
-  try {
-    if (!db.isOpen()) {
-      await db.open();
-    }
-    const now = Date.now();
-    const tokens = await db.resetTokens.toArray();
-    const expiredTokens = tokens.filter((t) => {
-      let expires;
-      if (typeof t.expires === "string") {
-        expires = parseInt(t.expires, 10);
-      } else {
-        expires = t.expires;
-      }
-      return !isNaN(expires) && expires < now;
-    });
-    await Promise.all(expiredTokens.map((t) => db.resetTokens.delete(t.token)));
-  } catch (error) {
-    console.error("[Dexie] Error cleaning up expired tokens:", error);
-  }
-}
-async function getFeelingPatterns(startDate, endDate) {
-  try {
-    if (!db.isOpen()) {
-      await db.open();
-    }
-    const logs = await db.feelingLogs.where("timestamp").between(startDate, endDate, true, true).toArray();
-    const patterns = {};
-    logs.forEach((log) => {
-      const state = log.emotionalState || log.emotion || "unknown";
-      patterns[state] = (patterns[state] || 0) + 1;
-    });
-    return Object.entries(patterns).map(([state, count]) => ({ state, count }));
-  } catch (error) {
-    console.error("[Dexie] Error getting feeling patterns:", error);
-    return [];
-  }
-}
-async function getProgressMetrics(startDate, endDate) {
-  try {
-    if (!db.isOpen()) {
-      await db.open();
-    }
-    const sessions = await db.sessions.where("startTimestamp").between(startDate, endDate, true, true).toArray();
-    const totalSessions = sessions.length;
-    const completedSessions = sessions.filter((s) => s.duration !== void 0 && s.duration !== null);
-    const averageDuration = completedSessions.length > 0 ? completedSessions.reduce((sum, s) => sum + (s.duration || 0), 0) / completedSessions.length : 0;
-    const valuesEngaged = [...new Set(sessions.map((s) => s.valueId).filter(Boolean))];
-    return { totalSessions, averageDuration, valuesEngaged };
-  } catch (error) {
-    console.error("[Dexie] Error getting progress metrics:", error);
-    return { totalSessions: 0, averageDuration: 0, valuesEngaged: [] };
-  }
-}
-async function getFeelingFrequency(limit) {
-  try {
-    if (!db.isOpen()) {
-      await db.open();
-    }
-    const logs = await db.feelingLogs.orderBy("timestamp").reverse().toArray();
-    const frequency = {};
-    const logsToProcess = limit ? logs.slice(0, limit) : logs;
-    logsToProcess.forEach((log) => {
-      const feeling = log.selectedFeeling;
-      if (feeling) {
-        frequency[feeling] = (frequency[feeling] || 0) + 1;
-      }
-    });
-    return Object.entries(frequency).map(([feeling, count]) => ({ feeling, count })).sort((a, b) => b.count - a.count);
-  } catch (error) {
-    console.error("[Dexie] Error getting feeling frequency:", error);
-    return [];
-  }
-}
-async function isMigrationComplete() {
-  try {
-    const migrationMarker = localStorage.getItem("auth_migration_complete");
-    return migrationMarker === "true";
-  } catch {
+    console.error("[LegacyAdapter] Error checking encryption status:", error);
     return false;
   }
-}
-async function markMigrationComplete() {
-  try {
-    localStorage.setItem("auth_migration_complete", "true");
-    console.log("[Migration] Migration marked as complete");
-  } catch (error) {
-    console.error("[Migration] Failed to mark migration complete:", error);
-  }
-}
-async function readUsersFromAuthDB() {
-  return new Promise((resolve, reject) => {
-    if (typeof indexedDB === "undefined") {
-      resolve([]);
-      return;
-    }
-    const request = indexedDB.open("groundedAuthDB", 1);
-    request.onsuccess = () => {
-      const authDb = request.result;
-      if (!authDb.objectStoreNames.contains("users")) {
-        console.log("[Migration] groundedAuthDB has no users store - nothing to migrate");
-        authDb.close();
-        resolve([]);
-        return;
-      }
-      const transaction = authDb.transaction(["users"], "readonly");
-      const store = transaction.objectStore("users");
-      const getAllRequest = store.getAll();
-      getAllRequest.onsuccess = () => {
-        const users = getAllRequest.result || [];
-        console.log(`[Migration] Found ${users.length} user(s) in groundedAuthDB`);
-        authDb.close();
-        resolve(users);
-      };
-      getAllRequest.onerror = () => {
-        console.error("[Migration] Error reading users from groundedAuthDB:", getAllRequest.error);
-        authDb.close();
-        reject(getAllRequest.error);
-      };
-    };
-    request.onerror = () => {
-      if (request.error?.name === "NotFoundError") {
-        console.log("[Migration] groundedAuthDB does not exist - nothing to migrate");
-        resolve([]);
-      } else {
-        console.error("[Migration] Error opening groundedAuthDB:", request.error);
-        reject(request.error);
-      }
-    };
-    request.onupgradeneeded = () => {
-      request.transaction?.abort();
-      resolve([]);
-    };
-  });
-}
-async function migrateUsersToDexie(users) {
-  if (users.length === 0) {
-    return 0;
-  }
-  let migratedCount = 0;
-  let skippedCount = 0;
-  let errorCount = 0;
-  for (const user of users) {
-    try {
-      const existing = await db.users.get(user.id);
-      if (existing) {
-        console.log(`[Migration] User ${user.username} already exists in groundedDB - skipping`);
-        skippedCount++;
-        continue;
-      }
-      const userRecord = {
-        id: user.id,
-        username: user.username,
-        passwordHash: user.passwordHash,
-        email: user.email,
-        therapistEmails: user.therapistEmails,
-        termsAccepted: user.termsAccepted,
-        termsAcceptedDate: user.termsAcceptedDate,
-        createdAt: user.createdAt,
-        lastLogin: user.lastLogin
-      };
-      await db.users.add(userRecord);
-      migratedCount++;
-      console.log(`[Migration] Migrated user: ${user.username} (${user.id})`);
-    } catch (error) {
-      if (error?.name === "ConstraintError" || error?.message?.includes("already exists")) {
-        console.log(`[Migration] User ${user.username} already exists - skipping`);
-        skippedCount++;
-      } else {
-        console.error(`[Migration] Error migrating user ${user.username}:`, error);
-        errorCount++;
-      }
-    }
-  }
-  console.log(`[Migration] Migration complete: ${migratedCount} migrated, ${skippedCount} skipped, ${errorCount} errors`);
-  return migratedCount;
-}
-async function migrateAuthToDexie() {
-  try {
-    if (await isMigrationComplete()) {
-      console.log("[Migration] Migration already completed - skipping");
-      return { success: true, migrated: 0, skipped: 0, errors: 0 };
-    }
-    console.log("[Migration] Starting migration from groundedAuthDB to groundedDB...");
-    await db.open();
-    const users = await readUsersFromAuthDB();
-    if (users.length === 0) {
-      console.log("[Migration] No users to migrate");
-      await markMigrationComplete();
-      return { success: true, migrated: 0, skipped: 0, errors: 0 };
-    }
-    const migrated = await migrateUsersToDexie(users);
-    await markMigrationComplete();
-    return {
-      success: true,
-      migrated,
-      skipped: users.length - migrated,
-      errors: 0
-    };
-  } catch (error) {
-    console.error("[Migration] Migration failed:", error);
-    return {
-      success: false,
-      migrated: 0,
-      skipped: 0,
-      errors: 1
-    };
-  }
-}
-class AuthStore {
-  constructor() {
-    this.initPromise = null;
-    this.migrationRun = false;
-  }
-  /**
-   * Initialize the authentication store
-   * Runs migration from groundedAuthDB on first init
-   */
-  async init() {
-    if (this.initPromise) {
-      return this.initPromise;
-    }
-    this.initPromise = (async () => {
-      await db.open();
-      if (!this.migrationRun) {
-        this.migrationRun = true;
-        try {
-          const result = await migrateAuthToDexie();
-          if (result.success && result.migrated > 0) {
-            console.log(`[AuthStore] Migrated ${result.migrated} user(s) from groundedAuthDB`);
-          }
-        } catch (error) {
-          console.error("[AuthStore] Migration error (non-fatal):", error);
-        }
-      }
-      try {
-        const userCount = await db.users.count();
-        console.log(`[AuthStore] Database initialized. User count: ${userCount}`);
-        if (userCount === 0 && typeof localStorage !== "undefined") {
-          await this.recoverFromLocalStorage();
-        }
-      } catch (error) {
-        console.error("[AuthStore] Error during verification:", error);
-      }
-    })();
-    return this.initPromise;
-  }
-  /**
-   * Recover users from localStorage backups
-   */
-  async recoverFromLocalStorage() {
-    try {
-      const recoveredUsers = [];
-      const latestUserBackup = localStorage.getItem("auth_latest_user");
-      if (latestUserBackup) {
-        try {
-          const latestUser = JSON.parse(latestUserBackup);
-          if (latestUser?.id && latestUser?.username) {
-            recoveredUsers.push(latestUser);
-            console.log("[AuthStore] Found latest user backup:", { userId: latestUser.id, username: latestUser.username });
-          }
-        } catch (e) {
-          console.warn("[AuthStore] Failed to parse latest user backup:", e);
-        }
-      }
-      const keys = [];
-      for (let i = 0; i < localStorage.length; i++) {
-        const key = localStorage.key(i);
-        if (key && key.startsWith("auth_user_backup_")) {
-          keys.push(key);
-        }
-      }
-      for (const key of keys) {
-        try {
-          const backup = localStorage.getItem(key);
-          if (backup) {
-            const user = JSON.parse(backup);
-            if (user?.id && user?.username && !recoveredUsers.find((u) => u.id === user.id)) {
-              recoveredUsers.push(user);
-            }
-          }
-        } catch (e) {
-          console.warn("[AuthStore] Failed to parse backup:", key, e);
-        }
-      }
-      if (recoveredUsers.length > 0) {
-        console.log(`[AuthStore] Attempting to restore ${recoveredUsers.length} user(s) from backups...`);
-        for (const user of recoveredUsers) {
-          try {
-            const existing = await db.users.get(user.id);
-            if (!existing) {
-              await db.users.add(user);
-              console.log("[AuthStore] Restored user:", user.username);
-            }
-          } catch (error) {
-            if (error?.name !== "ConstraintError") {
-              console.error("[AuthStore] Failed to restore user:", user.username, error);
-            }
-          }
-        }
-      }
-    } catch (error) {
-      console.error("[AuthStore] Error during localStorage recovery:", error);
-    }
-  }
-  /**
-   * Create a new user
-   */
-  async createUser(userData) {
-    await this.init();
-    const id = `user_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
-    const user = {
-      ...userData,
-      id,
-      createdAt: (/* @__PURE__ */ new Date()).toISOString()
-    };
-    try {
-      await db.users.add(user);
-      if (typeof localStorage !== "undefined") {
-        try {
-          localStorage.setItem(`auth_user_backup_${id}`, JSON.stringify(user));
-          localStorage.setItem("auth_latest_user", JSON.stringify(user));
-        } catch (e) {
-          console.warn("[AuthStore] Failed to backup user:", e);
-        }
-      }
-      const saved = await db.users.get(id);
-      if (!saved) {
-        throw new Error("User was not saved correctly");
-      }
-      console.log("[AuthStore] User created:", { userId: id, username: userData.username });
-      return id;
-    } catch (error) {
-      if (error?.name === "ConstraintError") {
-        throw new Error("Username or email already exists");
-      }
-      throw error;
-    }
-  }
-  /**
-   * Get user by username
-   */
-  async getUserByUsername(username) {
-    await this.init();
-    return await db.users.where("username").equals(username).first() || null;
-  }
-  /**
-   * Get user by email
-   */
-  async getUserByEmail(email) {
-    await this.init();
-    return await db.users.where("email").equals(email).first() || null;
-  }
-  /**
-   * Get all users
-   */
-  async getAllUsers() {
-    await this.init();
-    const users = await db.users.toArray();
-    if (users.length === 0) {
-      await this.recoverFromLocalStorage();
-      return await db.users.toArray();
-    }
-    return users;
-  }
-  /**
-   * Get user by ID
-   */
-  async getUserById(userId) {
-    await this.init();
-    return await db.users.get(userId) || null;
-  }
-  /**
-   * Update user
-   */
-  async updateUser(userId, updates) {
-    await this.init();
-    const user = await db.users.get(userId);
-    if (!user) {
-      throw new Error("User not found");
-    }
-    const updated = { ...user, ...updates };
-    await db.users.put(updated);
-    if (typeof localStorage !== "undefined") {
-      try {
-        localStorage.setItem(`auth_user_backup_${userId}`, JSON.stringify(updated));
-        const latest = localStorage.getItem("auth_latest_user");
-        if (latest) {
-          const latestUser = JSON.parse(latest);
-          if (latestUser.id === userId) {
-            localStorage.setItem("auth_latest_user", JSON.stringify(updated));
-          }
-        }
-      } catch (e) {
-        console.warn("[AuthStore] Failed to update backup:", e);
-      }
-    }
-  }
-  /**
-   * Create reset token (uses groundedDB.resetTokens)
-   */
-  async createResetToken(userId, email) {
-    await this.init();
-    const token = `reset_${Date.now()}_${Math.random().toString(36).substr(2, 16)}`;
-    const expires = Date.now() + 24 * 60 * 60 * 1e3;
-    const tokenData = {
-      token,
-      userId,
-      email,
-      expires: new Date(expires).toISOString(),
-      createdAt: (/* @__PURE__ */ new Date()).toISOString()
-    };
-    await db.resetTokens.add(tokenData);
-    return token;
-  }
-  /**
-   * Get reset token
-   */
-  async getResetToken(token) {
-    await this.init();
-    const result = await db.resetTokens.get(token);
-    if (!result) {
-      return null;
-    }
-    const expires = new Date(result.expires).getTime();
-    if (expires < Date.now()) {
-      return null;
-    }
-    return {
-      userId: result.userId,
-      email: result.email
-    };
-  }
-  /**
-   * Delete reset token
-   */
-  async deleteResetToken(token) {
-    await this.init();
-    await db.resetTokens.delete(token);
-  }
-  /**
-   * Cleanup expired tokens
-   */
-  async cleanupExpiredTokens() {
-    await this.init();
-    const now = Date.now();
-    const expired = await db.resetTokens.where("expires").below(new Date(now).toISOString()).toArray();
-    for (const token of expired) {
-      await db.resetTokens.delete(token.token);
-    }
-  }
-}
-const authStore = new AuthStore();
-const authStore$1 = /* @__PURE__ */ Object.freeze(/* @__PURE__ */ Object.defineProperty({
-  __proto__: null,
-  authStore
-}, Symbol.toStringTag, { value: "Module" }));
-const _EncryptedPWA = class _EncryptedPWA {
-  constructor(userId) {
-    this.db = null;
-    this.encryptionKey = null;
-    this.initialized = false;
-    this.userId = userId;
-  }
-  /**
-   * Initialize sql.js module (call once)
-   * Works in both browser and Node.js environments
-   */
-  static async initSQL() {
-    if (!_EncryptedPWA.SQL) {
-      const isNode = typeof process !== "undefined" && process.versions && process.versions.node;
-      if (isNode) {
-        try {
-          const path = await __vitePreload(() => import("./transformers-DYceLRQ3.js").then((n) => n.O), true ? __vite__mapDeps([0,1,2,3]) : void 0);
-          const pathModule = path.default || path;
-          const wasmPath = pathModule.join(
-            process.cwd(),
-            "node_modules",
-            "sql.js",
-            "dist",
-            "sql-wasm.wasm"
-          );
-          _EncryptedPWA.SQL = await initSqlJs({
-            locateFile: () => wasmPath
-          });
-        } catch (error) {
-          const wasmPath = require.resolve("sql.js/dist/sql-wasm.wasm");
-          _EncryptedPWA.SQL = await initSqlJs({
-            locateFile: () => wasmPath
-          });
-        }
-      } else {
-        _EncryptedPWA.SQL = await initSqlJs({
-          locateFile: (file) => `https://sql.js.org/dist/${file}`
-        });
-      }
-    }
-  }
-  /**
-   * Initialize encrypted database with password
-   */
-  static async init(password, userId) {
-    await _EncryptedPWA.initSQL();
-    const instance = new _EncryptedPWA(userId);
-    await instance.deriveKey(password);
-    await instance.loadOrCreateDB();
-    if (!instance.initialized) {
-      instance.initialized = true;
-    }
-    _EncryptedPWA.instance = instance;
-    return instance;
-  }
-  /**
-   * Get current instance (if initialized)
-   */
-  static getInstance() {
-    return _EncryptedPWA.instance;
-  }
-  /**
-   * Derive encryption key from password using PBKDF2
-   */
-  async deriveKey(password) {
-    const encoder = new TextEncoder();
-    const passwordData = encoder.encode(password);
-    const keyMaterial = await crypto.subtle.importKey(
-      "raw",
-      passwordData,
-      "PBKDF2",
-      false,
-      ["deriveBits", "deriveKey"]
-    );
-    const salt = await this.getOrCreateSalt();
-    this.encryptionKey = await crypto.subtle.deriveKey(
-      {
-        name: "PBKDF2",
-        salt,
-        iterations: 1e5,
-        hash: "SHA-256"
-      },
-      keyMaterial,
-      {
-        name: "AES-GCM",
-        length: 256
-      },
-      false,
-      ["encrypt", "decrypt"]
-    );
-  }
-  /**
-   * Get or create salt for key derivation
-   */
-  async getOrCreateSalt() {
-    const saltKey = "grounded_encryption_salt";
-    let salt = localStorage.getItem(saltKey);
-    if (!salt) {
-      const saltArray = new Uint8Array(16);
-      crypto.getRandomValues(saltArray);
-      salt = Array.from(saltArray).map((b) => b.toString(16).padStart(2, "0")).join("");
-      localStorage.setItem(saltKey, salt);
-    }
-    const saltBytes = new Uint8Array(salt.match(/.{1,2}/g).map((byte) => parseInt(byte, 16)));
-    return saltBytes;
-  }
-  /**
-   * Load or create encrypted database
-   */
-  async loadOrCreateDB() {
-    try {
-      const encryptedData = await this.loadEncryptedDBInternal();
-      if (encryptedData) {
-        const decryptedData = await this.decrypt(encryptedData);
-        await this.initSQLite(decryptedData);
-        this.initialized = true;
-      } else {
-        await this.initSQLite(null);
-        await this.createSchema();
-        this.initialized = true;
-      }
-    } catch (error) {
-      console.error("Error loading database:", error);
-      throw new Error("Failed to load encrypted database. Wrong password?");
-    }
-  }
-  /**
-   * Initialize SQLite database
-   */
-  async initSQLite(data) {
-    if (!_EncryptedPWA.SQL) {
-      await _EncryptedPWA.initSQL();
-    }
-    try {
-      if (data && data.length > 0) {
-        this.db = new _EncryptedPWA.SQL.Database(data);
-      } else {
-        this.db = new _EncryptedPWA.SQL.Database();
-      }
-    } catch (error) {
-      console.error("Error initializing SQLite database:", error);
-      throw new Error("Failed to initialize database. Wrong password or corrupted data?");
-    }
-  }
-  /**
-   * Create database schema
-   */
-  async createSchema() {
-    const schema = `
-      CREATE TABLE IF NOT EXISTS users_encrypted (
-        id TEXT PRIMARY KEY,
-        username TEXT NOT NULL,
-        password_hash TEXT NOT NULL,
-        email TEXT,
-        therapist_emails TEXT,
-        terms_accepted INTEGER DEFAULT 0,
-        terms_accepted_date TEXT,
-        created_at TEXT NOT NULL,
-        last_login TEXT
-      );
-      
-      CREATE TABLE IF NOT EXISTS app_data_encrypted (
-        user_id TEXT PRIMARY KEY,
-        settings TEXT,
-        logs TEXT,
-        goals TEXT,
-        "values" TEXT,
-        lcsw_config TEXT,
-        updated_at TEXT NOT NULL
-      );
-      
-      CREATE TABLE IF NOT EXISTS feeling_logs_encrypted (
-        id TEXT PRIMARY KEY,
-        user_id TEXT,
-        timestamp TEXT NOT NULL,
-        emotional_state TEXT,
-        selected_feeling TEXT,
-        reflection_text TEXT,
-        ai_analysis TEXT,
-        created_at TEXT NOT NULL
-      );
-      
-      CREATE TABLE IF NOT EXISTS goals_encrypted (
-        id TEXT PRIMARY KEY,
-        user_id TEXT NOT NULL,
-        value_id TEXT NOT NULL,
-        text TEXT NOT NULL,
-        frequency TEXT,
-        completed INTEGER DEFAULT 0,
-        created_at TEXT NOT NULL,
-        updated_at TEXT
-      );
-      
-      CREATE TABLE IF NOT EXISTS goal_updates_encrypted (
-        id TEXT PRIMARY KEY,
-        goal_id TEXT NOT NULL,
-        timestamp TEXT NOT NULL,
-        note TEXT,
-        mood TEXT,
-        created_at TEXT NOT NULL,
-        FOREIGN KEY (goal_id) REFERENCES goals_encrypted(id)
-      );
-      
-      CREATE TABLE IF NOT EXISTS reset_tokens_encrypted (
-        token TEXT PRIMARY KEY,
-        user_id TEXT NOT NULL,
-        email TEXT NOT NULL,
-        expires INTEGER NOT NULL,
-        created_at TEXT NOT NULL
-      );
-      
-      CREATE TABLE IF NOT EXISTS user_interactions_encrypted (
-        id TEXT PRIMARY KEY,
-        timestamp TEXT NOT NULL,
-        type TEXT NOT NULL,
-        session_id TEXT NOT NULL,
-        user_id TEXT,
-        value_id TEXT,
-        emotional_state TEXT,
-        selected_feeling TEXT,
-        metadata TEXT,
-        created_at TEXT NOT NULL
-      );
-      
-      CREATE TABLE IF NOT EXISTS sessions_encrypted (
-        id TEXT PRIMARY KEY,
-        user_id TEXT NOT NULL,
-        start_timestamp TEXT NOT NULL,
-        end_timestamp TEXT,
-        value_id TEXT NOT NULL,
-        initial_emotional_state TEXT,
-        final_emotional_state TEXT,
-        selected_feeling TEXT,
-        reflection_length INTEGER,
-        goal_created INTEGER DEFAULT 0,
-        duration INTEGER,
-        created_at TEXT NOT NULL
-      );
-      
-      CREATE TABLE IF NOT EXISTS values_encrypted (
-        id INTEGER PRIMARY KEY AUTOINCREMENT,
-        user_id TEXT NOT NULL,
-        value_id TEXT NOT NULL,
-        active INTEGER DEFAULT 1,
-        priority INTEGER DEFAULT 0,
-        created_at TEXT NOT NULL,
-        updated_at TEXT NOT NULL
-      );
-      
-      CREATE TABLE IF NOT EXISTS assessments_encrypted (
-        id TEXT PRIMARY KEY,
-        user_id TEXT NOT NULL,
-        emotion TEXT NOT NULL,
-        sub_emotion TEXT NOT NULL,
-        reflection TEXT NOT NULL,
-        assessment TEXT NOT NULL,
-        timestamp TEXT NOT NULL,
-        created_at TEXT NOT NULL
-      );
-      
-      CREATE TABLE IF NOT EXISTS reports_encrypted (
-        id TEXT PRIMARY KEY,
-        user_id TEXT NOT NULL,
-        content TEXT NOT NULL,
-        timestamp TEXT NOT NULL,
-        email_addresses TEXT,
-        treatment_protocols TEXT,
-        created_at TEXT NOT NULL
-      );
-      
-      CREATE TABLE IF NOT EXISTS metadata_encrypted (
-        id TEXT PRIMARY KEY,
-        app_name TEXT NOT NULL,
-        app_id TEXT NOT NULL,
-        platform TEXT NOT NULL,
-        version TEXT NOT NULL,
-        created_at TEXT NOT NULL,
-        last_validated TEXT NOT NULL,
-        local_storage_migrated INTEGER DEFAULT 0,
-        migration_date TEXT
-      );
-      
-      CREATE TABLE IF NOT EXISTS rule_based_usage_logs_encrypted (
-        id TEXT PRIMARY KEY,
-        user_id TEXT NOT NULL,
-        timestamp TEXT NOT NULL,
-        operation_type TEXT NOT NULL,
-        emotional_state TEXT,
-        sub_emotion TEXT,
-        value_id TEXT,
-        value_category TEXT,
-        frequency TEXT,
-        fallback_key TEXT NOT NULL,
-        fallback_response TEXT NOT NULL,
-        context TEXT,
-        ai_unavailable_reason TEXT,
-        created_at TEXT NOT NULL
-      );
-      
-      CREATE TABLE IF NOT EXISTS audit_log (
-        id TEXT PRIMARY KEY,
-        timestamp TEXT NOT NULL,
-        user_id INTEGER NOT NULL,
-        action TEXT NOT NULL,
-        table_name TEXT,
-        record_id TEXT,
-        details TEXT
-      );
-      
-      CREATE INDEX IF NOT EXISTS idx_audit_user ON audit_log(user_id);
-      CREATE INDEX IF NOT EXISTS idx_audit_timestamp ON audit_log(timestamp);
-      CREATE INDEX IF NOT EXISTS idx_feeling_logs_user ON feeling_logs_encrypted(user_id);
-      CREATE INDEX IF NOT EXISTS idx_goals_user ON goals_encrypted(user_id);
-      CREATE INDEX IF NOT EXISTS idx_reset_tokens_user ON reset_tokens_encrypted(user_id);
-      CREATE INDEX IF NOT EXISTS idx_reset_tokens_expires ON reset_tokens_encrypted(expires);
-      CREATE INDEX IF NOT EXISTS idx_user_interactions_session ON user_interactions_encrypted(session_id);
-      CREATE INDEX IF NOT EXISTS idx_user_interactions_timestamp ON user_interactions_encrypted(timestamp);
-      CREATE INDEX IF NOT EXISTS idx_sessions_user ON sessions_encrypted(user_id);
-      CREATE INDEX IF NOT EXISTS idx_sessions_value ON sessions_encrypted(value_id);
-      CREATE INDEX IF NOT EXISTS idx_sessions_start ON sessions_encrypted(start_timestamp);
-      CREATE INDEX IF NOT EXISTS idx_values_user_active ON values_encrypted(user_id, active);
-      CREATE INDEX IF NOT EXISTS idx_values_user ON values_encrypted(user_id);
-      CREATE INDEX IF NOT EXISTS idx_values_value ON values_encrypted(value_id);
-      CREATE INDEX IF NOT EXISTS idx_assessments_user ON assessments_encrypted(user_id);
-      CREATE INDEX IF NOT EXISTS idx_assessments_timestamp ON assessments_encrypted(timestamp);
-      CREATE INDEX IF NOT EXISTS idx_reports_user ON reports_encrypted(user_id);
-      CREATE INDEX IF NOT EXISTS idx_reports_timestamp ON reports_encrypted(timestamp);
-      CREATE INDEX IF NOT EXISTS idx_metadata_app_id ON metadata_encrypted(app_id);
-      CREATE INDEX IF NOT EXISTS idx_metadata_platform ON metadata_encrypted(platform);
-      CREATE INDEX IF NOT EXISTS idx_rule_based_logs_timestamp ON rule_based_usage_logs_encrypted(timestamp);
-      CREATE INDEX IF NOT EXISTS idx_rule_based_logs_type ON rule_based_usage_logs_encrypted(operation_type);
-      CREATE INDEX IF NOT EXISTS idx_rule_based_logs_user ON rule_based_usage_logs_encrypted(user_id);
-    `;
-    await this.executeSQL(schema);
-    try {
-      await this.auditLog("schema_created", "system", null, "Database schema initialized");
-    } catch (error) {
-      console.warn("Could not log schema creation:", error);
-    }
-  }
-  /**
-   * Execute SQL statement (for schema creation)
-   */
-  async executeSQL(sql) {
-    if (!this.db) {
-      throw new Error("Database not initialized");
-    }
-    try {
-      const statements = sql.split(";").filter((s) => s.trim().length > 0);
-      for (const statement of statements) {
-        this.db.run(statement.trim() + ";");
-      }
-    } catch (error) {
-      console.error("SQL execution error:", error);
-      throw error;
-    }
-  }
-  /**
-   * Query database (SELECT statements)
-   */
-  async query(sql, params) {
-    if (!this.initialized || !this.encryptionKey || !this.db) {
-      throw new Error("Database not initialized");
-    }
-    try {
-      const stmt = this.db.prepare(sql);
-      if (params && params.length > 0) {
-        stmt.bind(params);
-      }
-      const results = [];
-      while (stmt.step()) {
-        const row = stmt.getAsObject();
-        results.push(row);
-      }
-      stmt.free();
-      return results;
-    } catch (error) {
-      console.error("Query error:", error, "SQL:", sql);
-      throw error;
-    }
-  }
-  /**
-   * Execute SQL statement (INSERT, UPDATE, DELETE)
-   */
-  async execute(sql, params) {
-    if (!this.initialized || !this.encryptionKey || !this.db) {
-      throw new Error("Database not initialized");
-    }
-    try {
-      const stmt = this.db.prepare(sql);
-      if (params && params.length > 0) {
-        stmt.bind(params);
-      }
-      stmt.step();
-      stmt.free();
-    } catch (error) {
-      console.error("Execute error:", error, "SQL:", sql);
-      throw error;
-    }
-  }
-  /**
-   * Save encrypted database to storage
-   */
-  async save() {
-    if (!this.db) {
-      throw new Error("Database not initialized");
-    }
-    try {
-      const dbData = await this.exportDB();
-      const encryptedData = await this.encrypt(dbData);
-      await this.saveEncryptedDB(encryptedData);
-      await this.auditLog("database_saved", "system", null, "Encrypted database saved");
-    } catch (error) {
-      console.error("Error saving database:", error);
-      throw error;
-    }
-  }
-  /**
-   * Export database to binary format
-   */
-  async exportDB() {
-    if (!this.db) {
-      throw new Error("Database not initialized");
-    }
-    try {
-      const data = this.db.export();
-      return new Uint8Array(data);
-    } catch (error) {
-      console.error("Error exporting database:", error);
-      throw error;
-    }
-  }
-  /**
-   * Encrypt data using AES-GCM (public utility)
-   * Can be used for encrypting individual fields or data before storage
-   */
-  async encryptData(data) {
-    return this.encrypt(data);
-  }
-  /**
-   * Decrypt data using AES-GCM (public utility)
-   * Can be used for decrypting individual fields or data after retrieval
-   */
-  async decryptData(encryptedData) {
-    return this.decrypt(encryptedData);
-  }
-  /**
-   * Encrypt data using AES-GCM (internal)
-   */
-  async encrypt(data) {
-    if (!this.encryptionKey) {
-      throw new Error("Encryption key not available");
-    }
-    const iv = crypto.getRandomValues(new Uint8Array(12));
-    const encrypted = await crypto.subtle.encrypt(
-      {
-        name: "AES-GCM",
-        iv
-      },
-      this.encryptionKey,
-      data
-    );
-    const result = new Uint8Array(iv.length + encrypted.byteLength);
-    result.set(iv, 0);
-    result.set(new Uint8Array(encrypted), iv.length);
-    return result.buffer;
-  }
-  /**
-   * Decrypt data using AES-GCM
-   */
-  async decrypt(encryptedData) {
-    if (!this.encryptionKey) {
-      throw new Error("Encryption key not available");
-    }
-    const data = new Uint8Array(encryptedData);
-    const iv = data.slice(0, 12);
-    const encrypted = data.slice(12);
-    try {
-      const decrypted = await crypto.subtle.decrypt(
-        {
-          name: "AES-GCM",
-          iv
-        },
-        this.encryptionKey,
-        encrypted
-      );
-      return new Uint8Array(decrypted);
-    } catch (error) {
-      throw new Error("Failed to decrypt database. Wrong password?");
-    }
-  }
-  /**
-   * Load encrypted database from storage (public for testing)
-   */
-  async loadEncryptedDB() {
-    return this.loadEncryptedDBInternal();
-  }
-  /**
-   * Internal method to load encrypted database
-   */
-  async loadEncryptedDBInternal() {
-    try {
-      if ("FileSystemHandle" in window) {
-        try {
-          const opfsRoot = await navigator.storage.getDirectory();
-          const dbFile = await opfsRoot.getFileHandle("grounded_encrypted.db", { create: false });
-          const file = await dbFile.getFile();
-          return await file.arrayBuffer();
-        } catch (error) {
-        }
-      }
-      const dbName = "grounded_encrypted_storage";
-      const storeName = "encrypted_db";
-      return new Promise((resolve, reject) => {
-        const request = indexedDB.open(dbName, 1);
-        request.onerror = () => reject(request.error);
-        request.onsuccess = () => {
-          const db2 = request.result;
-          if (!db2.objectStoreNames.contains(storeName)) {
-            resolve(null);
-            return;
-          }
-          const transaction = db2.transaction([storeName], "readonly");
-          const store = transaction.objectStore(storeName);
-          const getRequest = store.get("database");
-          getRequest.onsuccess = () => {
-            const result = getRequest.result;
-            resolve(result ? result.data : null);
-          };
-          getRequest.onerror = () => reject(getRequest.error);
-        };
-        request.onupgradeneeded = (event) => {
-          const db2 = event.target.result;
-          if (!db2.objectStoreNames.contains(storeName)) {
-            db2.createObjectStore(storeName);
-          }
-        };
-      });
-    } catch (error) {
-      console.error("Error loading encrypted database:", error);
-      return null;
-    }
-  }
-  /**
-   * Save encrypted database to storage
-   */
-  async saveEncryptedDB(data) {
-    try {
-      if ("FileSystemHandle" in window) {
-        try {
-          const opfsRoot = await navigator.storage.getDirectory();
-          const dbFile = await opfsRoot.getFileHandle("grounded_encrypted.db", { create: true });
-          const writable = await dbFile.createWritable();
-          await writable.write(data);
-          await writable.close();
-          return;
-        } catch (error) {
-        }
-      }
-      const dbName = "grounded_encrypted_storage";
-      const storeName = "encrypted_db";
-      return new Promise((resolve, reject) => {
-        const request = indexedDB.open(dbName, 1);
-        request.onerror = () => reject(request.error);
-        request.onsuccess = () => {
-          const db2 = request.result;
-          const transaction = db2.transaction([storeName], "readwrite");
-          const store = transaction.objectStore(storeName);
-          const putRequest = store.put({ id: "database", data });
-          putRequest.onsuccess = () => resolve();
-          putRequest.onerror = () => reject(putRequest.error);
-        };
-        request.onupgradeneeded = (event) => {
-          const db2 = event.target.result;
-          if (!db2.objectStoreNames.contains(storeName)) {
-            db2.createObjectStore(storeName);
-          }
-        };
-      });
-    } catch (error) {
-      console.error("Error saving encrypted database:", error);
-      throw error;
-    }
-  }
-  /**
-   * Audit log entry
-   */
-  async auditLog(action, tableName, recordId, details) {
-    const logEntry2 = {
-      id: crypto.randomUUID(),
-      timestamp: (/* @__PURE__ */ new Date()).toISOString(),
-      userId: this.userId,
-      action,
-      table: tableName,
-      recordId: recordId || void 0,
-      details
-    };
-    await this.execute(
-      `INSERT INTO audit_log (id, timestamp, user_id, action, table_name, record_id, details)
-       VALUES (?, ?, ?, ?, ?, ?, ?)`,
-      [
-        logEntry2.id,
-        logEntry2.timestamp,
-        logEntry2.userId,
-        logEntry2.action,
-        logEntry2.table || null,
-        logEntry2.recordId || null,
-        logEntry2.details || null
-      ]
-    );
-  }
-  /**
-   * Verify database integrity using SQLite PRAGMA and SHA-256 hashing
-   */
-  async verifyIntegrity() {
-    try {
-      const result = await this.query("PRAGMA integrity_check");
-      const integrityResult = result[0]?.integrity_check;
-      if (integrityResult !== "ok") {
-        console.error("[Integrity] SQLite integrity check failed:", integrityResult);
-        return false;
-      }
-      const dbData = await this.exportDB();
-      const currentHash = await this.computeSHA256Hash(dbData);
-      const storedHash = await this.getStoredIntegrityHash();
-      if (storedHash && currentHash !== storedHash) {
-        console.error("[Integrity] SHA-256 hash mismatch - data may be corrupted");
-        return false;
-      }
-      if (!storedHash) {
-        await this.storeIntegrityHash(currentHash);
-      }
-      return true;
-    } catch (error) {
-      console.error("Error verifying integrity:", error);
-      return false;
-    }
-  }
-  /**
-   * Compute SHA-256 hash of database data
-   */
-  async computeSHA256Hash(data) {
-    const hashBuffer = await crypto.subtle.digest("SHA-256", data);
-    const hashArray = Array.from(new Uint8Array(hashBuffer));
-    return hashArray.map((b) => b.toString(16).padStart(2, "0")).join("");
-  }
-  /**
-   * Get stored integrity hash from metadata
-   * Uses a separate integrity_hashes table to avoid schema conflicts
-   */
-  async getStoredIntegrityHash() {
-    try {
-      const result = await this.query(
-        "SELECT hash FROM integrity_hashes WHERE id = ?",
-        ["db_integrity"]
-      );
-      return result[0]?.hash || null;
-    } catch (error) {
-      return null;
-    }
-  }
-  /**
-   * Store integrity hash in dedicated integrity_hashes table
-   */
-  async storeIntegrityHash(hash) {
-    try {
-      await this.execute(`
-        CREATE TABLE IF NOT EXISTS integrity_hashes (
-          id TEXT PRIMARY KEY,
-          hash TEXT NOT NULL,
-          updated_at TEXT NOT NULL
-        )
-      `);
-      await this.execute(
-        `INSERT OR REPLACE INTO integrity_hashes (id, hash, updated_at) 
-         VALUES (?, ?, ?)`,
-        ["db_integrity", hash, (/* @__PURE__ */ new Date()).toISOString()]
-      );
-    } catch (error) {
-      console.error("[Integrity] Failed to store integrity hash:", error);
-    }
-  }
-  /**
-   * Rotate encryption key (periodic key rotation for security)
-   * Re-encrypts entire database with a new key derived from the same password
-   */
-  async rotateEncryptionKey() {
-    if (!this.db || !this.initialized || !this.encryptionKey) {
-      throw new Error("Database not initialized");
-    }
-    try {
-      console.log("[Key Rotation] Starting encryption key rotation...");
-      const dbData = await this.exportDB();
-      const newSaltArray = new Uint8Array(16);
-      crypto.getRandomValues(newSaltArray);
-      const saltKey = "grounded_encryption_salt";
-      const newSaltHex = Array.from(newSaltArray).map((b) => b.toString(16).padStart(2, "0")).join("");
-      const currentPassword = await this.getCurrentPasswordForRotation();
-      if (!currentPassword) {
-        throw new Error("Cannot rotate key without password verification");
-      }
-      const encoder = new TextEncoder();
-      const passwordData = encoder.encode(currentPassword);
-      const keyMaterial = await crypto.subtle.importKey(
-        "raw",
-        passwordData,
-        "PBKDF2",
-        false,
-        ["deriveBits", "deriveKey"]
-      );
-      const newKey = await crypto.subtle.deriveKey(
-        {
-          name: "PBKDF2",
-          salt: newSaltArray,
-          iterations: 1e5,
-          hash: "SHA-256"
-        },
-        keyMaterial,
-        {
-          name: "AES-GCM",
-          length: 256
-        },
-        false,
-        ["encrypt", "decrypt"]
-      );
-      localStorage.setItem(saltKey, newSaltHex);
-      this.encryptionKey = newKey;
-      const newEncryptedData = await this.encrypt(dbData);
-      await this.saveEncryptedDB(newEncryptedData);
-      const newHash = await this.computeSHA256Hash(dbData);
-      await this.storeIntegrityHash(newHash);
-      await this.auditLog("key_rotated", "system", null, "Encryption key rotated successfully");
-      console.log("[Key Rotation] Encryption key rotation completed successfully");
-    } catch (error) {
-      console.error("[Key Rotation] Error rotating encryption key:", error);
-      throw error;
-    }
-  }
-  /**
-   * Get current password for key rotation
-   * In production, this should prompt user or use secure session storage
-   */
-  async getCurrentPasswordForRotation() {
-    const password = sessionStorage.getItem("encryption_password");
-    if (password) {
-      return password;
-    }
-    console.warn("[Key Rotation] Password not found in session - user must re-authenticate");
-    return null;
-  }
-  /**
-   * Generate report (PDF) - placeholder for reports integration
-   */
-  async generateReport(format = "SOAP") {
-    await this.auditLog("report_generated", "reports", null, `Format: ${format}`);
-    return new Uint8Array(0);
-  }
-  /**
-   * Change password and re-encrypt database
-   * This requires the old password to decrypt, then re-encrypts with new password
-   */
-  async changePassword(oldPassword, newPassword) {
-    if (!this.db || !this.initialized) {
-      throw new Error("Database not initialized");
-    }
-    try {
-      const oldSalt = await this.getOrCreateSalt();
-      const encoder = new TextEncoder();
-      const oldPasswordData = encoder.encode(oldPassword);
-      const oldKeyMaterial = await crypto.subtle.importKey(
-        "raw",
-        oldPasswordData,
-        "PBKDF2",
-        false,
-        ["deriveBits", "deriveKey"]
-      );
-      const oldKey = await crypto.subtle.deriveKey(
-        {
-          name: "PBKDF2",
-          salt: oldSalt,
-          iterations: 1e5,
-          hash: "SHA-256"
-        },
-        oldKeyMaterial,
-        {
-          name: "AES-GCM",
-          length: 256
-        },
-        false,
-        ["encrypt", "decrypt"]
-      );
-      const encryptedData = await this.loadEncryptedDBInternal();
-      if (encryptedData) {
-        const data = new Uint8Array(encryptedData);
-        const iv = data.slice(0, 12);
-        const encrypted = data.slice(12);
-        try {
-          await crypto.subtle.decrypt(
-            {
-              name: "AES-GCM",
-              iv
-            },
-            oldKey,
-            encrypted
-          );
-        } catch (error) {
-          throw new Error("Old password is incorrect");
-        }
-      }
-      const dbData = await this.exportDB();
-      const newSaltArray = new Uint8Array(16);
-      crypto.getRandomValues(newSaltArray);
-      const saltKey = "grounded_encryption_salt";
-      const newSaltHex = Array.from(newSaltArray).map((b) => b.toString(16).padStart(2, "0")).join("");
-      localStorage.setItem(saltKey, newSaltHex);
-      const newPasswordData = encoder.encode(newPassword);
-      const newKeyMaterial = await crypto.subtle.importKey(
-        "raw",
-        newPasswordData,
-        "PBKDF2",
-        false,
-        ["deriveBits", "deriveKey"]
-      );
-      const newKey = await crypto.subtle.deriveKey(
-        {
-          name: "PBKDF2",
-          salt: newSaltArray,
-          iterations: 1e5,
-          hash: "SHA-256"
-        },
-        newKeyMaterial,
-        {
-          name: "AES-GCM",
-          length: 256
-        },
-        false,
-        ["encrypt", "decrypt"]
-      );
-      this.encryptionKey = newKey;
-      const newEncryptedData = await this.encrypt(dbData);
-      await this.saveEncryptedDB(newEncryptedData);
-      await this.auditLog("password_changed", "system", null, "Database re-encrypted with new password");
-      console.log("Password changed successfully - database re-encrypted");
-    } catch (error) {
-      console.error("Error changing password:", error);
-      throw error;
-    }
-  }
-};
-_EncryptedPWA.instance = null;
-_EncryptedPWA.SQL = null;
-let EncryptedPWA = _EncryptedPWA;
-function isTauri() {
-  {
-    return false;
-  }
-}
-async function hashPassword(password) {
-  const encoder = new TextEncoder();
-  const data = encoder.encode(password);
-  const hashBuffer = await crypto.subtle.digest("SHA-256", data);
-  const hashArray = Array.from(new Uint8Array(hashBuffer));
-  return hashArray.map((b) => b.toString(16).padStart(2, "0")).join("");
-}
-async function verifyPassword(password, hash) {
-  const passwordHash = await hashPassword(password);
-  return passwordHash === hash;
-}
-async function registerUser(data) {
-  try {
-    try {
-      await authStore.init();
-    } catch (error) {
-      const errorMessage = error instanceof Error ? error.message : String(error);
-      console.error("Auth store initialization error:", error);
-      if (errorMessage.includes("IndexedDB is not available")) {
-        return { success: false, error: "Your browser does not support local storage. Please use a modern browser like Chrome, Firefox, or Safari." };
-      }
-      if (errorMessage.includes("quota") || errorMessage.includes("QuotaExceeded")) {
-        return { success: false, error: "Storage quota exceeded. Please clear some browser data and try again." };
-      }
-      if (errorMessage.includes("blocked") || errorMessage.includes("Blocked")) {
-        return { success: false, error: "Database access is blocked. Please check your browser settings and allow local storage for this site." };
-      }
-      return { success: false, error: "Unable to access local storage. Please refresh the page and try again." };
-    }
-    if (!data.username || data.username.length < 3) {
-      return { success: false, error: "Username must be at least 3 characters" };
-    }
-    if (!data.password || data.password.length < 6) {
-      return { success: false, error: "Password must be at least 6 characters" };
-    }
-    if (!data.email || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(data.email)) {
-      return { success: false, error: "Please enter a valid email address" };
-    }
-    let existingUser;
-    try {
-      existingUser = await authStore.getUserByUsername(data.username);
-    } catch (error) {
-      console.error("Error checking username:", error);
-      return { success: false, error: "Database error. Please try again." };
-    }
-    if (existingUser) {
-      return { success: false, error: "Username already exists" };
-    }
-    let existingEmail;
-    try {
-      existingEmail = await authStore.getUserByEmail(data.email);
-    } catch (error) {
-      console.error("Error checking email:", error);
-      return { success: false, error: "Database error. Please try again." };
-    }
-    if (existingEmail) {
-      return { success: false, error: "Email already registered" };
-    }
-    let passwordHash;
-    try {
-      passwordHash = await hashPassword(data.password);
-    } catch (error) {
-      console.error("Error hashing password:", error);
-      return { success: false, error: "Password encryption failed. Please try again." };
-    }
-    let userId;
-    try {
-      userId = await authStore.createUser({
-        username: data.username,
-        passwordHash,
-        email: data.email,
-        termsAccepted: false
-      });
-      console.log("[AuthService] User created successfully:", { userId, username: data.username });
-      try {
-        const verifyUser = await authStore.getUserById(userId);
-        if (!verifyUser) {
-          console.error("[AuthService] CRITICAL: User was created but cannot be retrieved!", { userId });
-          return { success: false, error: "Account created but verification failed. Please try logging in." };
-        }
-        if (verifyUser.username !== data.username) {
-          console.error("[AuthService] CRITICAL: Username mismatch after creation!", {
-            expected: data.username,
-            found: verifyUser.username
-          });
-        }
-        console.log("[AuthService] User verification successful:", { userId, username: verifyUser.username });
-      } catch (verifyError) {
-        console.error("[AuthService] CRITICAL: Error verifying created user:", verifyError);
-      }
-      try {
-        sessionStorage.setItem("userId", userId);
-        sessionStorage.setItem("username", data.username);
-        localStorage.setItem("userId", userId);
-        localStorage.setItem("username", data.username);
-        console.log("[AuthService] CRITICAL: New user credentials saved to both sessionStorage and localStorage:", { userId, username: data.username });
-        const savedUserId = localStorage.getItem("userId");
-        const savedUsername = localStorage.getItem("username");
-        if (savedUserId !== userId || savedUsername !== data.username) {
-          console.error("[AuthService] CRITICAL: Credentials saved but verification failed!", {
-            expected: { userId, username: data.username },
-            found: { userId: savedUserId, username: savedUsername }
-          });
-        } else {
-          console.log("[AuthService] Credentials verification successful");
-        }
-      } catch (error) {
-        console.error("[AuthService] CRITICAL ERROR: Failed to save new user credentials to storage:", error);
-        console.warn("[AuthService] Continuing despite storage error - user may need to login again on next visit");
-      }
-    } catch (error) {
-      console.error("Error creating user:", error);
-      const errorMessage = error instanceof Error ? error.message : String(error);
-      if (errorMessage.includes("ConstraintError") || errorMessage.includes("already exists")) {
-        return { success: false, error: "Username or email already exists" };
-      }
-      return { success: false, error: "Failed to create account. Please try again." };
-    }
-    return { success: true, userId };
-  } catch (error) {
-    console.error("Registration error:", error);
-    const errorMessage = error instanceof Error ? error.message : String(error);
-    return { success: false, error: `Registration failed: ${errorMessage}. Please try again.` };
-  }
-}
-async function loginUser(data) {
-  try {
-    if (!data.username || !data.password) {
-      return { success: false, error: "Please enter username and password" };
-    }
-    try {
-      await authStore.init();
-    } catch (error) {
-      const errorMessage = error instanceof Error ? error.message : String(error);
-      console.error("Auth store initialization error during login:", error);
-      if (errorMessage.includes("IndexedDB is not available")) {
-        return { success: false, error: "Your browser does not support local storage. Please use a modern browser." };
-      }
-      if (errorMessage.includes("blocked") || errorMessage.includes("Blocked")) {
-        return { success: false, error: "Database access is blocked. Please check your browser settings." };
-      }
-      return { success: false, error: "Unable to access local storage. Please refresh the page and try again." };
-    }
-    try {
-      await authStore.init();
-    } catch (initError) {
-      console.error("[AuthService] Auth store init error during login:", initError);
-    }
-    const user = await authStore.getUserByUsername(data.username);
-    if (!user) {
-      console.error("[AuthService] User not found:", data.username);
-      try {
-        const allUsers = await authStore.getAllUsers();
-        console.log("[AuthService] Available users in database:", allUsers.map((u) => u.username));
-      } catch (listError) {
-        console.error("[AuthService] Error listing users:", listError);
-      }
-      return { success: false, error: "Invalid username or password" };
-    }
-    console.log("[AuthService] User found, verifying password...", { userId: user.id, username: user.username });
-    const isValid = await verifyPassword(data.password, user.passwordHash);
-    if (!isValid) {
-      console.error("[AuthService] Password verification failed for user:", data.username);
-      return { success: false, error: "Invalid username or password" };
-    }
-    console.log("[AuthService] Password verified successfully");
-    await authStore.updateUser(user.id, {
-      lastLogin: (/* @__PURE__ */ new Date()).toISOString()
-    });
-    try {
-      sessionStorage.setItem("userId", user.id);
-      sessionStorage.setItem("username", user.username);
-      localStorage.setItem("userId", user.id);
-      localStorage.setItem("username", user.username);
-      if (localStorage.getItem("encryption_enabled") === "true") {
-        sessionStorage.setItem("encryption_password", data.password);
-        console.log("[AuthService] Encryption password stored in sessionStorage for Dexie hooks");
-      }
-      console.log("[AuthService] CRITICAL: Credentials saved to both sessionStorage and localStorage:", { userId: user.id, username: user.username });
-    } catch (error) {
-      console.error("[AuthService] CRITICAL ERROR: Failed to save credentials to storage:", error);
-      console.warn("[AuthService] Continuing despite storage error - user may need to login again on next visit");
-    }
-    return { success: true, userId: user.id };
-  } catch (error) {
-    console.error("Login error:", error);
-    return { success: false, error: "Login failed. Please try again." };
-  }
-}
-function logoutUser() {
-  sessionStorage.removeItem("userId");
-  sessionStorage.removeItem("username");
-  sessionStorage.removeItem("encryption_password");
-  localStorage.removeItem("userId");
-  localStorage.removeItem("username");
-}
-async function getCurrentUser() {
-  try {
-    await authStore.init();
-  } catch (error) {
-    console.error("[AuthService] Failed to initialize auth store:", error);
-  }
-  let userId = sessionStorage.getItem("userId");
-  if (!userId) {
-    userId = localStorage.getItem("userId");
-    if (userId) {
-      const username = localStorage.getItem("username");
-      sessionStorage.setItem("userId", userId);
-      if (username) {
-        sessionStorage.setItem("username", username);
-      }
-      console.log("[AuthService] Restored userId from localStorage:", userId);
-    }
-  }
-  if (!userId) {
-    try {
-      const allUsers = await authStore.getAllUsers();
-      console.log("[AuthService] Found users in database:", allUsers?.length || 0);
-      if (allUsers && allUsers.length > 0) {
-        const sortedUsers = allUsers.sort((a, b) => {
-          const aTime = a.lastLogin ? new Date(a.lastLogin).getTime() : new Date(a.createdAt).getTime();
-          const bTime = b.lastLogin ? new Date(b.lastLogin).getTime() : new Date(b.createdAt).getTime();
-          return bTime - aTime;
-        });
-        userId = sortedUsers[0].id;
-        const username = sortedUsers[0].username;
-        sessionStorage.setItem("userId", userId);
-        sessionStorage.setItem("username", username);
-        try {
-          localStorage.setItem("userId", userId);
-          localStorage.setItem("username", username);
-          console.log("[AuthService] Restored credentials to localStorage from database:", { userId, username });
-        } catch (error) {
-          console.warn("Could not store userId in localStorage:", error);
-        }
-      } else {
-        console.log("[AuthService] No users found in database");
-      }
-    } catch (error) {
-      console.error("[AuthService] Error finding existing user:", error);
-    }
-  }
-  if (!userId) {
-    console.log("[AuthService] No userId found - user needs to login");
-    return null;
-  }
-  try {
-    const user = await authStore.getUserById(userId);
-    if (user) {
-      console.log("[AuthService] User found:", { userId: user.id, username: user.username, termsAccepted: user.termsAccepted });
-    } else {
-      console.warn("[AuthService] User ID found but user not in database:", userId);
-      sessionStorage.removeItem("userId");
-      localStorage.removeItem("userId");
-      localStorage.removeItem("username");
-    }
-    return user;
-  } catch (error) {
-    console.error("[AuthService] Error getting user by ID:", error);
-    return null;
-  }
-}
-async function requestPasswordReset(email) {
-  try {
-    try {
-      await authStore.init();
-    } catch (error) {
-      const errorMessage = error instanceof Error ? error.message : String(error);
-      console.error("Auth store initialization error during password reset:", error);
-      if (errorMessage.includes("IndexedDB is not available")) {
-        return {
-          success: false,
-          error: "Your browser does not support local storage. Please use a modern browser."
-        };
-      }
-      if (errorMessage.includes("quota") || errorMessage.includes("QuotaExceeded")) {
-        return {
-          success: false,
-          error: "Storage quota exceeded. Please clear some browser data and try again."
-        };
-      }
-      return {
-        success: false,
-        error: "Unable to access local storage. Please refresh the page and try again."
-      };
-    }
-    const user = await authStore.getUserByEmail(email);
-    if (!user) {
-      return { success: true };
-    }
-    if (!user.id) {
-      throw new Error("User ID is missing");
-    }
-    const token = await authStore.createResetToken(user.id, email);
-    if (!token) {
-      throw new Error("Failed to create reset token");
-    }
-    const isTauriEnv = isTauri();
-    const origin = isTauriEnv ? "tauri://localhost" : typeof window !== "undefined" ? window.location.origin : "http://localhost";
-    const pathname = typeof window !== "undefined" && window.location.pathname ? window.location.pathname : "/";
-    const resetLink = `${origin}${pathname}#reset/${token}`;
-    if (!resetLink || !resetLink.includes("#reset/")) {
-      throw new Error(`Invalid reset link generated: ${resetLink}`);
-    }
-    return { success: true, resetLink };
-  } catch (error) {
-    console.error("Password reset error:", error);
-    const errorMessage = error instanceof Error ? error.message : "Unknown error";
-    return { success: false, error: `Failed to generate reset link: ${errorMessage}` };
-  }
-}
-async function resetPasswordWithToken(token, newPassword) {
-  try {
-    if (!newPassword || newPassword.length < 6) {
-      return { success: false, error: "Password must be at least 6 characters" };
-    }
-    await authStore.init();
-    const tokenData = await authStore.getResetToken(token);
-    if (!tokenData) {
-      return { success: false, error: "Invalid or expired reset token" };
-    }
-    const passwordHash = await hashPassword(newPassword);
-    await authStore.updateUser(tokenData.userId, { passwordHash });
-    await authStore.deleteResetToken(token);
-    const encryptionEnabled = localStorage.getItem("encryption_enabled") === "true";
-    if (encryptionEnabled) {
-      console.warn("Password reset with encryption enabled - database will need to be unlocked with new password");
-    }
-    return { success: true, userId: tokenData.userId };
-  } catch (error) {
-    console.error("Password reset error:", error);
-    return { success: false, error: "Failed to reset password" };
-  }
-}
-async function acceptTerms(userId) {
-  await authStore.init();
-  await authStore.updateUser(userId, {
-    termsAccepted: true,
-    termsAcceptedDate: (/* @__PURE__ */ new Date()).toISOString()
-  });
 }
 let initializationPromise = null;
 let isInitialized = false;
@@ -2524,16 +213,26 @@ class LegacyAdapter {
     });
   }
   async getFeelingLogs(limit, userId) {
-    let query = db.feelingLogs.orderBy("timestamp").reverse();
+    let logs = await db.feelingLogs.orderBy("timestamp").reverse().toArray();
     if (userId) {
-      query = db.feelingLogs.where("userId").equals(userId).orderBy("timestamp").reverse();
+      logs = logs.filter((log) => log.userId === userId);
     }
-    const logs = await query.toArray();
     return limit ? logs.slice(0, limit) : logs;
   }
+  async getFirstFeelingLog(userId) {
+    let logs = await db.feelingLogs.orderBy("timestamp").toArray();
+    if (userId) {
+      logs = logs.filter((log) => log.userId === userId);
+    }
+    return logs.length > 0 ? logs[0] : null;
+  }
   async getFeelingLogsByState(emotionalState, limit) {
-    let query = db.feelingLogs.where("emotionalState").equals(emotionalState).orderBy("timestamp").reverse();
-    const logs = await query.toArray();
+    let logs = await db.feelingLogs.where("emotionalState").equals(emotionalState).toArray();
+    logs.sort((a, b) => {
+      const timeA = new Date(a.timestamp).getTime();
+      const timeB = new Date(b.timestamp).getTime();
+      return timeB - timeA;
+    });
     return limit ? logs.slice(0, limit) : logs;
   }
   async deleteFeelingLog(logId) {
@@ -2564,11 +263,10 @@ class LegacyAdapter {
     });
   }
   async getUserInteractions(sessionId, limit) {
-    let query = db.userInteractions.orderBy("timestamp").reverse();
+    let interactions = await db.userInteractions.orderBy("timestamp").reverse().toArray();
     if (sessionId) {
-      query = db.userInteractions.where("sessionId").equals(sessionId).orderBy("timestamp").reverse();
+      interactions = interactions.filter((interaction) => interaction.sessionId === sessionId);
     }
-    const interactions = await query.toArray();
     return limit ? interactions.slice(0, limit) : interactions;
   }
   async deleteUserInteraction(interactionId) {
@@ -2593,13 +291,21 @@ class LegacyAdapter {
     await db.sessions.update(sessionId, updates);
   }
   async getSessions(userId, limit) {
-    let query = db.sessions.where("userId").equals(userId).orderBy("startTimestamp").reverse();
-    const sessions = await query.toArray();
+    let sessions = await db.sessions.where("userId").equals(userId).toArray();
+    sessions.sort((a, b) => {
+      const timeA = new Date(a.startTimestamp).getTime();
+      const timeB = new Date(b.startTimestamp).getTime();
+      return timeB - timeA;
+    });
     return limit ? sessions.slice(0, limit) : sessions;
   }
   async getSessionsByValue(valueId, limit) {
-    let query = db.sessions.where("valueId").equals(valueId).orderBy("startTimestamp").reverse();
-    const sessions = await query.toArray();
+    let sessions = await db.sessions.where("valueId").equals(valueId).toArray();
+    sessions.sort((a, b) => {
+      const timeA = new Date(a.startTimestamp).getTime();
+      const timeB = new Date(b.startTimestamp).getTime();
+      return timeB - timeA;
+    });
     return limit ? sessions.slice(0, limit) : sessions;
   }
   async getFeelingPatterns(startDate, endDate) {
@@ -2623,8 +329,12 @@ class LegacyAdapter {
     });
   }
   async getAssessments(userId, limit) {
-    let query = db.assessments.where("userId").equals(userId).orderBy("timestamp").reverse();
-    const assessments = await query.toArray();
+    let assessments = await db.assessments.where("userId").equals(userId).toArray();
+    assessments.sort((a, b) => {
+      const timeA = new Date(a.timestamp).getTime();
+      const timeB = new Date(b.timestamp).getTime();
+      return timeB - timeA;
+    });
     return limit ? assessments.slice(0, limit) : assessments;
   }
   async saveReport(report) {
@@ -2638,11 +348,15 @@ class LegacyAdapter {
     });
   }
   async getReports(userId, limit) {
-    let query = db.reports.where("userId").equals(userId).orderBy("timestamp").reverse();
-    const reports = await query.toArray();
+    let reports = await db.reports.where("userId").equals(userId).toArray();
+    reports.sort((a, b) => {
+      const timeA = new Date(a.timestamp).getTime();
+      const timeB = new Date(b.timestamp).getTime();
+      return timeB - timeA;
+    });
     return limit ? reports.slice(0, limit) : reports;
   }
-  // Values operations - Phase 3: Implement using Dexie
+  // Values operations
   async getActiveValues(userId) {
     if (!userId || typeof userId !== "string") {
       console.warn("[LegacyAdapter] Invalid userId for getActiveValues:", userId);
@@ -2716,7 +430,7 @@ class LegacyAdapter {
       });
     }
   }
-  // Goals operations - Phase 3: Implement using Dexie
+  // Goals operations
   async saveGoal(goal) {
     await db.goals.put(goal);
   }
@@ -2768,22 +482,13 @@ class LegacyAdapter {
     }
   }
 }
-function isEncryptionEnabled() {
-  try {
-    return localStorage.getItem("encryption_enabled") === "true";
-  } catch (error) {
-    console.error("[databaseAdapter] Error checking encryption status:", error);
-    return false;
-  }
-}
 function getDatabaseAdapter() {
   return new LegacyAdapter();
 }
 const databaseAdapter = /* @__PURE__ */ Object.freeze(/* @__PURE__ */ Object.defineProperty({
   __proto__: null,
   LegacyAdapter,
-  getDatabaseAdapter,
-  isEncryptionEnabled
+  getDatabaseAdapter
 }, Symbol.toStringTag, { value: "Module" }));
 const AuthContext = reactExports.createContext(void 0);
 const requestPersistentStorage = async () => {
@@ -2792,19 +497,19 @@ const requestPersistentStorage = async () => {
       const isPersisted = await navigator.storage.persist();
       const isMobile = /Android|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent);
       if (isPersisted) {
-        console.log(`[AuthContext] Persistent storage granted (platform: ${navigator.platform})`);
+        logger.debug(`[AuthContext] Persistent storage granted (platform: ${navigator.platform})`);
       } else if (isMobile) {
-        console.warn(`[AuthContext] Persistent storage denied on mobile (platform: ${navigator.platform}) - credentials may be lost on app updates`);
+        logger.warn(`[AuthContext] Persistent storage denied on mobile (platform: ${navigator.platform}) - credentials may be lost on app updates`);
       } else {
-        console.log(`[AuthContext] Persistent storage denied on desktop (platform: ${navigator.platform}) - this is expected, credentials will still persist in localStorage/IndexedDB`);
+        logger.debug(`[AuthContext] Persistent storage denied on desktop (platform: ${navigator.platform}) - this is expected, credentials will still persist in localStorage/IndexedDB`);
       }
       return isPersisted;
     } catch (error) {
-      console.warn("[AuthContext] Error requesting persistent storage:", error);
+      logger.warn("[AuthContext] Error requesting persistent storage:", error);
       return false;
     }
   }
-  console.log("[AuthContext] Persistent Storage API not supported - using standard storage (credentials will persist in localStorage/IndexedDB)");
+  logger.debug("[AuthContext] Persistent Storage API not supported - using standard storage (credentials will persist in localStorage/IndexedDB)");
   return false;
 };
 const checkStoragePersistence = async () => {
@@ -2812,7 +517,7 @@ const checkStoragePersistence = async () => {
     try {
       return await navigator.storage.persisted();
     } catch (error) {
-      console.warn("[AuthContext] Error checking storage persistence:", error);
+      logger.warn("[AuthContext] Error checking storage persistence:", error);
       return false;
     }
   }
@@ -2837,15 +542,28 @@ const AuthProvider = ({
       try {
         console.log("[AuthContext] Initializing auth state...");
         await requestPersistentStorage();
-        const { authStore: authStore2 } = await __vitePreload(async () => {
-          const { authStore: authStore3 } = await Promise.resolve().then(() => authStore$1);
-          return { authStore: authStore3 };
-        }, true ? void 0 : void 0);
+        const { authStore } = await __vitePreload(async () => {
+          const { authStore: authStore2 } = await import("./ai-services-DJUX-74P.js").then((n) => n.J);
+          return { authStore: authStore2 };
+        }, true ? __vite__mapDeps([0,1,2,3,4]) : void 0);
         try {
-          await authStore2.init();
+          await authStore.init();
           console.log("[AuthContext] Auth store initialized");
         } catch (initError) {
           console.error("[AuthContext] Auth store init error:", initError);
+        }
+        const { isPWAInstalled: isPWAInstalled2 } = await __vitePreload(async () => {
+          const { isPWAInstalled: isPWAInstalled3 } = await Promise.resolve().then(() => installCheck);
+          return { isPWAInstalled: isPWAInstalled3 };
+        }, true ? void 0 : void 0);
+        const isInstalled = isPWAInstalled2();
+        const installationCompleteKey = "app_installation_complete";
+        const wasJustInstalled = !localStorage.getItem(installationCompleteKey);
+        if (isInstalled && !wasJustInstalled) {
+          localStorage.setItem(installationCompleteKey, "true");
+          console.log("[AuthContext] App just installed - going to login for account creation");
+          setAuthState("login");
+          return;
         }
         const user = await getCurrentUser();
         if (user) {
@@ -2962,9 +680,9 @@ const AuthProvider = ({
       await requestPersistentStorage();
       setUserId(loggedInUserId);
       const { resetInitialization } = await __vitePreload(async () => {
-        const { resetInitialization: resetInitialization2 } = await import("./useAppInitialization-D3PT5EF8.js");
+        const { resetInitialization: resetInitialization2 } = await import("./useAppInitialization-CmNh7W4F.js");
         return { resetInitialization: resetInitialization2 };
-      }, true ? __vite__mapDeps([4,5,2,3,0,1,6,7]) : void 0);
+      }, true ? __vite__mapDeps([5,6,1,2,3,4,0]) : void 0);
       resetInitialization();
       const userDataPromise = getCurrentUser();
       const userDataTimeout = new Promise((_, reject) => {
@@ -3049,9 +767,9 @@ const AuthProvider = ({
       await acceptTerms(userId);
       setAuthState("app");
       const { preloadModels } = await __vitePreload(async () => {
-        const { preloadModels: preloadModels2 } = await import("./ai-services-COb65xmG.js").then((n) => n.f);
+        const { preloadModels: preloadModels2 } = await import("./ai-services-DJUX-74P.js").then((n) => n.N);
         return { preloadModels: preloadModels2 };
-      }, true ? [] : void 0);
+      }, true ? __vite__mapDeps([0,1,2,3,4]) : void 0);
       preloadModels().catch((error) => {
         console.warn("AI model preload retry failed:", error);
       });
@@ -3071,7 +789,7 @@ const AuthProvider = ({
   reactExports.useEffect(() => {
     const checkOnResume = async () => {
       if (!await checkStoragePersistence() && userId) {
-        console.warn("[AuthContext] Storage permission lost - re-requesting");
+        logger.debug("[AuthContext] Storage permission lost - re-requesting");
         await requestPersistentStorage();
       }
     };
@@ -3129,7 +847,7 @@ const DataProvider = ({
   reactExports.useEffect(() => {
     const hasData = initialData && (initialData.selectedValueIds && initialData.selectedValueIds.length > 0 || initialData.logs && initialData.logs.length > 0 || initialData.goals && initialData.goals.length > 0 || initialData.settings);
     if (hasData && !hasLoadedInitialDataRef.current) {
-      console.log("[DataContext] Loading initial data from props", {
+      logger.info("[DataContext] Loading initial data from props", {
         values: initialData.selectedValueIds?.length || 0,
         logs: initialData.logs?.length || 0,
         goals: initialData.goals?.length || 0,
@@ -3160,7 +878,7 @@ const DataProvider = ({
     hasTriedDatabaseLoadRef.current = true;
     const loadFromDatabase = async () => {
       try {
-        console.log("[DataContext] Loading values from database...", { userId });
+        logger.info("[DataContext] Loading values from database...", { userId });
         await adapter.init();
         let activeValues = await adapter.getActiveValues(userId);
         if (activeValues.length === 0) {
@@ -3168,19 +886,19 @@ const DataProvider = ({
           if (appData?.values && appData.values.length > 0) {
             activeValues = appData.values;
             await adapter.setValuesActive(userId, activeValues);
-            console.log("[DataContext] Migrated values from appData to values table");
+            logger.info("[DataContext] Migrated values from appData to values table");
           }
         }
         if (activeValues.length > 0) {
-          console.log("[DataContext] Loaded values from database:", activeValues.length, activeValues);
+          logger.info("[DataContext] Loaded values from database:", activeValues.length, activeValues);
           setSelectedValueIds(activeValues);
         } else {
-          console.log("[DataContext] No values found - user is first-time user");
+          logger.info("[DataContext] No values found - user is first-time user");
         }
         hasLoadedInitialDataRef.current = true;
         setIsHydrating(false);
       } catch (error) {
-        console.error("[DataContext] Error loading values:", error);
+        logger.error("[DataContext] Error loading values:", error);
         setTimeout(async () => {
           try {
             const retryValues = await adapter.getActiveValues(userId);
@@ -3188,7 +906,7 @@ const DataProvider = ({
               setSelectedValueIds(retryValues);
             }
           } catch (retryError) {
-            console.error("[DataContext] Retry failed:", retryError);
+            logger.error("[DataContext] Retry failed:", retryError);
           }
           hasLoadedInitialDataRef.current = true;
           setIsHydrating(false);
@@ -3205,7 +923,7 @@ const DataProvider = ({
       }
       const delay = userId ? 100 : 1e3;
       initializationTimeoutRef.current = setTimeout(() => {
-        console.log("[DataContext] Marking data as loaded after sync", {
+        logger.info("[DataContext] Marking data as loaded after sync", {
           values: selectedValueIds.length,
           logs: logs.length,
           goals: goals.length,
@@ -3239,7 +957,7 @@ const DataProvider = ({
             if (shouldSaveValues) {
               appDataToSave.values = selectedValueIds;
             }
-            console.log("[DataContext] Saving app data", {
+            logger.info("[DataContext] Saving app data", {
               values: shouldSaveValues ? selectedValueIds.length : "(skipped - not loaded yet)",
               logs: logs.length,
               goals: goals.length,
@@ -3258,7 +976,7 @@ const DataProvider = ({
             }
             pendingSaveRef.current = null;
           } catch (error) {
-            console.error("Error saving app data:", error);
+            logger.error("Error saving app data:", error);
             pendingSaveRef.current = null;
           }
         };
@@ -3304,19 +1022,19 @@ const DataProvider = ({
     if (userId && authState === "app") {
       try {
         await adapter.setValuesActive(userId, ids);
-        console.log("[DataContext] Saved values to values table with priorities", {
+        logger.info("[DataContext] Saved values to values table with priorities", {
           userId,
           count: ids.length,
           priorities: ids.map((id, index) => ({ id, priority: index }))
         });
       } catch (error) {
-        console.error("Error saving values to table:", error);
+        logger.error("Error saving values to table:", error);
       }
     }
   }, [userId, authState, adapter]);
   const handleMoodLoopEntry = reactExports.useCallback(async (emotion, feeling) => {
     if (!emotion || !feeling) {
-      console.warn("[DataContext] handleMoodLoopEntry called with invalid parameters", { emotion, feeling });
+      logger.warn("[DataContext] handleMoodLoopEntry called with invalid parameters", { emotion, feeling });
       return;
     }
     try {
@@ -3336,15 +1054,15 @@ const DataProvider = ({
         try {
           if (adapter && typeof adapter.saveFeelingLog === "function") {
             await adapter.saveFeelingLog(feelingLogData);
-            console.log("[DataContext] Mood entry saved to database", { emotion, feeling, userId, logId });
+            logger.info("[DataContext] Mood entry saved to database", { emotion, feeling, userId, logId });
           } else {
-            console.warn("[DataContext] saveFeelingLog method not available on adapter");
+            logger.warn("[DataContext] saveFeelingLog method not available on adapter");
           }
         } catch (error) {
-          console.error("[DataContext] Error saving mood entry to database:", error);
+          logger.error("[DataContext] Error saving mood entry to database:", error);
         }
       } else {
-        console.warn("[DataContext] Cannot save mood entry - user not authenticated", { userId, authState });
+        logger.warn("[DataContext] Cannot save mood entry - user not authenticated", { userId, authState });
       }
       const allowedEmotionalStates = [
         "drained",
@@ -3370,7 +1088,7 @@ const DataProvider = ({
       setLogs((prev) => [logEntry2, ...prev]);
     } catch (err) {
       const errorMessage = err instanceof Error ? err.message : String(err);
-      console.error("[DataContext] Error recording mood entry:", errorMessage, err);
+      logger.error("[DataContext] Error recording mood entry:", errorMessage, err);
       throw new Error(`Failed to record mood entry: ${errorMessage}`);
     }
   }, [userId, authState, adapter]);
@@ -3382,11 +1100,11 @@ const DataProvider = ({
       try {
         await pendingSaveRef.current;
       } catch (error) {
-        console.error("[DataContext] Error waiting for pending save:", error);
+        logger.error("[DataContext] Error waiting for pending save:", error);
       }
     }
     try {
-      console.log("[DataContext] Persisting data on exit", {
+      logger.info("[DataContext] Persisting data on exit", {
         values: selectedValueIds.length,
         logs: logs.length,
         goals: goals.length,
@@ -3407,9 +1125,9 @@ const DataProvider = ({
           await adapter.saveGoal(goal);
         }
       }
-      console.log("[DataContext] Data persisted successfully");
+      logger.info("[DataContext] Data persisted successfully");
     } catch (error) {
-      console.error("[DataContext] Error persisting data on exit:", error);
+      logger.error("[DataContext] Error persisting data on exit:", error);
     }
   }, [userId, authState, selectedValueIds, logs, goals, settings, adapter]);
   reactExports.useEffect(() => {
@@ -3425,7 +1143,7 @@ const DataProvider = ({
           settings
         });
         persistData().catch((error) => {
-          console.error("[DataContext] Failed to persist on exit:", error);
+          logger.error("[DataContext] Failed to persist on exit:", error);
         });
       }
     };
@@ -3433,7 +1151,7 @@ const DataProvider = ({
     const handleVisibilityChange = () => {
       if (document.hidden && userId && authState === "app") {
         persistData().catch((error) => {
-          console.error("[DataContext] Failed to persist on visibility change:", error);
+          logger.error("[DataContext] Failed to persist on visibility change:", error);
         });
       }
     };
@@ -3764,7 +1482,7 @@ const EMOTIONAL_STATES = [
 function getEmotionalState(state) {
   return EMOTIONAL_STATES.find((s) => s.state === state);
 }
-const FEELING_EMOJIS$1 = {
+const FEELING_EMOJIS = {
   // Drained
   "tired": "😴",
   "empty": "🫗",
@@ -3854,6 +1572,55 @@ const AIResponseBubble = ({
   const [currentPrimaryIndex, setCurrentPrimaryIndex] = reactExports.useState(-1);
   const [currentSubIndex, setCurrentSubIndex] = reactExports.useState(0);
   const currentPrimary = currentPrimaryIndex >= 0 ? EMOTIONAL_STATES[currentPrimaryIndex] : null;
+  const hasLoadedLastEmotionRef = reactExports.useRef(false);
+  reactExports.useEffect(() => {
+    if (emotion || feeling || hasLoadedLastEmotionRef.current) return;
+    const loadFirstEmotion = async () => {
+      try {
+        const { getDatabaseAdapter: getDatabaseAdapter2 } = await __vitePreload(async () => {
+          const { getDatabaseAdapter: getDatabaseAdapter3 } = await Promise.resolve().then(() => databaseAdapter);
+          return { getDatabaseAdapter: getDatabaseAdapter3 };
+        }, true ? void 0 : void 0);
+        const { getCurrentUser: getCurrentUser2 } = await __vitePreload(async () => {
+          const { getCurrentUser: getCurrentUser3 } = await import("./ai-services-DJUX-74P.js").then((n) => n.K);
+          return { getCurrentUser: getCurrentUser3 };
+        }, true ? __vite__mapDeps([0,1,2,3,4]) : void 0);
+        const user = await getCurrentUser2();
+        if (!user?.id) {
+          hasLoadedLastEmotionRef.current = true;
+          return;
+        }
+        const adapter = getDatabaseAdapter2();
+        await adapter.init();
+        const firstLog = await adapter.getFirstFeelingLog(user.id);
+        if (firstLog) {
+          const firstEmotion = firstLog.emotionalState || firstLog.emotion;
+          const firstFeeling = firstLog.selectedFeeling || firstLog.subEmotion;
+          if (firstEmotion && firstFeeling) {
+            const primaryIndex = EMOTIONAL_STATES.findIndex((e) => e.state === firstEmotion);
+            if (primaryIndex >= 0) {
+              setCurrentPrimaryIndex(primaryIndex);
+              const feelings = EMOTIONAL_STATES[primaryIndex].feelings;
+              const subIndex = feelings.findIndex((f) => f === firstFeeling);
+              if (subIndex >= 0) {
+                setCurrentSubIndex(subIndex);
+                setSelectionLevel("sub");
+                onMoodChange?.(firstEmotion, firstFeeling);
+                logger.debug("[AIResponseBubble] Loaded first emotion from database:", { firstEmotion, firstFeeling });
+              } else {
+                setSelectionLevel("primary");
+              }
+            }
+          }
+        }
+        hasLoadedLastEmotionRef.current = true;
+      } catch (error) {
+        logger.error("[AIResponseBubble] Error loading first emotion:", error);
+        hasLoadedLastEmotionRef.current = true;
+      }
+    };
+    loadFirstEmotion();
+  }, [emotion, feeling, onMoodChange]);
   reactExports.useEffect(() => {
     if (emotion) {
       const primaryIndex = EMOTIONAL_STATES.findIndex((e) => e.state === emotion);
@@ -3902,7 +1669,7 @@ const AIResponseBubble = ({
           const selectedFeeling = feelings[newIndex];
           onMoodChange?.(EMOTIONAL_STATES[currentPrimaryIndex].state, selectedFeeling);
           handleMoodLoopEntry(EMOTIONAL_STATES[currentPrimaryIndex].state, selectedFeeling).catch((error) => {
-            console.error("[AIResponseBubble] Error saving mood entry:", error);
+            logger.error("[AIResponseBubble] Error saving mood entry:", error);
           });
         }
       }
@@ -3966,11 +1733,11 @@ const AIResponseBubble = ({
     const selectedFeeling = currentPrimary.feelings[currentSubIndex];
     onMoodChange?.(currentPrimary.state, selectedFeeling);
     handleMoodLoopEntry(currentPrimary.state, selectedFeeling).catch((error) => {
-      console.error("[AIResponseBubble] Error saving mood entry:", error);
+      logger.error("[AIResponseBubble] Error saving mood entry:", error);
     });
   };
   const currentSubFeeling = currentPrimary ? currentPrimary.feelings[currentSubIndex] || currentPrimary.feelings[0] : null;
-  const subFeelingEmoji = currentSubFeeling ? FEELING_EMOJIS$1[currentSubFeeling] || "" : "";
+  const subFeelingEmoji = currentSubFeeling ? FEELING_EMOJIS[currentSubFeeling] || "" : "";
   const showSwipeHint = onMoodChange;
   return /* @__PURE__ */ jsxRuntimeExports.jsxs(
     motion.div,
@@ -3988,22 +1755,7 @@ const AIResponseBubble = ({
             className: "flex items-center space-x-3 cursor-pointer hover:opacity-80 transition-opacity",
             onClick: handlePrimaryClick,
             children: /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "flex items-center space-x-3", children: [
-              selectionLevel === "primary" && /* @__PURE__ */ jsxRuntimeExports.jsx(
-                motion.span,
-                {
-                  className: "text-navy-primary dark:text-yellow-warm text-2xl sm:text-3xl font-bold",
-                  animate: {
-                    x: [0, 5, 0]
-                  },
-                  transition: {
-                    repeat: Infinity,
-                    duration: 1.5,
-                    ease: "easeInOut"
-                  },
-                  children: "→"
-                }
-              ),
-              selectionLevel === "none" && /* @__PURE__ */ jsxRuntimeExports.jsx(
+              (selectionLevel === "primary" || selectionLevel === "none") && /* @__PURE__ */ jsxRuntimeExports.jsx(
                 motion.span,
                 {
                   className: "text-navy-primary dark:text-yellow-warm text-2xl sm:text-3xl font-bold",
@@ -6237,9 +3989,9 @@ const ReportView = ({ logs, values, lcswConfig, goals }) => {
     } catch (error) {
       console.error("Report synthesis failed:", error);
       const { generateFallbackReport } = await __vitePreload(async () => {
-        const { generateFallbackReport: generateFallbackReport2 } = await import("./ai-services-COb65xmG.js").then((n) => n.f);
+        const { generateFallbackReport: generateFallbackReport2 } = await import("./ai-services-DJUX-74P.js").then((n) => n.N);
         return { generateFallbackReport: generateFallbackReport2 };
-      }, true ? [] : void 0);
+      }, true ? __vite__mapDeps([0,1,2,3,4]) : void 0);
       const fallbackReport = generateFallbackReport(filteredLogs, values, goals);
       const disclaimer = `
 
@@ -6466,9 +4218,9 @@ async function clearAllCaches() {
     }
     try {
       const { clearModels } = await __vitePreload(async () => {
-        const { clearModels: clearModels2 } = await import("./ai-services-COb65xmG.js").then((n) => n.m);
+        const { clearModels: clearModels2 } = await import("./ai-services-DJUX-74P.js").then((n) => n.L);
         return { clearModels: clearModels2 };
-      }, true ? [] : void 0);
+      }, true ? __vite__mapDeps([0,1,2,3,4]) : void 0);
       await clearModels();
       console.log("[CacheService] Cleared AI model cache");
     } catch (error) {
@@ -7699,7 +5451,7 @@ class DatabaseService {
       this.oldDatabaseCheckCache = result;
       return result;
     } catch (error) {
-      console.warn("Error checking for old database:", error);
+      logger.warn("Error checking for old database:", error);
       this.oldDatabaseCheckCache = false;
       return false;
     }
@@ -7718,15 +5470,15 @@ class DatabaseService {
             deleteRequest.onsuccess = () => resolve();
             deleteRequest.onerror = () => reject(deleteRequest.error);
             deleteRequest.onblocked = () => {
-              console.warn("Old database deletion blocked - another tab may have it open");
+              logger.warn("Old database deletion blocked - another tab may have it open");
               setTimeout(() => resolve(), 1e3);
             };
           });
-          console.log("✅ Old database deleted successfully");
+          logger.info("✅ Old database deleted successfully");
         }
       }
     } catch (error) {
-      console.warn("Error deleting old database:", error);
+      logger.warn("Error deleting old database:", error);
     }
   }
   /**
@@ -7748,23 +5500,23 @@ class DatabaseService {
       }
       if (!metadata) {
         this.setMetadata().catch((err) => {
-          console.warn("Failed to set metadata (non-critical):", err);
+          logger.warn("Failed to set metadata (non-critical):", err);
         });
         this.metadataValidated = true;
         return true;
       }
       const isValid = metadata.appId === this.APP_ID && metadata.appName === this.APP_NAME;
       if (!isValid) {
-        console.error("Database validation failed - metadata mismatch");
+        logger.error("Database validation failed - metadata mismatch");
         return false;
       }
       this.metadataValidated = true;
       this.updateMetadataValidation().catch((err) => {
-        console.warn("Failed to update metadata validation timestamp (non-critical):", err);
+        logger.warn("Failed to update metadata validation timestamp (non-critical):", err);
       });
       return true;
     } catch (error) {
-      console.error("Error validating database:", error);
+      logger.error("Error validating database:", error);
       return false;
     }
   }
@@ -7805,13 +5557,13 @@ class DatabaseService {
       return;
     }
     if (!this.db.objectStoreNames.contains("metadata")) {
-      console.warn("Metadata object store does not exist - database may need upgrade");
+      logger.warn("Metadata object store does not exist - database may need upgrade");
       return;
     }
     const platform = this.detectPlatform();
     let version = "1.0.0";
     {
-      version = "1.13.7";
+      version = "1.13.8";
     }
     const metadata = {
       appName: this.APP_NAME,
@@ -7830,11 +5582,11 @@ class DatabaseService {
         const request = store.put({ id: "app_metadata", ...metadata });
         request.onsuccess = () => resolve();
         request.onerror = () => {
-          console.warn("Failed to set metadata (non-critical):", request.error);
+          logger.warn("Failed to set metadata (non-critical):", request.error);
           resolve();
         };
       } catch (error) {
-        console.warn("Failed to set metadata (non-critical):", error);
+        logger.warn("Failed to set metadata (non-critical):", error);
         resolve();
       }
     });
@@ -7854,7 +5606,7 @@ class DatabaseService {
         const store = transaction.objectStore("metadata");
         store.put({ id: "app_metadata", ...metadata });
       } catch (error) {
-        console.warn("Failed to update metadata validation (non-critical):", error);
+        logger.warn("Failed to update metadata validation (non-critical):", error);
       }
     }
   }
@@ -7890,7 +5642,7 @@ class DatabaseService {
       if (migrationDone === "true") {
         return;
       }
-      console.log("[MIGRATION] Starting migration of values and goals to new tables...");
+      logger.info("[MIGRATION] Starting migration of values and goals to new tables...");
       if (!this.db.objectStoreNames.contains("appData")) {
         localStorage.setItem(migrationKey, "true");
         return;
@@ -7912,7 +5664,7 @@ class DatabaseService {
                 await this.setValuesActive(userId, data.values);
                 migrated++;
               } catch (err) {
-                console.warn(`[MIGRATION] Failed to migrate values for user ${userId}:`, err);
+                logger.warn(`[MIGRATION] Failed to migrate values for user ${userId}:`, err);
               }
             }
             if (data.goals && Array.isArray(data.goals) && data.goals.length > 0) {
@@ -7920,23 +5672,23 @@ class DatabaseService {
                 try {
                   await this.saveGoal(goal);
                 } catch (err) {
-                  console.warn(`[MIGRATION] Failed to migrate goal ${goal.id}:`, err);
+                  logger.warn(`[MIGRATION] Failed to migrate goal ${goal.id}:`, err);
                 }
               }
             }
           }
-          console.log(`[MIGRATION] Completed: migrated ${migrated} users' data`);
+          logger.info(`[MIGRATION] Completed: migrated ${migrated} users' data`);
           localStorage.setItem(migrationKey, "true");
           resolve();
         };
         getAllRequest.onerror = () => {
-          console.warn("[MIGRATION] Failed to read appData for migration");
+          logger.warn("[MIGRATION] Failed to read appData for migration");
           localStorage.setItem(migrationKey, "true");
           resolve();
         };
       });
     } catch (error) {
-      console.warn("[MIGRATION] Migration error (non-critical):", error);
+      logger.warn("[MIGRATION] Migration error (non-critical):", error);
       localStorage.setItem("values_goals_migration_complete", "true");
     }
   }
@@ -7957,7 +5709,7 @@ class DatabaseService {
         const errorMessage = lastError.message;
         if (errorMessage.includes("backing store") || errorMessage.includes("Internal error")) {
           if (attempt < maxRetries - 1) {
-            console.warn(`Database initialization attempt ${attempt + 1} failed, retrying...`);
+            logger.warn(`Database initialization attempt ${attempt + 1} failed, retrying...`);
             await new Promise((resolve) => setTimeout(resolve, 500 * (attempt + 1)));
             continue;
           }
@@ -7976,7 +5728,7 @@ class DatabaseService {
     request.onerror = () => {
       const error = request.error || new Error("Unknown database error");
       const errorMessage = error instanceof Error ? error.message : String(error);
-      console.error("Database open error:", error);
+      logger.error("Database open error:", error);
       if (errorMessage.includes("backing store") || errorMessage.includes("Internal error")) {
         reject(new Error("Database storage error. Please try refreshing the page or clearing browser data."));
       } else if (errorMessage.includes("QuotaExceeded") || errorMessage.includes("quota")) {
@@ -7995,10 +5747,10 @@ class DatabaseService {
           return;
         }
         this.db.onerror = (event) => {
-          console.error("Database error:", event);
+          logger.error("Database error:", event);
         };
         this.db.onclose = () => {
-          console.warn("Database connection closed");
+          logger.warn("Database connection closed");
           this.db = null;
           this.metadataValidated = false;
           this.metadataCache = null;
@@ -8012,7 +5764,7 @@ class DatabaseService {
         }
         resolve();
       } catch (error) {
-        console.error("Error setting up database:", error);
+        logger.error("Error setting up database:", error);
         reject(error);
       }
     };
@@ -8099,7 +5851,7 @@ class DatabaseService {
         goalsStore.createIndex("createdAt", "createdAt", { unique: false });
       }
       request.onblocked = () => {
-        console.warn("Database upgrade blocked - another tab may have the database open");
+        logger.warn("Database upgrade blocked - another tab may have the database open");
       };
     };
   }
@@ -8111,17 +5863,6 @@ class DatabaseService {
       throw new Error("Database initialization failed");
     }
     return this.db;
-  }
-  // Generate a UUID with fallback for environments without crypto.randomUUID
-  generateUUID() {
-    if (typeof crypto !== "undefined" && crypto.randomUUID) {
-      return crypto.randomUUID();
-    }
-    return "xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx".replace(/[xy]/g, (c) => {
-      const r = Math.random() * 16 | 0;
-      const v = c === "x" ? r : r & 3 | 8;
-      return v.toString(16);
-    });
   }
   // User operations
   async createUser(userData) {
@@ -8213,11 +5954,11 @@ class DatabaseService {
           resolve(result ? result.data : null);
         };
         request.onerror = () => {
-          console.warn("Failed to get app data (non-critical):", request.error);
+          logger.warn("Failed to get app data (non-critical):", request.error);
           resolve(null);
         };
       } catch (error) {
-        console.warn("Failed to get app data (non-critical):", error);
+        logger.warn("Failed to get app data (non-critical):", error);
         resolve(null);
       }
     });
@@ -8225,7 +5966,7 @@ class DatabaseService {
   async saveAppData(userId, data) {
     const db2 = await this.ensureDB();
     if (!db2.objectStoreNames.contains("appData")) {
-      console.warn("App data store not available - data will not be saved");
+      logger.warn("App data store not available - data will not be saved");
       return;
     }
     return new Promise((resolve, reject) => {
@@ -8235,11 +5976,11 @@ class DatabaseService {
         const request = store.put({ userId, data });
         request.onsuccess = () => resolve();
         request.onerror = () => {
-          console.warn("Failed to save app data (non-critical):", request.error);
+          logger.warn("Failed to save app data (non-critical):", request.error);
           resolve();
         };
       } catch (error) {
-        console.warn("Failed to save app data (non-critical):", error);
+        logger.warn("Failed to save app data (non-critical):", error);
         resolve();
       }
     });
@@ -8250,7 +5991,7 @@ class DatabaseService {
     if (!db2.objectStoreNames.contains("resetTokens")) {
       throw new Error("Reset tokens store not available - database may need upgrade");
     }
-    const token = this.generateUUID();
+    const token = generateUUID();
     const expires = Date.now() + 24 * 60 * 60 * 1e3;
     return new Promise((resolve, reject) => {
       try {
@@ -8266,11 +6007,11 @@ class DatabaseService {
         request.onsuccess = () => resolve(token);
         request.onerror = (event) => {
           const error = event.target.error;
-          console.error("Failed to create reset token:", error);
+          logger.error("Failed to create reset token:", error);
           reject(error || new Error("Failed to create reset token in database"));
         };
       } catch (error) {
-        console.error("Failed to create reset token:", error);
+        logger.error("Failed to create reset token:", error);
         reject(error);
       }
     });
@@ -8298,11 +6039,11 @@ class DatabaseService {
           resolve({ userId: result.userId, email: result.email });
         };
         request.onerror = () => {
-          console.warn("Failed to get reset token (non-critical):", request.error);
+          logger.warn("Failed to get reset token (non-critical):", request.error);
           resolve(null);
         };
       } catch (error) {
-        console.warn("Failed to get reset token (non-critical):", error);
+        logger.warn("Failed to get reset token (non-critical):", error);
         resolve(null);
       }
     });
@@ -8319,11 +6060,11 @@ class DatabaseService {
         const request = store.delete(token);
         request.onsuccess = () => resolve();
         request.onerror = () => {
-          console.warn("Failed to delete reset token (non-critical):", request.error);
+          logger.warn("Failed to delete reset token (non-critical):", request.error);
           resolve();
         };
       } catch (error) {
-        console.warn("Failed to delete reset token (non-critical):", error);
+        logger.warn("Failed to delete reset token (non-critical):", error);
         resolve();
       }
     });
@@ -8356,11 +6097,11 @@ class DatabaseService {
           }
         };
         request.onerror = () => {
-          console.warn("Failed to cleanup expired tokens (non-critical):", request.error);
+          logger.warn("Failed to cleanup expired tokens (non-critical):", request.error);
           resolve();
         };
       } catch (error) {
-        console.warn("Failed to cleanup expired tokens (non-critical):", error);
+        logger.warn("Failed to cleanup expired tokens (non-critical):", error);
         resolve();
       }
     });
@@ -8369,7 +6110,7 @@ class DatabaseService {
   async saveFeelingLog(feelingLog) {
     const db2 = await this.ensureDB();
     if (!db2.objectStoreNames.contains("feelingLogs")) {
-      console.warn("feelingLogs object store does not exist");
+      logger.warn("feelingLogs object store does not exist");
       return Promise.resolve();
     }
     return new Promise((resolve, reject) => {
@@ -8402,7 +6143,7 @@ class DatabaseService {
         request.onsuccess = () => resolve();
         request.onerror = () => reject(request.error);
       } catch (error) {
-        console.error("Error saving feeling log:", error);
+        logger.error("Error saving feeling log:", error);
         resolve();
       }
     });
@@ -8410,7 +6151,7 @@ class DatabaseService {
   async saveRuleBasedUsage(log) {
     const db2 = await this.ensureDB();
     if (!db2.objectStoreNames.contains("ruleBasedUsageLogs")) {
-      console.warn("ruleBasedUsageLogs object store does not exist - skipping save (non-critical)");
+      logger.warn("ruleBasedUsageLogs object store does not exist - skipping save (non-critical)");
       return Promise.resolve();
     }
     return new Promise((resolve, reject) => {
@@ -8420,11 +6161,11 @@ class DatabaseService {
         const request = store.add(log);
         request.onsuccess = () => resolve();
         request.onerror = () => {
-          console.error("Failed to save rule-based usage log:", request.error);
+          logger.error("Failed to save rule-based usage log:", request.error);
           resolve();
         };
       } catch (error) {
-        console.error("Error saving rule-based usage log:", error);
+        logger.error("Error saving rule-based usage log:", error);
         resolve();
       }
     });
@@ -8455,7 +6196,7 @@ class DatabaseService {
         };
         request.onerror = () => reject(request.error);
       } catch (error) {
-        console.error("Error getting rule-based usage logs:", error);
+        logger.error("Error getting rule-based usage logs:", error);
         resolve([]);
       }
     });
@@ -8753,7 +6494,7 @@ class DatabaseService {
           request.onerror = () => reject(request.error);
         });
       } catch (error) {
-        console.warn(`Failed to export store ${storeName}:`, error);
+        logger.warn(`Failed to export store ${storeName}:`, error);
         exportData[storeName] = { error: String(error) };
       }
     }
@@ -8763,7 +6504,7 @@ class DatabaseService {
   async saveValue(userId, valueId, active = true, priority) {
     const db2 = await this.ensureDB();
     if (!db2.objectStoreNames.contains("values")) {
-      console.warn("Values object store does not exist");
+      logger.warn("Values object store does not exist");
       return Promise.resolve();
     }
     return new Promise((resolve, reject) => {
@@ -8799,7 +6540,7 @@ class DatabaseService {
         };
         getAllRequest.onerror = () => reject(getAllRequest.error);
       } catch (error) {
-        console.error("Error saving value:", error);
+        logger.error("Error saving value:", error);
         reject(error);
       }
     });
@@ -8822,7 +6563,7 @@ class DatabaseService {
         };
         request.onerror = () => reject(request.error);
       } catch (error) {
-        console.error("Error getting active values:", error);
+        logger.error("Error getting active values:", error);
         resolve([]);
       }
     });
@@ -8917,7 +6658,7 @@ class DatabaseService {
         };
         request.onerror = () => reject(request.error);
       } catch (error) {
-        console.error("Error setting values active:", error);
+        logger.error("Error setting values active:", error);
         resolve();
       }
     });
@@ -8926,7 +6667,7 @@ class DatabaseService {
   async saveGoal(goal) {
     const db2 = await this.ensureDB();
     if (!db2.objectStoreNames.contains("goals")) {
-      console.warn("Goals object store does not exist");
+      logger.warn("Goals object store does not exist");
       return Promise.resolve();
     }
     return new Promise((resolve, reject) => {
@@ -8937,7 +6678,7 @@ class DatabaseService {
         request.onsuccess = () => resolve();
         request.onerror = () => reject(request.error);
       } catch (error) {
-        console.error("Error saving goal:", error);
+        logger.error("Error saving goal:", error);
         resolve();
       }
     });
@@ -8962,7 +6703,7 @@ class DatabaseService {
         };
         request.onerror = () => reject(request.error);
       } catch (error) {
-        console.error("Error getting goals:", error);
+        logger.error("Error getting goals:", error);
         resolve([]);
       }
     });
@@ -8980,7 +6721,7 @@ class DatabaseService {
         request.onsuccess = () => resolve();
         request.onerror = () => reject(request.error);
       } catch (error) {
-        console.error("Error deleting goal:", error);
+        logger.error("Error deleting goal:", error);
         resolve();
       }
     });
@@ -8991,7 +6732,7 @@ class DatabaseService {
    * Use with caution - this is irreversible!
    */
   async uninstallAppData() {
-    console.log("[Uninstall] Starting complete data wipe...");
+    logger.info("[Uninstall] Starting complete data wipe...");
     try {
       if (this.db) {
         this.db.close();
@@ -9010,20 +6751,20 @@ class DatabaseService {
           await new Promise((resolve, reject) => {
             const deleteRequest = indexedDB.deleteDatabase(dbName);
             deleteRequest.onsuccess = () => {
-              console.log(`[Uninstall] Deleted IndexedDB: ${dbName}`);
+              logger.info(`[Uninstall] Deleted IndexedDB: ${dbName}`);
               resolve();
             };
             deleteRequest.onerror = () => {
-              console.warn(`[Uninstall] Failed to delete IndexedDB: ${dbName}`, deleteRequest.error);
+              logger.warn(`[Uninstall] Failed to delete IndexedDB: ${dbName}`, deleteRequest.error);
               resolve();
             };
             deleteRequest.onblocked = () => {
-              console.warn(`[Uninstall] IndexedDB deletion blocked: ${dbName}`);
+              logger.warn(`[Uninstall] IndexedDB deletion blocked: ${dbName}`);
               setTimeout(() => resolve(), 1e3);
             };
           });
         } catch (error) {
-          console.warn(`[Uninstall] Error deleting IndexedDB ${dbName}:`, error);
+          logger.warn(`[Uninstall] Error deleting IndexedDB ${dbName}:`, error);
         }
       }
       const localStorageKeys = Object.keys(localStorage);
@@ -9034,28 +6775,28 @@ class DatabaseService {
         try {
           localStorage.removeItem(key);
         } catch (error) {
-          console.warn(`[Uninstall] Failed to remove localStorage key ${key}:`, error);
+          logger.warn(`[Uninstall] Failed to remove localStorage key ${key}:`, error);
         }
       }
-      console.log("[Uninstall] Cleared localStorage");
+      logger.info("[Uninstall] Cleared localStorage");
       try {
         sessionStorage.clear();
-        console.log("[Uninstall] Cleared sessionStorage");
+        logger.info("[Uninstall] Cleared sessionStorage");
       } catch (error) {
-        console.warn("[Uninstall] Failed to clear sessionStorage:", error);
+        logger.warn("[Uninstall] Failed to clear sessionStorage:", error);
       }
       if ("caches" in window) {
         try {
           const cacheNames = await caches.keys();
           await Promise.all(
             cacheNames.map((cacheName) => {
-              console.log(`[Uninstall] Deleting cache: ${cacheName}`);
+              logger.info(`[Uninstall] Deleting cache: ${cacheName}`);
               return caches.delete(cacheName);
             })
           );
-          console.log("[Uninstall] Cleared cache storage");
+          logger.info("[Uninstall] Cleared cache storage");
         } catch (error) {
-          console.warn("[Uninstall] Failed to clear cache storage:", error);
+          logger.warn("[Uninstall] Failed to clear cache storage:", error);
         }
       }
       if ("serviceWorker" in navigator) {
@@ -9063,13 +6804,13 @@ class DatabaseService {
           const registrations = await navigator.serviceWorker.getRegistrations();
           await Promise.all(
             registrations.map((registration) => {
-              console.log(`[Uninstall] Unregistering service worker: ${registration.scope}`);
+              logger.info(`[Uninstall] Unregistering service worker: ${registration.scope}`);
               return registration.unregister();
             })
           );
-          console.log("[Uninstall] Unregistered service workers");
+          logger.info("[Uninstall] Unregistered service workers");
         } catch (error) {
-          console.warn("[Uninstall] Failed to unregister service workers:", error);
+          logger.warn("[Uninstall] Failed to unregister service workers:", error);
         }
       }
       if ("storage" in navigator && "getDirectory" in navigator.storage) {
@@ -9080,17 +6821,17 @@ class DatabaseService {
               await root2.removeEntry(name, { recursive: true });
             }
           }
-          console.log("[Uninstall] Cleared OPFS");
+          logger.info("[Uninstall] Cleared OPFS");
         } catch (error) {
-          console.warn("[Uninstall] Failed to clear OPFS:", error);
+          logger.warn("[Uninstall] Failed to clear OPFS:", error);
         }
       }
       this.metadataValidated = false;
       this.oldDatabaseCheckCache = null;
       this.metadataCache = null;
-      console.log("[Uninstall] Complete data wipe finished successfully");
+      logger.info("[Uninstall] Complete data wipe finished successfully");
     } catch (error) {
-      console.error("[Uninstall] Error during data wipe:", error);
+      logger.error("[Uninstall] Error during data wipe:", error);
       throw new Error(`Failed to uninstall app data: ${error instanceof Error ? error.message : String(error)}`);
     }
   }
@@ -9483,41 +7224,238 @@ const HelpOverlay = ({ onClose }) => {
     showDatabaseViewer && /* @__PURE__ */ jsxRuntimeExports.jsx(DatabaseViewer, { onClose: () => setShowDatabaseViewer(false) })
   ] });
 };
-const MoodTrendChart = ({ data }) => {
-  if (data.length === 0) {
-    return /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "bg-white dark:bg-dark-bg-secondary rounded-2xl p-6 shadow-sm", children: [
-      /* @__PURE__ */ jsxRuntimeExports.jsx("h3", { className: "text-lg font-semibold text-text-primary dark:text-white mb-4", children: "Mood Trends" }),
-      /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "text-text-secondary dark:text-white/70 text-sm", children: "No mood data available yet. Start logging your reflections to see trends." })
-    ] });
+const US_RESOURCES = {
+  primary: {
+    name: "988",
+    displayName: "988 Suicide & Crisis Lifeline",
+    callAction: "tel:988",
+    textAction: "sms:988",
+    buttonLabel: "Call or Text 988",
+    subtext: "Confidential support for people in distress. Available 24/7.",
+    url: "https://988lifeline.org/"
+  },
+  secondary: {
+    name: "CrisisTextLine",
+    displayName: "Crisis Text Line",
+    textAction: "sms:741741",
+    textBody: "HOME",
+    buttonLabel: "Text HOME to 741741",
+    subtext: "Free, 24/7 crisis support via text message.",
+    url: "https://www.crisistextline.org/"
+  },
+  lgbtq: {
+    name: "TrevorProject",
+    displayName: "The Trevor Project",
+    textAction: "sms:678678",
+    textBody: "START",
+    buttonLabel: "Text START to 678-678",
+    subtext: "LGBTQ+ specific crisis support. Available 24/7.",
+    url: "https://www.thetrevorproject.org/"
+  },
+  domesticViolence: {
+    name: "NDVH",
+    displayName: "National Domestic Violence Hotline",
+    callAction: "tel:18007997233",
+    textAction: "sms:88788",
+    textBody: "START",
+    buttonLabel: "Call 1-800-799-SAFE (7233)",
+    subtext: "24/7 support for domestic violence.",
+    url: "https://www.thehotline.org/"
   }
-  return /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "bg-white dark:bg-dark-bg-secondary rounded-2xl p-6 space-y-4 shadow-sm", children: [
-    /* @__PURE__ */ jsxRuntimeExports.jsx("h3", { className: "text-lg font-semibold text-text-primary dark:text-white", children: "Mood Trends" }),
-    /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "space-y-3", children: data.map((mood, index) => /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "space-y-1", children: [
-      /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "flex items-center justify-between text-sm", children: [
-        /* @__PURE__ */ jsxRuntimeExports.jsxs("span", { className: "flex items-center space-x-2", children: [
-          /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "text-xl", children: mood.emoji }),
-          /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "text-text-secondary dark:text-white/70", children: mood.label })
-        ] }),
-        /* @__PURE__ */ jsxRuntimeExports.jsxs("span", { className: "font-semibold text-text-primary dark:text-white", children: [
-          mood.percentage,
-          "%"
-        ] })
-      ] }),
-      /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "w-full bg-bg-tertiary dark:bg-dark-bg-tertiary rounded-full h-2 overflow-hidden", children: /* @__PURE__ */ jsxRuntimeExports.jsx(
-        motion.div,
-        {
-          initial: { width: 0 },
-          animate: { width: `${mood.percentage}%` },
-          transition: { duration: 0.5, delay: index * 0.1 },
-          className: "h-full rounded-full",
-          style: { backgroundColor: mood.color }
-        }
-      ) })
-    ] }, `${mood.state}-${index}`)) })
-  ] });
 };
-const MoodTrendChart$1 = React.memo(MoodTrendChart);
-const CrisisResourcesModal = ({ onClose, lcswConfig }) => {
+const UK_RESOURCES = {
+  primary: {
+    name: "Samaritans",
+    displayName: "Samaritans UK",
+    callAction: "tel:116123",
+    buttonLabel: "Call 116 123",
+    subtext: "Available 24 hours a day, 365 days a year.",
+    url: "https://www.samaritans.org/"
+  },
+  secondary: {
+    name: "Shout",
+    displayName: "Shout",
+    textAction: "sms:85258",
+    textBody: "SHOUT",
+    buttonLabel: "Text SHOUT to 85258",
+    subtext: "Free, confidential, 24/7 text support.",
+    url: "https://giveusashout.org/"
+  },
+  domesticViolence: {
+    name: "Refuge",
+    displayName: "Refuge National Domestic Abuse Helpline",
+    callAction: "tel:08082000247",
+    buttonLabel: "Call 0808 2000 247",
+    subtext: "24/7 support for domestic abuse.",
+    url: "https://www.nationaldahelpline.org.uk/"
+  }
+};
+const CA_RESOURCES = {
+  primary: {
+    name: "988",
+    displayName: "Suicide Crisis Helpline",
+    callAction: "tel:988",
+    textAction: "sms:988",
+    buttonLabel: "Call or Text 988",
+    subtext: "Available 24/7 for suicide prevention and crisis support.",
+    url: "https://www.crisisservicescanada.ca/"
+  },
+  secondary: {
+    name: "KidsHelpPhone",
+    displayName: "Kids Help Phone (Youth)",
+    textAction: "sms:686868",
+    textBody: "CONNECT",
+    buttonLabel: "Text CONNECT to 686868",
+    subtext: "Free, confidential support for youth. Available 24/7.",
+    url: "https://kidshelpphone.ca/"
+  }
+};
+const AU_RESOURCES = {
+  primary: {
+    name: "Lifeline",
+    displayName: "Lifeline",
+    callAction: "tel:131114",
+    buttonLabel: "Call 13 11 14",
+    subtext: "Available 24/7 for crisis support and suicide prevention.",
+    url: "https://www.lifeline.org.au/"
+  },
+  secondary: {
+    name: "BeyondBlue",
+    displayName: "Beyond Blue",
+    callAction: "tel:1300224636",
+    buttonLabel: "Call 1300 22 4636",
+    subtext: "24/7 support for anxiety, depression, and suicide prevention.",
+    url: "https://www.beyondblue.org.au/"
+  }
+};
+const INTL_RESOURCES = {
+  primary: {
+    name: "Befrienders",
+    displayName: "Befrienders Worldwide",
+    buttonLabel: "Visit befrienders.org",
+    subtext: "Global directory of crisis support centers.",
+    url: "https://www.befrienders.org/"
+  },
+  secondary: {
+    name: "IASP",
+    displayName: "IASP Resources",
+    buttonLabel: "Visit iasp.info",
+    subtext: "International Association for Suicide Prevention resources.",
+    url: "https://www.iasp.info/resources/Crisis_Centres"
+  }
+};
+function getCrisisResources(region = "US") {
+  switch (region) {
+    case "US":
+      return US_RESOURCES;
+    case "UK":
+      return UK_RESOURCES;
+    case "CA":
+      return CA_RESOURCES;
+    case "AU":
+      return AU_RESOURCES;
+    case "INTL":
+    default:
+      return INTL_RESOURCES;
+  }
+}
+function detectRegion() {
+  if (typeof window === "undefined") {
+    return "US";
+  }
+  const locale = navigator.language || navigator.languages?.[0] || "en-US";
+  const country = locale.split("-")[1]?.toUpperCase();
+  switch (country) {
+    case "US":
+      return "US";
+    case "GB":
+      return "UK";
+    case "CA":
+      return "CA";
+    case "AU":
+      return "AU";
+    default:
+      return "INTL";
+  }
+}
+function buildSMSUri(number, body) {
+  const separator = /iPhone|iPad|iPod/.test(navigator.userAgent) ? "&" : "?";
+  const bodyParam = body ? `${separator}body=${encodeURIComponent(body)}` : "";
+  return `sms:${number}${bodyParam}`;
+}
+const CrisisResourcesModal = ({ onClose, lcswConfig, region: overrideRegion }) => {
+  const [detectedRegion, setDetectedRegion] = reactExports.useState("US");
+  const [resources, setResources] = reactExports.useState(getCrisisResources("US"));
+  reactExports.useEffect(() => {
+    const region = overrideRegion || detectRegion();
+    setDetectedRegion(region);
+    setResources(getCrisisResources(region));
+  }, [overrideRegion]);
+  const handleCall = (action) => {
+    if (action && action.startsWith("tel:")) {
+      window.location.href = action;
+    }
+  };
+  const handleText = (action, body) => {
+    if (action && action.startsWith("sms:")) {
+      const number = action.replace("sms:", "").split(/[?&]/)[0];
+      const smsUri = buildSMSUri(number, body);
+      window.location.href = smsUri;
+    }
+  };
+  const renderResourceButton = (resource) => {
+    if (!resource) return null;
+    if (resource.callAction) {
+      return /* @__PURE__ */ jsxRuntimeExports.jsxs(
+        "a",
+        {
+          href: resource.callAction,
+          onClick: (e) => {
+            e.preventDefault();
+            handleCall(resource.callAction);
+          },
+          className: "flex-1 flex items-center justify-center gap-2 py-3 px-4 bg-red-600 hover:bg-red-700 text-white font-bold text-base rounded-lg transition-all active:scale-95",
+          children: [
+            /* @__PURE__ */ jsxRuntimeExports.jsx("span", { children: "📞" }),
+            resource.buttonLabel
+          ]
+        }
+      );
+    }
+    if (resource.textAction) {
+      return /* @__PURE__ */ jsxRuntimeExports.jsxs(
+        "a",
+        {
+          href: "#",
+          onClick: (e) => {
+            e.preventDefault();
+            handleText(resource.textAction, resource.textBody);
+          },
+          className: "flex-1 flex items-center justify-center gap-2 py-3 px-4 bg-blue-600 hover:bg-blue-700 text-white font-bold text-base rounded-lg transition-all active:scale-95",
+          children: [
+            /* @__PURE__ */ jsxRuntimeExports.jsx("span", { children: "💬" }),
+            resource.buttonLabel
+          ]
+        }
+      );
+    }
+    if (resource.url) {
+      return /* @__PURE__ */ jsxRuntimeExports.jsxs(
+        "a",
+        {
+          href: resource.url,
+          target: "_blank",
+          rel: "noopener noreferrer",
+          className: "flex-1 flex items-center justify-center gap-2 py-3 px-4 bg-navy-primary hover:bg-navy-dark text-white font-bold text-base rounded-lg transition-all active:scale-95",
+          children: [
+            /* @__PURE__ */ jsxRuntimeExports.jsx("span", { children: "🌐" }),
+            resource.buttonLabel
+          ]
+        }
+      );
+    }
+    return null;
+  };
   return /* @__PURE__ */ jsxRuntimeExports.jsx(
     "div",
     {
@@ -9555,34 +7493,84 @@ const CrisisResourcesModal = ({ onClose, lcswConfig }) => {
                   ] })
                 ] }),
                 /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "bg-yellow-warm/10 dark:bg-yellow-warm/20 border-l-4 border-yellow-warm p-4 sm:p-5 rounded-xl", children: [
-                  /* @__PURE__ */ jsxRuntimeExports.jsx("h3", { className: "text-lg font-black text-text-primary dark:text-white mb-3", children: "📞 Crisis Hotlines (24/7, Free, Confidential)" }),
-                  /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "space-y-3 text-sm text-text-primary dark:text-white", children: [
-                    /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { children: [
-                      /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "font-bold text-base", children: "988 Suicide & Crisis Lifeline" }),
-                      /* @__PURE__ */ jsxRuntimeExports.jsxs("p", { className: "text-xs text-text-secondary dark:text-text-secondary mt-1", children: [
-                        "Dial ",
-                        /* @__PURE__ */ jsxRuntimeExports.jsx("strong", { children: "988" }),
-                        " or text 988. Available 24/7 for anyone in suicidal crisis or emotional distress."
-                      ] })
+                  /* @__PURE__ */ jsxRuntimeExports.jsx("h3", { className: "text-lg font-black text-text-primary dark:text-white mb-3", children: "📞 Immediate Help (24/7, Free, Confidential)" }),
+                  /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "space-y-3", children: /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { children: [
+                    /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "font-bold text-base text-text-primary dark:text-white mb-2", children: resources.primary.displayName }),
+                    /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "flex gap-2", children: [
+                      renderResourceButton(resources.primary),
+                      resources.primary.url && /* @__PURE__ */ jsxRuntimeExports.jsx(
+                        "a",
+                        {
+                          href: resources.primary.url,
+                          target: "_blank",
+                          rel: "noopener noreferrer",
+                          className: "flex items-center justify-center py-3 px-3 bg-white dark:bg-white/5 border border-border-soft dark:border-white/10 text-text-secondary dark:text-white/60 rounded-lg font-medium text-sm hover:bg-gray-50 dark:hover:bg-white/10 transition-colors",
+                          children: "🌐"
+                        }
+                      )
                     ] }),
-                    /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { children: [
-                      /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "font-bold text-base", children: "Crisis Text Line" }),
-                      /* @__PURE__ */ jsxRuntimeExports.jsxs("p", { className: "text-xs text-text-secondary dark:text-text-secondary mt-1", children: [
-                        "Text ",
-                        /* @__PURE__ */ jsxRuntimeExports.jsx("strong", { children: "HOME" }),
-                        " to ",
-                        /* @__PURE__ */ jsxRuntimeExports.jsx("strong", { children: "741741" }),
-                        ". Free, 24/7 crisis support via text message."
-                      ] })
+                    /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "text-xs text-text-secondary dark:text-white/70 mt-2", children: resources.primary.subtext })
+                  ] }) })
+                ] }),
+                resources.secondary && /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "bg-navy-primary/10 dark:bg-navy-primary/20 border-l-4 border-navy-primary p-4 sm:p-5 rounded-xl", children: [
+                  /* @__PURE__ */ jsxRuntimeExports.jsx("h3", { className: "text-lg font-black text-text-primary dark:text-white mb-3", children: "Alternative Support" }),
+                  /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "space-y-2", children: [
+                    /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "font-bold text-base text-text-primary dark:text-white", children: resources.secondary.displayName }),
+                    /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "flex gap-2", children: [
+                      renderResourceButton(resources.secondary),
+                      resources.secondary.url && /* @__PURE__ */ jsxRuntimeExports.jsx(
+                        "a",
+                        {
+                          href: resources.secondary.url,
+                          target: "_blank",
+                          rel: "noopener noreferrer",
+                          className: "flex items-center justify-center py-3 px-3 bg-white dark:bg-white/5 border border-border-soft dark:border-white/10 text-text-secondary dark:text-white/60 rounded-lg font-medium text-sm hover:bg-gray-50 dark:hover:bg-white/10 transition-colors",
+                          children: "🌐"
+                        }
+                      )
                     ] }),
-                    /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { children: [
-                      /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "font-bold text-base", children: "National Domestic Violence Hotline" }),
-                      /* @__PURE__ */ jsxRuntimeExports.jsxs("p", { className: "text-xs text-text-secondary dark:text-text-secondary mt-1", children: [
-                        "Call ",
-                        /* @__PURE__ */ jsxRuntimeExports.jsx("strong", { children: "1-800-799-SAFE (7233)" }),
-                        " or text START to 88788. 24/7 support for domestic violence."
-                      ] })
-                    ] })
+                    /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "text-xs text-text-secondary dark:text-white/70 mt-2", children: resources.secondary.subtext })
+                  ] })
+                ] }),
+                resources.lgbtq && /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "bg-purple-50 dark:bg-purple-900/20 border-l-4 border-purple-500 p-4 sm:p-5 rounded-xl", children: [
+                  /* @__PURE__ */ jsxRuntimeExports.jsx("h3", { className: "text-lg font-black text-text-primary dark:text-white mb-3", children: "LGBTQ+ Support" }),
+                  /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "space-y-2", children: [
+                    /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "font-bold text-base text-text-primary dark:text-white", children: resources.lgbtq.displayName }),
+                    /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "flex gap-2", children: [
+                      renderResourceButton(resources.lgbtq),
+                      resources.lgbtq.url && /* @__PURE__ */ jsxRuntimeExports.jsx(
+                        "a",
+                        {
+                          href: resources.lgbtq.url,
+                          target: "_blank",
+                          rel: "noopener noreferrer",
+                          className: "flex items-center justify-center py-3 px-3 bg-white dark:bg-white/5 border border-border-soft dark:border-white/10 text-text-secondary dark:text-white/60 rounded-lg font-medium text-sm hover:bg-gray-50 dark:hover:bg-white/10 transition-colors",
+                          children: "🌐"
+                        }
+                      )
+                    ] }),
+                    /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "text-xs text-text-secondary dark:text-white/70 mt-2", children: resources.lgbtq.subtext })
+                  ] })
+                ] }),
+                resources.domesticViolence && /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "bg-yellow-50 dark:bg-yellow-900/20 border-l-4 border-yellow-500 p-4 sm:p-5 rounded-xl", children: [
+                  /* @__PURE__ */ jsxRuntimeExports.jsx("h3", { className: "text-lg font-black text-text-primary dark:text-white mb-3", children: "Domestic Violence Support" }),
+                  /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "space-y-2", children: [
+                    /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "font-bold text-base text-text-primary dark:text-white", children: resources.domesticViolence.displayName }),
+                    /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "flex gap-2", children: [
+                      renderResourceButton(resources.domesticViolence),
+                      resources.domesticViolence.url && /* @__PURE__ */ jsxRuntimeExports.jsx(
+                        "a",
+                        {
+                          href: resources.domesticViolence.url,
+                          target: "_blank",
+                          rel: "noopener noreferrer",
+                          className: "flex items-center justify-center py-3 px-3 bg-white dark:bg-white/5 border border-border-soft dark:border-white/10 text-text-secondary dark:text-white/60 rounded-lg font-medium text-sm hover:bg-gray-50 dark:hover:bg-white/10 transition-colors",
+                          children: "🌐"
+                        }
+                      )
+                    ] }),
+                    /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "text-xs text-text-secondary dark:text-white/70 mt-2", children: resources.domesticViolence.subtext }),
+                    /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "text-xs text-text-secondary dark:text-white/70 mt-2 italic", children: "You can clear your browser history after visiting this page." })
                   ] })
                 ] }),
                 lcswConfig?.emergencyContact?.phone && /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "bg-navy-primary/10 dark:bg-navy-primary/20 border-l-4 border-navy-primary p-4 sm:p-5 rounded-xl", children: [
@@ -9685,109 +7673,6 @@ const CrisisAlertModal = ({ data, onClose }) => {
     ) })
   ] }) });
 };
-const EmotionModal = ({
-  isOpen,
-  onClose,
-  onEmotionSelect,
-  selectedEmotion,
-  preSelectedEmotion
-}) => {
-  const [primaryEmotion, setPrimaryEmotion] = reactExports.useState(preSelectedEmotion || null);
-  React.useEffect(() => {
-    if (preSelectedEmotion && isOpen) {
-      setPrimaryEmotion(preSelectedEmotion);
-    } else if (!isOpen) {
-      setPrimaryEmotion(null);
-    }
-  }, [preSelectedEmotion, isOpen]);
-  if (!isOpen) return null;
-  const handlePrimarySelect = (emotion) => setPrimaryEmotion(emotion);
-  const handleSubSelect = (feeling) => {
-    if (primaryEmotion) onEmotionSelect(primaryEmotion, feeling);
-    onClose();
-  };
-  const handlePrimaryOnly = () => {
-    if (primaryEmotion) onEmotionSelect(primaryEmotion);
-    onClose();
-  };
-  const primaryConfig = EMOTIONAL_STATES.find((e) => e.state === primaryEmotion);
-  return /* @__PURE__ */ jsxRuntimeExports.jsx(
-    "div",
-    {
-      className: "fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm",
-      onClick: onClose,
-      children: /* @__PURE__ */ jsxRuntimeExports.jsx(
-        "div",
-        {
-          role: "dialog",
-          "aria-modal": "true",
-          className: "bg-white dark:bg-dark-bg-secondary rounded-2xl p-6 w-[90%] max-w-md shadow-xl relative",
-          onClick: (e) => e.stopPropagation(),
-          children: !primaryEmotion ? /* @__PURE__ */ jsxRuntimeExports.jsxs(jsxRuntimeExports.Fragment, { children: [
-            /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "flex justify-between items-center mb-4", children: [
-              /* @__PURE__ */ jsxRuntimeExports.jsx("h2", { className: "text-xl font-semibold text-text-primary dark:text-white", children: "How are you feeling?" }),
-              /* @__PURE__ */ jsxRuntimeExports.jsx(
-                "button",
-                {
-                  "aria-label": "Close",
-                  onClick: onClose,
-                  className: "text-gray-500 dark:text-gray-300 hover:text-gray-700 dark:hover:text-white text-xl font-bold",
-                  children: "×"
-                }
-              )
-            ] }),
-            /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "grid grid-cols-3 sm:grid-cols-4 gap-3", children: EMOTIONAL_STATES.map((emotion) => /* @__PURE__ */ jsxRuntimeExports.jsxs(
-              "button",
-              {
-                onClick: () => handlePrimarySelect(emotion.state),
-                className: `p-3 rounded-xl border shadow-sm transition flex flex-col items-center text-sm ${selectedEmotion?.state === emotion.state ? "bg-brand text-white border-brand" : "border-gray-200 dark:border-gray-700 hover:bg-brand hover:text-white text-text-primary dark:text-white"}`,
-                children: [
-                  /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "text-2xl", children: emotion.emoji }),
-                  /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "mt-1", children: emotion.shortLabel })
-                ]
-              },
-              emotion.state
-            )) })
-          ] }) : /* @__PURE__ */ jsxRuntimeExports.jsxs(jsxRuntimeExports.Fragment, { children: [
-            /* @__PURE__ */ jsxRuntimeExports.jsx(
-              "button",
-              {
-                onClick: () => setPrimaryEmotion(null),
-                className: "text-sm text-brand hover:underline mb-3",
-                children: "← Back"
-              }
-            ),
-            /* @__PURE__ */ jsxRuntimeExports.jsxs("h2", { className: "text-xl font-semibold text-center mb-3 text-text-primary dark:text-white", children: [
-              primaryConfig?.emoji,
-              " ",
-              primaryConfig?.shortLabel
-            ] }),
-            /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "grid grid-cols-2 gap-2 mb-4", children: primaryConfig?.feelings.map((f) => /* @__PURE__ */ jsxRuntimeExports.jsx(
-              "button",
-              {
-                onClick: () => handleSubSelect(f),
-                className: "p-2 rounded-lg border border-gray-200 dark:border-gray-700 hover:bg-brand hover:text-white capitalize text-text-primary dark:text-white transition",
-                children: f
-              },
-              f
-            )) }),
-            /* @__PURE__ */ jsxRuntimeExports.jsxs(
-              "button",
-              {
-                onClick: handlePrimaryOnly,
-                className: "w-full py-2 bg-brand text-white rounded-lg hover:bg-brand-dark transition",
-                children: [
-                  "Select ",
-                  primaryConfig?.shortLabel
-                ]
-              }
-            )
-          ] })
-        }
-      )
-    }
-  );
-};
 const SkeletonLoader = ({
   className = "",
   width = "100%",
@@ -9801,260 +7686,6 @@ const SkeletonLoader = ({
     }
   );
 };
-const FEELING_EMOJIS = {
-  // Drained
-  "tired": "😴",
-  "empty": "🫗",
-  "numb": "😐",
-  "burned out": "🔥",
-  "exhausted": "😮‍💨",
-  "drained": "💧",
-  "flat": "➖",
-  "lifeless": "💀",
-  // Heavy
-  "sad": "😢",
-  "disappointed": "😞",
-  "lonely": "😔",
-  "discouraged": "😓",
-  "down": "⬇️",
-  "gloomy": "☁️",
-  "melancholy": "🌧️",
-  "weighed down": "⚖️",
-  // Overwhelmed
-  "anxious": "😰",
-  "stressed": "😓",
-  "scattered": "💨",
-  "pressured": "⏰",
-  "swamped": "🌊",
-  "flooded": "💦",
-  "chaotic": "🌀",
-  "unable to focus": "🎯",
-  // Mixed
-  "uncertain": "🤔",
-  "okay": "😐",
-  "conflicted": "⚖️",
-  "reflective": "🤔",
-  "neutral": "➖",
-  "ambivalent": "↔️",
-  "contemplative": "🧘",
-  "processing": "⚙️",
-  // Calm
-  "peaceful": "🕊️",
-  "centered": "🎯",
-  "balanced": "⚖️",
-  "serene": "🌊",
-  "grounded": "🌱",
-  "stable": "🏔️",
-  "tranquil": "🌸",
-  "at ease": "😌",
-  // Hopeful
-  "optimistic": "☀️",
-  "encouraged": "💪",
-  "motivated": "🚀",
-  "inspired": "✨",
-  "forward-looking": "👀",
-  "promising": "🌟",
-  "bright": "💡",
-  "upward": "📈",
-  // Positive
-  "hopeful": "🌱",
-  "curious": "🤔",
-  "calm": "🌿",
-  "engaged": "🎯",
-  "content": "😊",
-  "grateful": "🙏",
-  // Energized
-  "joyful": "😄",
-  "excited": "🎉",
-  "proud": "🦁",
-  "elated": "🎊",
-  "enthusiastic": "🔥",
-  "vibrant": "🌈"
-};
-const EmotionSelection = ({
-  emotion,
-  feeling,
-  onEmotionChange,
-  showSwipeHint = true,
-  compact = false
-}) => {
-  const containerRef = reactExports.useRef(null);
-  const touchStartX = reactExports.useRef(0);
-  const mouseStartX = reactExports.useRef(0);
-  const isDragging = reactExports.useRef(false);
-  const [selectionLevel, setSelectionLevel] = reactExports.useState("none");
-  const [currentPrimaryIndex, setCurrentPrimaryIndex] = reactExports.useState(-1);
-  const [currentSubIndex, setCurrentSubIndex] = reactExports.useState(0);
-  const currentPrimary = currentPrimaryIndex >= 0 ? EMOTIONAL_STATES[currentPrimaryIndex] : null;
-  reactExports.useEffect(() => {
-    if (emotion) {
-      const primaryIndex = EMOTIONAL_STATES.findIndex((e) => e.state === emotion);
-      if (primaryIndex >= 0) {
-        setCurrentPrimaryIndex(primaryIndex);
-        setSelectionLevel("primary");
-        if (feeling) {
-          const subIndex = EMOTIONAL_STATES[primaryIndex].feelings.findIndex((f) => f === feeling);
-          if (subIndex >= 0) {
-            setCurrentSubIndex(subIndex);
-            setSelectionLevel("sub");
-          }
-        }
-      }
-    }
-  }, [emotion, feeling]);
-  const availableMoods = EMOTIONAL_STATES;
-  reactExports.useEffect(() => {
-    if (!onEmotionChange) return;
-    const handleTouchStart = (e) => {
-      touchStartX.current = e.touches[0].clientX;
-    };
-    const handleTouchEnd = (e) => {
-      const touchEndX = e.changedTouches[0].clientX;
-      const diff = touchStartX.current - touchEndX;
-      const threshold = 50;
-      if (Math.abs(diff) > threshold) {
-        if (diff > 0 && currentPrimaryIndex < availableMoods.length - 1) {
-          setCurrentPrimaryIndex((prev) => {
-            const next = prev + 1;
-            setSelectionLevel("primary");
-            return next;
-          });
-        } else if (diff < 0 && currentPrimaryIndex > 0) {
-          setCurrentPrimaryIndex((prev) => {
-            const next = prev - 1;
-            setSelectionLevel("primary");
-            return next;
-          });
-        }
-      }
-    };
-    const handleMouseDown = (e) => {
-      isDragging.current = false;
-      mouseStartX.current = e.clientX;
-    };
-    const handleMouseMove = (e) => {
-      if (mouseStartX.current !== 0) {
-        isDragging.current = true;
-      }
-    };
-    const handleMouseUp = (e) => {
-      if (isDragging.current && mouseStartX.current !== 0) {
-        const diff = mouseStartX.current - e.clientX;
-        const threshold = 50;
-        if (Math.abs(diff) > threshold) {
-          if (diff > 0 && currentPrimaryIndex < availableMoods.length - 1) {
-            setCurrentPrimaryIndex((prev) => {
-              const next = prev + 1;
-              setSelectionLevel("primary");
-              return next;
-            });
-          } else if (diff < 0 && currentPrimaryIndex > 0) {
-            setCurrentPrimaryIndex((prev) => {
-              const next = prev - 1;
-              setSelectionLevel("primary");
-              return next;
-            });
-          }
-        }
-      }
-      mouseStartX.current = 0;
-      isDragging.current = false;
-    };
-    const container = containerRef.current;
-    if (container) {
-      container.addEventListener("touchstart", handleTouchStart);
-      container.addEventListener("touchend", handleTouchEnd);
-      container.addEventListener("mousedown", handleMouseDown);
-      container.addEventListener("mousemove", handleMouseMove);
-      container.addEventListener("mouseup", handleMouseUp);
-      return () => {
-        container.removeEventListener("touchstart", handleTouchStart);
-        container.removeEventListener("touchend", handleTouchEnd);
-        container.removeEventListener("mousedown", handleMouseDown);
-        container.removeEventListener("mousemove", handleMouseMove);
-        container.removeEventListener("mouseup", handleMouseUp);
-      };
-    }
-  }, [onEmotionChange, currentPrimaryIndex, availableMoods]);
-  const handlePrimaryClick = () => {
-    if (currentPrimaryIndex < 0) {
-      setCurrentPrimaryIndex(0);
-    }
-    setSelectionLevel("primary");
-  };
-  const handleSubClick = () => {
-    if (currentPrimaryIndex < 0) return;
-    setSelectionLevel("sub");
-    const selectedFeeling = currentPrimary.feelings[currentSubIndex];
-    onEmotionChange?.(currentPrimary.state, selectedFeeling);
-  };
-  const currentSubFeeling = currentPrimary ? currentPrimary.feelings[currentSubIndex] || currentPrimary.feelings[0] : null;
-  const subFeelingEmoji = currentSubFeeling ? FEELING_EMOJIS[currentSubFeeling] || "" : "";
-  const sizeClass = compact ? "w-8 h-8 sm:w-10 sm:h-10" : "w-10 h-10 sm:w-12 sm:h-12";
-  const textSizeClass = compact ? "text-base sm:text-lg" : "text-base sm:text-lg";
-  const arrowSizeClass = compact ? "text-xl sm:text-2xl" : "text-2xl sm:text-3xl";
-  return /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { ref: containerRef, className: "space-y-2", children: [
-    showSwipeHint && /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "text-left text-xs sm:text-sm text-text-secondary dark:text-white/50 mb-2", children: "← Swipe or drag to change →" }),
-    /* @__PURE__ */ jsxRuntimeExports.jsx(
-      "div",
-      {
-        className: "flex items-center space-x-3 cursor-pointer hover:opacity-80 transition-opacity",
-        onClick: handlePrimaryClick,
-        children: /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "flex items-center space-x-3", children: [
-          (selectionLevel === "primary" || selectionLevel === "none") && /* @__PURE__ */ jsxRuntimeExports.jsx(
-            motion.span,
-            {
-              className: `text-navy-primary dark:text-yellow-warm ${arrowSizeClass} font-bold`,
-              animate: {
-                x: [0, 5, 0]
-              },
-              transition: {
-                repeat: Infinity,
-                duration: 1.5,
-                ease: "easeInOut"
-              },
-              children: "→"
-            }
-          ),
-          currentPrimaryIndex >= 0 && currentPrimary ? /* @__PURE__ */ jsxRuntimeExports.jsxs(jsxRuntimeExports.Fragment, { children: [
-            /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: `${sizeClass} bg-navy-primary dark:bg-yellow-warm rounded-full flex items-center justify-center flex-shrink-0`, children: /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: `text-white dark:text-navy-dark ${textSizeClass}`, children: currentPrimary.emoji }) }),
-            /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: `${textSizeClass} font-semibold text-navy-primary dark:text-yellow-warm capitalize`, children: currentPrimary.shortLabel })
-          ] }) : /* @__PURE__ */ jsxRuntimeExports.jsxs(jsxRuntimeExports.Fragment, { children: [
-            /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: `${sizeClass} bg-bg-secondary dark:bg-dark-bg-secondary rounded-full flex items-center justify-center flex-shrink-0 border-2 border-dashed border-navy-primary/50 dark:border-yellow-warm/50`, children: /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: `text-text-secondary dark:text-white/50 ${textSizeClass}`, children: "?" }) }),
-            /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: `${textSizeClass} font-semibold text-text-secondary dark:text-white/70`, children: "Select" })
-          ] })
-        ] })
-      }
-    ),
-    currentPrimaryIndex >= 0 && currentPrimary && /* @__PURE__ */ jsxRuntimeExports.jsx(
-      "div",
-      {
-        className: "flex items-center space-x-3 cursor-pointer hover:opacity-80 transition-opacity ml-8 sm:ml-10",
-        onClick: handleSubClick,
-        children: /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "flex items-center space-x-3", children: [
-          selectionLevel === "sub" && /* @__PURE__ */ jsxRuntimeExports.jsx(
-            motion.span,
-            {
-              className: `text-navy-primary dark:text-yellow-warm ${arrowSizeClass} font-bold`,
-              animate: {
-                x: [0, 5, 0]
-              },
-              transition: {
-                repeat: Infinity,
-                duration: 1.5,
-                ease: "easeInOut"
-              },
-              children: "→"
-            }
-          ),
-          subFeelingEmoji && /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: `${textSizeClass}`, children: subFeelingEmoji }),
-          /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: `text-sm sm:text-base text-text-secondary dark:text-white/70 capitalize`, children: currentSubFeeling })
-        ] })
-      }
-    )
-  ] });
-};
-const EmotionSelection$1 = React.memo(EmotionSelection);
 const ReflectionForm = ({
   value,
   emotionalState,
@@ -10115,22 +7746,6 @@ const ReflectionForm = ({
     return () => clearInterval(interval);
   }, [isProcessing]);
   return /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "mt-4 sm:mt-6 space-y-4 sm:space-y-6 animate-pop border-t border-border-soft dark:border-dark-border/30 pt-4 sm:pt-5", children: [
-    /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "space-y-3", children: [
-      /* @__PURE__ */ jsxRuntimeExports.jsx("label", { className: "text-xs sm:text-sm font-black text-text-primary/50 dark:text-white/50 uppercase tracking-widest block px-1", children: "How are you feeling right now?" }),
-      /* @__PURE__ */ jsxRuntimeExports.jsx(
-        EmotionSelection$1,
-        {
-          emotion: emotionalState === "neutral" ? void 0 : emotionalState,
-          feeling: selectedFeeling || void 0,
-          onEmotionChange: (emotion, feeling) => {
-            onEmotionalStateChange(emotion);
-            onSelectedFeelingChange(feeling);
-          },
-          showSwipeHint: true,
-          compact: false
-        }
-      )
-    ] }),
     /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "bg-navy-primary dark:bg-navy-primary rounded-xl sm:rounded-2xl p-3 sm:p-4 shadow-md border border-navy-primary/20 dark:border-dark-border/50 relative overflow-hidden group", children: [
       /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "text-xs sm:text-sm font-black text-brand/80 dark:text-brand-light/80 uppercase tracking-widest mb-1.5", children: "Focus Lens" }),
       loading ? /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "space-y-1.5", children: [
@@ -10315,6 +7930,16 @@ function useDebounce(value, delay) {
   }, [value, delay]);
   return debouncedValue;
 }
+function generateUUID$1() {
+  if (typeof crypto !== "undefined" && crypto.randomUUID) {
+    return crypto.randomUUID();
+  }
+  return "xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx".replace(/[xy]/g, (c) => {
+    const r = Math.random() * 16 | 0;
+    const v = c === "x" ? r : r & 3 | 8;
+    return v.toString(16);
+  });
+}
 function useDashboard({
   values = [],
   goals = [],
@@ -10344,14 +7969,6 @@ function useDashboard({
   const [crisisAlert, setCrisisAlert] = reactExports.useState(null);
   useDebounce(reflectionText, 1e3);
   reactExports.useRef({});
-  reactExports.useCallback(() => {
-    if (crypto?.randomUUID) return crypto.randomUUID();
-    return "xxxxxx4xxxyxxxxxxx".replace(/[xy]/g, (c) => {
-      const r = Math.random() * 16 | 0;
-      const v = c === "x" ? r : r & 3 | 8;
-      return v.toString(16);
-    });
-  }, []);
   const saveEmotionInteraction = reactExports.useCallback(
     async (emotion, subEmotion, valueId) => {
       try {
@@ -10363,7 +7980,7 @@ function useDashboard({
           userId = sessionStorage.getItem("userId") || "anonymous";
         }
         const timestamp = (/* @__PURE__ */ new Date()).toISOString();
-        const logId = `feeling-${Date.now()}-${Math.random().toString(36).substring(2, 9)}`;
+        const logId = generateUUID$1();
         const jsonIn = JSON.stringify({ emotion, subEmotion, valueId, timestamp, userId });
         const encouragement = await generateEmotionalEncouragement(
           emotion,
@@ -10421,7 +8038,7 @@ function useDashboard({
         setEncouragementText(encouragement);
         const adapter = getDatabaseAdapter();
         await adapter.saveFeelingLog({
-          id: `feeling-${Date.now()}`,
+          id: generateUUID$1(),
           timestamp: (/* @__PURE__ */ new Date()).toISOString(),
           emotionalState: state,
           selectedFeeling: feelingToUse || null,
@@ -10440,7 +8057,7 @@ function useDashboard({
   );
   const handleCommit = reactExports.useCallback(
     async (valueId) => {
-      if (!reflectionText.trim() && !goalText.trim()) return;
+      if (reflectionText.trim().length < MIN_REFLECTION_LENGTH && !goalText.trim()) return;
       let userId = null;
       try {
         const user = await getCurrentUser();
@@ -10452,7 +8069,7 @@ function useDashboard({
       const hasGoal = goalText.trim().length > 0;
       if (hasGoal) {
         const newGoal = {
-          id: `${Date.now()}-goal`,
+          id: generateUUID$1(),
           valueId,
           userId: userId || void 0,
           // Add userId to goal
@@ -10465,7 +8082,7 @@ function useDashboard({
         onUpdateGoals([newGoal, ...goals]);
       }
       const logEntry2 = {
-        id: `${Date.now()}-log`,
+        id: generateUUID$1(),
         date: timestamp,
         valueId,
         livedIt: true,
@@ -10476,7 +8093,7 @@ function useDashboard({
       onLog(logEntry2);
       const adapter = getDatabaseAdapter();
       await adapter.saveFeelingLog({
-        id: `${timestamp}-feeling`,
+        id: generateUUID$1(),
         timestamp,
         userId: userId || void 0,
         emotionalState: emotionalState || "",
@@ -10585,12 +8202,10 @@ const Dashboard = ({
     }
   }, [initialEmotion, initialFeeling, initialEncouragement, dashboard]);
   const { setPrimaryEmotion, setSubEmotion } = useEmotion();
-  const [showEmotionModal, setShowEmotionModal] = reactExports.useState(false);
   const [showReflectionModal, setShowReflectionModal] = reactExports.useState(false);
   const [selectedValue, setSelectedValue] = reactExports.useState(null);
   const [showResourcesModal, setShowResourcesModal] = reactExports.useState(false);
   const [showCrisisAlert, setShowCrisisAlert] = reactExports.useState(false);
-  const [preSelectedEmotion, setPreSelectedEmotion] = reactExports.useState(null);
   reactExports.useEffect(() => {
     if (dashboard.activeValueId) {
       localStorage.setItem("selectedValueId", dashboard.activeValueId.toString());
@@ -10609,49 +8224,10 @@ const Dashboard = ({
       valuesCount: values.length
     });
   }, [showReflectionModal, selectedValue, values.length]);
-  const handleEmotionClick = (emotionState) => {
-    setShowEmotionModal(true);
-    setPreSelectedEmotion(emotionState);
-  };
-  const handleEmotionSelect = async (primary, sub) => {
-    console.log("[Dashboard] Emotion selected:", { primary, sub, valuesCount: values.length });
-    setPrimaryEmotion(primary, "dashboard");
-    if (sub) {
-      setSubEmotion(sub);
-    } else {
-      setSubEmotion(null);
-    }
-    dashboard.setEmotionalState(primary);
-    if (sub) {
-      dashboard.setSelectedFeeling(sub);
-    }
-    setShowEmotionModal(false);
-    dashboard.handleEmotionalEncourage(primary, sub).catch((err) => {
-      console.error("[Dashboard] Encouragement generation failed (non-critical):", err);
-    });
-    if (values.length > 0) {
-      console.log("[Dashboard] Opening reflection modal with value:", values[0].name);
-      setSelectedValue(values[0]);
-      dashboard.setActiveValueId(values[0].id);
-    } else {
-      console.warn("[Dashboard] No values available - opening reflection modal with placeholder");
-      setSelectedValue({
-        id: "placeholder",
-        name: "Reflection",
-        description: "General reflection",
-        category: "general"
-      });
-    }
-    setTimeout(() => {
-      setShowReflectionModal(true);
-      console.log("[Dashboard] Reflection modal should now be open");
-    }, 100);
-  };
   const handleCheckInClick = (val) => {
     setSelectedValue(val);
     dashboard.setActiveValueId(val.id);
-    setPreSelectedEmotion(null);
-    setShowEmotionModal(true);
+    setShowReflectionModal(true);
   };
   const closeReflectionModal = () => {
     setShowReflectionModal(false);
@@ -10665,28 +8241,7 @@ const Dashboard = ({
     }
     return base;
   };
-  const moodData = reactExports.useMemo(
-    () => logs.map((log) => ({
-      date: new Date(log.date),
-      emotion: getEmotionalState(log.emotion)
-    })),
-    [logs]
-  );
   return /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "dashboard-container px-4 pb-12", children: [
-    /* @__PURE__ */ jsxRuntimeExports.jsx("h2", { className: "text-xl font-semibold mb-3", children: "How are you feeling?" }),
-    /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "flex flex-wrap gap-3 mb-6", children: EMOTIONAL_STATES.map((emotion) => {
-      const isSelected = dashboard.emotionalState === emotion.state && (dashboard.selectedFeeling || dashboard.encouragementText);
-      return /* @__PURE__ */ jsxRuntimeExports.jsx(
-        "button",
-        {
-          onClick: () => handleEmotionClick(emotion.state),
-          className: `px-4 py-2 rounded-md border text-sm capitalize transition-colors duration-150 ${isSelected ? "bg-blue-500 text-white border-blue-600" : "bg-white hover:bg-blue-100 border-gray-300 text-gray-700"}`,
-          children: emotion.label
-        },
-        emotion.state
-      );
-    }) }),
-    /* @__PURE__ */ jsxRuntimeExports.jsx(MoodTrendChart$1, { data: moodData }),
     /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "grid grid-cols-2 gap-4 mb-8", children: values.map((val, index) => /* @__PURE__ */ jsxRuntimeExports.jsxs(
       "div",
       {
@@ -10713,22 +8268,6 @@ const Dashboard = ({
       val.id
     )) }),
     /* @__PURE__ */ jsxRuntimeExports.jsx(GoalsSection$1, { goals }),
-    /* @__PURE__ */ jsxRuntimeExports.jsx(
-      EmotionModal,
-      {
-        isOpen: showEmotionModal,
-        onClose: () => {
-          setShowEmotionModal(false);
-          setPreSelectedEmotion(null);
-        },
-        onEmotionSelect: handleEmotionSelect,
-        selectedEmotion: (
-          // Only show as selected if there's been an explicit selection (has selectedFeeling or encouragementText)
-          dashboard.emotionalState && (dashboard.selectedFeeling || dashboard.encouragementText) ? EMOTIONAL_STATES.find((e) => e.state === dashboard.emotionalState) || null : null
-        ),
-        preSelectedEmotion
-      }
-    ),
     showReflectionModal && selectedValue && /* @__PURE__ */ jsxRuntimeExports.jsx(
       "div",
       {
@@ -10816,6 +8355,652 @@ const Dashboard = ({
         lcswConfig
       }
     )
+  ] });
+};
+const CrisisCard = ({
+  onClose,
+  showQuickExit = false,
+  region: overrideRegion
+}) => {
+  const [detectedRegion, setDetectedRegion] = reactExports.useState("US");
+  const [resources, setResources] = reactExports.useState(getCrisisResources("US"));
+  reactExports.useEffect(() => {
+    const region = overrideRegion || detectRegion();
+    setDetectedRegion(region);
+    setResources(getCrisisResources(region));
+  }, [overrideRegion]);
+  const handleQuickExit = () => {
+    if (typeof window !== "undefined") {
+      window.history.replaceState(null, "", "/");
+      window.close();
+      setTimeout(() => {
+        window.location.href = "https://www.google.com";
+      }, 100);
+    }
+  };
+  const handleCall = (action) => {
+    if (action && action.startsWith("tel:")) {
+      window.location.href = action;
+    }
+  };
+  const handleText = (action, body) => {
+    if (action && action.startsWith("sms:")) {
+      const number = action.replace("sms:", "").split(/[?&]/)[0];
+      const smsUri = buildSMSUri(number, body);
+      window.location.href = smsUri;
+    }
+  };
+  const renderResourceButton = (resource) => {
+    if (resource.callAction) {
+      return /* @__PURE__ */ jsxRuntimeExports.jsxs(
+        "button",
+        {
+          onClick: () => handleCall(resource.callAction),
+          className: "w-full py-4 px-6 bg-red-600 hover:bg-red-700 text-white font-bold text-lg rounded-xl shadow-lg hover:shadow-xl transition-all active:scale-95 flex items-center justify-center gap-2",
+          children: [
+            /* @__PURE__ */ jsxRuntimeExports.jsx("span", { children: "📞" }),
+            resource.buttonLabel
+          ]
+        }
+      );
+    }
+    if (resource.textAction) {
+      return /* @__PURE__ */ jsxRuntimeExports.jsxs(
+        "button",
+        {
+          onClick: () => handleText(resource.textAction, resource.textBody),
+          className: "w-full py-4 px-6 bg-blue-600 hover:bg-blue-700 text-white font-bold text-lg rounded-xl shadow-lg hover:shadow-xl transition-all active:scale-95 flex items-center justify-center gap-2",
+          children: [
+            /* @__PURE__ */ jsxRuntimeExports.jsx("span", { children: "💬" }),
+            resource.buttonLabel
+          ]
+        }
+      );
+    }
+    if (resource.url) {
+      return /* @__PURE__ */ jsxRuntimeExports.jsxs(
+        "a",
+        {
+          href: resource.url,
+          target: "_blank",
+          rel: "noopener noreferrer",
+          className: "w-full py-4 px-6 bg-navy-primary hover:bg-navy-dark text-white font-bold text-lg rounded-xl shadow-lg hover:shadow-xl transition-all active:scale-95 flex items-center justify-center gap-2",
+          children: [
+            /* @__PURE__ */ jsxRuntimeExports.jsx("span", { children: "🌐" }),
+            resource.buttonLabel
+          ]
+        }
+      );
+    }
+    return null;
+  };
+  return /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "fixed inset-0 z-[100] flex items-center justify-center p-4 bg-black/70 backdrop-blur-sm", children: /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "bg-white dark:bg-dark-bg-primary w-full max-w-lg rounded-3xl shadow-2xl overflow-hidden border-2 border-red-500/30", children: [
+    showQuickExit && /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "bg-red-600 text-white p-3 text-center", children: /* @__PURE__ */ jsxRuntimeExports.jsx(
+      "button",
+      {
+        onClick: handleQuickExit,
+        className: "text-sm font-bold uppercase tracking-wide hover:underline",
+        children: "🚨 Quick Exit"
+      }
+    ) }),
+    /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "bg-red-50 dark:bg-red-900/20 p-6 sm:p-8 text-center border-b border-red-100 dark:border-red-900/30", children: [
+      /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "text-5xl mb-3", children: "❤️‍🩹" }),
+      /* @__PURE__ */ jsxRuntimeExports.jsx("h2", { className: "text-2xl sm:text-3xl font-black text-red-600 dark:text-red-400 mb-2", children: "I'm glad you reached out" }),
+      /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "text-sm sm:text-base text-red-700 dark:text-red-300 leading-relaxed", children: "I'm glad you reached out, but I need you to talk to a person. As an AI, I have limits. What you're describing needs a human touch and professional support. These services are free, confidential, and available 24/7." })
+    ] }),
+    /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "p-6 sm:p-8 space-y-4 max-h-[60vh] overflow-y-auto", children: [
+      /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "space-y-2", children: [
+        /* @__PURE__ */ jsxRuntimeExports.jsx("h3", { className: "text-lg font-bold text-text-primary dark:text-white", children: "Immediate Help" }),
+        renderResourceButton(resources.primary),
+        /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "text-xs text-text-secondary dark:text-white/70", children: resources.primary.subtext })
+      ] }),
+      resources.secondary && /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "space-y-2", children: [
+        /* @__PURE__ */ jsxRuntimeExports.jsx("h3", { className: "text-lg font-bold text-text-primary dark:text-white", children: "Alternative Support" }),
+        renderResourceButton(resources.secondary),
+        /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "text-xs text-text-secondary dark:text-white/70", children: resources.secondary.subtext })
+      ] }),
+      resources.lgbtq && /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "space-y-2", children: [
+        /* @__PURE__ */ jsxRuntimeExports.jsx("h3", { className: "text-lg font-bold text-text-primary dark:text-white", children: "LGBTQ+ Support" }),
+        renderResourceButton(resources.lgbtq),
+        /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "text-xs text-text-secondary dark:text-white/70", children: resources.lgbtq.subtext })
+      ] }),
+      resources.domesticViolence && /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "space-y-2 bg-yellow-50 dark:bg-yellow-900/20 p-4 rounded-xl border border-yellow-200 dark:border-yellow-800", children: [
+        /* @__PURE__ */ jsxRuntimeExports.jsx("h3", { className: "text-lg font-bold text-text-primary dark:text-white", children: "Domestic Violence Support" }),
+        renderResourceButton(resources.domesticViolence),
+        /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "text-xs text-text-secondary dark:text-white/70 mt-2", children: resources.domesticViolence.subtext }),
+        showQuickExit && /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "text-xs text-text-secondary dark:text-white/70 mt-2 italic", children: "You can clear your browser history after visiting this page." })
+      ] }),
+      /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "bg-red-50 dark:bg-red-900/20 p-4 rounded-xl border border-red-200 dark:border-red-800", children: [
+        /* @__PURE__ */ jsxRuntimeExports.jsx("h3", { className: "text-lg font-bold text-red-800 dark:text-red-300 mb-2", children: "🚨 Emergency Services" }),
+        /* @__PURE__ */ jsxRuntimeExports.jsxs("p", { className: "text-sm text-red-700 dark:text-red-200", children: [
+          /* @__PURE__ */ jsxRuntimeExports.jsx("strong", { children: "911" }),
+          " (US) or your local emergency number - For immediate life-threatening emergencies"
+        ] })
+      ] })
+    ] }),
+    onClose && /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "p-4 bg-bg-secondary dark:bg-dark-bg-secondary border-t border-border-soft dark:border-dark-border text-center", children: /* @__PURE__ */ jsxRuntimeExports.jsx(
+      "button",
+      {
+        onClick: onClose,
+        className: "text-text-tertiary hover:text-text-primary dark:text-white/60 dark:hover:text-white text-sm font-bold uppercase tracking-widest transition-colors",
+        children: "Close"
+      }
+    ) })
+  ] }) });
+};
+const COLORS = ["blue", "green", "red", "yellow", "purple", "orange", "brown", "black", "white"];
+const GroundingTool = ({ onComplete, onClose }) => {
+  const [currentScreen, setCurrentScreen] = reactExports.useState("instruction");
+  const [selectedColor, setSelectedColor] = reactExports.useState("");
+  const [breathPhase, setBreathPhase] = reactExports.useState("in");
+  const [breathCount, setBreathCount] = reactExports.useState(0);
+  const [touchProgress, setTouchProgress] = reactExports.useState(0);
+  const breathIntervalRef = reactExports.useRef(null);
+  const touchIntervalRef = reactExports.useRef(null);
+  reactExports.useEffect(() => {
+    setSelectedColor(COLORS[Math.floor(Math.random() * COLORS.length)]);
+  }, []);
+  reactExports.useEffect(() => {
+    let timer;
+    switch (currentScreen) {
+      case "instruction":
+        timer = setTimeout(() => setCurrentScreen("sight"), 5e3);
+        break;
+      case "sight":
+        timer = setTimeout(() => setCurrentScreen("touch"), 15e3);
+        break;
+      case "touch":
+        timer = setTimeout(() => {
+          setCurrentScreen("breath");
+          startBreathing();
+        }, 15e3);
+        break;
+      case "breath":
+        timer = setTimeout(() => {
+          stopBreathing();
+          setCurrentScreen("landing");
+        }, 15e3);
+        break;
+    }
+    return () => {
+      if (timer) clearTimeout(timer);
+    };
+  }, [currentScreen]);
+  const startBreathing = () => {
+    let phase = "in";
+    let count = 0;
+    breathIntervalRef.current = setInterval(() => {
+      if (phase === "in") {
+        phase = "hold";
+        setTimeout(() => {
+          phase = "out";
+          setBreathPhase("out");
+        }, 2e3);
+      } else if (phase === "out") {
+        phase = "pause";
+        setBreathPhase("pause");
+        count++;
+        setBreathCount(count);
+        setTimeout(() => {
+          phase = "in";
+          setBreathPhase("in");
+        }, 2e3);
+      } else {
+        setBreathPhase(phase);
+      }
+    }, 4e3);
+  };
+  const stopBreathing = () => {
+    if (breathIntervalRef.current) {
+      clearInterval(breathIntervalRef.current);
+      breathIntervalRef.current = null;
+    }
+  };
+  reactExports.useEffect(() => {
+    if (currentScreen === "touch") {
+      touchIntervalRef.current = setInterval(() => {
+        setTouchProgress((prev) => Math.min(prev + 1, 100));
+      }, 150);
+      return () => {
+        if (touchIntervalRef.current) {
+          clearInterval(touchIntervalRef.current);
+        }
+      };
+    } else {
+      setTouchProgress(0);
+    }
+  }, [currentScreen]);
+  reactExports.useEffect(() => {
+    return () => {
+      stopBreathing();
+      if (touchIntervalRef.current) {
+        clearInterval(touchIntervalRef.current);
+      }
+    };
+  }, []);
+  const handleAction = (action) => {
+    onComplete?.(action);
+  };
+  return /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "fixed inset-0 z-[100] bg-gradient-to-br from-sage-green via-navy-dark to-sage-green flex items-center justify-center p-4", children: /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "w-full max-w-md", children: /* @__PURE__ */ jsxRuntimeExports.jsxs(AnimatePresence, { mode: "wait", children: [
+    currentScreen === "instruction" && /* @__PURE__ */ jsxRuntimeExports.jsxs(
+      motion.div,
+      {
+        initial: { opacity: 0, y: 20 },
+        animate: { opacity: 1, y: 0 },
+        exit: { opacity: 0, y: -20 },
+        className: "bg-white dark:bg-dark-bg-primary rounded-3xl p-8 text-center shadow-2xl",
+        children: [
+          /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "text-6xl mb-4", children: "🧘" }),
+          /* @__PURE__ */ jsxRuntimeExports.jsx("h2", { className: "text-2xl font-black text-text-primary dark:text-white mb-4", children: "Just breathe." }),
+          /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "text-base text-text-secondary dark:text-white/70 leading-relaxed", children: "We're going to find your center. Follow the prompts—no typing needed." }),
+          /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "mt-6 flex justify-center", children: /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "w-16 h-16 border-4 border-navy-primary dark:border-yellow-warm border-t-transparent rounded-full animate-spin" }) })
+        ]
+      },
+      "instruction"
+    ),
+    currentScreen === "sight" && /* @__PURE__ */ jsxRuntimeExports.jsxs(
+      motion.div,
+      {
+        initial: { opacity: 0, y: 20 },
+        animate: { opacity: 1, y: 0 },
+        exit: { opacity: 0, y: -20 },
+        className: "bg-white dark:bg-dark-bg-primary rounded-3xl p-8 text-center shadow-2xl",
+        children: [
+          /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "text-6xl mb-4", children: "👀" }),
+          /* @__PURE__ */ jsxRuntimeExports.jsx("h2", { className: "text-2xl font-black text-text-primary dark:text-white mb-4", children: "Find 3 things" }),
+          /* @__PURE__ */ jsxRuntimeExports.jsxs("p", { className: "text-lg text-text-secondary dark:text-white/70 mb-6", children: [
+            "Look around the room. Find ",
+            /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "font-bold text-navy-primary dark:text-yellow-warm capitalize", children: selectedColor }),
+            " things."
+          ] }),
+          /* @__PURE__ */ jsxRuntimeExports.jsx(
+            "button",
+            {
+              onClick: () => setCurrentScreen("touch"),
+              className: "w-full py-4 bg-navy-primary dark:bg-yellow-warm text-white dark:text-navy-dark font-bold text-lg rounded-xl shadow-lg hover:opacity-90 transition-opacity",
+              children: "Found Them"
+            }
+          )
+        ]
+      },
+      "sight"
+    ),
+    currentScreen === "touch" && /* @__PURE__ */ jsxRuntimeExports.jsxs(
+      motion.div,
+      {
+        initial: { opacity: 0, y: 20 },
+        animate: { opacity: 1, y: 0 },
+        exit: { opacity: 0, y: -20 },
+        className: "bg-white dark:bg-dark-bg-primary rounded-3xl p-8 text-center shadow-2xl",
+        children: [
+          /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "text-6xl mb-4", children: "✋" }),
+          /* @__PURE__ */ jsxRuntimeExports.jsx("h2", { className: "text-2xl font-black text-text-primary dark:text-white mb-4", children: "Feel your body" }),
+          /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "text-base text-text-secondary dark:text-white/70 mb-6 leading-relaxed", children: "Press your feet firmly into the floor. Feel the texture of your chair or your clothes. Notice the weight of your body." }),
+          /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "w-full bg-bg-secondary dark:bg-dark-bg-secondary rounded-full h-3 mb-4", children: /* @__PURE__ */ jsxRuntimeExports.jsx(
+            motion.div,
+            {
+              className: "bg-navy-primary dark:bg-yellow-warm h-3 rounded-full",
+              initial: { width: 0 },
+              animate: { width: `${touchProgress}%` },
+              transition: { duration: 0.15 }
+            }
+          ) }),
+          /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "text-sm text-text-tertiary dark:text-white/50", children: "Focus on the sensations..." })
+        ]
+      },
+      "touch"
+    ),
+    currentScreen === "breath" && /* @__PURE__ */ jsxRuntimeExports.jsxs(
+      motion.div,
+      {
+        initial: { opacity: 0, y: 20 },
+        animate: { opacity: 1, y: 0 },
+        exit: { opacity: 0, y: -20 },
+        className: "bg-white dark:bg-dark-bg-primary rounded-3xl p-8 text-center shadow-2xl",
+        children: [
+          /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "text-6xl mb-4", children: "🦉" }),
+          /* @__PURE__ */ jsxRuntimeExports.jsx("h2", { className: "text-2xl font-black text-text-primary dark:text-white mb-4", children: "Breathe with me" }),
+          /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "text-base text-text-secondary dark:text-white/70 mb-6", children: "Listen for the furthest sound you can hear. Now, breathe with the owl." }),
+          /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "flex flex-col items-center mb-6", children: [
+            /* @__PURE__ */ jsxRuntimeExports.jsx(
+              motion.div,
+              {
+                className: "relative",
+                animate: {
+                  scale: breathPhase === "in" ? 1.2 : breathPhase === "out" ? 0.9 : 1
+                },
+                transition: {
+                  duration: 4,
+                  ease: "easeInOut"
+                },
+                children: /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "w-32 h-32 bg-navy-primary dark:bg-yellow-warm rounded-full flex items-center justify-center relative", children: [
+                  /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "absolute top-4 left-6 w-6 h-6 bg-white rounded-full" }),
+                  /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "absolute top-4 right-6 w-6 h-6 bg-white rounded-full" }),
+                  /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "absolute bottom-8 left-1/2 transform -translate-x-1/2 w-8 h-4 bg-white rounded-full" }),
+                  /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "absolute -bottom-2 left-1/2 transform -translate-x-1/2 w-16 h-20 bg-white dark:bg-dark-bg-secondary border-2 border-navy-primary dark:border-yellow-warm rounded-lg flex items-center justify-center", children: /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "text-2xl font-bold text-navy-primary dark:text-yellow-warm", children: breathCount }) })
+                ] })
+              }
+            ),
+            /* @__PURE__ */ jsxRuntimeExports.jsxs("p", { className: "text-lg font-bold text-navy-primary dark:text-yellow-warm mt-4", children: [
+              breathPhase === "in" && "Breathe In...",
+              breathPhase === "hold" && "Hold...",
+              breathPhase === "out" && "Breathe Out...",
+              breathPhase === "pause" && "Pause..."
+            ] })
+          ] })
+        ]
+      },
+      "breath"
+    ),
+    currentScreen === "landing" && /* @__PURE__ */ jsxRuntimeExports.jsxs(
+      motion.div,
+      {
+        initial: { opacity: 0, y: 20 },
+        animate: { opacity: 1, y: 0 },
+        exit: { opacity: 0, y: -20 },
+        className: "bg-white dark:bg-dark-bg-primary rounded-3xl p-8 text-center shadow-2xl",
+        children: [
+          /* @__PURE__ */ jsxRuntimeExports.jsx(
+            motion.div,
+            {
+              initial: { scale: 0 },
+              animate: { scale: 1 },
+              transition: { type: "spring", stiffness: 200 },
+              className: "text-6xl mb-4",
+              children: "✓"
+            }
+          ),
+          /* @__PURE__ */ jsxRuntimeExports.jsx("h2", { className: "text-3xl font-black text-text-primary dark:text-white mb-2", children: "You're back." }),
+          /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "text-base text-text-secondary dark:text-white/70 mb-6 leading-relaxed", children: "You just gave your nervous system a moment to catch up. The air is a little clearer now. Take one more breath—there is no rush." }),
+          /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "space-y-3 mt-8", children: [
+            /* @__PURE__ */ jsxRuntimeExports.jsx(
+              "button",
+              {
+                onClick: () => handleAction("coach"),
+                className: "w-full py-4 bg-navy-primary dark:bg-yellow-warm text-white dark:text-navy-dark font-bold text-lg rounded-xl shadow-lg hover:opacity-90 transition-opacity",
+                children: "I'm ready to process"
+              }
+            ),
+            /* @__PURE__ */ jsxRuntimeExports.jsx(
+              "button",
+              {
+                onClick: () => handleAction("better"),
+                className: "w-full py-4 bg-bg-secondary dark:bg-dark-bg-secondary text-text-primary dark:text-white font-bold text-lg rounded-xl shadow-lg hover:opacity-90 transition-opacity",
+                children: "I just need a moment of peace"
+              }
+            ),
+            /* @__PURE__ */ jsxRuntimeExports.jsx(
+              "button",
+              {
+                onClick: () => handleAction("more-help"),
+                className: "w-full py-4 bg-red-600 text-white font-bold text-lg rounded-xl shadow-lg hover:opacity-90 transition-opacity",
+                children: "I need more help"
+              }
+            )
+          ] })
+        ]
+      },
+      "landing"
+    )
+  ] }) }) });
+};
+const ChatInterface = ({ onClose, initialMessage }) => {
+  const [messages, setMessages] = reactExports.useState([]);
+  const [inputValue, setInputValue] = reactExports.useState(initialMessage || "");
+  const [isLoading, setIsLoading] = reactExports.useState(false);
+  const [isRouting, setIsRouting] = reactExports.useState(false);
+  const [routingFramework, setRoutingFramework] = reactExports.useState(null);
+  const [session, setSession] = reactExports.useState(null);
+  const [showCrisisCard, setShowCrisisCard] = reactExports.useState(false);
+  const [crisisResponse, setCrisisResponse] = reactExports.useState(null);
+  const [showGrounding, setShowGrounding] = reactExports.useState(false);
+  const [hasSessionMemory, setHasSessionMemory] = reactExports.useState(false);
+  const messagesEndRef = reactExports.useRef(null);
+  const inputRef = reactExports.useRef(null);
+  reactExports.useEffect(() => {
+    const checkSessionMemory = async () => {
+      try {
+        const user = await getCurrentUser();
+        if (user?.id) {
+          const token = await loadLastSessionToken(user.id);
+          setHasSessionMemory(!!token);
+        }
+      } catch (error) {
+        logger.error("[ChatInterface] Error checking session memory:", error);
+      }
+    };
+    checkSessionMemory();
+  }, []);
+  reactExports.useEffect(() => {
+    messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
+  }, [messages]);
+  reactExports.useEffect(() => {
+    inputRef.current?.focus();
+  }, []);
+  const handleSend = async () => {
+    const message = inputValue.trim();
+    if (!message || isLoading) return;
+    const userMessage = {
+      id: crypto.randomUUID(),
+      role: "user",
+      content: message,
+      timestamp: (/* @__PURE__ */ new Date()).toISOString()
+    };
+    setMessages((prev) => [...prev, userMessage]);
+    setInputValue("");
+    setIsLoading(true);
+    try {
+      if (messages.length === 0) {
+        setIsRouting(true);
+        const result = await startCounselingSessionWithTriage(message);
+        if (typeof result.response === "object" && "isCrisis" in result.response) {
+          setCrisisResponse(result.response);
+          setShowCrisisCard(true);
+          setIsLoading(false);
+          setIsRouting(false);
+          return;
+        }
+        if (result.handover) {
+          const { getCategoryDisplayName: getCategoryDisplayName2 } = await __vitePreload(async () => {
+            const { getCategoryDisplayName: getCategoryDisplayName3 } = await import("./ai-services-DJUX-74P.js").then((n) => n.M);
+            return { getCategoryDisplayName: getCategoryDisplayName3 };
+          }, true ? __vite__mapDeps([0,1,2,3,4]) : void 0);
+          const category = result.category || "OVERWHELM";
+          setRoutingFramework(getCategoryDisplayName2(category));
+          await new Promise((resolve) => setTimeout(resolve, 1500));
+        }
+        setIsRouting(false);
+        setRoutingFramework(null);
+        const newSession = {
+          promptType: result.framework,
+          messages: [
+            { role: "user", content: message, timestamp: userMessage.timestamp },
+            { role: "assistant", content: result.response, timestamp: (/* @__PURE__ */ new Date()).toISOString() }
+          ]
+        };
+        setSession(newSession);
+        const assistantMessage = {
+          id: crypto.randomUUID(),
+          role: "assistant",
+          content: result.response,
+          timestamp: (/* @__PURE__ */ new Date()).toISOString()
+        };
+        setMessages((prev) => [...prev, assistantMessage]);
+      } else {
+        if (!session) {
+          logger.error("[ChatInterface] No session found for continuation");
+          return;
+        }
+        const result = await continueCounselingSession(session, message);
+        if (typeof result === "object" && "isCrisis" in result) {
+          setCrisisResponse(result);
+          setShowCrisisCard(true);
+          setIsLoading(false);
+          return;
+        }
+        const updatedSession = {
+          ...session,
+          messages: [
+            ...session.messages,
+            { role: "user", content: message, timestamp: userMessage.timestamp },
+            { role: "assistant", content: result, timestamp: (/* @__PURE__ */ new Date()).toISOString() }
+          ]
+        };
+        setSession(updatedSession);
+        const assistantMessage = {
+          id: crypto.randomUUID(),
+          role: "assistant",
+          content: result,
+          timestamp: (/* @__PURE__ */ new Date()).toISOString()
+        };
+        setMessages((prev) => [...prev, assistantMessage]);
+      }
+    } catch (error) {
+      logger.error("[ChatInterface] Error in chat:", error);
+      const errorMessage = {
+        id: crypto.randomUUID(),
+        role: "assistant",
+        content: "I apologize, but I encountered an error. Please try again or use the 60-Second Reset if you need immediate support.",
+        timestamp: (/* @__PURE__ */ new Date()).toISOString()
+      };
+      setMessages((prev) => [...prev, errorMessage]);
+    } finally {
+      setIsLoading(false);
+    }
+  };
+  const handleKeyPress = (e) => {
+    if (e.key === "Enter" && !e.shiftKey) {
+      e.preventDefault();
+      handleSend();
+    }
+  };
+  const handleGroundingComplete = (action) => {
+    setShowGrounding(false);
+    if (action === "coach") {
+      inputRef.current?.focus();
+    } else if (action === "more-help") {
+      setShowCrisisCard(true);
+    }
+  };
+  if (showCrisisCard && crisisResponse) {
+    return /* @__PURE__ */ jsxRuntimeExports.jsx(
+      CrisisCard,
+      {
+        onClose: () => {
+          setShowCrisisCard(false);
+          setCrisisResponse(null);
+        },
+        showQuickExit: crisisResponse.isDomesticViolence
+      }
+    );
+  }
+  if (showGrounding) {
+    return /* @__PURE__ */ jsxRuntimeExports.jsx(GroundingTool, { onComplete: handleGroundingComplete, onClose: () => setShowGrounding(false) });
+  }
+  return /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "fixed inset-0 z-50 bg-bg-primary dark:bg-dark-bg-primary flex flex-col", children: [
+    /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "bg-white dark:bg-dark-bg-secondary border-b border-border-soft dark:border-dark-border p-4 flex items-center justify-between", children: [
+      /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "flex items-center gap-3", children: [
+        /* @__PURE__ */ jsxRuntimeExports.jsx("h2", { className: "text-lg font-bold text-text-primary dark:text-white", children: "Protected Space" }),
+        hasSessionMemory && /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "text-xs text-text-secondary dark:text-white/70 bg-bg-secondary dark:bg-dark-bg-tertiary px-2 py-1 rounded", children: "Previous session available" })
+      ] }),
+      /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "flex items-center gap-2", children: [
+        /* @__PURE__ */ jsxRuntimeExports.jsx(
+          "button",
+          {
+            onClick: () => setShowGrounding(true),
+            className: "px-3 py-1.5 bg-yellow-warm dark:bg-yellow-warm text-navy-dark font-bold text-sm rounded-lg hover:opacity-90 transition-opacity",
+            children: "🧘 60-Second Reset"
+          }
+        ),
+        onClose && /* @__PURE__ */ jsxRuntimeExports.jsx(
+          "button",
+          {
+            onClick: onClose,
+            className: "w-8 h-8 flex items-center justify-center rounded-full hover:bg-bg-secondary dark:hover:bg-dark-bg-tertiary",
+            children: /* @__PURE__ */ jsxRuntimeExports.jsx("svg", { className: "w-5 h-5", fill: "none", viewBox: "0 0 24 24", stroke: "currentColor", children: /* @__PURE__ */ jsxRuntimeExports.jsx("path", { strokeLinecap: "round", strokeLinejoin: "round", strokeWidth: 2, d: "M6 18L18 6M6 6l12 12" }) })
+          }
+        )
+      ] })
+    ] }),
+    /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "flex-1 overflow-y-auto p-4 space-y-4", children: [
+      messages.length === 0 && /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "text-center py-8", children: [
+        /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "text-text-secondary dark:text-white/70 mb-4", children: "This is your Protected Space. Share what's on your mind, and I'll help you find the right support." }),
+        /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "text-sm text-text-tertiary dark:text-white/50", children: "Your words stay here, encrypted and unjudged." })
+      ] }),
+      /* @__PURE__ */ jsxRuntimeExports.jsxs(AnimatePresence, { children: [
+        isRouting && routingFramework && /* @__PURE__ */ jsxRuntimeExports.jsx(
+          motion.div,
+          {
+            initial: { opacity: 0, y: 10 },
+            animate: { opacity: 1, y: 0 },
+            exit: { opacity: 0 },
+            className: "bg-navy-primary/10 dark:bg-yellow-warm/10 rounded-xl p-4 text-center",
+            children: /* @__PURE__ */ jsxRuntimeExports.jsxs("p", { className: "text-sm text-text-primary dark:text-white", children: [
+              "Switching to ",
+              /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "font-bold", children: routingFramework }),
+              "..."
+            ] })
+          }
+        ),
+        messages.map((message) => /* @__PURE__ */ jsxRuntimeExports.jsx(
+          motion.div,
+          {
+            initial: { opacity: 0, y: 10 },
+            animate: { opacity: 1, y: 0 },
+            className: `flex ${message.role === "user" ? "justify-end" : "justify-start"}`,
+            children: /* @__PURE__ */ jsxRuntimeExports.jsx(
+              "div",
+              {
+                className: `max-w-[80%] rounded-2xl p-4 ${message.role === "user" ? "bg-navy-primary dark:bg-yellow-warm text-white dark:text-navy-dark" : "bg-bg-secondary dark:bg-dark-bg-secondary text-text-primary dark:text-white"}`,
+                children: /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "text-sm leading-relaxed whitespace-pre-wrap", children: message.content })
+              }
+            )
+          },
+          message.id
+        )),
+        isLoading && /* @__PURE__ */ jsxRuntimeExports.jsx(
+          motion.div,
+          {
+            initial: { opacity: 0 },
+            animate: { opacity: 1 },
+            className: "flex justify-start",
+            children: /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "bg-bg-secondary dark:bg-dark-bg-secondary rounded-2xl p-4", children: /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "flex gap-2", children: [
+              /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "w-2 h-2 bg-text-secondary dark:text-white/50 rounded-full animate-bounce", style: { animationDelay: "0ms" } }),
+              /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "w-2 h-2 bg-text-secondary dark:text-white/50 rounded-full animate-bounce", style: { animationDelay: "150ms" } }),
+              /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "w-2 h-2 bg-text-secondary dark:text-white/50 rounded-full animate-bounce", style: { animationDelay: "300ms" } })
+            ] }) })
+          }
+        )
+      ] }),
+      /* @__PURE__ */ jsxRuntimeExports.jsx("div", { ref: messagesEndRef })
+    ] }),
+    /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "bg-white dark:bg-dark-bg-secondary border-t border-border-soft dark:border-dark-border p-4", children: [
+      /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "flex gap-2", children: [
+        /* @__PURE__ */ jsxRuntimeExports.jsx(
+          "textarea",
+          {
+            ref: inputRef,
+            value: inputValue,
+            onChange: (e) => setInputValue(e.target.value),
+            onKeyPress: handleKeyPress,
+            placeholder: "Share what's on your mind...",
+            className: "flex-1 resize-none rounded-xl p-3 bg-bg-secondary dark:bg-dark-bg-tertiary text-text-primary dark:text-white border border-border-soft dark:border-dark-border focus:outline-none focus:ring-2 focus:ring-navy-primary dark:focus:ring-yellow-warm",
+            rows: 2,
+            disabled: isLoading
+          }
+        ),
+        /* @__PURE__ */ jsxRuntimeExports.jsx(
+          "button",
+          {
+            onClick: handleSend,
+            disabled: !inputValue.trim() || isLoading,
+            className: "px-6 py-3 bg-navy-primary dark:bg-yellow-warm text-white dark:text-navy-dark font-bold rounded-xl hover:opacity-90 transition-opacity disabled:opacity-50 disabled:cursor-not-allowed",
+            children: "Send"
+          }
+        )
+      ] }),
+      /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "text-xs text-text-tertiary dark:text-white/50 mt-2 text-center", children: "Press Enter to send, Shift+Enter for new line" })
+    ] })
   ] });
 };
 const AppHeader = ({
@@ -10957,10 +9142,14 @@ function AppContent({ onHydrationReady }) {
   const [showSettings, setShowSettings] = reactExports.useState(false);
   const [showResources, setShowResources] = reactExports.useState(false);
   const [showReflection, setShowReflection] = reactExports.useState(false);
+  const [showChat, setShowChat] = reactExports.useState(false);
+  const [showGrounding, setShowGrounding] = reactExports.useState(false);
   const [encouragementText, setEncouragementText] = reactExports.useState(null);
   const [encouragementLoading, setEncouragementLoading] = reactExports.useState(false);
   const [currentEmotion, setCurrentEmotion] = reactExports.useState(void 0);
   const [currentFeeling, setCurrentFeeling] = reactExports.useState(void 0);
+  const [hasSessionMemory, setHasSessionMemory] = reactExports.useState(false);
+  const [sessionMemorySummary, setSessionMemorySummary] = reactExports.useState(null);
   const selectedValues = reactExports.useMemo(
     () => (context?.selectedValueIds || []).map((id) => ALL_VALUES.find((v) => v.id === id)).filter(Boolean),
     [context?.selectedValueIds]
@@ -10990,8 +9179,60 @@ function AppContent({ onHydrationReady }) {
       setShowResources(true);
     }
   }, [setCurrentView, setShowReflection, setShowResources]);
+  reactExports.useEffect(() => {
+    if (!context || context.isHydrating || authState !== "app") return;
+    if (currentEmotion && currentFeeling) return;
+    const loadLastEmotion = async () => {
+      try {
+        const user = await getCurrentUser();
+        if (!user?.id) return;
+        const adapter = getDatabaseAdapter();
+        await adapter.init();
+        const firstLog = await adapter.getFirstFeelingLog(user.id);
+        if (firstLog) {
+          const emotion = firstLog.emotionalState || firstLog.emotion;
+          const feeling = firstLog.selectedFeeling || firstLog.subEmotion;
+          if (emotion && feeling) {
+            setCurrentEmotion(emotion);
+            setCurrentFeeling(feeling);
+            setEncouragementLoading(true);
+            try {
+              const encouragement = await generateEmotionalEncouragement(emotion, feeling);
+              setEncouragementText(encouragement);
+              logger.debug("[AppContent] Loaded first emotion and generated encouragement:", { emotion, feeling });
+            } catch (error) {
+              logger.error("[AppContent] Error generating encouragement for loaded emotion:", error);
+            } finally {
+              setEncouragementLoading(false);
+            }
+          }
+        }
+      } catch (error) {
+        logger.error("[AppContent] Error loading last emotion:", error);
+      }
+    };
+    loadLastEmotion();
+  }, [authState, context, currentEmotion, currentFeeling]);
+  reactExports.useEffect(() => {
+    if (!context || context.isHydrating || authState !== "app") return;
+    const loadSessionMemory = async () => {
+      try {
+        const user = await getCurrentUser();
+        if (!user?.id) return;
+        const token = await loadLastSessionToken(user.id);
+        if (token) {
+          setHasSessionMemory(true);
+          setSessionMemorySummary(formatSessionContextForPrompt(token));
+          logger.debug("[AppContent] Loaded session memory:", token.framework);
+        }
+      } catch (error) {
+        logger.error("[AppContent] Error loading session memory:", error);
+      }
+    };
+    loadSessionMemory();
+  }, [authState, context]);
   const handleMoodChange = reactExports.useCallback(async (emotion, feeling) => {
-    console.log("[AppContent] Mood changed:", emotion, feeling);
+    logger.debug("[AppContent] Mood changed:", emotion, feeling);
     setCurrentEmotion(emotion);
     setCurrentFeeling(feeling);
     setEncouragementLoading(true);
@@ -10999,9 +9240,9 @@ function AppContent({ onHydrationReady }) {
     try {
       const encouragement = await generateEmotionalEncouragement(emotion, feeling);
       setEncouragementText(encouragement);
-      console.log("[AppContent] Encouragement generated:", encouragement);
+      logger.debug("[AppContent] Encouragement generated:", encouragement);
     } catch (error) {
-      console.error("[AppContent] Error generating encouragement:", error);
+      logger.error("[AppContent] Error generating encouragement:", error);
       setEncouragementText("Your feelings are valid. Take care of yourself.");
     } finally {
       setEncouragementLoading(false);
@@ -11042,18 +9283,41 @@ function AppContent({ onHydrationReady }) {
       }
     ),
     /* @__PURE__ */ jsxRuntimeExports.jsxs("main", { className: "flex-1 w-full overflow-y-auto p-4 pb-24", children: [
-      currentView === "home" && /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "max-w-2xl mx-auto py-8 space-y-4", children: /* @__PURE__ */ jsxRuntimeExports.jsx(
-        AIResponseBubble$1,
-        {
-          message: "Welcome to Grounded. How are you feeling today?",
-          emotion: currentEmotion,
-          feeling: currentFeeling,
-          onActionClick: handleActionClick,
-          onMoodChange: handleMoodChange,
-          encouragement: encouragementText,
-          encouragementLoading
-        }
-      ) }),
+      currentView === "home" && /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "max-w-2xl mx-auto py-8 space-y-4", children: [
+        hasSessionMemory && sessionMemorySummary && /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "bg-navy-primary/10 dark:bg-yellow-warm/10 rounded-xl p-4 mb-4 border border-navy-primary/20 dark:border-yellow-warm/20", children: /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "text-sm text-text-primary dark:text-white italic", children: sessionMemorySummary }) }),
+        /* @__PURE__ */ jsxRuntimeExports.jsx(
+          AIResponseBubble$1,
+          {
+            message: "Welcome to Grounded. How are you feeling today?",
+            emotion: currentEmotion,
+            feeling: currentFeeling,
+            onActionClick: handleActionClick,
+            onMoodChange: handleMoodChange,
+            encouragement: encouragementText,
+            encouragementLoading
+          }
+        ),
+        /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "space-y-3 mt-6", children: /* @__PURE__ */ jsxRuntimeExports.jsxs(
+          "button",
+          {
+            onClick: () => setShowChat(true),
+            className: "w-full py-4 bg-navy-primary dark:bg-yellow-warm text-white dark:text-navy-dark font-bold text-lg rounded-xl shadow-lg hover:opacity-90 transition-opacity flex items-center justify-center gap-2",
+            children: [
+              /* @__PURE__ */ jsxRuntimeExports.jsx("span", { children: "💬" }),
+              "Start a New Session"
+            ]
+          }
+        ) }),
+        /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "fixed bottom-24 right-4 z-40", children: /* @__PURE__ */ jsxRuntimeExports.jsx(
+          "button",
+          {
+            onClick: () => setShowGrounding(true),
+            className: "w-16 h-16 bg-yellow-warm dark:bg-yellow-warm text-navy-dark font-black text-xl rounded-full shadow-2xl hover:scale-110 transition-transform flex items-center justify-center animate-pulse",
+            title: "60-Second Emergency Grounding",
+            children: "🧘"
+          }
+        ) })
+      ] }),
       currentView === "goals" && /* @__PURE__ */ jsxRuntimeExports.jsx(
         GoalsSection$1,
         {
@@ -11232,121 +9496,28 @@ function AppContent({ onHydrationReady }) {
         onClose: () => setShowResources(false),
         lcswConfig: context.settings?.lcswConfig
       }
+    ),
+    showChat && /* @__PURE__ */ jsxRuntimeExports.jsx(
+      ChatInterface,
+      {
+        onClose: () => setShowChat(false)
+      }
+    ),
+    showGrounding && /* @__PURE__ */ jsxRuntimeExports.jsx(
+      GroundingTool,
+      {
+        onComplete: (action) => {
+          setShowGrounding(false);
+          if (action === "coach") {
+            setShowChat(true);
+          } else if (action === "more-help") {
+            setShowResources(true);
+          }
+        },
+        onClose: () => setShowGrounding(false)
+      }
     )
   ] });
-}
-function isDevelopment() {
-  if (typeof window !== "undefined") {
-    if (window.location.hostname === "localhost" || window.location.hostname === "127.0.0.1") {
-      return true;
-    }
-  }
-  if (typeof localStorage !== "undefined") {
-    return localStorage.getItem("dev_mode") === "true";
-  }
-  return false;
-}
-const AppWithData = ({ onHydrationReady }) => {
-  const authContext = useAuthContext();
-  const { appData } = React.useContext(AppDataContext);
-  return /* @__PURE__ */ jsxRuntimeExports.jsx(
-    DataProvider,
-    {
-      userId: authContext.userId,
-      authState: authContext.authState,
-      initialData: appData || {},
-      children: /* @__PURE__ */ jsxRuntimeExports.jsx(AppContent, { onHydrationReady })
-    }
-  );
-};
-const DiagnosticOverlay = ({ status }) => /* @__PURE__ */ jsxRuntimeExports.jsxs(
-  "div",
-  {
-    style: {
-      position: "fixed",
-      top: 8,
-      right: 8,
-      background: "rgba(0,0,0,0.65)",
-      color: "#00ffff",
-      padding: "4px 8px",
-      fontSize: 10,
-      borderRadius: 4,
-      fontFamily: "monospace",
-      zIndex: 9999,
-      pointerEvents: "none",
-      opacity: 0.8
-    },
-    children: [
-      "⚙️ ",
-      status
-    ]
-  }
-);
-const AppDataContext = React.createContext({
-  appData: null,
-  setAppData: () => {
-  }
-});
-const App = () => {
-  const [status, setStatus] = React.useState("Initializing contexts...");
-  const [showStatus, setShowStatus] = React.useState(true);
-  const [appData, setAppData] = React.useState(null);
-  React.useEffect(() => {
-    if (status) {
-      setShowStatus(true);
-      const timer = setTimeout(() => {
-        setShowStatus(false);
-      }, 5e3);
-      return () => clearTimeout(timer);
-    }
-  }, [status]);
-  return /* @__PURE__ */ jsxRuntimeExports.jsxs(jsxRuntimeExports.Fragment, { children: [
-    /* @__PURE__ */ jsxRuntimeExports.jsx(ErrorBoundary, { children: /* @__PURE__ */ jsxRuntimeExports.jsx(reactExports.Suspense, { fallback: /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "flex flex-col items-center justify-center h-screen bg-bg-primary dark:bg-dark-bg-primary text-text-primary dark:text-white", children: /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "animate-pulse text-lg tracking-wide", children: "Loading Grounded ..." }) }), children: /* @__PURE__ */ jsxRuntimeExports.jsx(AppDataContext.Provider, { value: { appData, setAppData }, children: /* @__PURE__ */ jsxRuntimeExports.jsx(
-      AuthProvider,
-      {
-        onLoginComplete: (userId, loginAppData) => {
-          setAppData(loginAppData);
-          setStatus("User authenticated");
-        },
-        onLogoutComplete: () => {
-          setAppData(null);
-          setStatus("User logged out");
-        },
-        children: /* @__PURE__ */ jsxRuntimeExports.jsx(AppWithData, { onHydrationReady: () => setStatus("Rendering ready") })
-      }
-    ) }) }) }),
-    showStatus && /* @__PURE__ */ jsxRuntimeExports.jsx(DiagnosticOverlay, { status })
-  ] });
-};
-function watchServiceWorkerVersion(scope = "/") {
-  if (!("serviceWorker" in navigator)) return;
-  const log = (...args) => console.debug("[refresh-cache]", ...args);
-  const forceReload = () => {
-    log("Detected updated service worker. Reloading PWA…");
-    window.location.reload();
-  };
-  navigator.serviceWorker.register("/sw.js", { scope }).then((registration) => {
-    log("Service worker registered.", registration.scope);
-    if (registration.waiting) {
-      forceReload();
-      return;
-    }
-    registration.addEventListener("updatefound", () => {
-      const newWorker = registration.installing;
-      if (!newWorker) return;
-      newWorker.addEventListener("statechange", () => {
-        if (newWorker.state === "installed" && navigator.serviceWorker.controller) {
-          newWorker.postMessage({ type: "SKIP_WAITING" });
-        }
-      });
-    });
-  }).catch((error) => {
-    console.error("[refresh-cache] Registration failed:", error);
-  });
-  navigator.serviceWorker.addEventListener("controllerchange", () => {
-    log("Service worker controller changed. Triggering reload.");
-    forceReload();
-  });
 }
 function isPWAInstalled() {
   if (typeof window === "undefined") return false;
@@ -11478,7 +9649,27 @@ async function getInstallationStatus() {
     platform: detectPlatform()
   };
 }
-const InstallationGate = ({ children }) => {
+const installCheck = /* @__PURE__ */ Object.freeze(/* @__PURE__ */ Object.defineProperty({
+  __proto__: null,
+  checkCacheReady,
+  checkForUpdates,
+  checkServiceWorkerStatus,
+  detectPlatform,
+  getInstallationStatus,
+  isPWAInstalled
+}, Symbol.toStringTag, { value: "Module" }));
+function isDevelopment() {
+  if (typeof window !== "undefined") {
+    if (window.location.hostname === "localhost" || window.location.hostname === "127.0.0.1") {
+      return true;
+    }
+  }
+  if (typeof localStorage !== "undefined") {
+    return localStorage.getItem("dev_mode") === "true";
+  }
+  return false;
+}
+const InstallationGate = ({ children, onInstallComplete }) => {
   const [status, setStatus] = reactExports.useState({
     isInstalled: false,
     serviceWorkerActive: false,
@@ -11522,6 +9713,9 @@ const InstallationGate = ({ children }) => {
         });
         if (installationStatus.isInstalled && installationStatus.needsUpdate && !isDevelopment()) {
           await applyUpdate();
+        }
+        if (installationStatus.isInstalled && onInstallComplete) {
+          onInstallComplete();
         }
       } catch (error) {
         console.error("[InstallationGate] Error checking status:", error);
@@ -11632,7 +9826,22 @@ const InstallationGate = ({ children }) => {
       /* @__PURE__ */ jsxRuntimeExports.jsx(
         "button",
         {
-          onClick: () => window.location.reload(),
+          onClick: async () => {
+            const currentStatus = await getInstallationStatus();
+            if (currentStatus.isInstalled) {
+              setStatus((prev) => ({
+                ...prev,
+                isInstalled: true,
+                serviceWorkerActive: currentStatus.serviceWorkerActive,
+                cacheReady: currentStatus.cacheReady
+              }));
+              if (onInstallComplete) {
+                onInstallComplete();
+              }
+            } else {
+              window.location.reload();
+            }
+          },
           className: "w-full py-3 bg-brand dark:bg-brand-light text-white dark:text-navy-dark rounded-xl font-black uppercase tracking-widest hover:opacity-90 transition-opacity",
           children: "I've Installed It - Continue"
         }
@@ -11656,6 +9865,108 @@ const InstallationGate = ({ children }) => {
     ] })
   ] }) });
 };
+const AppWithData = ({ onHydrationReady }) => {
+  const authContext = useAuthContext();
+  const { appData } = React.useContext(AppDataContext);
+  return /* @__PURE__ */ jsxRuntimeExports.jsx(
+    DataProvider,
+    {
+      userId: authContext.userId,
+      authState: authContext.authState,
+      initialData: appData || {},
+      children: /* @__PURE__ */ jsxRuntimeExports.jsx(AppContent, { onHydrationReady })
+    }
+  );
+};
+const DiagnosticOverlay = ({ status }) => /* @__PURE__ */ jsxRuntimeExports.jsxs(
+  "div",
+  {
+    style: {
+      position: "fixed",
+      top: 8,
+      right: 8,
+      background: "rgba(0,0,0,0.65)",
+      color: "#00ffff",
+      padding: "4px 8px",
+      fontSize: 10,
+      borderRadius: 4,
+      fontFamily: "monospace",
+      zIndex: 9999,
+      pointerEvents: "none",
+      opacity: 0.8
+    },
+    children: [
+      "⚙️ ",
+      status
+    ]
+  }
+);
+const AppDataContext = React.createContext({
+  appData: null,
+  setAppData: () => {
+  }
+});
+const App = () => {
+  const [status, setStatus] = React.useState("Initializing contexts...");
+  const [showStatus, setShowStatus] = React.useState(true);
+  const [appData, setAppData] = React.useState(null);
+  React.useEffect(() => {
+    if (status) {
+      setShowStatus(true);
+      const timer = setTimeout(() => {
+        setShowStatus(false);
+      }, 5e3);
+      return () => clearTimeout(timer);
+    }
+  }, [status]);
+  return /* @__PURE__ */ jsxRuntimeExports.jsxs(jsxRuntimeExports.Fragment, { children: [
+    /* @__PURE__ */ jsxRuntimeExports.jsx(ErrorBoundary, { children: /* @__PURE__ */ jsxRuntimeExports.jsx(reactExports.Suspense, { fallback: /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "flex flex-col items-center justify-center h-screen bg-bg-primary dark:bg-dark-bg-primary text-text-primary dark:text-white", children: /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "animate-pulse text-lg tracking-wide", children: "Loading Grounded ..." }) }), children: /* @__PURE__ */ jsxRuntimeExports.jsx(InstallationGate, { children: /* @__PURE__ */ jsxRuntimeExports.jsx(AppDataContext.Provider, { value: { appData, setAppData }, children: /* @__PURE__ */ jsxRuntimeExports.jsx(
+      AuthProvider,
+      {
+        onLoginComplete: (userId, loginAppData) => {
+          setAppData(loginAppData);
+          setStatus("User authenticated");
+        },
+        onLogoutComplete: () => {
+          setAppData(null);
+          setStatus("User logged out");
+        },
+        children: /* @__PURE__ */ jsxRuntimeExports.jsx(AppWithData, { onHydrationReady: () => setStatus("Rendering ready") })
+      }
+    ) }) }) }) }),
+    showStatus && /* @__PURE__ */ jsxRuntimeExports.jsx(DiagnosticOverlay, { status })
+  ] });
+};
+function watchServiceWorkerVersion(scope = "/") {
+  if (!("serviceWorker" in navigator)) return;
+  const log = (...args) => console.debug("[refresh-cache]", ...args);
+  const forceReload = () => {
+    log("Detected updated service worker. Reloading PWA…");
+    window.location.reload();
+  };
+  navigator.serviceWorker.register("/sw.js", { scope }).then((registration) => {
+    log("Service worker registered.", registration.scope);
+    if (registration.waiting) {
+      forceReload();
+      return;
+    }
+    registration.addEventListener("updatefound", () => {
+      const newWorker = registration.installing;
+      if (!newWorker) return;
+      newWorker.addEventListener("statechange", () => {
+        if (newWorker.state === "installed" && navigator.serviceWorker.controller) {
+          newWorker.postMessage({ type: "SKIP_WAITING" });
+        }
+      });
+    });
+  }).catch((error) => {
+    console.error("[refresh-cache] Registration failed:", error);
+  });
+  navigator.serviceWorker.addEventListener("controllerchange", () => {
+    log("Service worker controller changed. Triggering reload.");
+    forceReload();
+  });
+}
 const rootElement = document.getElementById("root");
 if (!rootElement) {
   document.body.innerHTML = `
@@ -11703,7 +10014,7 @@ watchServiceWorkerVersion();
 const root = ReactDOM.createRoot(rootElement);
 try {
   root.render(
-    /* @__PURE__ */ jsxRuntimeExports.jsx(ThemeProvider, { children: /* @__PURE__ */ jsxRuntimeExports.jsx(InstallationGate, { children: /* @__PURE__ */ jsxRuntimeExports.jsx(App, {}) }) })
+    /* @__PURE__ */ jsxRuntimeExports.jsx(ThemeProvider, { children: /* @__PURE__ */ jsxRuntimeExports.jsx(App, {}) })
   );
   clearTimeout(renderTimeout);
 } catch (error) {

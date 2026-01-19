@@ -1,10 +1,8 @@
-import "./react-vendor-DI6xFhD6.js";
-import "./ai-services-COb65xmG.js";
-import "./index-WfZz5ZRF.js";
-import "./vendor-Dvad8g1z.js";
+import "./react-vendor-BgnRdV3Y.js";
+import "./ai-services-DJUX-74P.js";
+import "./vendor-BKChQSPc.js";
 import "./db-vendor-CqkAjsCZ.js";
-import "./animations-DuiRUzrK.js";
-import "./transformers-DYceLRQ3.js";
+import "./transformers-CdMs_eeA.js";
 import "./onnx-eBVVFwq3.js";
 const INIT_STARTED_KEY = "app_init_started";
 const INIT_STARTED_TIME_KEY = "app_init_started_time";

@@ -224,6 +224,37 @@ const IMMINENT_DANGER_PHRASES: CrisisPhrase[] = [
 ];
 
 /**
+ * 9. Domestic violence phrases
+ * CRITICAL - Immediate safety response required
+ */
+const DOMESTIC_VIOLENCE_PHRASES: CrisisPhrase[] = [
+  { phrase: 'hitting me', category: 'CRISIS_IMMINENT_DANGER', severity: 'critical' },
+  { phrase: 'scared to go home', category: 'CRISIS_IMMINENT_DANGER', severity: 'critical' },
+  { phrase: 'domestic violence', category: 'CRISIS_IMMINENT_DANGER', severity: 'critical' },
+  { phrase: 'being controlled', category: 'CRISIS_IMMINENT_DANGER', severity: 'critical' },
+  { phrase: 'afraid of my partner', category: 'CRISIS_IMMINENT_DANGER', severity: 'critical' },
+  { phrase: 'partner hurts me', category: 'CRISIS_IMMINENT_DANGER', severity: 'critical' },
+  { phrase: 'can\'t leave', category: 'CRISIS_IMMINENT_DANGER', severity: 'critical' },
+  { phrase: 'trapped in relationship', category: 'CRISIS_IMMINENT_DANGER', severity: 'critical' },
+  { phrase: 'fear for my safety', category: 'CRISIS_IMMINENT_DANGER', severity: 'critical' },
+  { phrase: 'abuse', category: 'CRISIS_IMMINENT_DANGER', severity: 'critical' },
+];
+
+/**
+ * 10. Substance crisis phrases
+ * CRITICAL - Immediate medical response required
+ */
+const SUBSTANCE_CRISIS_PHRASES: CrisisPhrase[] = [
+  { phrase: 'overdose', category: 'CRISIS_IMMINENT_DANGER', severity: 'critical' },
+  { phrase: 'took too many', category: 'CRISIS_IMMINENT_DANGER', severity: 'critical' },
+  { phrase: 'blackout', category: 'CRISIS_IMMINENT_DANGER', severity: 'critical' },
+  { phrase: 'too much alcohol', category: 'CRISIS_IMMINENT_DANGER', severity: 'critical' },
+  { phrase: 'too many pills', category: 'CRISIS_IMMINENT_DANGER', severity: 'critical' },
+  { phrase: 'mixing drugs', category: 'CRISIS_IMMINENT_DANGER', severity: 'critical' },
+  { phrase: 'can\'t stop using', category: 'CRISIS_IMMINENT_DANGER', severity: 'critical' },
+];
+
+/**
  * All crisis phrases combined
  * This is the master list used for detection
  */
@@ -236,6 +267,8 @@ export const ALL_CRISIS_PHRASES: CrisisPhrase[] = [
   ...BEHAVIORAL_RED_FLAGS,
   ...THIRD_PARTY_PHRASES,
   ...IMMINENT_DANGER_PHRASES,
+  ...DOMESTIC_VIOLENCE_PHRASES,
+  ...SUBSTANCE_CRISIS_PHRASES,
 ];
 
 /**

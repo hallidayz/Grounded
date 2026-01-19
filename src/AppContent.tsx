@@ -14,11 +14,14 @@ import Settings from "./components/Settings";
 import HelpOverlay from "./components/HelpOverlay";
 import Dashboard from "./components/Dashboard";
 import CrisisResourcesModal from "./components/CrisisResourcesModal";
+import ChatInterface from "./components/ChatInterface";
+import GroundingTool from "./components/GroundingTool";
 import { AppHeader } from "./components/Layout/AppHeader";
 import { ALL_VALUES } from "./constants";
 import { generateEmotionalEncouragement } from "./services/aiService";
 import { getDatabaseAdapter } from "./services/databaseAdapter";
 import { getCurrentUser } from "./services/authService";
+import { loadLastSessionToken, formatSessionContextForPrompt } from "./services/ai/sessionMemory";
 import { logger } from "./utils/logger";
 
 type AppView = "home" | "goals" | "vault" | "update" | "values" | "report";
@@ -42,12 +45,16 @@ export default function AppContent({ onHydrationReady }: { onHydrationReady?: ()
   const [showSettings, setShowSettings] = useState(false);
   const [showResources, setShowResources] = useState(false);
   const [showReflection, setShowReflection] = useState(false);
+  const [showChat, setShowChat] = useState(false);
+  const [showGrounding, setShowGrounding] = useState(false);
   
   // Encouragement state for home screen
   const [encouragementText, setEncouragementText] = useState<string | null>(null);
   const [encouragementLoading, setEncouragementLoading] = useState(false);
   const [currentEmotion, setCurrentEmotion] = useState<string | undefined>(undefined);
   const [currentFeeling, setCurrentFeeling] = useState<string | undefined>(undefined);
+  const [hasSessionMemory, setHasSessionMemory] = useState(false);
+  const [sessionMemorySummary, setSessionMemorySummary] = useState<string | null>(null);
 
   // Memoize values to prevent hydration mismatches - MUST be called before any early returns
   const selectedValues = useMemo(() => 
@@ -135,6 +142,29 @@ export default function AppContent({ onHydrationReady }: { onHydrationReady?: ()
     loadLastEmotion();
   }, [authState, context, currentEmotion, currentFeeling]);
 
+  // Load session memory on app load
+  useEffect(() => {
+    if (!context || context.isHydrating || authState !== 'app') return;
+
+    const loadSessionMemory = async () => {
+      try {
+        const user = await getCurrentUser();
+        if (!user?.id) return;
+
+        const token = await loadLastSessionToken(user.id);
+        if (token) {
+          setHasSessionMemory(true);
+          setSessionMemorySummary(formatSessionContextForPrompt(token));
+          logger.debug('[AppContent] Loaded session memory:', token.framework);
+        }
+      } catch (error) {
+        logger.error('[AppContent] Error loading session memory:', error);
+      }
+    };
+
+    loadSessionMemory();
+  }, [authState, context]);
+
   // Handle mood changes from AIResponseBubble - generate encouragement - MUST be before early returns (Rules of Hooks)
   const handleMoodChange = useCallback(async (emotion: string, feeling: string) => {
     logger.debug('[AppContent] Mood changed:', emotion, feeling);
@@ -207,6 +237,15 @@ export default function AppContent({ onHydrationReady }: { onHydrationReady?: ()
       <main className="flex-1 w-full overflow-y-auto p-4 pb-24">
         {currentView === "home" && (
           <div className="max-w-2xl mx-auto py-8 space-y-4">
+            {/* Session Memory Summary */}
+            {hasSessionMemory && sessionMemorySummary && (
+              <div className="bg-navy-primary/10 dark:bg-yellow-warm/10 rounded-xl p-4 mb-4 border border-navy-primary/20 dark:border-yellow-warm/20">
+                <p className="text-sm text-text-primary dark:text-white italic">
+                  {sessionMemorySummary}
+                </p>
+              </div>
+            )}
+
             <AIResponseBubble 
               message="Welcome to Grounded. How are you feeling today?"
               emotion={currentEmotion}
@@ -216,6 +255,28 @@ export default function AppContent({ onHydrationReady }: { onHydrationReady?: ()
               encouragement={encouragementText}
               encouragementLoading={encouragementLoading}
             />
+
+            {/* Action Buttons */}
+            <div className="space-y-3 mt-6">
+              <button
+                onClick={() => setShowChat(true)}
+                className="w-full py-4 bg-navy-primary dark:bg-yellow-warm text-white dark:text-navy-dark font-bold text-lg rounded-xl shadow-lg hover:opacity-90 transition-opacity flex items-center justify-center gap-2"
+              >
+                <span>💬</span>
+                Start a New Session
+              </button>
+            </div>
+
+            {/* 60-Second Grounding SOS Button */}
+            <div className="fixed bottom-24 right-4 z-40">
+              <button
+                onClick={() => setShowGrounding(true)}
+                className="w-16 h-16 bg-yellow-warm dark:bg-yellow-warm text-navy-dark font-black text-xl rounded-full shadow-2xl hover:scale-110 transition-transform flex items-center justify-center animate-pulse"
+                title="60-Second Emergency Grounding"
+              >
+                🧘
+              </button>
+            </div>
           </div>
         )}
         {currentView === "goals" && (
@@ -414,6 +475,28 @@ export default function AppContent({ onHydrationReady }: { onHydrationReady?: ()
         <CrisisResourcesModal
           onClose={() => setShowResources(false)}
           lcswConfig={context.settings?.lcswConfig}
+        />
+      )}
+
+      {/* Chat Interface */}
+      {showChat && (
+        <ChatInterface
+          onClose={() => setShowChat(false)}
+        />
+      )}
+
+      {/* 60-Second Grounding Tool */}
+      {showGrounding && (
+        <GroundingTool
+          onComplete={(action) => {
+            setShowGrounding(false);
+            if (action === 'coach') {
+              setShowChat(true);
+            } else if (action === 'more-help') {
+              setShowResources(true);
+            }
+          }}
+          onClose={() => setShowGrounding(false)}
         />
       )}
     </div>

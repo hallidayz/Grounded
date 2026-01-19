@@ -1,5 +1,5 @@
 import { a as getDefaultExportFromCjs } from "./db-vendor-CqkAjsCZ.js";
-import { u as requireScheduler } from "./vendor-Dvad8g1z.js";
+import { v as requireScheduler } from "./vendor-BKChQSPc.js";
 var jsxRuntime = { exports: {} };
 var reactJsxRuntime_production = {};
 /**

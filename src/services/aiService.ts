@@ -50,7 +50,7 @@ function getWorker(): Worker {
   return globalWorker;
 }
 
-export function runAIWorker(
+export async function runAIWorker(
   inputText: string, 
   task: string = 'text2text-generation', 
   modelName?: string, 
@@ -58,8 +58,8 @@ export function runAIWorker(
 ): Promise<any | CrisisResponse> {
   
   // --- SAFETY INTERCEPTOR ---
-  // Check for crisis keywords FIRST.
-  const crisisResponse = checkForCrisisKeywords(inputText);
+  // Check for crisis keywords FIRST (now async).
+  const crisisResponse = await checkForCrisisKeywords(inputText);
   if (crisisResponse) {
     // If a crisis is detected, DO NOT proceed to the AI worker.
     // Immediately return the hardcoded safety response.
@@ -95,8 +95,8 @@ export function runAIWorker(
 // Re-export generateText for backward compatibility
 // Updated to use WebLLM (TinyLlama) for better mobile performance
 export async function generateText(prompt: string, modelName?: string): Promise<string | CrisisResponse> {
-  // Check for crisis keywords FIRST (safety interceptor)
-  const crisisResponse = checkForCrisisKeywords(prompt);
+  // Check for crisis keywords FIRST (safety interceptor) - now async
+  const crisisResponse = await checkForCrisisKeywords(prompt);
   if (crisisResponse) {
     logger.warn('[aiService] Crisis keyword detected. Bypassing AI and returning safety response.');
     return Promise.resolve(crisisResponse);
@@ -195,6 +195,7 @@ export {
 export {
   startCounselingSession,
   continueCounselingSession,
+  startCounselingSessionWithTriage,
   recommendSystemPrompt,
   type CounselingSession,
 } from './ai/specializedCounseling';

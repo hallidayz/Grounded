@@ -5,6 +5,50 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.13.8] - 2026-01-19
+
+### Added
+
+- implement mood selection and swipe functionality in AIResponseBubble component for enhanced user interaction and experience| (883485c)
+
+- update emotion log retrieval to fetch the first feeling log for improved user experience in AppContent and AIResponseBubble components| (87f4015)
+
+- implement loading of last emotion from database in AppContent and AIResponseBubble components for enhanced user experience| (30dfd23)
+
+- implement InstallationGate component to manage app installation status and enhance user experience| (8c6dc7d)
+
+### Changed
+
+- simplify AIResponseBubble component by removing unused state management and event handling for improved readability and performance| (1a77864)
+
+- enhance logging in getCurrentUser function to provide clearer debug information during user recovery scenarios| (2df7a98)
+
+- replace console logging with logger utility in AuthContext for improved logging consistency| (d469a8d)
+
+- streamline Dashboard and ReflectionForm components by removing unused emotion handling and related UI elements for improved clarity and functionality| (f2e2c11)
+
+- remove unused emotion handling logic and mood trend chart from Dashboard component for cleaner code| (ad477aa)
+
+- integrate logger utility in DataContext for improved logging consistency| (5af3bd1)
+
+- replace console logging with logger utility in various components and services for improved logging consistency| (16f18bf)
+
+- replace console logging with logger utility in useAppInitialization, authService, and dexieDB for improved logging consistency| (f91eb10)
+
+- replace console logging with logger utility in DatabaseInspector, authService, and dexieDB for improved logging consistency| (7f00dee)
+
+- replace console logging with logger utility in useAppInitialization and DatabaseService for improved logging consistency| (d47e5a7)
+
+- replace console logging with logger utility in DataContext, useAppInitialization, useDashboard, and dexieDB for improved logging consistency| (bb97265)
+
+- clean up whitespace and formatting in various service files for consistency| (75d49b1)
+
+### Other
+
+- update package dependencies and enhance AI service with WebLLM integration for improved performance and logging| (2937ffd)
+
+- **vercel**: remove unnecessary workbox headers from vercel.json to streamline configuration| (efc6f56)
+
 ## [1.13.7] - 2026-01-11
 
 ### Added
