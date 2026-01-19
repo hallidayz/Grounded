@@ -225,11 +225,24 @@ export function useAppInitialization(options: UseAppInitializationOptions): AppI
           }
         }
         
-        setModelLoadingProgress(5, 'Starting...', 'Initializing app');
-        
-        // OPTIMIZATION: Defer AI model loading until first user interaction
-        // Models will be loaded on-demand when first AI interaction occurs
-        logger.info('[INIT] ⏸️ AI model loading deferred - will load on first user interaction');
+        setModelLoadingProgress(10, 'Initializing app...', 'Setting up core services');
+        logger.info('[INIT] Progress updated to 10%');
+
+        // OPTIMIZATION: Start AI model loading immediately in background (non-blocking)
+        // Model loads in background while app continues initializing
+        logger.info('[INIT] 🚀 Starting AI model loading in background...');
+        const modelLoadPromise = (async () => {
+          const { initializeModels } = await import('../services/aiService');
+          try {
+            await initializeModels(false, 'lamini');
+            logger.info('[INIT] AI model loading started in background');
+          } catch (error) {
+            logger.warn('[INIT] AI model loading failed (non-critical):', error);
+          }
+        })();
+
+        // Don't wait for model loading - continue with initialization
+        // Model will be ready by the time user tries to use AI features
         
         setModelLoadingProgress(10, 'Initializing app...', 'Setting up core services');
         logger.info('[INIT] Progress updated to 10%');
@@ -494,9 +507,9 @@ export function useAppInitialization(options: UseAppInitializationOptions): AppI
           return;
         }
         
-        if (isLoggedIn()) {
-          setModelLoadingProgress(70, 'Loading user data...', 'AI models load on-demand when used');
-          logger.info('[INIT] Progress updated to 70%, loading user data...');
+         if (isLoggedIn()) {
+           setModelLoadingProgress(70, 'Loading user data...', 'AI models ready in background');
+           logger.info('[INIT] Progress updated to 70%, loading user data...');
           
           const userDataPromise = (async () => {
             try {
@@ -593,12 +606,12 @@ export function useAppInitialization(options: UseAppInitializationOptions): AppI
             }
           })();
           
-          await userDataPromise;
-          
-          setModelLoadingProgress(100, 'Ready!', 'AI models load on-demand when used');
-        } else {
-          setModelLoadingProgress(100, 'Ready!', 'AI models load on-demand when used');
-        }
+           await userDataPromise;
+
+           setModelLoadingProgress(100, 'Ready!', 'AI models ready in background');
+         } else {
+           setModelLoadingProgress(100, 'Ready!', 'AI models ready in background');
+         }
         
         if (isMountedRef.current) {
           setLoading(false);

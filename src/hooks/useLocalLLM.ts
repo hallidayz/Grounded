@@ -56,7 +56,8 @@ export function useLocalLLM(config: LLMConfig = {}) {
 
   const abortControllerRef = useRef<AbortController | null>(null);
 
-  // OPTIMIZATION: Lazy load models only when first used
+  // OPTIMIZATION: Load model in background immediately (non-blocking)
+  // Model starts loading as soon as hook mounts, but doesn't block initialization
   useEffect(() => {
     let isMounted = true;
 
@@ -78,7 +79,6 @@ export function useLocalLLM(config: LLMConfig = {}) {
       if (modelLoadState === 'loading' && modelLoadPromise) {
         try {
           await modelLoadPromise;
-          // Check if model loaded successfully
           if (isMounted && globalModel) {
             setState(prev => ({
               ...prev,
@@ -86,8 +86,6 @@ export function useLocalLLM(config: LLMConfig = {}) {
               isLoading: false,
               error: null,
             }));
-          } else {
-            throw new Error('Model failed to load');
           }
         } catch (error) {
           if (isMounted) {
@@ -103,9 +101,63 @@ export function useLocalLLM(config: LLMConfig = {}) {
         return;
       }
 
-      // OPTIMIZATION: Don't load immediately - wait for user interaction
-      // This prevents blocking the initial app load with 300MB+ downloads
-      logger.info('[useLocalLLM] ⏸️ Model loading deferred - will load on first use');
+      // OPTIMIZATION: Start loading immediately (background, non-blocking)
+      logger.info('[useLocalLLM] 🚀 Starting background model loading...');
+      modelLoadState = 'loading';
+      modelLoadPromise = (async () => {
+        try {
+          setState(prev => ({ ...prev, isLoading: true, error: null }));
+
+          // Import WebLLM and load model
+          const { LLM } = await import('@mlc-ai/web-llm') as any;
+
+          const model = new LLM({
+            model: modelName,
+            initProgressCallback: (report: any) => {
+              const progress = report.progress || 0;
+              if (isMounted) {
+                setState(prev => ({
+                  ...prev,
+                  progress: Math.min(100, progress * 100),
+                }));
+              }
+              logger.debug('[useLocalLLM] Load progress:', progress);
+            },
+          });
+
+          await model.load();
+
+          globalModel = model;
+          modelLoadState = 'ready';
+
+          logger.info('[useLocalLLM] Model loaded successfully');
+
+          if (isMounted) {
+            setState(prev => ({
+              ...prev,
+              isReady: true,
+              isLoading: false,
+              progress: 100,
+              error: null,
+            }));
+          }
+        } catch (error) {
+          modelLoadState = 'error';
+          const errorMsg = error instanceof Error ? error.message : String(error);
+          logger.error('[useLocalLLM] Model load error:', errorMsg);
+
+          if (isMounted) {
+            setState(prev => ({
+              ...prev,
+              isReady: false,
+              isLoading: false,
+              error: errorMsg,
+            }));
+          }
+
+          throw new Error(`Failed to load model: ${errorMsg}`);
+        }
+      })();
     };
 
     initializeModel();
