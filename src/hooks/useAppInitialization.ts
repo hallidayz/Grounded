@@ -161,13 +161,13 @@ export function useAppInitialization(options: UseAppInitializationOptions): AppI
     
     let initializationTimeout: NodeJS.Timeout | null = null;
     
-    // Set a timeout to prevent infinite hanging (5 seconds max - optimized)
+    // Set a timeout to prevent infinite hanging (10 seconds max - safer for slow connections)
     initializationTimeout = setTimeout(() => {
       if (isMountedRef.current) {
-        logger.error('⚠️ Initialization timeout after 5 seconds - proceeding');
+        logger.error('⚠️ Initialization timeout after 10 seconds - proceeding');
         setLoading(false);
       }
-    }, 5000);
+    }, 10000);
     
     const initialize = async () => {
       try {
@@ -233,18 +233,13 @@ export function useAppInitialization(options: UseAppInitializationOptions): AppI
         
         setModelLoadingProgress(10, 'Initializing app...', 'Setting up core services');
         logger.info('[INIT] Progress updated to 10%');
-
-        // OPTIMIZATION: Parallelize non-dependent initialization steps
-        logger.info('[INIT] 🚀 Parallelizing initialization steps...');
-
-        const [
-          debugResult,
-          updateResult,
-          swResult,
-          shortcutsResult,
-          legacyResult
-        ] = await Promise.allSettled([
-          // Step 1: Initialize debug logging
+        
+        // OPTIMIZATION: Parallelize truly independent initialization steps
+        logger.info('[INIT] 🚀 Parallelizing independent initialization steps...');
+        
+        // Step 1: Independent init (parallel)
+        const [debugResult, shortcutsResult, updateResult] = await Promise.allSettled([
+          // Initialize debug logging
           (async () => {
             try {
               initializeDebugLogging();
@@ -256,7 +251,18 @@ export function useAppInitialization(options: UseAppInitializationOptions): AppI
             }
           })(),
 
-          // Step 2: Initialize update manager
+          // Initialize shortcuts
+          (async () => {
+            try {
+              await initializeShortcuts();
+              return { success: true };
+            } catch (error) {
+              logger.warn('Failed to initialize shortcuts:', error);
+              return { success: false };
+            }
+          })(),
+
+          // Initialize update manager
           (async () => {
             try {
               const { updateManager } = await import('../services/updateManager');
@@ -281,93 +287,38 @@ export function useAppInitialization(options: UseAppInitializationOptions): AppI
               return { success: false, updateInfo: { isNewInstall: false, isUpdate: false, previousVersion: null } };
             }
           })(),
-
-          // Step 3: Service worker setup
-          (async () => {
-            try {
-              setModelLoadingProgress(30, 'Setting up service worker...', '');
-              logger.info('[INIT] Progress updated to 30%');
-
-              const swActive = await ensureServiceWorkerActive().catch((error) => {
-                logger.error('[INIT] Error ensuring service worker active:', error);
-                return false;
-              });
-
-              if (swActive) {
-                logger.info('✅ Service Worker is active - starting background model loading');
-              } else {
-                logger.info('⚠️ Service Worker not active - starting model loading anyway');
-              }
-
-              // Parallelize service worker operations
-              const [listenerResult, updateResult] = await Promise.allSettled([
-                (async () => {
-                  try {
-                    listenForServiceWorkerUpdates();
-                    return { success: true };
-                  } catch (swError) {
-                    logger.warn('[INIT] Service worker listener failed (non-critical):', swError);
-                    return { success: false };
-                  }
-                })(),
-                (async () => {
-                  if (typeof window !== 'undefined' && 'serviceWorker' in navigator) {
-                    try {
-                      const registration = await navigator.serviceWorker.getRegistration();
-                      if (registration) {
-                        await registration.update().catch(error => {
-                          logger.warn('Service worker update check failed:', error);
-                        });
-                      }
-                      return { success: true };
-                    } catch (error) {
-                      logger.warn('Service worker registration check failed:', error);
-                      return { success: false };
-                    }
-                  }
-                  return { success: true };
-                })()
-              ]);
-
-              return { success: true, swActive };
-            } catch (swError) {
-              logger.warn('[INIT] Service worker setup failed (non-critical):', swError);
-              return { success: false, swActive: false };
-            }
-          })(),
-
-          // Step 4: Initialize shortcuts
-          (async () => {
-            try {
-              await initializeShortcuts();
-              return { success: true };
-            } catch (error) {
-              logger.warn('Failed to initialize shortcuts:', error);
-              return { success: false };
-            }
-          })(),
-
-          // Step 5: Legacy data detection (only if not encryption enabled)
-          !encryptionEnabled ? (async () => {
-            try {
-              const migrationDismissed = localStorage.getItem('migration_prompt_dismissed') === 'true';
-              if (!migrationDismissed) {
-                const legacyData = await detectLegacyData();
-                if (legacyData.hasLegacyData && isMountedRef.current) {
-                  setShouldShowMigration(true);
-                  onSetShowMigrationScreen?.(true);
-                }
-              }
-              return { success: true };
-            } catch (error) {
-              logger.error('[INIT] Error detecting legacy data:', error);
-              return { success: false };
-            }
-          })() : Promise.resolve({ success: true })
         ]);
 
-        // Extract results from parallel operations
-        const updateInfo = updateResult.status === 'fulfilled' ? updateResult.value?.updateInfo : { isNewInstall: false, isUpdate: false, previousVersion: null };
+        // Step 2: Service worker setup (critical, sequential)
+        logger.info('[INIT] Setting up service worker...');
+        
+        const swActive = await ensureServiceWorkerActive().catch((error) => {
+          logger.error('[INIT] Error ensuring service worker active:', error);
+          return false;
+        });
+
+        if (swActive) {
+          logger.info('✅ Service Worker is active');
+        } else {
+          logger.info('⚠️ Service Worker not active');
+        }
+
+        // Step 3: Legacy data detection (only if not encryption enabled)
+        let legacyData: any = null;
+        if (!encryptionEnabled) {
+          try {
+            const migrationDismissed = localStorage.getItem('migration_prompt_dismissed') === 'true';
+            if (!migrationDismissed) {
+              legacyData = await detectLegacyData();
+              if (legacyData.hasLegacyData && isMountedRef.current) {
+                setShouldShowMigration(true);
+                onSetShowMigrationScreen?.(true);
+              }
+            }
+          } catch (error) {
+            logger.error('[INIT] Error detecting legacy data:', error);
+          }
+        }
 
         logger.info('[INIT] ✅ Parallel initialization completed');
         
@@ -426,7 +377,7 @@ export function useAppInitialization(options: UseAppInitializationOptions): AppI
           // Data recovery (optional, run in parallel)
           (async () => {
             try {
-              const { recoverExportedData } = await import('../services/dexieDB');
+              const { recoverExportedData } = await import('../services/dexieDB') as any;
               const recovered = await recoverExportedData();
               if (recovered) {
                 logger.info('[INIT] Data recovered from previous version error');
@@ -442,7 +393,7 @@ export function useAppInitialization(options: UseAppInitializationOptions): AppI
           (async () => {
             const dbInitPromise = adapter.init();
             const dbInitTimeout = new Promise((_, reject) => {
-              setTimeout(() => reject(new Error('Database initialization timeout after 5 seconds')), 5000);
+              setTimeout(() => reject(new Error('Database initialization timeout after 10 seconds')), 10000);
             });
 
             try {
@@ -455,7 +406,7 @@ export function useAppInitialization(options: UseAppInitializationOptions): AppI
               try {
                 await Promise.race([
                   adapter.init(),
-                  new Promise((_, reject) => setTimeout(() => reject(new Error('Database retry timeout')), 3000))
+                  new Promise((_, reject) => setTimeout(() => reject(new Error('Database retry timeout')), 5000))
                 ]);
                 logger.info('[INIT] Database initialization retry succeeded');
                 return { success: true };
@@ -497,7 +448,7 @@ export function useAppInitialization(options: UseAppInitializationOptions): AppI
 
         // Only perform database operations if initialization succeeded
         if (dbInitSuccess) {
-          setModelLoadingProgress(40, 'Preparing AI models...', '');
+          setModelLoadingProgress(40, 'Preparing AI models...', 'AI models will load on-demand when used');
 
           // Use adapter for cleanup operations (only if DB is ready)
           adapter.cleanupExpiredTokens().catch((error) => logger.error('[INIT] Cleanup expired tokens failed:', error));
@@ -544,7 +495,7 @@ export function useAppInitialization(options: UseAppInitializationOptions): AppI
         }
         
         if (isLoggedIn()) {
-          setModelLoadingProgress(70, 'Loading user data...', 'AI models loading in background');
+          setModelLoadingProgress(70, 'Loading user data...', 'AI models load on-demand when used');
           logger.info('[INIT] Progress updated to 70%, loading user data...');
           
           const userDataPromise = (async () => {
@@ -644,9 +595,9 @@ export function useAppInitialization(options: UseAppInitializationOptions): AppI
           
           await userDataPromise;
           
-          setModelLoadingProgress(100, 'Ready!', 'AI models continue loading in background');
+          setModelLoadingProgress(100, 'Ready!', 'AI models load on-demand when used');
         } else {
-          setModelLoadingProgress(100, 'Ready!', 'AI models loading in background');
+          setModelLoadingProgress(100, 'Ready!', 'AI models load on-demand when used');
         }
         
         if (isMountedRef.current) {
