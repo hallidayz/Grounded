@@ -11,8 +11,8 @@ import { Goal, FeelingLog, Assessment, CounselorReport, Session, UserInteraction
 // Version constant for explicit version management
 export const CURRENT_DB_VERSION = 4;
 
-// Database schema
-interface UserRecord {
+// Database schema - exported for use in adapters
+export interface UserRecord {
   id: string;
   username: string;
   passwordHash: string;
@@ -24,7 +24,7 @@ interface UserRecord {
   lastLogin?: string;
 }
 
-interface AppDataRecord {
+export interface AppDataRecord {
   userId: string;
   data: {
     settings: AppSettings;
@@ -35,7 +35,7 @@ interface AppDataRecord {
   };
 }
 
-interface ValueRecord {
+export interface ValueRecord {
   id?: number;
   userId: string;
   valueId: string;
@@ -45,12 +45,12 @@ interface ValueRecord {
   updatedAt: string;
 }
 
-interface GoalRecord extends Goal {}
-interface FeelingLogRecord extends FeelingLog {}
-interface UserInteractionRecord extends UserInteraction {}
-interface SessionRecord extends Session {}
-interface AssessmentRecord extends Assessment {}
-interface ReportRecord extends CounselorReport {}
+export interface GoalRecord extends Goal {}
+export interface FeelingLogRecord extends FeelingLog {}
+export interface UserInteractionRecord extends UserInteraction {}
+export interface SessionRecord extends Session {}
+export interface AssessmentRecord extends Assessment {}
+export interface ReportRecord extends CounselorReport {}
 interface ResetTokenRecord {
   token: string;
   userId: string;
@@ -177,46 +177,6 @@ export async function cleanupExpiredTokens(): Promise<void> {
   });
 
   await Promise.all(expiredTokens.map(t => db.resetTokens.delete(t.token)));
-}
-
-interface AppDataRecord {
-  userId: string;
-  data: {
-    settings: AppSettings;
-    logs: LogEntry[];
-    goals: Goal[];
-    values: string[];
-    lcswConfig?: LCSWConfig;
-  };
-}
-
-interface ValueRecord {
-  id?: number; // Auto-increment
-  userId: string;
-  valueId: string;
-  active: boolean;
-  priority: number;
-  createdAt: string;
-  updatedAt: string;
-}
-
-interface GoalRecord extends Goal {
-  // Goal interface already has all required fields
-}
-
-interface FeelingLogRecord extends FeelingLog {
-  // FeelingLog interface already has all required fields
-}
-
-interface UserInteractionRecord extends UserInteraction {
-  // UserInteraction interface already has all required fields
-}
-
-interface SessionRecord extends Session {
-  // Session interface already has all required fields
-}
-
-interface AssessmentRecord extends Assessment {
 }
 
 export async function getFeelingPatterns(startDate: string, endDate: string): Promise<{ state: string; count: number }[]> {

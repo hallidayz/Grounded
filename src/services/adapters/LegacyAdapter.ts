@@ -12,6 +12,7 @@
  */
 
 import { Goal, FeelingLog, UserInteraction, Session, Assessment, CounselorReport } from '../../types';
+import { logger } from '../../utils/logger';
 import {
   db,
   createUser as dexieCreateUser,
@@ -521,15 +522,15 @@ export class LegacyAdapter implements DatabaseAdapter {
       console.warn('[LegacyAdapter] Invalid userId for getActiveValues:', userId);
       return [];
     }
-    
+
     try {
       // Use filter approach directly - more reliable than compound index query
       // Compound index queries can fail with invalid key errors, especially with boolean values
       const allValues = await db.values.where('userId').equals(userId).toArray();
       const values = allValues
-        .filter(v => v.active === true || v.active === 1) // Handle both boolean and numeric active flags
-        .sort((a, b) => (a.priority || 0) - (b.priority || 0));
-      
+        .filter(v => v.active === true) // Handle boolean active flag
+        .sort((a, b) => (a.priority ?? 0) - (b.priority ?? 0));
+
       return values.map(v => v.valueId);
     } catch (error) {
       console.error('[LegacyAdapter] Error getting active values:', error);
@@ -538,52 +539,63 @@ export class LegacyAdapter implements DatabaseAdapter {
   }
 
   async setValuesActive(userId: string, valueIds: string[]): Promise<void> {
-    // Use Dexie for better performance with bulk operations
-    // Get all existing values for this user
-    const allUserValues = await db.values.where('userId').equals(userId).toArray();
-    
-    // Mark all existing as inactive
-    const updates = allUserValues.map(v => ({
-      ...v,
-      active: false,
-      updatedAt: new Date().toISOString(),
-    }));
-    
-    // Update existing values to active if in valueIds, or keep inactive
-    const existingValueIds = allUserValues.map(v => v.valueId);
-    const newValueIds = valueIds.filter(id => !existingValueIds.includes(id));
-    
-    // Update existing values
-    for (let i = 0; i < valueIds.length; i++) {
-      const valueId = valueIds[i];
-      const existing = allUserValues.find(v => v.valueId === valueId);
-      
-      if (existing) {
-        await db.values.update(existing.id!, {
-          active: true,
-          priority: i,
-          updatedAt: new Date().toISOString(),
-        });
-      } else {
-        // Add new value
-        await db.values.add({
-          userId,
-          valueId,
-          active: true,
-          priority: i,
-          createdAt: new Date().toISOString(),
-          updatedAt: new Date().toISOString(),
-        });
-      }
+    if (!userId || !Array.isArray(valueIds)) {
+      console.warn('[LegacyAdapter] Invalid parameters for setValuesActive:', { userId, valueIds });
+      return;
     }
-    
-    // Mark values not in valueIds as inactive
-    const toDeactivate = allUserValues.filter(v => !valueIds.includes(v.valueId));
-    for (const value of toDeactivate) {
-      await db.values.update(value.id!, {
-        active: false,
-        updatedAt: new Date().toISOString(),
+
+    try {
+      // Use transaction to ensure atomicity
+      await db.transaction('rw', db.values, async () => {
+        // Get all existing values for this user
+        const allUserValues = await db.values.where('userId').equals(userId).toArray();
+
+        // Create a map of existing valueIds for quick lookup
+        const existingValueMap = new Map(allUserValues.map(v => [v.valueId, v]));
+
+        // Determine which values to activate and which to deactivate
+        const valueIdsSet = new Set(valueIds);
+
+        // Process all user values - update existing or mark inactive
+        for (const existingValue of allUserValues) {
+          if (valueIdsSet.has(existingValue.valueId)) {
+            // Value should be active - update priority
+            const priority = valueIds.indexOf(existingValue.valueId);
+            await db.values.update(existingValue.id!, {
+              active: true,
+              priority,
+              updatedAt: new Date().toISOString(),
+            });
+          } else {
+            // Value should be inactive
+            await db.values.update(existingValue.id!, {
+              active: false,
+              updatedAt: new Date().toISOString(),
+            });
+          }
+        }
+
+        // Add new values that don't exist yet
+        for (let i = 0; i < valueIds.length; i++) {
+          const valueId = valueIds[i];
+          if (!existingValueMap.has(valueId)) {
+            // This is a new value - add it
+            await db.values.add({
+              userId,
+              valueId,
+              active: true,
+              priority: i,
+              createdAt: new Date().toISOString(),
+              updatedAt: new Date().toISOString(),
+            });
+          }
+        }
       });
+
+      logger.debug('[LegacyAdapter] setValuesActive completed for user:', userId, 'with values:', valueIds);
+    } catch (error) {
+      console.error('[LegacyAdapter] Error in setValuesActive:', error);
+      throw error;
     }
   }
 
@@ -601,13 +613,14 @@ export class LegacyAdapter implements DatabaseAdapter {
         updatedAt: new Date().toISOString(),
       });
     } else {
-      // Get count of active values for default priority
+      // Get count of active values for default priority using simple query
       const activeCount = await db.values
-        .where('[userId+active]')
-        .equals([userId, true])
+        .where('userId')
+        .equals(userId)
+        .filter(v => v.active === true)
         .count();
       const defaultPriority = priority !== undefined ? priority : activeCount;
-      
+
       // Add new value
       await db.values.add({
         userId,
