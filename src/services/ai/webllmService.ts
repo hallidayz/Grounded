@@ -77,25 +77,41 @@ export async function initializeWebLLM(
         logger.info('[webllmService] Attempting to load WebLLM model:', tryModelName);
 
         // Dynamic import to avoid loading in SSR
-        const { LLM } = await import('@mlc-ai/web-llm');
+        const webllmModule = await import('@mlc-ai/web-llm') as any;
 
-        // Create model instance with progress callback
-        const model = new LLM({
+        if (!webllmModule) {
+          throw new Error(`WebLLM module import returned undefined`);
+        }
+
+        // Use CreateMLCEngine or CreateWebWorkerMLCEngine (new API)
+        const CreateMLCEngine = webllmModule.CreateMLCEngine || webllmModule.CreateWebWorkerMLCEngine;
+
+        if (!CreateMLCEngine || typeof CreateMLCEngine !== 'function') {
+          const availableExports = Object.keys(webllmModule).join(', ');
+          throw new Error(`ML Engine constructor not found. Available exports: ${availableExports}`);
+        }
+
+        // Create ML Engine instance with progress callback
+        const modelInstance = await CreateMLCEngine({
           model: tryModelName,
           initProgressCallback: (report: any) => {
             const progress = report.progress || 0;
             loadProgress = progress * 100;
-            
+
             if (loadProgressCallback) {
               loadProgressCallback(loadProgress);
             }
-            
+
             logger.debug('[webllmService] Load progress:', `${Math.round(loadProgress)}%`);
           },
         });
 
-        // Initialize the model
-        await model.load();
+        // Generate method to match interface expectations
+        const model = {
+          generate: async (prompt: string, options: any) => {
+            return await modelInstance.generate(prompt, options);
+          }
+        };
 
         globalModel = model;
         modelReady = true;
