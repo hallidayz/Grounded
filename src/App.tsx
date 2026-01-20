@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react';
+import { motion, AnimatePresence } from 'framer-motion';
 import { COPY, getConversationNode } from './copy';
 import { continueConversation, generateWelcomeMessage } from './services/aiService';
 import { 
@@ -10,7 +11,7 @@ import {
   TERMS_VERSION
 } from './services/settings';
 import { chatDB, type ChatSession } from './services/chatDB';
-import type { EnergyLevel, ConversationState } from './types';
+import type { EnergyLevel, ConversationState, AppView } from './types';
 
 const BREATHING_PATTERNS = {
   '10s-reset': { 
@@ -120,29 +121,40 @@ function BreathingExercise({
       }
     };
 
+    const playCompletionHaptic = () => {
+      if (navigator.vibrate) {
+        navigator.vibrate([100, 50, 100]);
+      }
+    };
+
     const runPhase = async () => {
       if (isAmygdalaMode) {
+        let countdownValue = inhale;
         for (let c = 0; c < 1; c++) {
           setPhase('inhale');
-          setCurrentScale(0.3);
           setCountdown(inhale);
           playHaptic();
           await new Promise(resolve => setTimeout(resolve, 100));
-          setCurrentScale(2.2);
-          await new Promise(resolve => setTimeout(resolve, inhale * 1000 - 100));
+          
+          for (let t = inhale - 1; t >= 0; t--) {
+            setCountdown(t);
+            await new Promise(resolve => setTimeout(resolve, 1000));
+          }
           
           setPhase('hold');
-          setCurrentScale(2.3);
           setCountdown(hold1);
           playHaptic();
           await new Promise(resolve => setTimeout(resolve, hold1 * 1000));
           
           setPhase('exhale');
-          setCurrentScale(0.3);
           setCountdown(exhale);
           playHaptic();
-          await new Promise(resolve => setTimeout(resolve, exhale * 1000));
+          for (let t = exhale - 1; t >= 0; t--) {
+            setCountdown(t);
+            await new Promise(resolve => setTimeout(resolve, 1000));
+          }
         }
+        playCompletionHaptic();
         } else if (isFiveFourThreeTwoOne) {
         for (let i = 0; i < sensoryStages.length; i++) {
           const stage = sensoryStages[i];
@@ -236,48 +248,121 @@ function BreathingExercise({
     const opacity = phase === 'exhale' ? 0.5 : 1;
     
     const getCircleColor = () => {
-      if (phase === 'inhale') return 'radial-gradient(circle, #a8e6cf, #84c5a4)';
-      if (phase === 'hold') return 'radial-gradient(circle, #84c5a4, #5ea88c)';
-      return 'radial-gradient(circle, #7fb3d5, #5a9bc4)';
+      if (phase === 'inhale') return '#a8e6cf';
+      if (phase === 'hold') return '#84c5a4';
+      return '#7fb3d5';
     };
 
-    return (
-      <div style={styles.breathingContainer}>
-        <h2 style={styles.amygdalaTitle}>10 seconds</h2>
-        <p style={styles.amygdalaMessage}>{config.message}</p>
-        
-        <div style={styles.amygdalaCircleWrapper}>
-          <div 
-            style={{
-              ...styles.amygdalaCircle,
-              transform: `scale(${currentScale})`,
-              background: getCircleColor(),
-              boxShadow: glow,
-              opacity: opacity,
-              transition: `transform ${phase === 'inhale' ? inhale : phase === 'hold' ? hold1 : exhale}s ${ease}, background 0.5s, box-shadow 0.5s, opacity 0.5s`,
-            }}
-          />
-          <span style={styles.amygdalaCount}>{countdown}</span>
-        </div>
-        
-        <p style={styles.amygdalaPhaseText}>
-          {phase === 'inhale' ? 'In' : phase === 'hold' ? 'Hold' : phase === 'exhale' ? 'Out' : ''}
-        </p>
+    const circumference = 2 * Math.PI * 80;
+    const progress = countdown / inhale;
 
-        <div style={styles.amygdalaButtons}>
-          <button style={styles.amygdalaButtonSecondary} onClick={() => {
-            setPhase('inhale');
-            setCurrentScale(0.3);
-            setCountdown(inhale);
-            setCycle(0);
-          }}>
-            Again
-          </button>
-          <button style={styles.amygdalaButtonPrimary} onClick={onComplete}>
-            Done
-          </button>
-        </div>
-      </div>
+    return (
+      <motion.div 
+        style={styles.amygdalaContainer}
+        initial={{ opacity: 0 }}
+        animate={{ opacity: 1 }}
+        exit={{ opacity: 0 }}
+      >
+        <motion.div style={styles.amygdalaContent}>
+          <motion.h2 
+            style={styles.amygdalaTitle}
+            initial={{ y: -20, opacity: 0 }}
+            animate={{ y: 0, opacity: 1 }}
+            transition={{ delay: 0.2 }}
+          >
+            {config.label}
+          </motion.h2>
+          
+          <motion.p 
+            style={styles.amygdalaMessage}
+            initial={{ y: 20, opacity: 0 }}
+            animate={{ y: 0, opacity: 1 }}
+            transition={{ delay: 0.3 }}
+          >
+            {config.message}
+          </motion.p>
+          
+          <div style={styles.countdownRingWrapper}>
+            <svg width="200" height="200" style={{ transform: 'rotate(-90deg)' }}>
+              <circle
+                cx="100"
+                cy="100"
+                r="80"
+                stroke="white"
+                strokeWidth="6"
+                fill="transparent"
+                opacity={0.2}
+              />
+              <motion.circle
+                cx="100"
+                cy="100"
+                r="80"
+                stroke={getCircleColor()}
+                strokeWidth="6"
+                fill="transparent"
+                strokeDasharray={circumference}
+                initial={{ strokeDashoffset: 0 }}
+                animate={{ 
+                  strokeDashoffset: circumference * (1 - progress),
+                  stroke: getCircleColor()
+                }}
+                transition={{ duration: 0.5, ease: "easeOut" }}
+                style={{ filter: `drop-shadow(0 0 8px ${getCircleColor()})` }}
+              />
+            </svg>
+            <motion.span 
+              style={styles.amygdalaCount}
+              key={countdown}
+              initial={{ scale: 1.3, opacity: 0.8 }}
+              animate={{ scale: 1, opacity: 1 }}
+              transition={{ duration: 0.3 }}
+            >
+              {countdown}
+            </motion.span>
+          </div>
+          
+          <motion.div
+            style={styles.amygdalaPhaseContainer}
+            key={phase}
+            initial={{ y: 10, opacity: 0 }}
+            animate={{ y: 0, opacity: 1 }}
+            transition={{ duration: 0.3 }}
+          >
+            <p style={styles.amygdalaPhaseText}>
+              {phase === 'inhale' ? config.instruction : phase === 'hold' ? 'Hold' : phase === 'exhale' ? config.instruction : ''}
+            </p>
+            <p style={styles.amygdalaSubtext}>{config.subtext}</p>
+          </motion.div>
+
+          <motion.div 
+            style={styles.amygdalaButtons}
+            initial={{ y: 20, opacity: 0 }}
+            animate={{ y: 0, opacity: 1 }}
+            transition={{ delay: 0.4 }}
+          >
+            <button 
+              style={styles.amygdalaButtonSecondary} 
+              onClick={() => {
+                if (navigator.vibrate) navigator.vibrate(30);
+                setPhase('inhale');
+                setCountdown(inhale);
+                setCycle(0);
+              }}
+            >
+              Again
+            </button>
+            <button 
+              style={styles.amygdalaButtonPrimary} 
+              onClick={() => {
+                if (navigator.vibrate) navigator.vibrate([100, 50, 100]);
+                onComplete();
+              }}
+            >
+              Done
+            </button>
+          </motion.div>
+        </motion.div>
+      </motion.div>
     );
   }
 
@@ -490,18 +575,19 @@ export default function App() {
   const [pendingUserInput, setPendingUserInput] = useState<string>('');
   const [inputRows, setInputRows] = useState(1);
   const [isWebGPUSupported, setIsWebGPUSupported] = useState(true);
-  const [showTenSecondBreakers, setShowTenSecondBreakers] = useState(false);
+  const [selectedTenSecondBreaker, setSelectedTenSecondBreaker] = useState<EnergyLevel>('10s-reset');
   const textareaRef = useRef<HTMLTextAreaElement>(null);
   const messagesEndRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
     const checkWebGPU = async () => {
-      if (!navigator.gpu) {
+      const gpu = (navigator as unknown as { gpu?: { requestAdapter: () => Promise<unknown> } }).gpu;
+      if (!gpu) {
         setIsWebGPUSupported(false);
         return;
       }
       try {
-        const adapter = await navigator.gpu.requestAdapter();
+        const adapter = await gpu.requestAdapter();
         if (!adapter) {
           setIsWebGPUSupported(false);
         }
@@ -549,12 +635,6 @@ export default function App() {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
   }, [conversationHistory]);
 
-  useEffect(() => {
-    if (selectedDate) {
-      chatDB.getSessionsByDate(selectedDate).then(setSavedSessions);
-    }
-  }, [selectedDate]);
-
   const toggleTheme = () => {
     const newDark = !isDarkMode;
     setIsDarkMode(newDark);
@@ -574,19 +654,10 @@ export default function App() {
 
   const handleEnergySelect = (energy: string) => {
     if (energy === '10s') {
-      setShowTenSecondBreakers(true);
+      setSelectedEnergy(selectedTenSecondBreaker);
     } else {
       setSelectedEnergy(energy as EnergyLevel);
-      setPendingUserInput('');
-      setBreathingPhase('inhale');
-      setBreathingCycle(0);
-      setView('breathing');
     }
-  };
-
-  const handleTenSecondSelect = (energy: EnergyLevel) => {
-    setShowTenSecondBreakers(false);
-    setSelectedEnergy(energy);
     setPendingUserInput('');
     setBreathingPhase('inhale');
     setBreathingCycle(0);
@@ -737,6 +808,12 @@ export default function App() {
   const [savedSessions, setSavedSessions] = useState<ChatSession[]>([]);
   const [selectedDate, setSelectedDate] = useState<string>('');
   const [datesWithSessions, setDatesWithSessions] = useState<string[]>([]);
+
+  useEffect(() => {
+    if (selectedDate) {
+      chatDB.getSessionsByDate(selectedDate).then(setSavedSessions);
+    }
+  }, [selectedDate]);
 
   const loadSavedSessions = async () => {
     const dates = await chatDB.getDatesWithSessions();
@@ -913,7 +990,7 @@ export default function App() {
   };
 
   const renderBottomNav = () => {
-    if (view === 'loading' || showTenSecondBreakers) return null;
+    if (view === 'loading') return null;
     const navItems = [
       { view: 'welcome', icon: '🏠', label: 'Home' },
       { view: 'help', icon: '❓', label: 'Help' },
@@ -1116,14 +1193,53 @@ export default function App() {
         <p style={styles.welcomeSubtitle}>Small moments, big difference</p>
         <h2 style={styles.welcomeHeading}>Pause. What's moving through you?</h2>
       </div>
+      
+      <div style={styles.circuitBreakerSelector}>
+        <div style={styles.circuitBreakerHeader}>
+          <span style={styles.circuitBreakerLabel}>The Circuit Breaker</span>
+          <span style={styles.circuitBreakerEnergyBadge}>High Energy</span>
+        </div>
+        <div style={styles.circuitBreakerOptions}>
+          {COPY.tenSecondBreakers.map(breaker => (
+            <button
+              key={breaker.key}
+              style={{
+                ...styles.circuitBreakerOption,
+                ...(selectedTenSecondBreaker === breaker.key ? styles.circuitBreakerOptionSelected : {}),
+                borderColor: selectedTenSecondBreaker === breaker.key ? breaker.color : `${breaker.color}60`,
+                backgroundColor: selectedTenSecondBreaker === breaker.key ? breaker.bgColor : 'var(--bg-card, #ffffff)',
+              }}
+              onClick={() => setSelectedTenSecondBreaker(breaker.key as EnergyLevel)}
+            >
+              <span style={styles.circuitBreakerVisual}>{breaker.icon}</span>
+              <span style={styles.circuitBreakerName}>{breaker.label}</span>
+              <span style={{
+                ...styles.circuitBreakerEnergy,
+                color: breaker.color,
+              }}>{breaker.energyLevel?.toUpperCase()}</span>
+            </button>
+          ))}
+        </div>
+        <p style={styles.circuitBreakerSubtext}>
+          {COPY.tenSecondBreakers.find(b => b.key === selectedTenSecondBreaker)?.subtext}
+        </p>
+      </div>
+
       <div style={styles.optionsGrid}>
         {COPY.energy.options.map(option => (
           <button key={option.energy} style={styles.optionCard} onClick={() => handleEnergySelect(option.energy)}>
             <span style={styles.optionIcon}>{option.icon}</span>
-            <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-start' }}>
+            <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-start', flex: 1 }}>
               <span style={styles.optionLabel}>{option.label}</span>
               <span style={styles.optionDescription}>{option.description}</span>
             </div>
+            {option.energyLevel && (
+              <span style={{
+                ...styles.energyLevelBadge,
+                backgroundColor: option.energyLevel === 'high' ? '#fef3c7' : option.energyLevel === 'medium' ? '#fce7f3' : '#ede9fe',
+                color: option.energyLevel === 'high' ? '#d97706' : option.energyLevel === 'medium' ? '#db2777' : '#7c3aed',
+              }}>{option.energyLevel}</span>
+            )}
           </button>
         ))}
       </div>
@@ -1152,34 +1268,6 @@ export default function App() {
         </button>
       </div>
       {moments > 0 && <p style={styles.momentsCount}>{moments} moments</p>}
-    </div>
-  );
-
-  const renderTenSecondBreakers = () => (
-    <div style={styles.container}>
-      <div style={styles.settingsHeader}>
-        <button style={styles.backButton} onClick={() => setShowTenSecondBreakers(false)}>
-          ← Back
-        </button>
-        <h2 style={styles.title}>Choose your reset</h2>
-      </div>
-      
-      <div style={styles.tenSecondBreakersGrid}>
-        {COPY.tenSecondBreakers.map(breaker => (
-          <button 
-            key={breaker.key}
-            style={{
-              ...styles.tenSecondBreakerCard,
-              borderColor: `${breaker.color}40`,
-            }}
-            onClick={() => handleTenSecondSelect(breaker.key as EnergyLevel)}
-          >
-            <span style={styles.tenSecondBreakerIcon}>{breaker.icon}</span>
-            <span style={styles.tenSecondBreakerTitle}>{breaker.label}</span>
-            <span style={styles.tenSecondBreakerSubtext}>{breaker.subtext}</span>
-          </button>
-        ))}
-      </div>
     </div>
   );
 
@@ -1279,7 +1367,6 @@ export default function App() {
         {view === 'settings' && renderSettings()}
         {view === 'values' && renderValues()}
         {view === 'welcome' && renderWelcome()}
-        {showTenSecondBreakers && renderTenSecondBreakers()}
         {view === 'breathing' && renderBreathing()}
         {view === 'conversation' && renderConversation()}
         {view === 'crisis-resources' && renderCrisisResources()}
@@ -1616,121 +1703,200 @@ const styles: Record<string, React.CSSProperties> = {
     textDecoration: 'none',
     fontSize: '14px',
   },
-  welcomeContainer: {
-    padding: '20px',
-    paddingBottom: '100px',
-    maxWidth: '500px',
-    margin: '0 auto',
-  },
-  welcomeLogoSection: {
-    display: 'flex',
-    flexDirection: 'column',
-    alignItems: 'center',
-    marginBottom: '32px',
-    marginTop: '20px',
-  },
-  logoImage: {
-    width: '100px',
-    height: '100px',
-    borderRadius: '20px',
-    marginBottom: '16px',
-    objectFit: 'contain',
-  },
-  welcomeTitle: {
-    fontSize: '32px',
-    fontWeight: '700',
-    marginBottom: '8px',
-    textAlign: 'center',
-  },
-   welcomeSubtitle: {
-    fontSize: '16px',
-    opacity: 0.7,
-    textAlign: 'center',
-  },
-  welcomeHeading: {
-    fontSize: '24px',
-    fontWeight: '600',
-    textAlign: 'center',
-    marginTop: '16px',
-    marginBottom: '24px',
-    color: 'var(--text-primary, #1b3448)',
+   welcomeContainer: {
+     padding: '12px',
+     paddingBottom: '100px',
+     maxWidth: '500px',
+     margin: '0 auto',
    },
-   optionsGrid: {
-    display: 'flex',
-    flexDirection: 'column',
-    gap: '12px',
-    marginBottom: '24px',
-  },
-  optionCard: {
-    display: 'flex',
-    flexDirection: 'row',
-    alignItems: 'center',
-    padding: '16px 20px',
-    backgroundColor: 'var(--bg-card, #ffffff)',
-    borderRadius: '12px',
-    boxShadow: '0 2px 8px rgba(0,0,0,0.08)',
-    cursor: 'pointer',
-    border: 'none',
-    minHeight: '60px',
-    justifyContent: 'flex-start',
-    gap: '16px',
-    transition: 'transform 0.2s, box-shadow 0.2s',
-  },
-  optionIcon: {
-    fontSize: '24px',
-    display: 'block',
-  },
-  optionLabel: {
-    fontSize: '16px',
-    fontWeight: '600',
-    display: 'block',
-    color: 'var(--text-primary, #1b3448)',
-  },
-  optionDescription: {
-    fontSize: '13px',
-    opacity: 0.6,
-    display: 'block',
-    color: 'var(--text-secondary, #4a5568)',
-  },
-  welcomeInputContainer: {
-    display: 'flex',
-    gap: '12px',
-    padding: '16px',
-    backgroundColor: 'var(--bg-card, #ffffff)',
-    borderRadius: '12px',
-    boxShadow: '0 2px 8px rgba(0,0,0,0.08)',
+   welcomeLogoSection: {
+     display: 'flex',
+     flexDirection: 'column',
+     alignItems: 'center',
+     marginBottom: '12px',
+     marginTop: '8px',
    },
-   welcomeInput: {
-    flex: 1,
-    padding: '12px 16px',
-    fontSize: '16px',
-    border: '1px solid rgba(0,0,0,0.1)',
-    borderRadius: '16px',
-    outline: 'none',
-    backgroundColor: 'var(--bg-secondary, #f8f7f4)',
-    fontFamily: 'inherit',
-    lineHeight: '1.4',
+   logoImage: {
+     width: '60px',
+     height: '60px',
+     borderRadius: '12px',
+     marginBottom: '8px',
+     objectFit: 'contain',
    },
-   welcomeSendButton: {
-    width: '48px',
-    height: '48px',
-    borderRadius: '50%',
-    backgroundColor: 'var(--primary, #2c5282)',
-    color: '#ffffff',
-    border: 'none',
-    fontSize: '20px',
-    cursor: 'pointer',
-    display: 'flex',
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  welcomeInputLabel: {
-    fontSize: '14px',
-    opacity: 0.6,
-    textAlign: 'center',
-    marginBottom: '12px',
-  },
-  conversationContainer: {
+   welcomeTitle: {
+     fontSize: '24px',
+     fontWeight: '700',
+     marginBottom: '4px',
+     textAlign: 'center',
+   },
+    welcomeSubtitle: {
+     fontSize: '14px',
+     opacity: 0.7,
+     textAlign: 'center',
+   },
+   welcomeHeading: {
+     fontSize: '18px',
+     fontWeight: '600',
+     textAlign: 'center',
+     marginTop: '8px',
+     marginBottom: '12px',
+     color: 'var(--text-primary, #1b3448)',
+    },
+    optionsGrid: {
+     display: 'flex',
+     flexDirection: 'column',
+     gap: '8px',
+     marginBottom: '12px',
+   },
+   optionCard: {
+     display: 'flex',
+     flexDirection: 'row',
+     alignItems: 'center',
+     padding: '12px 16px',
+     backgroundColor: 'var(--bg-card, #ffffff)',
+     borderRadius: '12px',
+     boxShadow: '0 2px 8px rgba(0,0,0,0.08)',
+     cursor: 'pointer',
+     border: 'none',
+     minHeight: '52px',
+     justifyContent: 'flex-start',
+     gap: '12px',
+     transition: 'transform 0.2s, box-shadow 0.2s',
+   },
+   optionIcon: {
+     fontSize: '20px',
+     display: 'block',
+   },
+   optionLabel: {
+     fontSize: '15px',
+     fontWeight: '600',
+     display: 'block',
+     color: 'var(--text-primary, #1b3448)',
+   },
+   optionDescription: {
+     fontSize: '12px',
+     opacity: 0.6,
+     display: 'block',
+     color: 'var(--text-secondary, #4a5568)',
+   },
+   energyLevelBadge: {
+     fontSize: '9px',
+     padding: '3px 8px',
+     borderRadius: '10px',
+     fontWeight: '600',
+     textTransform: 'capitalize',
+   },
+   welcomeInputContainer: {
+     display: 'flex',
+     gap: '8px',
+     padding: '12px',
+     backgroundColor: 'var(--bg-card, #ffffff)',
+     borderRadius: '12px',
+     boxShadow: '0 2px 8px rgba(0,0,0,0.08)',
+    },
+    welcomeInput: {
+     flex: 1,
+     padding: '10px 12px',
+     fontSize: '15px',
+     border: '1px solid rgba(0,0,0,0.1)',
+     borderRadius: '12px',
+     outline: 'none',
+     backgroundColor: 'var(--bg-secondary, #f8f7f4)',
+     fontFamily: 'inherit',
+     lineHeight: '1.4',
+    },
+    welcomeSendButton: {
+     width: '40px',
+     height: '40px',
+     borderRadius: '50%',
+     backgroundColor: 'var(--primary, #2c5282)',
+     color: '#ffffff',
+     border: 'none',
+     fontSize: '18px',
+     cursor: 'pointer',
+     display: 'flex',
+     alignItems: 'center',
+     justifyContent: 'center',
+   },
+    welcomeInputLabel: {
+      fontSize: '12px',
+      opacity: 0.6,
+      textAlign: 'center',
+      marginBottom: '8px',
+    },
+    circuitBreakerSelector: {
+      marginBottom: '12px',
+    },
+    circuitBreakerHeader: {
+      display: 'flex',
+      alignItems: 'center',
+      justifyContent: 'space-between',
+      marginBottom: '8px',
+    },
+    circuitBreakerLabel: {
+      fontSize: '14px',
+      fontWeight: '700',
+      color: 'var(--text-primary, #1b3448)',
+    },
+    circuitBreakerEnergyBadge: {
+      fontSize: '10px',
+      padding: '2px 8px',
+      borderRadius: '10px',
+      backgroundColor: '#fef3c7',
+      color: '#d97706',
+      fontWeight: '600',
+      textTransform: 'uppercase',
+    },
+    circuitBreakerOptions: {
+      display: 'flex',
+      gap: '6px',
+      justifyContent: 'center',
+    },
+    circuitBreakerOption: {
+      display: 'flex',
+      flexDirection: 'column',
+      alignItems: 'center',
+      padding: '6px 4px',
+      backgroundColor: 'var(--bg-card, #ffffff)',
+      borderRadius: '10px',
+      borderWidth: '2px',
+      borderStyle: 'solid',
+      cursor: 'pointer',
+      transition: 'all 0.15s ease',
+      flex: 1,
+      maxWidth: '72px',
+    },
+    circuitBreakerOptionSelected: {
+      boxShadow: '0 2px 8px rgba(0,0,0,0.12)',
+      transform: 'translateY(-1px)',
+    },
+    circuitBreakerVisual: {
+      fontSize: '16px',
+      marginBottom: '2px',
+    },
+    circuitBreakerName: {
+      fontSize: '8px',
+      fontWeight: '600',
+      textAlign: 'center',
+      lineHeight: 1.2,
+      color: 'var(--text-primary, #1b3448)',
+    },
+    circuitBreakerEnergy: {
+      fontSize: '7px',
+      fontWeight: '700',
+      marginTop: '2px',
+    },
+     circuitBreakerSubtext: {
+       fontSize: '11px',
+       opacity: 0.8,
+       textAlign: 'center',
+       marginTop: '8px',
+       marginBottom: '4px',
+       lineHeight: 1.4,
+       color: 'var(--text-secondary, #4a5568)',
+       padding: '0 12px',
+     },
+   conversationContainer: {
     flex: 1,
     display: 'flex',
     flexDirection: 'column',
@@ -2005,12 +2171,38 @@ const styles: Record<string, React.CSSProperties> = {
     marginTop: '12px',
     transition: 'background-color 0.2s',
   },
+  amygdalaContainer: {
+    flex: 1,
+    display: 'flex',
+    flexDirection: 'column',
+    alignItems: 'center',
+    justifyContent: 'center',
+    minHeight: '100vh',
+    padding: '20px',
+    paddingBottom: '100px',
+    maxWidth: '500px',
+    margin: '0 auto',
+  },
+  amygdalaContent: {
+    display: 'flex',
+    flexDirection: 'column',
+    alignItems: 'center',
+    width: '100%',
+  },
+  countdownRingWrapper: {
+    position: 'relative',
+    display: 'flex',
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginTop: '24px',
+    marginBottom: '24px',
+  },
   amygdalaTitle: {
-    fontSize: '24px',
+    fontSize: '28px',
     fontWeight: '700',
     color: 'var(--text-primary, #1b3448)',
     textAlign: 'center',
-    marginBottom: '4px',
+    marginBottom: '8px',
   },
   amygdalaMessage: {
     fontSize: '14px',
@@ -2036,17 +2228,30 @@ const styles: Record<string, React.CSSProperties> = {
     position: 'absolute',
   },
   amygdalaCount: {
-    fontSize: '24px',
-    fontWeight: '700',
+    fontSize: '48px',
+    fontWeight: '300',
+    fontStyle: 'italic',
     color: 'var(--text-primary, #1b3448)',
-    zIndex: 1,
+    position: 'absolute',
+    fontFamily: 'Georgia, serif',
+  },
+  amygdalaPhaseContainer: {
+    textAlign: 'center',
+    marginBottom: '24px',
   },
   amygdalaPhaseText: {
-    fontSize: '18px',
+    fontSize: '20px',
     fontWeight: '600',
     color: 'var(--text-primary, #1b3448)',
-    textTransform: 'capitalize',
-    marginTop: '8px',
+    marginBottom: '8px',
+  },
+  amygdalaSubtext: {
+    fontSize: '14px',
+    color: 'var(--text-secondary, #1b3448)',
+    opacity: 0.7,
+    textAlign: 'center',
+    maxWidth: '280px',
+    lineHeight: 1.4,
   },
   amygdalaButtons: {
     display: 'flex',
@@ -2382,18 +2587,20 @@ const styles: Record<string, React.CSSProperties> = {
       gap: '16px',
       padding: '20px',
      },
-     tenSecondBreakerCard: {
-      display: 'flex',
-      flexDirection: 'column',
-      alignItems: 'flex-start',
-      padding: '20px',
-      backgroundColor: 'var(--bg-card, #ffffff)',
-      borderRadius: '16px',
-      borderWidth: '2px',
-      borderStyle: 'solid',
-      cursor: 'pointer',
-      textAlign: 'left',
-     },
+      tenSecondBreakerCard: {
+        display: 'flex',
+        flexDirection: 'column',
+        alignItems: 'flex-start',
+        padding: '20px',
+        backgroundColor: 'var(--bg-card, #ffffff)',
+        borderRadius: '16px',
+        borderWidth: '2px',
+        borderStyle: 'solid',
+        cursor: 'pointer',
+        textAlign: 'left',
+        boxShadow: '0 2px 8px rgba(0,0,0,0.08)',
+        transition: 'all 0.2s ease',
+      },
      tenSecondBreakerIcon: {
       fontSize: '32px',
       marginBottom: '12px',
