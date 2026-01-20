@@ -108,9 +108,9 @@ export default defineConfig({
   },
   server: {
     port: 3000,
-    host: '0.0.0.0',
+    host: true,
     strictPort: false,
-    open: '/',
+    open: true,
     headers: {
       'Cross-Origin-Opener-Policy': 'same-origin',
       'Cross-Origin-Embedder-Policy': 'require-corp',
@@ -146,11 +146,9 @@ export default defineConfig({
     VitePWA({
       registerType: 'autoUpdate',
       injectRegister: 'auto',
-      strategies: 'injectManifest',
-      srcDir: 'src',
-      filename: 'sw.js',
-      injectManifest: {
-        maximumFileSizeToCacheInBytes: 10 * 1024 * 1024, // 10 MB (increased from default 2 MB)
+      strategies: 'generateSW',
+      workbox: {
+        maximumFileSizeToCacheInBytes: 10 * 1024 * 1024,
       },
       manifest: {
         name: 'Grounded',
