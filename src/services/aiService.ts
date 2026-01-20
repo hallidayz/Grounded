@@ -1,215 +1,411 @@
-/**
- * AI SERVICE - MAIN EXPORT
- * 
- * This file re-exports all AI functionality from the modular structure.
- * Maintains backward compatibility with existing imports.
- * 
- * The AI service has been split into:
- * - ai/models.ts - Model loading and management
- * - ai/crisis.ts - Crisis detection and response
- * - ai/reports.ts - Clinical report generation
- * - ai/encouragement.ts - Encouragement and guidance generation
- */
+import type { ConversationNode, ConversationState, EnergyLevel } from '../types';
 
-import { checkForCrisisKeywords, CrisisResponse } from './safetyService';
-import { logger } from '../utils/logger';
-
-interface AIWorkerResponse {
-  id: string;
-  output?: any;
-  error?: string;
+export interface UserValues {
+  values: string[];
+  priority: string[];
 }
 
-let globalWorker: Worker | null = null;
-const pendingRequests = new Map<string, { resolve: Function, reject: Function }>();
+let userValues: UserValues = { values: [], priority: [] };
 
-// Simple in-memory cache for common responses (TTL 5 mins)
-const responseCache = new Map<string, { data: any, timestamp: number }>();
-const CACHE_TTL = 5 * 60 * 1000;
-
-function getWorker(): Worker {
-  if (!globalWorker) {
-    globalWorker = new Worker(new URL('../workers/aiWorker.ts', import.meta.url), { type: 'module' });
-    
-    globalWorker.onmessage = (e) => {
-      const { id, output, error } = e.data as AIWorkerResponse;
-      const request = pendingRequests.get(id);
-      
-      if (request) {
-        if (error) request.reject(new Error(error));
-        else request.resolve(output);
-        pendingRequests.delete(id);
-      }
-    };
-    
-    globalWorker.onerror = (err) => {
-      logger.error('[aiService] Global AI Worker Error (deprecated - using WebLLM now):', err);
-      // Worker is deprecated in favor of WebLLM, but kept for backward compatibility
-    };
-  }
-  return globalWorker;
+export function setUserValues(values: UserValues) {
+  userValues = values;
 }
 
-export async function runAIWorker(
-  inputText: string, 
-  task: string = 'text2text-generation', 
-  modelName?: string, 
-  generationConfig?: any
-): Promise<any | CrisisResponse> {
-  
-  // --- SAFETY INTERCEPTOR ---
-  // Check for crisis keywords FIRST (now async).
-  const crisisResponse = await checkForCrisisKeywords(inputText);
-  if (crisisResponse) {
-    // If a crisis is detected, DO NOT proceed to the AI worker.
-    // Immediately return the hardcoded safety response.
-    console.warn('Crisis keyword detected. Bypassing AI and returning safety response.');
-    return Promise.resolve(crisisResponse); 
-  }
-  // --- END OF SAFETY INTERCEPTOR ---
+export function getUserValues(): UserValues {
+  return userValues;
+}
 
-  // Check cache first
-  const cacheKey = `${task}-${modelName}-${inputText}-${JSON.stringify(generationConfig)}`;
-  const cached = responseCache.get(cacheKey);
-  if (cached && (Date.now() - cached.timestamp < CACHE_TTL)) {
-    console.log('[AIService] Returning cached response');
-    return Promise.resolve(cached.data);
-  }
-
-  const id = crypto.randomUUID();
-  const worker = getWorker();
+function checkValuesInInput(input: string): string[] {
+  const matchedValues: string[] = [];
+  const lowerInput = input.toLowerCase();
   
-  return new Promise((resolve, reject) => {
-    pendingRequests.set(id, { 
-      resolve: (data: any) => {
-        // Cache successful response
-        responseCache.set(cacheKey, { data, timestamp: Date.now() });
-        resolve(data);
-      }, 
-      reject 
-    });
-    worker.postMessage({ id, text: inputText, task, modelName, generationConfig });
+  userValues.values.forEach(value => {
+    if (lowerInput.includes(value.toLowerCase())) {
+      matchedValues.push(value);
+    }
   });
+  
+  return matchedValues;
 }
 
-// Re-export generateText for backward compatibility
-// Updated to use WebLLM (TinyLlama) for better mobile performance
-export async function generateText(prompt: string, modelName?: string): Promise<string | CrisisResponse> {
-  // Check for crisis keywords FIRST (safety interceptor) - now async
-  const crisisResponse = await checkForCrisisKeywords(prompt);
-  if (crisisResponse) {
-    logger.warn('[aiService] Crisis keyword detected. Bypassing AI and returning safety response.');
-    return Promise.resolve(crisisResponse);
-  }
+let engine: any = null;
+let isLoading = false;
+let loadPromise: Promise<void> | null = null;
 
-  // Check cache first
-  const cacheKey = `text-generation-${modelName || 'default'}-${prompt}`;
-  const cached = responseCache.get(cacheKey);
-  if (cached && (Date.now() - cached.timestamp < CACHE_TTL)) {
-    logger.debug('[aiService] Returning cached response');
-    return Promise.resolve(cached.data);
+async function getEngine() {
+  if (engine) return engine;
+  
+  if (isLoading && loadPromise) {
+    await loadPromise;
+    return engine;
   }
+  
+  isLoading = true;
+  loadPromise = (async () => {
+    try {
+      const { CreateMLCEngine } = await import('@mlc-ai/web-llm');
+      
+      const modelName = 'Qwen2.5-0.5B-Instruct-q4f16_1-MLC';
+      
+      engine = await CreateMLCEngine(
+        modelName,
+        {
+          initProgressCallback: (progress: any) => {
+            console.log('Model download progress:', progress.progress, progress.text);
+          }
+        }
+      );
+    } catch (error) {
+      console.error('Failed to load AI engine:', error);
+      engine = null;
+      throw error;
+    } finally {
+      isLoading = false;
+    }
+  })();
+  
+  await loadPromise;
+  return engine;
+}
 
+function classifyEnergy(input: string): 'low' | 'medium' | 'high' | 'panic' | 'mild' | null {
+  const lower = input.toLowerCase();
+  
+  const panicIndicators = [
+    'panic', 'freaking', "freak", "can't breathe", 'heart racing', 'losing it',
+    'losing control', 'dying', 'spinning out', 'spinning', '失控', '疯狂',
+    'hyperventilating', 'chest tight', 'can\'t get air', 'gonna pass out',
+    'terrified', 'horror', 'emergency', '911', 'emergency room'
+  ];
+  
+  const mildIndicators = [
+    'anxious', 'anxiety', 'worried', 'worry', 'nervous', 'stressed', 'stress',
+    'on edge', 'edgy', 'uneasy', 'uptight', 'tense', 'apprehensive',
+    'butterflies', 'nervous stomach', 'future', 'what if'
+  ];
+  
+  const lowIndicators = [
+    'tired', 'exhausted', 'drained', 'empty', 'heavy', 'numb', 'nothing',
+    'done', 'can\'t', 'no energy', 'so tired', 'drained', 'empty',
+    'silence', 'quiet', 'just', 'meh', 'blah', 'low', 'zombie',
+    'sleepy', 'wiped', 'beat', 'fried', 'spent', 'worn',
+    'can\'t do', 'too much', 'over it', 'checked out', ' depleted'
+  ];
+  
+  const highIndicators = [
+    'chaos', 'crazy', 'overwhelm', 'overwhelmed', 'too much', 'everything', 'breaking',
+    'crashing', 'falling apart', 'can\'t think', 'mind racing', 'spinning',
+    'intense', 'out of control', 'bombarded', 'swamped', 'snowed under'
+  ];
+  
+  for (const indicator of panicIndicators) {
+    if (lower.includes(indicator)) return 'panic';
+  }
+  
+  for (const indicator of mildIndicators) {
+    if (lower.includes(indicator)) return 'mild';
+  }
+  
+  for (const indicator of lowIndicators) {
+    if (lower.includes(indicator)) return 'low';
+  }
+  
+  for (const indicator of highIndicators) {
+    if (lower.includes(indicator)) return 'high';
+  }
+  
+  if (lower.includes('swirl') || lower.includes('racing') || lower.includes('busy') || lower.includes('mess')) {
+    return 'medium';
+  }
+  
+  return null;
+}
+
+function routeToNode(
+  userInput: string,
+  currentNode: ConversationNode,
+  energy: EnergyLevel,
+  quickReply?: string
+): ConversationNode {
+  const input = quickReply || userInput;
+  const lower = input.toLowerCase();
+  
+  if (currentNode === 'welcome') {
+    const energyLevel = classifyEnergy(input);
+    if (energyLevel === 'low') return 'low_energy_offer';
+    if (energyLevel === 'high') return 'high_chaos_offer';
+    if (energyLevel === 'panic') return 'panic_offer';
+    if (energyLevel === 'mild') return 'mild_offer';
+    return 'medium_swirl_offer';
+  }
+  
+  if (currentNode === 'low_energy_offer') {
+    if (lower.includes('yes') || lower.includes('sure') || lower.includes('ok') || lower.includes('guide')) {
+      return 'low_energy_yes';
+    }
+    return 'low_energy_no';
+  }
+  
+  if (currentNode === 'low_energy_no') {
+    if (lower.includes('ready') || lower.includes('blue') || lower.includes('color')) {
+      return 'low_energy_grounding';
+    }
+    return 'low_energy_grounding';
+  }
+  
+  if (currentNode === 'low_energy_grounding') {
+    return 'low_energy_complete';
+  }
+  
+  if (currentNode === 'medium_swirl_offer') {
+    return 'medium_swirl_response';
+  }
+  
+  if (currentNode === 'medium_swirl_response') {
+    return 'medium_swirl_grounding';
+  }
+  
+  if (currentNode === 'medium_swirl_grounding') {
+    return 'medium_swirl_complete';
+  }
+  
+  if (currentNode === 'high_chaos_offer') {
+    if (lower.includes('can\'t') || lower.includes('focus')) {
+      return 'high_chaos_grounding';
+    }
+    return 'high_chaos_grounding';
+  }
+  
+  if (currentNode === 'high_chaos_grounding') {
+    if (lower.includes('timer') || lower.includes('pro') || lower.includes('help') || lower.includes('hotline')) {
+      return 'high_chaos_crisis';
+    }
+    if (lower.includes('water') || lower.includes('walk') || lower.includes('rest') || lower.includes('journal')) {
+      return 'high_chaos_tiny_steps';
+    }
+    return 'high_chaos_visualization';
+  }
+  
+  if (currentNode === 'high_chaos_visualization') {
+    return 'high_chaos_tiny_steps';
+  }
+  
+  if (currentNode === 'high_chaos_tiny_steps') {
+    return 'high_chaos_complete';
+  }
+  
+  if (currentNode === 'high_chaos_crisis') {
+    return 'high_chaos_complete';
+  }
+  
+  if (currentNode === 'panic_offer') {
+    if (lower.includes('yes') || lower.includes('sure')) {
+      return 'panic_yes';
+    }
+    return 'panic_no';
+  }
+  
+  if (currentNode === 'panic_yes') {
+    return 'panic_breath';
+  }
+  
+  if (currentNode === 'panic_no') {
+    if (lower.includes('988') || lower.includes('timer') || lower.includes('help')) {
+      return 'panic_escalate';
+    }
+    return 'panic_no';
+  }
+  
+  if (currentNode === 'panic_breath') {
+    return 'panic_complete';
+  }
+  
+  if (currentNode === 'panic_escalate') {
+    return 'panic_complete';
+  }
+  
+  if (currentNode === 'mild_offer') {
+    if (lower.includes(' ') && !lower.includes('everything') && !lower.includes('nothing')) {
+      return 'mild_specific';
+    }
+    return 'mild_general';
+  }
+  
+  if (currentNode === 'mild_specific') {
+    return 'mild_anchor';
+  }
+  
+  if (currentNode === 'mild_general') {
+    return 'mild_complete';
+  }
+  
+  if (currentNode === 'mild_anchor') {
+    return 'mild_complete';
+  }
+  
+  return currentNode;
+}
+
+export async function continueConversation(
+  state: ConversationState,
+  userInput: string,
+  quickReply?: string
+): Promise<{ message: string; state: ConversationState; quickReplies?: string[] }> {
   try {
-    // Use WebLLM service for generation
-    const { generateText: webllmGenerate } = await import('./ai/webllmService');
+    const chatEngine = await getEngine();
     
-    // System prompt for mental health support
-    const systemPrompt = 'You are a compassionate mental health support assistant. Be brief, supportive, and validating. Keep responses under 50 words.';
+    const nextNode = routeToNode(userInput, state.node, state.energy, quickReply);
     
-    const response = await webllmGenerate(prompt, {
-      systemPrompt,
-      temperature: 0.7,
-      maxTokens: 256,
-    });
+    const matchedValues = checkValuesInInput(userInput);
+    const valuesSection = matchedValues.length > 0 
+      ? `\n\n## Detected Values in User's Input\n${matchedValues.join(', ')}\n\nIf appropriate, gently connect your suggestion to what matters to them.`
+      : '';
 
-    // Cache successful response
-    responseCache.set(cacheKey, { data: response, timestamp: Date.now() });
+    const systemPrompt = `You are a warm, practical support companion. The user just completed a breathing exercise and shared what's on their mind.
+
+## User's Input
+"${userInput}"
+
+## Energy Level
+${state.energy}
+
+## Context
+- The user selected a "${state.energy}" session
+- They took time to breathe first
+- They want support with what's above${valuesSection}
+
+## What Good Help Looks Like
+
+When someone shares what's hard, you help them:
+1. Feel understood first — they need to feel seen before they can move
+2. Find one clear, doable thing — not a list, just one next step
+3. Remember they're capable — even when they don't feel it
+
+## Your Voice
+- Warm and steady, like a good friend who gets it
+- Practical, not preachy
+- Short enough to read, long enough to help
+- You use "you" and "your" to make it personal
+
+## What To Offer
+
+Depending on what they're dealing with, suggest ONE of these (or something similar):
+- "What if you started tomorrow with just X?"
+- "One thing that might help right now is..."
+- "For the rest of today, try..."
+- "A small win you could have today is..."
+- "When you're ready, one step toward X could be..."
+
+## Examples of Good Responses
+
+User: "I'm overwhelmed with work"
+Good response: "That sounds like a lot to carry. One thing that might help right now is writing down just the top 3 things — then letting the rest wait until tomorrow."
+
+User: "I can't stop worrying about my family"
+Good response: "That's heavy to carry. What if you reached out to just one person today, even a short text? Connection can ease the worry."
+
+## What NOT To Do
+- Don't give long lists
+- Don't say "take it one day at a time" — it's not helpful
+- Don't minimize their struggle
+- Don't lecture or be preachy
+
+## Important
+- Reference what they shared — show you heard them
+- Match your response to their energy level (10s = short, 2min/5min = more space)
+- If they mention self-harm or suicide, gently mention 988 (US crisis line)
+
+${state.energy === '10s' ? 'Keep your response SHORT — under 15 words.' : ''}`;
+
+    const contextMessages = [
+      { role: 'system' as const, content: systemPrompt },
+      { role: 'user' as const, content: `The user shared: "${userInput}"\n\nEnergy level: ${state.energy}\n\nWhat would be a helpful, warm response?` },
+    ];
     
-    return response;
+    const response = await chatEngine.chat.completions.create({
+      messages: contextMessages,
+      max_tokens: 120,
+      temperature: 0.8,
+    });
+    
+    const aiMessage = response.choices[0]?.message?.content || '';
+    
+    return {
+      message: aiMessage,
+      state: {
+        node: nextNode,
+        energy: state.energy,
+        depth: state.depth + 1,
+        lastUserInput: userInput,
+      },
+    };
   } catch (error) {
-    logger.error('[aiService] Error generating text with WebLLM:', error);
-    
-    // Return a helpful fallback message instead of using the old worker
-    // The old worker uses transformers which we've replaced with WebLLM
-    const errorMsg = error instanceof Error ? error.message : String(error);
-    logger.warn('[aiService] WebLLM unavailable, returning fallback response');
-    
-    // Return a supportive fallback message
-    return 'I understand you\'re going through something difficult. Your feelings are valid. Please take care of yourself.';
+    console.error('AI conversation failed:', error);
+    return getFallbackResponse(state, userInput, quickReply);
   }
 }
 
-// Re-export model functions with lazy loading support
-export {
-  clearModels,
-  initializeModels,
-  preloadModels,
-  preloadModelsContinuously,
-  areModelsLoaded,
-  getModelStatus,
-  getCompatibilityReport,
-  // Model selection functions
-  getSelectedModel,
-  setSelectedModel,
-  getModelConfig,
-  getAllModelConfigs,
-  // Internal helper functions (for advanced use cases)
-  getMoodTrackerModel,
-  getCounselingCoachModel,
-  getIsModelLoading,
-  isTextGenerationModel,
-  // Lazy loading functions
-  triggerLazyModelLoading,
-  isLazyLoadingTriggered
-} from './ai/models';
+function getFallbackResponse(
+  state: ConversationState,
+  userInput: string,
+  quickReply?: string
+): { message: string; state: ConversationState } {
+  const node = routeToNode(userInput, state.node, state.energy, quickReply);
+  
+  const fallbackMessages: Record<ConversationNode, string> = {
+    welcome: "Pause. What's moving through you? Take your time...",
+    low_energy_offer: "That's heavy to carry. You're safe here. Want 1 slow breath with me?",
+    low_energy_yes: "Good. Hand on heart? In... 4... hold 4... out 8... What's 1 thing you see nearby?",
+    low_energy_no: "That's okay. Here's quiet space. Tap when ready, or name 1 color you see.",
+    low_energy_grounding: "Notice that. Now — 4 more things you can see?",
+    low_energy_complete: "You're doing this. Rest here as long as you need. I'm with you.",
+    medium_swirl_offer: "Sounds swirling — I see you. Name 1 thing you can touch right now?",
+    medium_swirl_response: "Feel its texture. Good anchor. What's 1 sound nearby?",
+    medium_swirl_grounding: "That grounding. 3 things you can feel? Then 2 you smell? 1 you taste?",
+    medium_swirl_complete: "Thoughts passing like clouds. You're here, steady. What feels steady right now?",
+    high_chaos_offer: "You're holding so much — here's space to set it down. Safe with me. Hand on heart?",
+    high_chaos_grounding: "That's okay, just breathe. What's 1 safe thing under your feet?",
+    high_chaos_visualization: "Grounded there. Chaos doesn't own you. Picture a calm place — what do you see?",
+    high_chaos_tiny_steps: "This feels big. Name 1 tiny step? Water? Walk? Journal?",
+    high_chaos_crisis: "Want hotlines nearby? You're not alone.",
+    high_chaos_complete: "You showed up for yourself. That's everything.",
+    panic_offer: "I see the panic — you're safe right here with me. Hand on heart. Feet on floor. Can you press your feet down?",
+    panic_yes: "Perfect anchor. 1 thing you feel under your fingers?",
+    panic_no: "That's alright. You're held here. Notice air on your face? Just the air. In... out...",
+    panic_breath: "Good. 1 slow breath with me? In 3... hold 3... out 6. You're pulling through. Name 1 color you see.",
+    panic_escalate: "Want a 988 timer or stay in this breath space with me?",
+    panic_complete: "You made it through that wave. I'm still here.",
+    mild_offer: "I feel that edge with you. What's the main worry showing up right now?",
+    mild_specific: "That sounds heavy to carry. Can you name 1 thing that's certain right now?",
+    mild_general: "The hum of anxiety. Normal to feel that. What's 1 small thing feeling steady under all this?",
+    mild_anchor: "Good anchor. Let that worry float next to it. Notice which feels more solid?",
+    mild_complete: "You're being with it instead of fighting it. That's real progress.",
+    crisis_resources: "Here are some resources nearby...",
+    session_complete: "Thank you for being here. You've done hard work. Rest well.",
+  };
+  
+  return {
+    message: fallbackMessages[node] || "I'm here with you. Take your time.",
+    state: {
+      node,
+      energy: state.energy,
+      depth: state.depth + 1,
+      lastUserInput: userInput,
+    },
+  };
+}
 
-// Re-export compatibility functions
-export {
-  checkBrowserCompatibility,
-  getCompatibilitySummary
-} from './ai/browserCompatibility';
+export async function generateWelcomeMessage(): Promise<string> {
+  return "Pause. What's moving through you?";
+}
 
-// Re-export crisis functions
-export {
-  detectCrisis,
-  getCrisisResponse
-} from './ai/crisis';
+export function isAILoading(): boolean {
+  return isLoading;
+}
 
-// Re-export report functions
-export {
-  assessMentalState,
-  generateHumanReports,
-  generateFallbackReport
-} from './ai/reports';
-
-// Re-export encouragement functions
-export {
-  generateEncouragement,
-  generateEmotionalEncouragement,
-  generateCounselingGuidance,
-  generateValueMantra,
-  suggestGoal,
-  analyzeReflection,
-  generateFocusLens
-} from './ai/encouragement';
-
-// Re-export specialized counseling functions
-export {
-  startCounselingSession,
-  continueCounselingSession,
-  startCounselingSessionWithTriage,
-  recommendSystemPrompt,
-  type CounselingSession,
-} from './ai/specializedCounseling';
-
-// Re-export system prompts
-export {
-  SYSTEM_PROMPTS,
-  getSystemPrompt,
-  getAllSystemPrompts,
-  getSystemPromptByName,
-  formatPromptForLLM,
-  type SystemPromptType,
-  type SystemPromptConfig,
-} from './ai/systemPrompts';
+export function getAILoadStatus(): { loaded: boolean; loading: boolean } {
+  return {
+    loaded: engine !== null,
+    loading: isLoading,
+  };
+}

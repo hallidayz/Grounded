@@ -1,0 +1,306 @@
+/**
+ * Centralized copy library for Grounded app
+ */
+
+import type { EnergyOption, MoodType, ConversationNode } from './types';
+import type { CrisisResource } from './types';
+
+export const COPY = {
+  app: {
+    title: 'Grounded',
+    tagline: 'Small moments, big difference',
+  },
+
+  welcome: {
+    title: 'Pause.',
+    subtitle: "What's moving through you?",
+    placeholder: 'Take your time...',
+  },
+
+  energy: {
+    title: 'How are you feeling?',
+    subtitle: 'Be honest. Every bit counts.',
+    options: [
+      {
+        energy: '10s',
+        label: '10 seconds',
+        icon: '🌬️',
+        duration: '10s',
+        description: 'Just a breath reset',
+      },
+      {
+        energy: '2min',
+        label: '2 minutes',
+        icon: '🌱',
+        duration: '2 min',
+        description: 'Breath and check-in',
+      },
+      {
+        energy: '5min',
+        label: '5 minutes',
+        icon: '🌊',
+        duration: '5 min',
+        description: 'Body scan and reflection',
+      },
+    ] as EnergyOption[],
+  },
+
+  conversation: {
+    nodes: {
+      welcome: {
+        message: "Pause. What's moving through you?",
+        placeholder: 'Take your time...',
+      },
+      low_energy_offer: {
+        message: "That's heavy to carry. You're safe here. Want 1 slow breath with me?",
+        quickReplies: ['Yes, guide me', 'No, just need space'],
+      },
+      low_energy_yes: {
+        message: "Good. Hand on heart? In... 4... hold 4... out 8... Feel your body settling. What's 1 thing you see nearby?",
+        placeholder: 'Name something you see...',
+      },
+      low_energy_no: {
+        message: "That's okay. Here's quiet space. Tap when ready, or name 1 color you see.",
+        quickReplies: ['Ready now', 'Blue'],
+      },
+      low_energy_grounding: {
+        message: "Notice that. Now — 4 more things you can see?",
+        placeholder: '4 things you see...',
+      },
+      low_energy_complete: {
+        message: "You're doing this. Rest here as long as you need. I'm with you.",
+        quickReplies: ['Thank you', 'Done for now'],
+      },
+      medium_swirl_offer: {
+        message: "Sounds swirling — I see you. Name 1 thing you can touch right now?",
+        placeholder: 'What can you touch?',
+      },
+      medium_swirl_response: {
+        message: "Feel its texture. Good anchor. What's 1 sound nearby?",
+        placeholder: 'What do you hear?',
+      },
+      medium_swirl_grounding: {
+        message: "That grounding. 3 things you can feel? Then 2 you smell? 1 you taste?",
+        placeholder: 'Continue grounding...',
+      },
+      medium_swirl_complete: {
+        message: "Thoughts passing like clouds. You're here, steady. What feels steady right now?",
+        placeholder: 'What feels steady?',
+      },
+      high_chaos_offer: {
+        message: "You're holding so much — here's space to set it down. Safe with me. Hand on heart? In... out...",
+        quickReplies: ['Breathing', "Can't focus"],
+      },
+      high_chaos_grounding: {
+        message: "That's okay, just breathe. What's 1 safe thing under your feet? Floor? Chair? Ground?",
+        placeholder: 'What supports you?',
+      },
+      high_chaos_visualization: {
+        message: "Grounded there. Chaos doesn't own you. Picture a calm place — what do you see? Hear?",
+        placeholder: 'Describe your safe place...',
+      },
+      high_chaos_tiny_steps: {
+        message: "This feels big. Name 1 tiny step? Water? Walk? Journal? Phone a friend?",
+        quickReplies: ['Water', 'Walk', 'Rest'],
+      },
+      high_chaos_crisis: {
+        message: "Want hotlines nearby, or I can set a timer for pro help to arrive? You're not alone.",
+        quickReplies: ['Show hotlines', 'Set timer'],
+      },
+      high_chaos_complete: {
+        message: "You showed up for yourself. That's everything. Rest, or tiny step — your call.",
+        quickReplies: ['Thank you', 'Done'],
+      },
+      panic_offer: {
+        message: "I see the panic — you're safe right here with me. Hand on heart. Feet on floor. Can you press your feet down now?",
+        quickReplies: ['Yes', "No, can't move"],
+      },
+      panic_yes: {
+        message: "Perfect anchor. 1 thing you feel under your fingers?",
+        placeholder: 'What do you feel?',
+      },
+      panic_no: {
+        message: "That's alright. You're held here. Notice air on your face? Just the air. In... out...",
+        quickReplies: ['Trying', 'Stay here'],
+      },
+      panic_breath: {
+        message: "Good. 1 slow breath with me? In 3... hold 3... out 6. You're pulling through. Name 1 color you see.",
+        placeholder: 'Name a color...',
+      },
+      panic_escalate: {
+        message: "Want a 988 timer or stay in this breath space with me? You're not alone in this.",
+        quickReplies: ['988 timer', 'Stay here'],
+      },
+      panic_complete: {
+        message: "You made it through that wave. I'm still here. Want to stay in this breath or tiny step?",
+        quickReplies: ['Breathe more', 'Tiny step'],
+      },
+      mild_offer: {
+        message: "I feel that edge with you. What's the main worry showing up right now?",
+        placeholder: "What's worrying you?",
+      },
+      mild_specific: {
+        message: "That sounds heavy to carry. Can you name 1 thing that's certain right now? (Feet? Phone? Breath?)",
+        placeholder: "What's certain?",
+      },
+      mild_general: {
+        message: "The hum of anxiety. Normal to feel that. What's 1 small thing feeling steady under all this?",
+        placeholder: 'What feels steady?',
+      },
+      mild_anchor: {
+        message: "Good anchor. Let that worry float next to it. Notice which feels more solid?",
+        placeholder: 'What feels solid?',
+      },
+      mild_complete: {
+        message: "You're being with it instead of fighting it. That's real progress. What feels steadier now?",
+        placeholder: 'What feels better?',
+      },
+      crisis_resources: {
+        header: 'Resources nearby',
+        resources: [
+          { name: '988 Suicide & Crisis Lifeline', action: 'tel:988', description: 'Call or text 988 (US)' },
+          { name: 'Crisis Text Line', action: 'sms:741741&body=HOME', description: 'Text HOME to 741741' },
+        ] as CrisisResource[],
+        closing: "You don't have to face this alone. These humans are ready to listen.",
+      },
+      session_complete: {
+        message: "Thank you for being here. You've done hard work. Rest well.",
+        quickReplies: ['New session', 'Done'],
+      },
+    },
+  },
+
+  grounding: {
+    intro: {
+      '10s': 'One breath. That\'s all we need.',
+      '2min': 'Let\'s take a moment together.',
+      '5min': 'Let\'s slow down and check in.',
+    },
+    breath: {
+      '10s': [
+        'Breathe in slowly...',
+        'Breathe out...',
+      ],
+      '2min': [
+        'Find a comfortable position.',
+        'Breathe in slowly through your nose...',
+        'Hold for a moment...',
+        'Breathe out through your mouth...',
+        'Again...',
+        'Notice how your body feels.',
+      ],
+      '5min': [
+        'Find a comfortable position, sitting or lying down.',
+        'Close your eyes or soften your gaze.',
+        'Take three deep breaths: in through nose, out through mouth.',
+        'Notice any sensations in your body...',
+        'Without judging, simply observe.',
+        'If your mind wanders, gently bring it back.',
+        'Take one more deep breath.',
+        'Slowly open your eyes.',
+      ],
+    },
+    reflection: {
+      prompt: 'What\'s one thing that mattered today?',
+      placeholder: 'Small is fine...',
+    },
+  },
+
+  validation: {
+    heavy: [
+      'Today felt heavy. Showing up anyway matters.',
+      'Getting through it counts.',
+      'Sometimes just existing is enough.',
+      'You\'re doing better than you think.',
+      'This feeling won\'t last forever.',
+      'It\'s okay to not be okay.',
+    ],
+    neutral: [
+      'Every day is a mix. You\'re here, and that\'s something.',
+      'Checking in with yourself is a form of care.',
+      'Steady and present. That\'s a win.',
+      'You\'re on your own timeline.',
+      'Moderate is okay. You\'re still here.',
+    ],
+    light: [
+      'That\'s wonderful. Enjoy the good moments.',
+      'It\'s nice when things feel lighter.',
+      'Savor this feeling.',
+      'You deserve the good days too.',
+    ],
+    uncertain: [
+      'Not knowing is okay too.',
+      'Feelings don\'t always have names.',
+      'You\'re still doing the work.',
+      'Checking in matters, even without answers.',
+    ],
+  },
+
+  completion: {
+    title: 'You did it.',
+    subtitle: 'Thanks for showing up for yourself.',
+  },
+
+  crisis: {
+    header: 'Need urgent help now?',
+    subtitle: 'These services are ready to listen:',
+    resources: [
+      {
+        name: '988 Suicide & Crisis Lifeline',
+        action: 'tel:988',
+        description: 'Call or text 988 (US)',
+      },
+      {
+        name: 'Crisis Text Line',
+        action: 'sms:741741&body=HOME',
+        description: 'Text HOME to 741741',
+      },
+    ] as CrisisResource[],
+    hotlines: [
+      { name: 'International Association for Suicide Prevention', url: 'https://www.iasp.info/resources/Crisis_Centres/' },
+      { name: 'Befrienders Worldwide', url: 'https://befrienders.org/' },
+    ],
+    closing: 'You don\'t have to face this alone.',
+  },
+
+  history: {
+    title: 'Your moments',
+    subtitle: 'Every dot is a time you showed up.',
+    empty: 'No moments yet. Your first one matters.',
+  },
+
+  tinySteps: {
+    title: 'Tiny steps',
+    subtitle: 'Optional suggestions for when you\'re ready:',
+    actions: [
+      { label: 'Drink some water', icon: '💧' },
+      { label: 'Stretch for 30 seconds', icon: '🧘' },
+      { label: 'Look out a window', icon: '🪟' },
+      { label: 'Write down one thing', icon: '📝' },
+      { label: 'Text a friend', icon: '💬' },
+    ],
+    dismiss: 'Maybe later',
+    dismissAll: 'I\'m good for now',
+  },
+};
+
+export function getValidationCopy(mood: MoodType): string {
+  const options = COPY.validation[mood];
+  return options[Math.floor(Math.random() * options.length)];
+}
+
+export function getCompletionMessage(): { title: string; subtitle: string } {
+  return COPY.completion;
+}
+
+export function getGroundingIntro(energy: string): string {
+  return COPY.grounding.intro[energy as keyof typeof COPY.grounding.intro] || '';
+}
+
+export function getGroundingBreath(energy: string): string[] {
+  return COPY.grounding.breath[energy as keyof typeof COPY.grounding.breath] || [];
+}
+
+export function getConversationNode(node: ConversationNode) {
+  return COPY.conversation.nodes[node];
+}
