@@ -13,12 +13,32 @@ import { chatDB, type ChatSession } from './services/chatDB';
 import type { EnergyLevel, ConversationState } from './types';
 
 const BREATHING_PATTERNS = {
-  '10s': { 
+  '10s-reset': { 
     pattern: [4, 2, 4], 
     cycles: 1, 
-    label: '10 seconds',
+    label: 'The Reset',
     isAmygdalaHijack: true,
+    instruction: 'Inhale... Inhale... Exhale...',
+    subtext: 'Physiological Sigh: 2 short sniffs, 1 long breath out.',
     message: 'Just this breath. You are safe in this moment.'
+  },
+  '10s-anchor': { 
+    pattern: [4, 2, 4], 
+    cycles: 1, 
+    label: 'The Anchor',
+    isAmygdalaHijack: true,
+    instruction: 'Drop everything.',
+    subtext: 'Drop shoulders. Unclench jaw. Release tongue.',
+    message: 'Drop into your body. You are here now.'
+  },
+  '10s-hum': { 
+    pattern: [4, 2, 4], 
+    cycles: 1, 
+    label: 'The Vagus Hum',
+    isAmygdalaHijack: true,
+    instruction: 'Mmmmmmmmm',
+    subtext: 'Hum out loud to activate your parasympathetic nervous system.',
+    message: 'Vibrate into calm. You are safe to rest.'
   },
   '2min': { 
     pattern: [40, 30, 20, 20, 10], 
@@ -32,7 +52,7 @@ const BREATHING_PATTERNS = {
     cycles: 1, 
     label: '5 minutes',
     isRainMethod: true,
-    message: 'This is a moment of difficulty. Experiencing difficult things is a part of life. May I be kind to myself in this moment.'
+    message: 'A 5-minute guided process. Four phases: Recognize (1 min), Allow (1 min), Investigate (2 min), Nurture (1 min). Click floating graphics to acknowledge each feeling.'
   },
 };
 
@@ -69,10 +89,10 @@ function BreathingExercise({
   ];
 
   const rainStages = [
-    { phase: 'recognize', label: 'Recognize', instruction: 'Name what you\'re feeling (e.g., "I am feeling anxious")', duration: 60 },
-    { phase: 'allow', label: 'Allow', instruction: 'Let this feeling exist. Don\'t try to fix it.', duration: 60 },
-    { phase: 'investigate', label: 'Investigate', instruction: 'Where is this in your body? What is it saying?', duration: 120 },
-    { phase: 'nurture', label: 'Nurture', instruction: '"I am doing my best with a hard moment."', duration: 60 },
+    { phase: 'recognize', label: 'Recognize', instruction: 'Label the feeling (e.g., "I am feeling anxious").', duration: 60 },
+    { phase: 'allow', label: 'Allow', instruction: 'Let the feeling exist without trying to fix it.', duration: 60 },
+    { phase: 'investigate', label: 'Investigate', instruction: 'Where is this in my body? What is this feeling "saying"?', duration: 120 },
+    { phase: 'nurture', label: 'Nurture', instruction: 'Affirmation: "I am doing my best with a hard moment."', duration: 60 },
   ];
 
   const bubbleColors = [
@@ -352,7 +372,9 @@ function BreathingExercise({
           <div style={{...styles.rainProgressFill, width: `${stageProgress}%`}} />
         </div>
         
-        <div style={styles.rainStageLabel}>{currentStage.label}</div>
+        <div style={styles.rainStageLabel}>
+          {currentStage.label} · Phase {sensoryStage + 1} of {rainStages.length}
+        </div>
         
         <div style={styles.rainBubblesContainer}>
           {bubbles.map(bubble => (
@@ -468,6 +490,7 @@ export default function App() {
   const [pendingUserInput, setPendingUserInput] = useState<string>('');
   const [inputRows, setInputRows] = useState(1);
   const [isWebGPUSupported, setIsWebGPUSupported] = useState(true);
+  const [showTenSecondBreakers, setShowTenSecondBreakers] = useState(false);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
   const messagesEndRef = useRef<HTMLDivElement>(null);
 
@@ -549,7 +572,20 @@ export default function App() {
     setView('welcome');
   };
 
-  const handleEnergySelect = (energy: EnergyLevel) => {
+  const handleEnergySelect = (energy: string) => {
+    if (energy === '10s') {
+      setShowTenSecondBreakers(true);
+    } else {
+      setSelectedEnergy(energy as EnergyLevel);
+      setPendingUserInput('');
+      setBreathingPhase('inhale');
+      setBreathingCycle(0);
+      setView('breathing');
+    }
+  };
+
+  const handleTenSecondSelect = (energy: EnergyLevel) => {
+    setShowTenSecondBreakers(false);
     setSelectedEnergy(energy);
     setPendingUserInput('');
     setBreathingPhase('inhale');
@@ -877,7 +913,7 @@ export default function App() {
   };
 
   const renderBottomNav = () => {
-    if (view === 'loading') return null;
+    if (view === 'loading' || showTenSecondBreakers) return null;
     const navItems = [
       { view: 'welcome', icon: '🏠', label: 'Home' },
       { view: 'help', icon: '❓', label: 'Help' },
@@ -1119,6 +1155,34 @@ export default function App() {
     </div>
   );
 
+  const renderTenSecondBreakers = () => (
+    <div style={styles.container}>
+      <div style={styles.settingsHeader}>
+        <button style={styles.backButton} onClick={() => setShowTenSecondBreakers(false)}>
+          ← Back
+        </button>
+        <h2 style={styles.title}>Choose your reset</h2>
+      </div>
+      
+      <div style={styles.tenSecondBreakersGrid}>
+        {COPY.tenSecondBreakers.map(breaker => (
+          <button 
+            key={breaker.key}
+            style={{
+              ...styles.tenSecondBreakerCard,
+              borderColor: `${breaker.color}40`,
+            }}
+            onClick={() => handleTenSecondSelect(breaker.key as EnergyLevel)}
+          >
+            <span style={styles.tenSecondBreakerIcon}>{breaker.icon}</span>
+            <span style={styles.tenSecondBreakerTitle}>{breaker.label}</span>
+            <span style={styles.tenSecondBreakerSubtext}>{breaker.subtext}</span>
+          </button>
+        ))}
+      </div>
+    </div>
+  );
+
   const renderBreathing = () => (
     <div style={styles.breathingWrapper}>
       {selectedEnergy && (
@@ -1215,6 +1279,7 @@ export default function App() {
         {view === 'settings' && renderSettings()}
         {view === 'values' && renderValues()}
         {view === 'welcome' && renderWelcome()}
+        {showTenSecondBreakers && renderTenSecondBreakers()}
         {view === 'breathing' && renderBreathing()}
         {view === 'conversation' && renderConversation()}
         {view === 'crisis-resources' && renderCrisisResources()}
@@ -2306,9 +2371,42 @@ const styles: Record<string, React.CSSProperties> = {
      borderRadius: '12px',
     },
     helpFooterText: {
-     fontSize: '13px',
-     color: 'var(--text-secondary, #4a5568)',
-     textAlign: 'center',
-     lineHeight: 1.5,
-    },
+      fontSize: '13px',
+      color: 'var(--text-secondary, #4a5568)',
+      textAlign: 'center',
+      lineHeight: 1.5,
+     },
+     tenSecondBreakersGrid: {
+      display: 'flex',
+      flexDirection: 'column',
+      gap: '16px',
+      padding: '20px',
+     },
+     tenSecondBreakerCard: {
+      display: 'flex',
+      flexDirection: 'column',
+      alignItems: 'flex-start',
+      padding: '20px',
+      backgroundColor: 'var(--bg-card, #ffffff)',
+      borderRadius: '16px',
+      borderWidth: '2px',
+      borderStyle: 'solid',
+      cursor: 'pointer',
+      textAlign: 'left',
+     },
+     tenSecondBreakerIcon: {
+      fontSize: '32px',
+      marginBottom: '12px',
+     },
+     tenSecondBreakerTitle: {
+      fontSize: '18px',
+      fontWeight: '600',
+      color: 'var(--text-primary, #1b3448)',
+      marginBottom: '8px',
+     },
+     tenSecondBreakerSubtext: {
+      fontSize: '14px',
+      color: 'var(--text-secondary, #4a5568)',
+      lineHeight: 1.4,
+     },
 };

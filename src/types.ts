@@ -1,4 +1,4 @@
-export type EnergyLevel = '10s' | '2min' | '5min';
+export type EnergyLevel = '10s' | '10s-reset' | '10s-anchor' | '10s-hum' | '2min' | '5min';
 export type MoodType = 'heavy' | 'neutral' | 'light' | 'uncertain';
 
 export interface Moment {
@@ -18,11 +18,12 @@ export interface AppSettings {
 }
 
 export interface EnergyOption {
-  energy: EnergyLevel;
+  energy: string;
   label: string;
   icon: string;
   duration: string;
   description: string;
+  hasSubOptions?: boolean;
 }
 
 export interface CrisisResource {

@@ -26,7 +26,8 @@ export const COPY = {
         label: '10 seconds',
         icon: '🌬️',
         duration: '10s',
-        description: 'Just a breath reset',
+        description: 'Quick reset options',
+        hasSubOptions: true,
       },
       {
         energy: '2min',
@@ -44,6 +45,36 @@ export const COPY = {
       },
     ] as EnergyOption[],
   },
+
+  tenSecondBreakers: [
+    {
+      key: '10s-reset',
+      label: 'The Reset',
+      icon: '🔄',
+      title: 'The Reset',
+      instruction: 'Inhale... Inhale... Exhale...',
+      subtext: 'Physiological Sigh: 2 short sniffs, 1 long breath out.',
+      color: '#3b82f6',
+    },
+    {
+      key: '10s-anchor',
+      label: 'The Anchor',
+      icon: '⚓',
+      title: 'The Anchor',
+      instruction: 'Drop everything.',
+      subtext: 'Drop shoulders. Unclench jaw. Release tongue.',
+      color: '#475569',
+    },
+    {
+      key: '10s-hum',
+      label: 'The Vagus Hum',
+      icon: '🎵',
+      title: 'The Vagus Hum',
+      instruction: 'Mmmmmmmmm',
+      subtext: 'Hum out loud to activate your parasympathetic nervous system.',
+      color: '#a855f7',
+    },
+  ],
 
   conversation: {
     nodes: {
