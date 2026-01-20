@@ -9,6 +9,7 @@ import {
   PRIVACY_POLICY,
   TERMS_VERSION
 } from './services/settings';
+import { chatDB, type ChatSession } from './services/chatDB';
 import type { EnergyLevel, ConversationState } from './types';
 
 const BREATHING_PATTERNS = {
@@ -525,6 +526,12 @@ export default function App() {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
   }, [conversationHistory]);
 
+  useEffect(() => {
+    if (selectedDate) {
+      chatDB.getSessionsByDate(selectedDate).then(setSavedSessions);
+    }
+  }, [selectedDate]);
+
   const toggleTheme = () => {
     const newDark = !isDarkMode;
     setIsDarkMode(newDark);
@@ -550,13 +557,30 @@ export default function App() {
     setView('breathing');
   };
 
-  const handleWelcomeInput = () => {
+  const handleWelcomeInput = async () => {
     if (!pendingUserInput.trim()) return;
-    const energy: EnergyLevel = '2min';
+    setConversationHistory([{ role: 'user', content: pendingUserInput }]);
+    setAiLoading(true);
+    setView('conversation');
+    
+    const energy: EnergyLevel = 'custom';
     setSelectedEnergy(energy);
-    setBreathingPhase('inhale');
-    setBreathingCycle(0);
-    setView('breathing');
+    setConversationState({ node: 'welcome', energy, depth: 0 });
+    
+    try {
+      const result = await continueConversation(
+        { node: 'welcome', energy, depth: 0 },
+        pendingUserInput
+      );
+      setAiMessage(result.message);
+      setConversationState(result.state);
+      setTimeout(() => {
+        setConversationHistory(prev => [...prev, { role: 'assistant', content: result.message }]);
+      }, 300);
+    } catch {
+      setConversationHistory(prev => [...prev, { role: 'assistant', content: "I'm still here. Take your time." }]);
+    }
+    setAiLoading(false);
   };
 
   const handleBreathingComplete = async () => {
@@ -642,13 +666,224 @@ export default function App() {
     }
   };
 
+  const handleSaveSession = async () => {
+    if (conversationHistory.length === 0) {
+      alert('No messages to save.');
+      return;
+    }
+    try {
+      const sessionId = await chatDB.saveSession(
+        conversationHistory,
+        selectedEnergy || undefined
+      );
+      alert('Chat saved locally.');
+    } catch (error) {
+      alert('Failed to save chat.');
+    }
+  };
+
+  const handleShareSession = async () => {
+    if (conversationHistory.length === 0) {
+      alert('No messages to share.');
+      return;
+    }
+    try {
+      await chatDB.shareSession(conversationState?.energy || 'custom');
+    } catch (error: any) {
+      if (error.message === 'Copied to clipboard') {
+        alert('Chat copied to clipboard.');
+      } else {
+        alert('Failed to share chat.');
+      }
+    }
+  };
+
+  const [savedSessions, setSavedSessions] = useState<ChatSession[]>([]);
+  const [selectedDate, setSelectedDate] = useState<string>('');
+  const [datesWithSessions, setDatesWithSessions] = useState<string[]>([]);
+
+  const loadSavedSessions = async () => {
+    const dates = await chatDB.getDatesWithSessions();
+    setDatesWithSessions(dates);
+    if (dates.length > 0) {
+      setSelectedDate(dates[0]);
+    }
+  };
+
+  const handleViewSessions = async () => {
+    await loadSavedSessions();
+    if (selectedDate) {
+      await chatDB.getSessionsByDate(selectedDate).then(setSavedSessions);
+    }
+    setView('sessions');
+  };
+
+  const renderHelp = () => (
+    <div style={styles.container}>
+      <div style={styles.settingsHeader}>
+        <h2 style={styles.title}>How to Use Grounded</h2>
+      </div>
+      
+      <div style={styles.helpSection}>
+        <div style={styles.helpItem}>
+          <div style={styles.helpIcon}>🧘</div>
+          <div style={styles.helpContent}>
+            <h3 style={styles.helpTitle}>1. Choose Your Energy</h3>
+            <p style={styles.helpText}>
+              Select how you're feeling: Heavy, Neutral, or Light. Each option 
+              provides a different breathing exercise tailored to your current state.
+            </p>
+          </div>
+        </div>
+
+        <div style={styles.helpItem}>
+          <div style={styles.helpIcon}>💨</div>
+          <div style={styles.helpContent}>
+            <h3 style={styles.helpTitle}>2. Follow the Exercise</h3>
+            <p style={styles.helpText}>
+              A calming animation will guide you through breathing. 
+              Follow along at your own pace. This helps ground you before our chat.
+            </p>
+          </div>
+        </div>
+
+        <div style={styles.helpItem}>
+          <div style={styles.helpIcon}>💬</div>
+          <div style={styles.helpContent}>
+            <h3 style={styles.helpTitle}>3. Chat Through It</h3>
+            <p style={styles.helpText}>
+              Share what's on your mind. Our AI listens without judgment 
+              and helps you work through difficult emotions privately.
+            </p>
+          </div>
+        </div>
+
+        <div style={styles.helpItem}>
+          <div style={styles.helpIcon}>💾</div>
+          <div style={styles.helpContent}>
+            <h3 style={styles.helpTitle}>4. Save or Share</h3>
+            <p style={styles.helpText}>
+              Save your chat for later reference, or share it with someone 
+              you trust. All data stays on your device—nothing is sent to servers.
+            </p>
+          </div>
+        </div>
+
+        <div style={styles.helpItem}>
+          <div style={styles.helpIcon}>🌙</div>
+          <div style={styles.helpContent}>
+            <h3 style={styles.helpTitle}>5. Dark Mode</h3>
+            <p style={styles.helpText}>
+              Tap the sun/moon icon to switch themes. Perfect for 
+              nighttime use when you need extra calm.
+            </p>
+          </div>
+        </div>
+
+        <div style={styles.helpItem}>
+          <div style={styles.helpIcon}>🚨</div>
+          <div style={styles.helpContent}>
+            <h3 style={styles.helpTitle}>Crisis Resources</h3>
+            <p style={styles.helpText}>
+              If you're in crisis, the Crisis tab provides immediate 
+              access to hotlines and support resources.
+            </p>
+          </div>
+        </div>
+      </div>
+
+      <div style={styles.helpFooter}>
+        <p style={styles.helpFooterText}>
+          💡 Grounded runs entirely on your device. Your conversations 
+          are never seen by anyone else.
+        </p>
+      </div>
+    </div>
+  );
+
+  const renderSessions = () => {
+    const sessionsForDate = savedSessions.filter(s => s.dateString === selectedDate);
+
+    return (
+      <div style={styles.container}>
+        <div style={styles.settingsHeader}>
+          <button style={styles.backButton} onClick={() => setView('welcome')}>
+            ← Back
+          </button>
+          <h2 style={styles.title}>Chat History</h2>
+        </div>
+        
+        {datesWithSessions.length === 0 ? (
+          <p style={styles.subtitle}>No saved chats yet.</p>
+        ) : (
+          <>
+            <div style={styles.dateSelector}>
+              {datesWithSessions.map(date => (
+                <button
+                  key={date}
+                  style={{
+                    ...styles.dateButton,
+                    ...(date === selectedDate ? styles.dateButtonActive : {})
+                  }}
+                  onClick={() => setSelectedDate(date)}
+                >
+                  {new Date(date).toLocaleDateString('en-US', { 
+                    weekday: 'short', 
+                    month: 'short', 
+                    day: 'numeric' 
+                  })}
+                </button>
+              ))}
+            </div>
+            
+            <div style={styles.sessionsList}>
+              {sessionsForDate.map(session => (
+                <div key={session.id} style={styles.sessionCard}>
+                  <div style={styles.sessionHeader}>
+                    <span style={styles.sessionTime}>{session.timeString}</span>
+                    <span style={styles.sessionTitle}>{session.title}</span>
+                  </div>
+                  <p style={styles.sessionPreview}>
+                    {session.messages[session.messages.length - 1]?.content.slice(0, 60)}...
+                  </p>
+                  <div style={styles.sessionActions}>
+                    <button 
+                      style={styles.sessionAction}
+                      onClick={() => {
+                        setConversationHistory(session.messages.map(m => ({role: m.role, content: m.content})));
+                        setView('conversation');
+                      }}
+                    >
+                      Continue
+                    </button>
+                    <button 
+                      style={styles.sessionAction}
+                      onClick={() => {
+                        if (confirm('Delete this chat?')) {
+                          chatDB.deleteSession(session.id).then(loadSavedSessions);
+                        }
+                      }}
+                    >
+                      Delete
+                    </button>
+                  </div>
+                </div>
+              ))}
+            </div>
+          </>
+        )}
+      </div>
+    );
+  };
+
   const renderBottomNav = () => {
     if (view === 'loading') return null;
     const navItems = [
       { view: 'welcome', icon: '🏠', label: 'Home' },
+      { view: 'help', icon: '❓', label: 'Help' },
+      { view: 'sessions', icon: '📚', label: 'History' },
       { view: 'crisis-resources', icon: '🚨', label: 'Crisis' },
-      { view: 'values', icon: '❤️', label: 'My Values' },
-      { view: 'settings', icon: '⚙️', label: 'Personalize' },
+      { view: 'settings', icon: '⚙️', label: 'Settings' },
     ];
     return (
       <nav style={styles.bottomNav}>
@@ -898,10 +1133,29 @@ export default function App() {
     return (
       <div style={styles.conversationContainer}>
         <div style={styles.conversationHeader}>
-          <button style={styles.backButton} onClick={() => setView('welcome')}>
-            ← Energy
+          <button style={styles.backButton} onClick={() => {
+            setPendingUserInput('');
+            setView('welcome');
+          }}>
+            ← Back
           </button>
-          <span style={styles.energyBadge}>{selectedEnergy}</span>
+          <button style={styles.newChatButton} onClick={handleNewSession}>
+            + New Chat
+          </button>
+        </div>
+        <div style={styles.conversationHeading}>
+          This is your safe and private space to chat through it.
+        </div>
+        <div style={styles.chatActions}>
+          <button style={styles.chatActionButton} onClick={handleSaveSession}>
+            💾 Save
+          </button>
+          <button style={styles.chatActionButton} onClick={handleShareSession}>
+            📤 Share
+          </button>
+          <button style={styles.chatActionButton} onClick={() => setView('sessions')}>
+            📚 History
+          </button>
         </div>
         <div style={styles.messagesContainer}>
           {conversationHistory.map((msg, index) => (
@@ -953,22 +1207,24 @@ export default function App() {
     </div>
   );
 
-   return (
-     <div style={styles.app}>
-       {!isWebGPUSupported && renderUnsupportedBrowser()}
-       {view === 'loading' && renderLoading()}
-       {view === 'terms' && renderTerms()}
-       {view === 'settings' && renderSettings()}
-       {view === 'values' && renderValues()}
-       {view === 'welcome' && renderWelcome()}
-       {view === 'breathing' && renderBreathing()}
-       {view === 'conversation' && renderConversation()}
-       {view === 'crisis-resources' && renderCrisisResources()}
-       {view === 'complete' && renderComplete()}
-       {renderBottomNav()}
-       {renderThemeToggle()}
-     </div>
-   );
+    return (
+      <div style={styles.app}>
+        {!isWebGPUSupported && renderUnsupportedBrowser()}
+        {view === 'loading' && renderLoading()}
+        {view === 'terms' && renderTerms()}
+        {view === 'settings' && renderSettings()}
+        {view === 'values' && renderValues()}
+        {view === 'welcome' && renderWelcome()}
+        {view === 'breathing' && renderBreathing()}
+        {view === 'conversation' && renderConversation()}
+        {view === 'crisis-resources' && renderCrisisResources()}
+        {view === 'help' && renderHelp()}
+        {view === 'sessions' && renderSessions()}
+        {view === 'complete' && renderComplete()}
+        {renderBottomNav()}
+        {renderThemeToggle()}
+      </div>
+    );
 }
 
 const styles: Record<string, React.CSSProperties> = {
@@ -1419,9 +1675,30 @@ const styles: Record<string, React.CSSProperties> = {
   conversationHeader: {
     display: 'flex',
     alignItems: 'center',
+    justifyContent: 'space-between',
     gap: '12px',
     padding: '16px 20px',
-    borderBottom: '1px solid rgba(0,0,0,0.1)',
+    borderBottom: '1px solid var(--border, rgba(0,0,0,0.1))',
+  },
+  newChatButton: {
+    padding: '8px 16px',
+    fontSize: '14px',
+    fontWeight: '600',
+    borderRadius: '20px',
+    backgroundColor: 'var(--primary, #2c5282)',
+    color: '#ffffff',
+    border: 'none',
+    cursor: 'pointer',
+  },
+  conversationHeading: {
+    fontSize: '18px',
+    fontWeight: '500',
+    color: 'var(--text-secondary, #4a5568)',
+    textAlign: 'center',
+    padding: '12px 20px',
+    margin: '0 16px',
+    lineHeight: 1.4,
+    fontStyle: 'italic',
   },
   energyBadge: {
     fontSize: '12px',
@@ -1434,6 +1711,8 @@ const styles: Record<string, React.CSSProperties> = {
     overflow: 'auto',
     padding: '16px 20px',
     scrollBehavior: 'smooth',
+    display: 'flex',
+    flexDirection: 'column',
   },
   messageBubble: {
     maxWidth: '85%',
@@ -1443,7 +1722,7 @@ const styles: Record<string, React.CSSProperties> = {
   },
   userMessage: {
     alignSelf: 'flex-end',
-    backgroundColor: '#2c5282',
+    backgroundColor: 'var(--primary, #2c5282)',
     color: '#ffffff',
   },
   assistantMessage: {
@@ -1897,4 +2176,139 @@ const styles: Record<string, React.CSSProperties> = {
     textShadow: '0 0 0 2px var(--timer-outline-on-bubbles, #2c5282)',
     zIndex: 1,
    },
+   chatActions: {
+    display: 'flex',
+    gap: '8px',
+    padding: '8px 20px',
+    borderBottom: '1px solid var(--border, rgba(0,0,0,0.1))',
+   },
+   chatActionButton: {
+    padding: '8px 16px',
+    fontSize: '13px',
+    borderRadius: '16px',
+    backgroundColor: 'var(--bg-card, rgba(255,255,255,0.8))',
+    border: '1px solid var(--border, rgba(0,0,0,0.1))',
+    cursor: 'pointer',
+    color: 'var(--text-primary, #1b3448)',
+   },
+   dateSelector: {
+    display: 'flex',
+    gap: '8px',
+    overflowX: 'auto',
+    padding: '12px 0',
+    marginBottom: '16px',
+    scrollBehavior: 'smooth',
+   },
+   dateButton: {
+    padding: '8px 12px',
+    fontSize: '13px',
+    borderRadius: '16px',
+    backgroundColor: 'var(--bg-card, #ffffff)',
+    border: '1px solid var(--border, rgba(0,0,0,0.1))',
+    cursor: 'pointer',
+    whiteSpace: 'nowrap',
+    color: 'var(--text-primary, #1b3448)',
+   },
+   dateButtonActive: {
+    backgroundColor: 'var(--primary, #2c5282)',
+    color: '#ffffff',
+    borderColor: 'var(--primary, #2c5282)',
+   },
+   sessionsList: {
+    display: 'flex',
+    flexDirection: 'column',
+    gap: '12px',
+   },
+   sessionCard: {
+    padding: '16px',
+    backgroundColor: 'var(--bg-card, #ffffff)',
+    borderRadius: '12px',
+    boxShadow: '0 2px 8px rgba(0,0,0,0.08)',
+   },
+   sessionHeader: {
+    display: 'flex',
+    alignItems: 'center',
+    gap: '12px',
+    marginBottom: '8px',
+   },
+   sessionTime: {
+    fontSize: '12px',
+    padding: '4px 8px',
+    backgroundColor: 'var(--bg-secondary, rgba(0,0,0,0.05))',
+    borderRadius: '8px',
+    color: 'var(--text-secondary, #4a5568)',
+   },
+   sessionTitle: {
+    fontSize: '14px',
+    fontWeight: '600',
+    color: 'var(--text-primary, #1b3448)',
+   },
+   sessionPreview: {
+    fontSize: '13px',
+    color: 'var(--text-secondary, #4a5568)',
+    marginBottom: '12px',
+    lineHeight: 1.4,
+   },
+   sessionActions: {
+    display: 'flex',
+    gap: '8px',
+   },
+    sessionAction: {
+     padding: '8px 16px',
+     fontSize: '12px',
+     borderRadius: '12px',
+     backgroundColor: 'var(--bg-secondary, rgba(0,0,0,0.05))',
+     border: 'none',
+     cursor: 'pointer',
+     color: 'var(--text-primary, #1b3448)',
+    },
+    helpSection: {
+     display: 'flex',
+     flexDirection: 'column',
+     gap: '20px',
+    },
+    helpItem: {
+     display: 'flex',
+     gap: '16px',
+     padding: '16px',
+     backgroundColor: 'var(--bg-card, #ffffff)',
+     borderRadius: '16px',
+     boxShadow: '0 2px 8px rgba(0,0,0,0.06)',
+    },
+    helpIcon: {
+     fontSize: '32px',
+     width: '48px',
+     height: '48px',
+     display: 'flex',
+     alignItems: 'center',
+     justifyContent: 'center',
+     backgroundColor: 'var(--bg-secondary, rgba(0,0,0,0.05))',
+     borderRadius: '12px',
+    },
+    helpContent: {
+     flex: 1,
+    },
+    helpTitle: {
+     fontSize: '16px',
+     fontWeight: '600',
+     color: 'var(--text-primary, #1b3448)',
+     marginBottom: '8px',
+    },
+    helpText: {
+     fontSize: '14px',
+     color: 'var(--text-secondary, #4a5568)',
+     lineHeight: 1.5,
+    },
+    helpFooter: {
+     marginTop: '24px',
+     padding: '16px',
+     backgroundColor: 'var(--bg-secondary, rgba(0,0,0,0.05))',
+     borderRadius: '12px',
+    },
+    helpFooterText: {
+     fontSize: '13px',
+     color: 'var(--text-secondary, #4a5568)',
+     textAlign: 'center',
+     lineHeight: 1.5,
+    },
 };
