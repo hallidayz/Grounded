@@ -1,23 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { motion } from 'framer-motion';
-
-const STAGES = [
-  {
-    name: 'Mindfulness',
-    duration: 40,
-    instruction: 'Labeling the pain: "This is a moment of suffering"',
-  },
-  {
-    name: 'Common Humanity',
-    duration: 40,
-    instruction: '"Suffering is part of life; I am not alone"',
-  },
-  {
-    name: 'Self-Kindness',
-    duration: 40,
-    instruction: 'Select a kind phrase to repeat',
-  },
-];
+import type { TechniqueComponentProps } from '../../types/sessions';
 
 const KIND_PHRASES = [
   'May I be kind to myself',
@@ -26,38 +9,63 @@ const KIND_PHRASES = [
   'May I be patient with myself',
 ];
 
-const SelfCompassionBreakTechnique: React.FC = () => {
-  const [currentStage, setCurrentStage] = useState(0);
-  const [timeRemaining, setTimeRemaining] = useState(STAGES[0].duration);
+const SelfCompassionBreakTechnique: React.FC<TechniqueComponentProps> = ({
+  currentPhase,
+  countdown,
+  phaseIndex,
+  sessionConfig,
+}) => {
+  // Support both SessionEngine (with props) and standalone usage (without props)
+  const [localStage, setLocalStage] = useState(0);
+  const [localTimeRemaining, setLocalTimeRemaining] = useState(40);
   const [selectedPhrase, setSelectedPhrase] = useState<string | null>(null);
   const [breathPhase, setBreathPhase] = useState<'in' | 'out'>('in');
 
+  // If props are provided, use them (SessionEngine mode)
+  const displayCountdown = countdown !== undefined ? countdown : localTimeRemaining;
+  const currentStageIndex = phaseIndex !== undefined ? phaseIndex : localStage;
+  
+  // Get stage info from currentPhase or use defaults
+  const stageName = currentPhase?.label || (currentStageIndex === 0 ? 'Mindfulness' : currentStageIndex === 1 ? 'Common Humanity' : 'Self-Kindness');
+  const instruction = currentPhase?.prompt || (currentStageIndex === 0 
+    ? 'Labeling the pain: "This is a moment of suffering"'
+    : currentStageIndex === 1
+    ? '"Suffering is part of life; I am not alone"'
+    : 'Select a kind phrase to repeat');
+
+  // Standalone mode: manage own timer
   useEffect(() => {
-    const timer = setInterval(() => {
-      setTimeRemaining((prev) => {
-        if (prev <= 1) {
-          if (currentStage < STAGES.length - 1) {
-            setCurrentStage((s) => s + 1);
-            return STAGES[currentStage + 1].duration;
+    if (countdown === undefined) {
+      const timer = setInterval(() => {
+        setLocalTimeRemaining((prev) => {
+          if (prev <= 1) {
+            if (localStage < 2) {
+              setLocalStage((s) => s + 1);
+              return 40;
+            }
+            return 0;
           }
-          return 0;
-        }
-        return prev - 1;
-      });
-    }, 1000);
+          return prev - 1;
+        });
+      }, 1000);
 
-    // Breathing animation
-    const breathTimer = setInterval(() => {
-      setBreathPhase((prev) => (prev === 'in' ? 'out' : 'in'));
-    }, 3000);
+      // Breathing animation
+      const breathTimer = setInterval(() => {
+        setBreathPhase((prev) => (prev === 'in' ? 'out' : 'in'));
+      }, 3000);
 
-    return () => {
-      clearInterval(timer);
-      clearInterval(breathTimer);
-    };
-  }, [currentStage]);
-
-  const stage = STAGES[currentStage];
+      return () => {
+        clearInterval(timer);
+        clearInterval(breathTimer);
+      };
+    } else {
+      // SessionEngine mode: just handle breathing animation
+      const breathTimer = setInterval(() => {
+        setBreathPhase((prev) => (prev === 'in' ? 'out' : 'in'));
+      }, 3000);
+      return () => clearInterval(breathTimer);
+    }
+  }, [countdown, localStage]);
 
   return (
     <div style={styles.container}>
@@ -76,12 +84,12 @@ const SelfCompassionBreakTechnique: React.FC = () => {
       </motion.div>
 
       <div style={styles.stageInfo}>
-        <h3 style={styles.stageName}>{stage.name}</h3>
-        <p style={styles.instruction}>{stage.instruction}</p>
-        <p style={styles.timer}>{timeRemaining}s</p>
+        <h3 style={styles.stageName}>{stageName}</h3>
+        <p style={styles.instruction}>{instruction}</p>
+        <p style={styles.timer}>{displayCountdown}s</p>
       </div>
 
-      {currentStage === 2 && (
+      {currentStageIndex === 2 && (
         <div style={styles.phrasesContainer}>
           <p style={styles.phrasesLabel}>Select a phrase:</p>
           <div style={styles.phrasesGrid}>

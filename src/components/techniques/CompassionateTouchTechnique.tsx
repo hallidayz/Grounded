@@ -1,22 +1,38 @@
-import React, { useState, useEffect } from 'react';
+import React from 'react';
 import { motion } from 'framer-motion';
+import type { TechniqueComponentProps } from '../../types/sessions';
 
-const CompassionateTouchTechnique: React.FC = () => {
-  const [countdown, setCountdown] = useState(10);
+const CompassionateTouchTechnique: React.FC<TechniqueComponentProps> = ({
+  currentPhase,
+  countdown,
+  phaseIndex,
+  sessionConfig,
+}) => {
+  // Support both SessionEngine (with props) and standalone usage (without props)
+  const [localCountdown, setLocalCountdown] = React.useState(10);
+  const [isRunning, setIsRunning] = React.useState(false);
 
-  useEffect(() => {
-    const timer = setInterval(() => {
-      setCountdown((prev) => {
-        if (prev <= 0) {
-          clearInterval(timer);
-          return 0;
-        }
-        return prev - 1;
-      });
-    }, 1000);
+  // If props are provided, use them (SessionEngine mode)
+  const displayCountdown = countdown !== undefined ? countdown : localCountdown;
+  const instruction = currentPhase?.prompt || 'Place your hands over your heart. Feel the warmth and rhythm.';
+  const message = sessionConfig?.message || 'Give yourself this moment of kindness. I am here for you.';
 
-    return () => clearInterval(timer);
-  }, []);
+  // Standalone mode: manage own timer
+  React.useEffect(() => {
+    if (countdown === undefined && !isRunning) {
+      setIsRunning(true);
+      const timer = setInterval(() => {
+        setLocalCountdown((prev) => {
+          if (prev <= 1) {
+            clearInterval(timer);
+            return 0;
+          }
+          return prev - 1;
+        });
+      }, 1000);
+      return () => clearInterval(timer);
+    }
+  }, [countdown, isRunning]);
 
   return (
     <div style={styles.container}>
@@ -39,13 +55,9 @@ const CompassionateTouchTechnique: React.FC = () => {
       </motion.div>
 
       <div style={styles.instructions}>
-        <p style={styles.instruction}>
-          Place your hands over your heart. Feel the warmth and rhythm.
-        </p>
-        <p style={styles.countdown}>{countdown}</p>
-        <p style={styles.message}>
-          Give yourself this moment of kindness. I am here for you.
-        </p>
+        <p style={styles.instruction}>{instruction}</p>
+        <p style={styles.countdown}>{displayCountdown}</p>
+        <p style={styles.message}>{message}</p>
       </div>
     </div>
   );

@@ -1,35 +1,54 @@
 import React, { useState, useEffect } from 'react';
 import { motion } from 'framer-motion';
+import type { TechniqueComponentProps } from '../../types/sessions';
 
-const GroundingFlashTechnique: React.FC = () => {
-  const [phase, setPhase] = useState<'inhale' | 'hold' | 'exhale'>('inhale');
-  const [countdown, setCountdown] = useState(4);
+const GroundingFlashTechnique: React.FC<TechniqueComponentProps> = ({
+  currentPhase,
+  countdown,
+  phaseIndex,
+  sessionConfig,
+}) => {
+  // Support both SessionEngine (with props) and standalone usage (without props)
+  const [localPhase, setLocalPhase] = useState<'inhale' | 'hold' | 'exhale'>('inhale');
+  const [localCountdown, setLocalCountdown] = useState(4);
 
-  useEffect(() => {
-    // 0-4s: Inhale
-    // 4-6s: Hold
-    // 6-10s: Exhale
-    const timer = setInterval(() => {
-      setCountdown((prev) => {
-        if (prev <= 0) {
-          if (phase === 'inhale') {
-            setPhase('hold');
-            return 2; // Hold for 2 seconds
-          } else if (phase === 'hold') {
-            setPhase('exhale');
-            return 4; // Exhale for 4 seconds
-          } else {
-            return 0; // Complete
-          }
-        }
-        return prev - 1;
-      });
-    }, 1000);
-
-    return () => clearInterval(timer);
-  }, [phase]);
-
+  // If props are provided, use them (SessionEngine mode)
+  const phase = currentPhase 
+    ? (currentPhase.label.toLowerCase().includes('inhale') 
+        ? 'inhale' 
+        : currentPhase.label.toLowerCase().includes('hold')
+        ? 'hold'
+        : 'exhale')
+    : localPhase;
+  
+  const displayCountdown = countdown !== undefined ? countdown : localCountdown;
+  const instruction = currentPhase?.instruction || (phase === 'inhale' ? 'Inhale...' : phase === 'hold' ? 'Hold...' : 'Exhale slowly...');
+  const message = sessionConfig?.message || 'Just this breath. You are safe in this moment.';
+  
   const scale = phase === 'inhale' ? 1.2 : phase === 'hold' ? 1.2 : 0.3;
+
+  // Standalone mode: manage own timer
+  useEffect(() => {
+    if (countdown === undefined) {
+      const timer = setInterval(() => {
+        setLocalCountdown((prev) => {
+          if (prev <= 0) {
+            if (localPhase === 'inhale') {
+              setLocalPhase('hold');
+              return 2;
+            } else if (localPhase === 'hold') {
+              setLocalPhase('exhale');
+              return 4;
+            } else {
+              return 0;
+            }
+          }
+          return prev - 1;
+        });
+      }, 1000);
+      return () => clearInterval(timer);
+    }
+  }, [countdown, localPhase]);
 
   return (
     <div style={styles.container}>
@@ -43,14 +62,10 @@ const GroundingFlashTechnique: React.FC = () => {
           ease: phase === 'inhale' ? 'easeOut' : phase === 'exhale' ? 'easeIn' : 'linear',
         }}
       >
-        <span style={styles.countdown}>{countdown}</span>
+        <span style={styles.countdown}>{displayCountdown}</span>
       </motion.div>
-      <p style={styles.instruction}>
-        {phase === 'inhale' && 'Inhale...'}
-        {phase === 'hold' && 'Hold...'}
-        {phase === 'exhale' && 'Exhale slowly...'}
-      </p>
-      <p style={styles.message}>Just this breath. You are safe in this moment.</p>
+      <p style={styles.instruction}>{instruction}</p>
+      <p style={styles.message}>{message}</p>
     </div>
   );
 };

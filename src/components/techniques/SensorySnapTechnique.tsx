@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { motion } from 'framer-motion';
+import type { TechniqueComponentProps } from '../../types/sessions';
 
 // ADA-compliant: Softer, less aggressive colors with good contrast
 const COLORS = [
@@ -10,10 +11,18 @@ const COLORS = [
   { hex: '#E0F2F1', name: 'soft teal' },
 ];
 
-const SensorySnapTechnique: React.FC = () => {
+const SensorySnapTechnique: React.FC<TechniqueComponentProps> = ({
+  currentPhase,
+  countdown,
+  phaseIndex,
+  sessionConfig,
+}) => {
+  // Support both SessionEngine (with props) and standalone usage (without props)
   const [selectedColor, setSelectedColor] = useState(COLORS[0]);
-  const [countdown, setCountdown] = useState(10);
   const [isVisible, setIsVisible] = useState(false);
+  const [localCountdown, setLocalCountdown] = useState(10);
+
+  const displayCountdown = countdown !== undefined ? countdown : localCountdown;
 
   useEffect(() => {
     // Gentle fade-in instead of flash
@@ -22,20 +31,23 @@ const SensorySnapTechnique: React.FC = () => {
     // Randomly select a color on mount
     const randomIndex = Math.floor(Math.random() * COLORS.length);
     setSelectedColor(COLORS[randomIndex]);
-    
-    // Countdown
-    const timer = setInterval(() => {
-      setCountdown((prev) => {
-        if (prev <= 1) {
-          clearInterval(timer);
-          return 0;
-        }
-        return prev - 1;
-        });
-    }, 1000);
-
-    return () => clearInterval(timer);
   }, []);
+
+  // Standalone mode: manage own timer
+  useEffect(() => {
+    if (countdown === undefined) {
+      const timer = setInterval(() => {
+        setLocalCountdown((prev) => {
+          if (prev <= 1) {
+            clearInterval(timer);
+            return 0;
+          }
+          return prev - 1;
+        });
+      }, 1000);
+      return () => clearInterval(timer);
+    }
+  }, [countdown]);
 
   return (
     <motion.div
@@ -56,7 +68,7 @@ const SensorySnapTechnique: React.FC = () => {
           Find one thing in your room that is <strong style={styles.colorName}>{selectedColor.name}</strong>
         </h3>
         <div style={styles.countdownContainer}>
-          <span style={styles.countdown}>{countdown}</span>
+          <span style={styles.countdown}>{displayCountdown}</span>
         </div>
         <p style={styles.message}>Found it? Focus on the color. You are here now.</p>
       </div>

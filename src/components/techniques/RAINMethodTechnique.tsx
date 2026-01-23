@@ -1,47 +1,74 @@
 import React, { useState, useEffect } from 'react';
 import { motion } from 'framer-motion';
-
-const STAGES = [
-  { name: 'Recognize', duration: 60, instruction: 'Tap bubbles for feelings you notice' },
-  { name: 'Allow', duration: 60, instruction: 'Let it be. You don\'t have to change it yet.' },
-  { name: 'Investigate', duration: 120, instruction: 'Tap where you feel the sensation in your body' },
-  { name: 'Nurture', duration: 60, instruction: 'The bubbles transform into warm light' },
-];
+import type { TechniqueComponentProps } from '../../types/sessions';
 
 const FEELING_BUBBLES = ['Fear', 'Heavy', 'Tight', 'Angry', 'Sad', 'Anxious', 'Overwhelmed'];
 const BODY_PARTS = ['chest', 'throat', 'stomach', 'shoulders', 'head', 'hands'];
 
-const RAINMethodTechnique: React.FC = () => {
-  const [currentStage, setCurrentStage] = useState(0);
-  const [timeRemaining, setTimeRemaining] = useState(STAGES[0].duration);
+const RAINMethodTechnique: React.FC<TechniqueComponentProps> = ({
+  currentPhase,
+  countdown,
+  phaseIndex,
+  sessionConfig,
+}) => {
+  // Support both SessionEngine (with props) and standalone usage (without props)
+  const [localStage, setLocalStage] = useState(0);
+  const [localTimeRemaining, setLocalTimeRemaining] = useState(60);
+  
+  // If props are provided, use them (SessionEngine mode)
+  const currentStageIndex = phaseIndex !== undefined ? phaseIndex : localStage;
+  const displayCountdown = countdown !== undefined ? countdown : localTimeRemaining;
+  
+  // Get stage info from currentPhase or use defaults
+  const stageName = currentPhase?.label || (currentStageIndex === 0 ? 'Recognize' : currentStageIndex === 1 ? 'Allow' : currentStageIndex === 2 ? 'Investigate' : 'Nurture');
+  const instruction = currentPhase?.prompt || (currentStageIndex === 0 
+    ? 'Tap bubbles for feelings you notice'
+    : currentStageIndex === 1
+    ? 'Let it be. You don\'t have to change it yet.'
+    : currentStageIndex === 2
+    ? 'Tap where you feel the sensation in your body'
+    : 'The bubbles transform into warm light');
   const [selectedFeelings, setSelectedFeelings] = useState<string[]>([]);
   const [selectedBodyParts, setSelectedBodyParts] = useState<string[]>([]);
   const [bubbles, setBubbles] = useState<Array<{ id: string; label: string; x: number; y: number }>>([]);
   const [showBody, setShowBody] = useState(false);
 
+  // Standalone mode: manage own timer
   useEffect(() => {
-    const timer = setInterval(() => {
-      setTimeRemaining((prev) => {
-        if (prev <= 1) {
-          if (currentStage < STAGES.length - 1) {
-            const nextStage = currentStage + 1;
-            setCurrentStage(nextStage);
-            if (nextStage === 2) {
-              setShowBody(true);
+    if (countdown === undefined) {
+      const timer = setInterval(() => {
+        setLocalTimeRemaining((prev) => {
+          if (prev <= 1) {
+            if (localStage < 3) {
+              const nextStage = localStage + 1;
+              setLocalStage(nextStage);
+              if (nextStage === 2) {
+                setShowBody(true);
+              }
+              if (nextStage === 3) {
+                setShowBody(false);
+              }
+              return nextStage === 0 ? 60 : nextStage === 1 ? 60 : nextStage === 2 ? 120 : 60;
             }
-            if (nextStage === 3) {
-              setShowBody(false);
-            }
-            return STAGES[nextStage].duration;
+            return 0;
           }
-          return 0;
-        }
-        return prev - 1;
-      });
-    }, 1000);
+          return prev - 1;
+        });
+      }, 1000);
+      return () => clearInterval(timer);
+    } else {
+      // SessionEngine mode: sync showBody with phase
+      if (currentStageIndex === 2) {
+        setShowBody(true);
+      } else if (currentStageIndex === 3) {
+        setShowBody(false);
+      }
+    }
+  }, [countdown, localStage, currentStageIndex]);
 
-    // Create floating bubbles
-    if (currentStage === 0) {
+  // Create floating bubbles for Recognize stage
+  useEffect(() => {
+    if (currentStageIndex === 0) {
       const createBubble = () => {
         const id = `bubble-${Date.now()}-${Math.random()}`;
         const label = FEELING_BUBBLES[Math.floor(Math.random() * FEELING_BUBBLES.length)];
@@ -62,36 +89,35 @@ const RAINMethodTechnique: React.FC = () => {
         });
       }, 2000);
 
-      return () => {
-        clearInterval(timer);
-        clearInterval(bubbleInterval);
-      };
+      return () => clearInterval(bubbleInterval);
+    } else {
+      // Clear bubbles when moving to other stages
+      setBubbles([]);
     }
-
-    return () => clearInterval(timer);
-  }, [currentStage]);
+  }, [currentStageIndex]);
 
   const handleBubbleClick = (label: string) => {
-    if (currentStage === 0 && !selectedFeelings.includes(label)) {
+    if (currentStageIndex === 0 && !selectedFeelings.includes(label)) {
       setSelectedFeelings((prev) => [...prev, label]);
     }
   };
 
   const handleBodyPartClick = (part: string) => {
-    if (currentStage === 2 && !selectedBodyParts.includes(part)) {
+    if (currentStageIndex === 2 && !selectedBodyParts.includes(part)) {
       setSelectedBodyParts((prev) => [...prev, part]);
     }
   };
 
-  const stage = STAGES[currentStage];
+  const minutes = Math.floor(displayCountdown / 60);
+  const seconds = displayCountdown % 60;
 
   return (
     <div style={styles.container}>
-      <h3 style={styles.stageName}>{stage.name}</h3>
-      <p style={styles.instruction}>{stage.instruction}</p>
-      <p style={styles.timer}>{Math.floor(timeRemaining / 60)}:{(timeRemaining % 60).toString().padStart(2, '0')}</p>
+      <h3 style={styles.stageName}>{stageName}</h3>
+      <p style={styles.instruction}>{instruction}</p>
+      <p style={styles.timer}>{minutes}:{seconds.toString().padStart(2, '0')}</p>
 
-      {currentStage === 0 && (
+      {currentStageIndex === 0 && (
         <div style={styles.bubblesContainer}>
           {bubbles.map((bubble) => (
             <motion.button
@@ -118,7 +144,7 @@ const RAINMethodTechnique: React.FC = () => {
         </div>
       )}
 
-      {currentStage === 1 && (
+      {currentStageIndex === 1 && (
         <div style={styles.allowContainer}>
           <motion.div
             style={styles.dimmedScreen}
@@ -129,7 +155,7 @@ const RAINMethodTechnique: React.FC = () => {
         </div>
       )}
 
-      {currentStage === 2 && showBody && (
+      {currentStageIndex === 2 && showBody && (
         <div style={styles.bodyContainer}>
           <div style={styles.bodySilhouette}>
             {BODY_PARTS.map((part, index) => (
@@ -149,7 +175,7 @@ const RAINMethodTechnique: React.FC = () => {
         </div>
       )}
 
-      {currentStage === 3 && (
+      {currentStageIndex === 3 && (
         <motion.div
           style={styles.nurtureContainer}
           animate={{

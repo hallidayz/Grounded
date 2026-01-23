@@ -4,6 +4,7 @@
 
 import type { EnergyOption, MoodType, ConversationNode } from './types';
 import type { CrisisResource } from './types';
+import type { SessionLibrary, AffirmationLibrary } from './types/sessions';
 
 export const COPY = {
   app: {
@@ -448,4 +449,379 @@ export function getGroundingBreath(energy: string): string[] {
 
 export function getConversationNode(node: ConversationNode) {
   return COPY.conversation.nodes[node];
+}
+
+/**
+ * MASTER_SESSIONS Library
+ * 
+ * Type-safe configuration for all CBT/Mindfulness interventions.
+ * Each session includes complete phase arrays with durations and prompts.
+ */
+export const MASTER_SESSIONS: SessionLibrary = {
+  // 10-second Circuit Breakers
+  '10s-reset': {
+    id: '10s-reset',
+    label: 'The Reset',
+    type: 'breathing',
+    message: 'Just this breath. You are safe in this moment.',
+    category: '10s',
+    color: '#fbbf24',
+    bgColor: '#fef3c7',
+    phases: [
+      {
+        id: 'inhale-1',
+        duration: 4,
+        label: 'Inhale',
+        prompt: 'Two quick inhales through the nose',
+        instruction: 'Inhale... Inhale...',
+      },
+      {
+        id: 'hold',
+        duration: 2,
+        label: 'Hold',
+        prompt: 'Hold the breath briefly',
+        instruction: 'Hold...',
+      },
+      {
+        id: 'exhale',
+        duration: 4,
+        label: 'Exhale',
+        prompt: 'One long, slow exhale through the mouth',
+        instruction: 'Exhale...',
+      },
+    ],
+  },
+  '10s-anchor': {
+    id: '10s-anchor',
+    label: 'The Anchor',
+    type: 'physical',
+    message: 'Drop into your body. You are here now.',
+    category: '10s',
+    color: '#475569',
+    bgColor: '#e2e8f0',
+    phases: [
+      {
+        id: 'squeeze',
+        duration: 3,
+        label: 'Squeeze',
+        prompt: 'Squeeze your shoulders to your ears. Clench your fists.',
+        instruction: 'Squeeze...',
+      },
+      {
+        id: 'release',
+        duration: 7,
+        label: 'Release',
+        prompt: 'Drop the weight. Let your shoulders fall. Unclench your jaw.',
+        instruction: 'Drop...',
+      },
+    ],
+  },
+  '10s-snap': {
+    id: '10s-snap',
+    label: 'The Sensory Snap',
+    type: 'sensory',
+    message: 'Found it? Focus on the color. You are here now.',
+    category: '10s',
+    color: '#8b5cf6',
+    bgColor: '#ede9fe',
+    phases: [
+      {
+        id: 'find-color',
+        duration: 10,
+        label: 'Find Color',
+        prompt: 'Find one thing in your room that matches this exact color',
+        instruction: 'Look around...',
+      },
+    ],
+  },
+  '10s-compassion': {
+    id: '10s-compassion',
+    label: 'The Compassionate Touch',
+    type: 'physical',
+    message: 'Give yourself this moment of kindness. I am here for you.',
+    category: '10s',
+    color: '#ec4899',
+    bgColor: '#fce7f3',
+    phases: [
+      {
+        id: 'touch',
+        duration: 10,
+        label: 'Touch',
+        prompt: 'Place your hands over your heart. Feel the warmth and rhythm.',
+        instruction: 'Hand on heart...',
+      },
+    ],
+  },
+  '10s-hum': {
+    id: '10s-hum',
+    label: 'The Vagus Hum',
+    type: 'physical',
+    message: 'Vibrate into calm. You are safe to rest.',
+    category: '10s',
+    color: '#8b5cf6',
+    bgColor: '#ede9fe',
+    phases: [
+      {
+        id: 'hum',
+        duration: 10,
+        label: 'Hum',
+        prompt: 'Take one breath and hum "Mmm" until the timer hits zero to vibrate the Vagus nerve',
+        instruction: 'Mmmmmmmm',
+      },
+    ],
+  },
+  
+  // 2-minute Perspective Shifts
+  '2min-grounding': {
+    id: '2min-grounding',
+    label: '5-4-3-2-1 Sensory Anchor',
+    type: 'sensory',
+    message: 'Your senses are your anchor to the present.',
+    category: '2min',
+    phases: [
+      {
+        id: 'see',
+        duration: 40,
+        label: '5 Things You See',
+        prompt: 'Name 5 things you can see around you',
+        instruction: 'Look around...',
+        icon: '👁️',
+      },
+      {
+        id: 'feel',
+        duration: 30,
+        label: '4 Things You Feel',
+        prompt: 'Name 4 things you can feel (texture, temperature, pressure)',
+        instruction: 'Touch something...',
+        icon: '✋',
+      },
+      {
+        id: 'hear',
+        duration: 20,
+        label: '3 Things You Hear',
+        prompt: 'Name 3 things you can hear',
+        instruction: 'Listen...',
+        icon: '👂',
+      },
+      {
+        id: 'smell',
+        duration: 20,
+        label: '2 Things You Smell',
+        prompt: 'Name 2 things you can smell',
+        instruction: 'Breathe in...',
+        icon: '👃',
+      },
+      {
+        id: 'taste',
+        duration: 10,
+        label: '1 Thing You Taste',
+        prompt: 'Name 1 thing you can taste',
+        instruction: 'Notice...',
+        icon: '👄',
+      },
+    ],
+  },
+  '2min-compassion': {
+    id: '2min-compassion',
+    label: 'Self-Compassion Break',
+    type: 'cognitive-restructuring',
+    message: 'You are doing your best with a hard moment.',
+    category: '2min',
+    phases: [
+      {
+        id: 'mindfulness',
+        duration: 40,
+        label: 'Mindfulness',
+        prompt: 'This is a moment of suffering. Acknowledge the pain without judgment.',
+        instruction: 'Notice what you feel...',
+      },
+      {
+        id: 'common-humanity',
+        duration: 40,
+        label: 'Common Humanity',
+        prompt: 'Suffering is part of life. I am not alone in this experience.',
+        instruction: 'Remember you\'re not alone...',
+      },
+      {
+        id: 'self-kindness',
+        duration: 40,
+        label: 'Self-Kindness',
+        prompt: 'May I be kind to myself. May I give myself the compassion I need.',
+        instruction: 'Offer yourself kindness...',
+      },
+    ],
+  },
+  '2min-reality': {
+    id: '2min-reality',
+    label: 'Reality Check',
+    type: 'cognitive-restructuring',
+    message: 'Let\'s examine the evidence together.',
+    category: '2min',
+    phases: [
+      {
+        id: 'identify-thought',
+        duration: 30,
+        label: 'Identify Thought',
+        prompt: 'What is the thought that\'s causing distress?',
+        instruction: 'Name the thought...',
+      },
+      {
+        id: 'evidence-for',
+        duration: 45,
+        label: 'Evidence For',
+        prompt: 'What evidence supports this thought? Be honest and specific.',
+        instruction: 'List evidence for...',
+      },
+      {
+        id: 'evidence-against',
+        duration: 45,
+        label: 'Evidence Against',
+        prompt: 'What evidence contradicts this thought? What would you tell a friend?',
+        instruction: 'List evidence against...',
+      },
+    ],
+  },
+  
+  // 5-minute Deep Support
+  '5min-rain': {
+    id: '5min-rain',
+    label: 'RAIN Method',
+    type: 'inquiry',
+    message: 'A 5-minute guided process. Four phases: Recognize, Allow, Investigate, Nurture.',
+    category: '5min',
+    phases: [
+      {
+        id: 'recognize',
+        duration: 60,
+        label: 'Recognize',
+        prompt: 'Label the feeling (e.g., "I am feeling anxious"). Tap bubbles for feelings you notice.',
+        instruction: 'What am I feeling?',
+      },
+      {
+        id: 'allow',
+        duration: 60,
+        label: 'Allow',
+        prompt: 'Let the feeling exist without trying to fix it. You don\'t have to change it yet.',
+        instruction: 'Let it be...',
+      },
+      {
+        id: 'investigate',
+        duration: 120,
+        label: 'Investigate',
+        prompt: 'Where is this in my body? What is this feeling "saying"? Tap where you feel the sensation.',
+        instruction: 'Where do I feel this?',
+      },
+      {
+        id: 'nurture',
+        duration: 60,
+        label: 'Nurture',
+        prompt: 'The bubbles transform into warm light. Offer yourself compassion and kindness.',
+        instruction: 'How can I care for myself?',
+      },
+    ],
+  },
+  '5min-safe-space': {
+    id: '5min-safe-space',
+    label: 'Safe Space',
+    type: 'visualization',
+    message: 'Create a mental sanctuary where you feel completely safe and at peace.',
+    category: '5min',
+    phases: [
+      {
+        id: 'describe-place',
+        duration: 120,
+        label: 'Describe Place',
+        prompt: 'Visualize a safe place (beach, forest, library). What do you see? What is the temperature?',
+        instruction: 'Imagine your safe place...',
+      },
+      {
+        id: 'sensory-layering',
+        duration: 120,
+        label: 'Sensory Layering',
+        prompt: 'Who is there that loves you? What sounds do you hear? What do you smell?',
+        instruction: 'Add sensory details...',
+      },
+      {
+        id: 'anchor',
+        duration: 60,
+        label: 'Anchor',
+        prompt: 'Associate this feeling with a physical gesture (like touching your heart). Remember this feeling.',
+        instruction: 'Create an anchor...',
+      },
+    ],
+  },
+  '5min-letter': {
+    id: '5min-letter',
+    label: 'Compassionate Letter',
+    type: 'writing',
+    message: 'Write from the perspective of a wise, compassionate friend.',
+    category: '5min',
+    phases: [
+      {
+        id: 'grounding',
+        duration: 60,
+        label: 'Grounding',
+        prompt: 'Take 3 deep breaths. Find your center.',
+        instruction: 'Breathe...',
+      },
+      {
+        id: 'writing',
+        duration: 180,
+        label: 'Writing',
+        prompt: 'If a friend you loved was feeling exactly this way, what would you say to them?',
+        instruction: 'Write with compassion...',
+      },
+      {
+        id: 'read-back',
+        duration: 60,
+        label: 'Read Back',
+        prompt: 'Read these words back to yourself. They are for you, too.',
+        instruction: 'Read with kindness...',
+      },
+    ],
+  },
+};
+
+/**
+ * Nurture Affirmations Library
+ * 
+ * Phrases for the Nurture phase of RAIN method and other compassion-based exercises.
+ */
+export const NURTURE_AFFIRMATIONS: AffirmationLibrary = {
+  shame: [
+    'You are doing your best with a hard moment.',
+    'You are worthy of compassion, especially from yourself.',
+    'Mistakes don\'t define your worth.',
+    'You are human, and that\'s enough.',
+    'Self-compassion is not self-pity—it\'s strength.',
+  ],
+  anxiety: [
+    'This feeling will pass.',
+    'You have survived every difficult moment so far.',
+    'Anxiety is information, not a verdict.',
+    'You are safe in this moment.',
+    'You can handle what comes next.',
+  ],
+  burnout: [
+    'Rest is productive.',
+    'You don\'t have to earn your right to rest.',
+    'Your worth is not measured by productivity.',
+    'Taking care of yourself is taking care of others.',
+    'It\'s okay to slow down.',
+  ],
+  grief: [
+    'Your feelings are valid.',
+    'Grief is love with nowhere to go.',
+    'There is no timeline for healing.',
+    'It\'s okay to not be okay.',
+    'You are allowed to feel this deeply.',
+  ],
+};
+
+/**
+ * Helper function to get a random affirmation for a category
+ */
+export function getNurtureAffirmation(category: keyof AffirmationLibrary): string {
+  const affirmations = NURTURE_AFFIRMATIONS[category];
+  return affirmations[Math.floor(Math.random() * affirmations.length)];
 }

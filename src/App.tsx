@@ -13,551 +13,28 @@ import {
 import { chatDB, type ChatSession } from './services/chatDB';
 import type { EnergyLevel, ConversationState, AppView } from './types';
 import EnergyCheckIn from './components/EnergyCheckIn';
+import SessionEngine from './components/SessionEngine';
+import { MASTER_SESSIONS } from './copy';
 
-const BREATHING_PATTERNS = {
-  '10s-reset': { 
-    pattern: [4, 2, 4], 
-    cycles: 1, 
-    label: 'The Reset',
-    isAmygdalaHijack: true,
-    instruction: 'Inhale... Inhale... Exhale...',
-    subtext: 'Physiological Sigh: 2 short sniffs, 1 long breath out.',
-    message: 'Just this breath. You are safe in this moment.'
-  },
-  '10s-anchor': { 
-    pattern: [4, 2, 4], 
-    cycles: 1, 
-    label: 'The Anchor',
-    isAmygdalaHijack: true,
-    instruction: 'Drop everything.',
-    subtext: 'Drop shoulders. Unclench jaw. Release tongue.',
-    message: 'Drop into your body. You are here now.'
-  },
-  '10s-hum': { 
-    pattern: [4, 2, 4], 
-    cycles: 1, 
-    label: 'The Vagus Hum',
-    isAmygdalaHijack: true,
-    instruction: 'Mmmmmmmmm',
-    subtext: 'Hum out loud to activate your parasympathetic nervous system.',
-    message: 'Vibrate into calm. You are safe to rest.'
-  },
-  '2min': { 
-    pattern: [40, 30, 20, 20, 10], 
-    cycles: 1, 
-    label: '2 minutes',
-    isFiveFourThreeTwoOne: true,
-    message: 'Your senses are your anchor to the present.'
-  },
-  '5min': { 
-    pattern: [60, 60, 120, 60], 
-    cycles: 1, 
-    label: '5 minutes',
-    isRainMethod: true,
-    message: 'A 5-minute guided process. Four phases: Recognize (1 min), Allow (1 min), Investigate (2 min), Nurture (1 min). Click floating graphics to acknowledge each feeling.'
-  },
-};
-
-function BreathingExercise({ 
-  energy, 
-  onComplete 
-}: { 
-  energy: EnergyLevel; 
-  onComplete: () => void;
-}) {
-  const [phase, setPhase] = useState<'inhale' | 'hold' | 'exhale' | 'see' | 'feel' | 'hear' | 'smell' | 'taste' | 'recognize' | 'allow' | 'investigate' | 'nurture'>('inhale');
-  const [cycle, setCycle] = useState(0);
-  const [countdown, setCountdown] = useState(4);
-  const [isReducedMotion, setIsReducedMotion] = useState(false);
-  const [currentScale, setCurrentScale] = useState(0.3);
-  const [sensoryStage, setSensoryStage] = useState(0);
-  const [bubbles, setBubbles] = useState<Array<{id: number; x: number; y: number; size: number; speed: number; color: string}>>([]);
-  const [poppedBubbles, setPoppedBubbles] = useState(0);
-  const bubbleIdRef = useRef(0);
+// Helper function to map energy levels to session keys
+function getSessionKeyFromEnergy(energy: EnergyLevel | null): string | null {
+  if (!energy) return null;
   
-  const config = BREATHING_PATTERNS[energy];
-  const isAmygdalaMode = config.isAmygdalaHijack;
-  const isFiveFourThreeTwoOne = config.isFiveFourThreeTwoOne;
-  const isRainMethod = config.isRainMethod;
-  const totalCycles = config.cycles;
-  const [inhale, hold1, exhale] = config.pattern;
-
-  const sensoryStages = [
-    { phase: 'see', icon: '👁️', label: '5 things you see', duration: 40, countLabel: '5' },
-    { phase: 'feel', icon: '✋', label: '4 things you feel', duration: 30, countLabel: '4' },
-    { phase: 'hear', icon: '👂', label: '3 things you hear', duration: 20, countLabel: '3' },
-    { phase: 'smell', icon: '👃', label: '2 things you smell', duration: 20, countLabel: '2' },
-    { phase: 'taste', icon: '👄', label: '1 thing you taste', duration: 10, countLabel: '1' },
-  ];
-
-  const rainStages = [
-    { phase: 'recognize', label: 'Recognize', instruction: 'Label the feeling (e.g., "I am feeling anxious").', duration: 60 },
-    { phase: 'allow', label: 'Allow', instruction: 'Let the feeling exist without trying to fix it.', duration: 60 },
-    { phase: 'investigate', label: 'Investigate', instruction: 'Where is this in my body? What is this feeling "saying"?', duration: 120 },
-    { phase: 'nurture', label: 'Nurture', instruction: 'Affirmation: "I am doing my best with a hard moment."', duration: 60 },
-  ];
-
-  const bubbleColors = [
-    'rgba(168, 230, 207, 0.6)',
-    'rgba(132, 197, 164, 0.5)',
-    'rgba(127, 179, 213, 0.5)',
-    'rgba(180, 200, 180, 0.5)',
-    'rgba(160, 180, 170, 0.5)',
-  ];
-
-  useEffect(() => {
-    const mediaQuery = window.matchMedia('(prefers-reduced-motion: reduce)');
-    setIsReducedMotion(mediaQuery.matches);
-    const handler = (e: MediaQueryListEvent) => setIsReducedMotion(e.matches);
-    mediaQuery.addEventListener('change', handler);
-    return () => mediaQuery.removeEventListener('change', handler);
-  }, []);
-
-  useEffect(() => {
-    if (isReducedMotion) return;
-
-    const playHaptic = () => {
-      if (navigator.vibrate) {
-        navigator.vibrate(50);
-      }
-    };
-
-    const playCompletionHaptic = () => {
-      if (navigator.vibrate) {
-        navigator.vibrate([100, 50, 100]);
-      }
-    };
-
-    const runPhase = async () => {
-      if (isAmygdalaMode) {
-        let countdownValue = inhale;
-        for (let c = 0; c < 1; c++) {
-          setPhase('inhale');
-          setCountdown(inhale);
-          playHaptic();
-          await new Promise(resolve => setTimeout(resolve, 100));
-          
-          for (let t = inhale - 1; t >= 0; t--) {
-            setCountdown(t);
-            await new Promise(resolve => setTimeout(resolve, 1000));
-          }
-          
-          setPhase('hold');
-          setCountdown(hold1);
-          playHaptic();
-          await new Promise(resolve => setTimeout(resolve, hold1 * 1000));
-          
-          setPhase('exhale');
-          setCountdown(exhale);
-          playHaptic();
-          for (let t = exhale - 1; t >= 0; t--) {
-            setCountdown(t);
-            await new Promise(resolve => setTimeout(resolve, 1000));
-          }
-        }
-        playCompletionHaptic();
-        } else if (isFiveFourThreeTwoOne) {
-        for (let i = 0; i < sensoryStages.length; i++) {
-          const stage = sensoryStages[i];
-          setPhase(stage.phase as any);
-          setSensoryStage(i);
-          setCountdown(stage.duration);
-          playHaptic();
-          
-          for (let t = stage.duration; t > 0; t--) {
-            setCountdown(t);
-            await new Promise(resolve => setTimeout(resolve, 1000));
-          }
-        }
-      } else if (isRainMethod) {
-        const bubbleInterval = setInterval(() => {
-          if (bubbles.length < 10) {
-            bubbleIdRef.current += 1;
-            const newBubble = {
-              id: bubbleIdRef.current,
-              x: Math.random() * 80 + 10,
-              y: 110,
-              size: Math.random() * 25 + 15,
-              speed: Math.random() * 0.5 + 0.4,
-              color: bubbleColors[Math.floor(Math.random() * bubbleColors.length)],
-            };
-            setBubbles(prev => [...prev, newBubble]);
-          }
-        }, 1200);
-
-        for (let i = 0; i < rainStages.length; i++) {
-          const stage = rainStages[i];
-          setPhase(stage.phase as any);
-          setSensoryStage(i);
-          setCountdown(stage.duration);
-          playHaptic();
-          
-          for (let t = stage.duration; t > 0; t--) {
-            setBubbles(prev => prev.map(b => ({...b, y: b.y - b.speed})));
-            setCountdown(t);
-            await new Promise(resolve => setTimeout(resolve, 1000));
-          }
-        }
-        
-        clearInterval(bubbleInterval);
-      } else {
-        const phases = [
-          { name: 'inhale' as const, duration: inhale, text: 'Breathe in' },
-          { name: 'hold' as const, duration: hold1, text: 'Hold' },
-          { name: 'exhale' as const, duration: exhale, text: 'Breathe out' },
-        ];
-
-        for (let c = cycle; c < totalCycles; c++) {
-          for (let i = 0; i < phases.length; i++) {
-            setPhase(phases[i].name);
-            setCountdown(phases[i].duration);
-            playHaptic();
-
-            await new Promise(resolve => setTimeout(resolve, phases[i].duration * 1000));
-          }
-          setCycle(c + 1);
-        }
-      }
-
-      onComplete();
-    };
-
-    runPhase();
-  }, [energy, isReducedMotion, isAmygdalaMode, isFiveFourThreeTwoOne, inhale, hold1, exhale, totalCycles, cycle]);
-
-  if (isReducedMotion) {
-    return (
-      <div style={styles.breathingContainer}>
-        <div style={styles.breathingReducedMotion}>
-          <p style={styles.breathingInstruction}>
-            {phase === 'inhale' ? 'Inhale' : phase === 'exhale' ? 'Exhale' : 'Hold'}
-          </p>
-          <div style={styles.breathingStaticRing}>
-            <span style={styles.breathingCount}>{countdown}</span>
-          </div>
-        </div>
-        <button style={styles.skipBreathingButton} onClick={onComplete}>
-          Skip
-        </button>
-      </div>
-    );
-  }
-
-  if (isAmygdalaMode) {
-    const ease = phase === 'inhale' ? 'ease-out' : phase === 'exhale' ? 'ease-in' : 'linear';
-    const glow = phase === 'hold' ? '0 0 80px rgba(132, 197, 164, 0.8)' : '0 0 40px rgba(132, 197, 164, 0.5)';
-    const opacity = phase === 'exhale' ? 0.5 : 1;
-    
-    const getCircleColor = () => {
-      if (phase === 'inhale') return '#a8e6cf';
-      if (phase === 'hold') return '#84c5a4';
-      return '#7fb3d5';
-    };
-
-    const circumference = 2 * Math.PI * 80;
-    const progress = countdown / inhale;
-
-    return (
-      <motion.div 
-        style={styles.amygdalaContainer}
-        initial={{ opacity: 0 }}
-        animate={{ opacity: 1 }}
-        exit={{ opacity: 0 }}
-      >
-        <motion.div style={styles.amygdalaContent}>
-          <motion.h2 
-            style={styles.amygdalaTitle}
-            initial={{ y: -20, opacity: 0 }}
-            animate={{ y: 0, opacity: 1 }}
-            transition={{ delay: 0.2 }}
-          >
-            {config.label}
-          </motion.h2>
-          
-          <motion.p 
-            style={styles.amygdalaMessage}
-            initial={{ y: 20, opacity: 0 }}
-            animate={{ y: 0, opacity: 1 }}
-            transition={{ delay: 0.3 }}
-          >
-            {config.message}
-          </motion.p>
-          
-          <div style={styles.countdownRingWrapper}>
-            <svg width="200" height="200" style={{ transform: 'rotate(-90deg)' }}>
-              <circle
-                cx="100"
-                cy="100"
-                r="80"
-                stroke="white"
-                strokeWidth="6"
-                fill="transparent"
-                opacity={0.2}
-              />
-              <motion.circle
-                cx="100"
-                cy="100"
-                r="80"
-                stroke={getCircleColor()}
-                strokeWidth="6"
-                fill="transparent"
-                strokeDasharray={circumference}
-                initial={{ strokeDashoffset: 0 }}
-                animate={{ 
-                  strokeDashoffset: circumference * (1 - progress),
-                  stroke: getCircleColor()
-                }}
-                transition={{ duration: 0.5, ease: "easeOut" }}
-                style={{ filter: `drop-shadow(0 0 8px ${getCircleColor()})` }}
-              />
-            </svg>
-            <motion.span 
-              style={styles.amygdalaCount}
-              key={countdown}
-              initial={{ scale: 1.3, opacity: 0.8 }}
-              animate={{ scale: 1, opacity: 1 }}
-              transition={{ duration: 0.3 }}
-            >
-              {countdown}
-            </motion.span>
-          </div>
-          
-          <motion.div
-            style={styles.amygdalaPhaseContainer}
-            key={phase}
-            initial={{ y: 10, opacity: 0 }}
-            animate={{ y: 0, opacity: 1 }}
-            transition={{ duration: 0.3 }}
-          >
-            <p style={styles.amygdalaPhaseText}>
-              {phase === 'inhale' ? config.instruction : phase === 'hold' ? 'Hold' : phase === 'exhale' ? config.instruction : ''}
-            </p>
-            <p style={styles.amygdalaSubtext}>{config.subtext}</p>
-          </motion.div>
-
-          <motion.div 
-            style={styles.amygdalaButtons}
-            initial={{ y: 20, opacity: 0 }}
-            animate={{ y: 0, opacity: 1 }}
-            transition={{ delay: 0.4 }}
-          >
-            <button 
-              style={styles.amygdalaButtonSecondary} 
-              onClick={() => {
-                if (navigator.vibrate) navigator.vibrate(30);
-                setPhase('inhale');
-                setCountdown(inhale);
-                setCycle(0);
-              }}
-            >
-              Again
-            </button>
-            <button 
-              style={styles.amygdalaButtonPrimary} 
-              onClick={() => {
-                if (navigator.vibrate) navigator.vibrate([100, 50, 100]);
-                onComplete();
-              }}
-            >
-              Done
-            </button>
-          </motion.div>
-        </motion.div>
-      </motion.div>
-    );
-  }
-
-  if (isFiveFourThreeTwoOne) {
-    const currentStage = sensoryStages[sensoryStage];
-    const elapsedTime = sensoryStages.slice(0, sensoryStage).reduce((acc, s) => acc + s.duration, 0) + (currentStage.duration - countdown);
-    const remainingTime = 120 - elapsedTime;
-    const minutes = Math.floor(remainingTime / 60);
-    const seconds = remainingTime % 60;
-    const timeString = `${minutes}:${seconds.toString().padStart(2, '0')}`;
-    
-    const stageProgress = (elapsedTime / 120) * 100;
-
-    return (
-      <div style={styles.breathingContainer}>
-        <h2 style={styles.fiveFourTitle}>2 minutes</h2>
-        <p style={styles.fiveFourMessage}>{config.message}</p>
-        
-        <div style={styles.fiveFourTimer}>{timeString}</div>
-        
-        <div style={styles.fiveFourProgressBar}>
-          <div style={{...styles.fiveFourProgressFill, width: `${stageProgress}%`}} />
-        </div>
-        
-        <div style={styles.fiveFourIconsContainer}>
-          {sensoryStages.map((stage, index) => (
-            <div 
-              key={stage.phase}
-              style={{
-                ...styles.fiveFourIcon,
-                opacity: index === sensoryStage ? 1 : index < sensoryStage ? 0.3 : 0.1,
-                transform: index === sensoryStage ? 'scale(1.2)' : 'scale(1)',
-                transition: 'opacity 0.5s, transform 0.3s',
-              }}
-            >
-              <span style={styles.fiveFourIconEmoji}>{stage.icon}</span>
-              <span style={styles.fiveFourIconLabel}>
-                {index < sensoryStage ? '✓' : stage.countLabel}
-              </span>
-            </div>
-          ))}
-        </div>
-        
-        <div style={styles.fiveFourInstructionContainer}>
-          <p style={styles.fiveFourInstruction}>
-            {currentStage.label}
-          </p>
-          <p style={styles.fiveFourCountdown}>{countdown}</p>
-        </div>
-
-        <div style={styles.amygdalaButtons}>
-          <button style={styles.amygdalaButtonSecondary} onClick={() => {
-            setSensoryStage(0);
-            setCountdown(sensoryStages[0].duration);
-            setCycle(0);
-            setBubbles([]);
-            setPoppedBubbles(0);
-          }}>
-            Again
-          </button>
-          <button style={styles.amygdalaButtonPrimary} onClick={onComplete}>
-            Done
-          </button>
-        </div>
-      </div>
-    );
-  }
-
-  if (isRainMethod) {
-    const currentStage = rainStages[sensoryStage];
-    const elapsedTime = rainStages.slice(0, sensoryStage).reduce((acc, s) => acc + s.duration, 0) + (currentStage.duration - countdown);
-    const remainingTime = 300 - elapsedTime;
-    const minutes = Math.floor(remainingTime / 60);
-    const seconds = remainingTime % 60;
-    const timeString = `${minutes}:${seconds.toString().padStart(2, '0')}`;
-    const stageProgress = (elapsedTime / 300) * 100;
-
-    const popBubble = (id: number) => {
-      setBubbles(prev => prev.filter(b => b.id !== id));
-      setPoppedBubbles(prev => prev + 1);
-      if (navigator.vibrate) navigator.vibrate(30);
-    };
-
-    return (
-      <div style={styles.rainContainer}>
-        <h2 style={styles.rainTitle}>5 minutes</h2>
-        <p style={styles.rainMessage}>{config.message}</p>
-        
-        <div style={styles.rainTimer}>{timeString}</div>
-        
-        <div style={styles.rainProgressBar}>
-          <div style={{...styles.rainProgressFill, width: `${stageProgress}%`}} />
-        </div>
-        
-        <div style={styles.rainStageLabel}>
-          {currentStage.label} · Phase {sensoryStage + 1} of {rainStages.length}
-        </div>
-        
-        <div style={styles.rainBubblesContainer}>
-          {bubbles.map(bubble => (
-            <div
-              key={bubble.id}
-              onClick={() => popBubble(bubble.id)}
-              style={{
-                ...styles.rainBubble,
-                left: `${bubble.x}%`,
-                top: `${bubble.y}%`,
-                width: bubble.size,
-                height: bubble.size,
-                background: bubble.color,
-                borderRadius: '50%',
-              }}
-            />
-          ))}
-        </div>
-        
-        <p style={styles.rainInstruction}>{currentStage.instruction}</p>
-        <p style={styles.rainCountdown}>{countdown}</p>
-
-        <div style={styles.amygdalaButtons}>
-          <button style={styles.amygdalaButtonSecondary} onClick={() => {
-            setSensoryStage(0);
-            setCountdown(rainStages[0].duration);
-            setCycle(0);
-            setBubbles([]);
-            setPoppedBubbles(0);
-            bubbleIdRef.current = 0;
-          }}>
-            Again
-          </button>
-          <button style={styles.amygdalaButtonPrimary} onClick={onComplete}>
-            Done
-          </button>
-        </div>
-      </div>
-    );
-  }
-
-  const scale = phase === 'inhale' ? 1.5 : phase === 'hold' && cycle % 2 === 0 ? 1.55 : 1;
-  const ease = phase === 'inhale' ? 'ease-out' : phase === 'exhale' ? 'ease-in' : 'linear';
-
-  const getPhaseColor = () => {
-    if (phase === 'inhale') return '#a8e6cf';
-    if (phase === 'hold') return '#84c5a4';
-    if (phase === 'exhale') return '#7fb3d5';
-    return '#95a5a6';
-  };
-
-  return (
-    <div style={styles.breathingContainer}>
-      <div 
-        role="status" 
-        aria-live="polite" 
-        aria-atomic="true"
-        style={{ position: 'absolute', left: -9999 }}
-        id="breath-announce"
-      >
-        {phase === 'inhale' ? `Inhale for ${countdown} seconds` : 
-         phase === 'exhale' ? `Exhale for ${countdown} seconds` : 
-         `Hold for ${countdown} seconds`}
-      </div>
-
-      <h2 style={styles.breathingTitle}>{config.label}</h2>
-      
-      <div style={styles.breathingCircleWrapper}>
-        <div 
-          style={{
-            ...styles.breathingCircle,
-            transform: `scale(${scale})`,
-            background: `radial-gradient(circle, ${getPhaseColor()}, ${getPhaseColor()}88)`,
-            boxShadow: phase === 'hold' && cycle % 2 === 0 
-              ? '0 0 60px rgba(168, 230, 207, 0.7)' 
-              : '0 0 40px rgba(168, 230, 207, 0.5)',
-            transition: `transform ${countdown}s ${ease}, background 0.5s, box-shadow 0.5s`,
-          }}
-          aria-label={`Breathing guide: ${phase}`}
-        >
-          <span style={styles.breathingPhaseText}>
-            {phase === 'inhale' ? 'In' : phase === 'exhale' ? 'Out' : phase === 'hold' ? 'Hold' : 'Rest'}
-          </span>
-          <span style={styles.breathingCount}>{countdown}</span>
-        </div>
-      </div>
-
-      <p style={styles.breathingCycleText}>
-        Cycle {Math.min(cycle + 1, totalCycles)} of {totalCycles}
-      </p>
-
-      <button style={styles.skipBreathingButton} onClick={onComplete}>
-        Skip to conversation
-      </button>
-    </div>
-  );
+  // Map existing energy selections to session keys
+  if (energy === '10s-reset') return '10s-reset';
+  if (energy === '10s-anchor') return '10s-anchor';
+  if (energy === '10s-hum') return '10s-hum';
+  if (energy === '2min') return '2min-grounding'; // Default to grounding
+  if (energy === '5min') return '5min-rain'; // Default to RAIN method
+  
+  // Check if it's already a valid session key
+  if (MASTER_SESSIONS[energy]) return energy;
+  
+  return null;
 }
+
+// BreathingExercise has been replaced by SessionEngine
+// The entire function was removed in favor of unified SessionEngine component
 
 export default function App() {
   const [view, setView] = useState<AppView>('loading');
@@ -638,6 +115,23 @@ export default function App() {
   useEffect(() => {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
   }, [conversationHistory]);
+
+  // ============================================
+  // TESTING ONLY: Close device selector on outside click
+  // TODO: Remove this useEffect before production
+  // ============================================
+  useEffect(() => {
+    if (!deviceSelectorOpen) return;
+    const handleClickOutside = (event: MouseEvent) => {
+      const target = event.target as HTMLElement;
+      if (!target.closest('[data-device-selector]')) {
+        setDeviceSelectorOpen(false);
+      }
+    };
+    document.addEventListener('mousedown', handleClickOutside);
+    return () => document.removeEventListener('mousedown', handleClickOutside);
+  }, [deviceSelectorOpen]);
+  // ============================================
 
   const toggleTheme = () => {
     const newDark = !isDarkMode;
@@ -989,14 +483,139 @@ export default function App() {
     );
   };
 
+  const [headerHover, setHeaderHover] = useState<'theme' | 'settings' | 'device' | null>(null);
+  
+  // ============================================
+  // TESTING ONLY: Device Selector
+  // TODO: Remove this section before production
+  // ============================================
+  const [deviceSelectorOpen, setDeviceSelectorOpen] = useState(false);
+  const [selectedDevice, setSelectedDevice] = useState<'current' | 'mobile' | 'tablet'>('current');
+  // ============================================
+
+  const renderHeader = () => {
+    if (view === 'loading' || view === 'terms') return null;
+    return (
+      <header style={styles.appHeader}>
+        <div style={styles.headerLeft}>
+          <img src="/ac-minds-logo.png" alt="AC Minds" style={styles.headerLogo} />
+          <h1 style={styles.headerTitle}>Grounded</h1>
+        </div>
+        <div style={styles.headerRight}>
+          {/* ============================================
+              TESTING ONLY: Device Selector
+              TODO: Remove this entire block before production
+              ============================================ */}
+          <div style={{ position: 'relative' as const }} data-device-selector>
+            <button 
+              style={{
+                ...styles.headerIconButton,
+                ...styles.deviceSelectorButton, // Hidden, only developer knows where to click
+                ...(headerHover === 'device' ? styles.headerIconButtonHover : {}),
+              }}
+              onClick={() => setDeviceSelectorOpen(!deviceSelectorOpen)} 
+              onMouseEnter={() => setHeaderHover('device')}
+              onMouseLeave={() => setHeaderHover(null)}
+              aria-label="Device selector (testing only)"
+              title="Device selector (testing only)"
+            >
+              <span style={styles.headerIcon}>📱</span>
+            </button>
+            {deviceSelectorOpen && (
+              <div style={styles.deviceSelectorDropdown} data-device-selector>
+                <div style={styles.deviceSelectorHeader}>
+                  <span style={styles.deviceSelectorTitle}>Device</span>
+                  <span style={styles.deviceSelectorIcon}>🖥️📱</span>
+                </div>
+                <button
+                  style={{
+                    ...styles.deviceSelectorOption,
+                    ...(selectedDevice === 'current' ? styles.deviceSelectorOptionActive : {}),
+                  }}
+                  onClick={() => {
+                    setSelectedDevice('current');
+                    document.body.style.width = '';
+                    document.body.style.maxWidth = '';
+                    setDeviceSelectorOpen(false);
+                  }}
+                >
+                  <span style={styles.deviceSelectorOptionIcon}>🖥️📱</span>
+                  <span>Current screen size</span>
+                </button>
+                <button
+                  style={{
+                    ...styles.deviceSelectorOption,
+                    ...(selectedDevice === 'mobile' ? styles.deviceSelectorOptionActive : {}),
+                  }}
+                  onClick={() => {
+                    setSelectedDevice('mobile');
+                    document.body.style.width = '375px';
+                    document.body.style.maxWidth = '375px';
+                    document.body.style.margin = '0 auto';
+                    setDeviceSelectorOpen(false);
+                  }}
+                >
+                  <span style={styles.deviceSelectorOptionIcon}>📱</span>
+                  <span>Mobile</span>
+                </button>
+                <button
+                  style={{
+                    ...styles.deviceSelectorOption,
+                    ...(selectedDevice === 'tablet' ? styles.deviceSelectorOptionActive : {}),
+                  }}
+                  onClick={() => {
+                    setSelectedDevice('tablet');
+                    document.body.style.width = '768px';
+                    document.body.style.maxWidth = '768px';
+                    document.body.style.margin = '0 auto';
+                    setDeviceSelectorOpen(false);
+                  }}
+                >
+                  <span style={styles.deviceSelectorOptionIcon}>📱</span>
+                  <span>Tablet</span>
+                </button>
+              </div>
+            )}
+          </div>
+          {/* ============================================
+              END TESTING ONLY: Device Selector
+              ============================================ */}
+          <button 
+            style={{
+              ...styles.headerIconButton,
+              ...(headerHover === 'theme' ? styles.headerIconButtonHover : {}),
+            }}
+            onClick={toggleTheme} 
+            onMouseEnter={() => setHeaderHover('theme')}
+            onMouseLeave={() => setHeaderHover(null)}
+            aria-label={isDarkMode ? 'Switch to light mode' : 'Switch to dark mode'}
+          >
+            <span style={styles.headerIcon}>{isDarkMode ? '☀️' : '🌙'}</span>
+          </button>
+          <button 
+            style={{
+              ...styles.headerIconButton,
+              ...(headerHover === 'settings' ? styles.headerIconButtonHover : {}),
+            }}
+            onClick={() => setView('settings')}
+            onMouseEnter={() => setHeaderHover('settings')}
+            onMouseLeave={() => setHeaderHover(null)}
+            aria-label="Settings"
+          >
+            <span style={styles.headerIcon}>⚙️</span>
+          </button>
+        </div>
+      </header>
+    );
+  };
+
   const renderBottomNav = () => {
-    if (view === 'loading') return null;
+    if (view === 'loading' || view === 'terms') return null;
     const navItems = [
       { view: 'welcome', icon: '🏠', label: 'Home' },
       { view: 'help', icon: '❓', label: 'Help' },
       { view: 'sessions', icon: '📚', label: 'History' },
       { view: 'crisis-resources', icon: '🚨', label: 'Crisis' },
-      { view: 'settings', icon: '⚙️', label: 'Settings' },
     ];
     return (
       <nav style={styles.bottomNav}>
@@ -1010,10 +629,62 @@ export default function App() {
             <span style={styles.bottomNavLabel}>{item.label}</span>
           </button>
         ))}
-        <button style={styles.themeNavButton} onClick={toggleTheme} aria-label={isDarkMode ? 'Switch to light mode' : 'Switch to dark mode'}>
-          <span style={styles.themeNavIcon}>{isDarkMode ? '☀️' : '🌙'}</span>
-        </button>
       </nav>
+    );
+  };
+
+  const renderFooterInput = () => {
+    // Only show footer input on welcome and conversation views
+    if (view !== 'welcome' && view !== 'conversation') return null;
+    
+    if (view === 'conversation') {
+      return (
+        <div style={styles.footerInputContainer}>
+          <input
+            type="text"
+            style={styles.footerInput}
+            placeholder="Type your response..."
+            value={userInput}
+            onChange={(e: any) => setUserInput(e.target.value)}
+            onKeyDown={handleKeyPress}
+            disabled={aiLoading}
+          />
+          <button 
+            style={styles.footerSendButton} 
+            onClick={() => handleSendMessage()} 
+            disabled={aiLoading || !userInput.trim()}
+          >
+            →
+          </button>
+        </div>
+      );
+    }
+    
+    // Welcome view footer input
+    return (
+      <div style={styles.footerInputContainer}>
+        <textarea
+          ref={textareaRef}
+          style={styles.footerTextarea}
+          placeholder="Share your thoughts..."
+          value={pendingUserInput}
+          rows={inputRows}
+          onChange={(e: any) => {
+            const value = e.target.value;
+            setPendingUserInput(value);
+            const lines = value.split('\n').length;
+            setInputRows(Math.min(Math.max(lines, 1), 4));
+          }}
+        />
+        <button 
+          style={{...styles.footerSendButton, opacity: pendingUserInput.trim() ? 1 : 0.5}} 
+          onClick={handleWelcomeInput}
+          disabled={!pendingUserInput.trim()}
+          aria-label="Submit what's on your mind"
+        >
+          →
+        </button>
+      </div>
     );
   };
 
@@ -1202,41 +873,25 @@ export default function App() {
         }}
       />
 
-      <p style={styles.welcomeInputLabel}>Or share what's on your mind:</p>
-      <div style={styles.welcomeInputContainer}>
-        <textarea
-          ref={textareaRef}
-          style={{...styles.welcomeInput, height: 'auto', minHeight: '48px', resize: 'none'}}
-          placeholder="Type here..."
-          value={pendingUserInput}
-          rows={inputRows}
-          onChange={(e: any) => {
-            const value = e.target.value;
-            setPendingUserInput(value);
-            const lines = value.split('\n').length;
-            setInputRows(Math.min(Math.max(lines, 1), 4));
-          }}
-        />
-        <button 
-          style={{...styles.welcomeSendButton, opacity: pendingUserInput.trim() ? 1 : 0.5}} 
-          onClick={handleWelcomeInput}
-          disabled={!pendingUserInput.trim()}
-          aria-label="Submit what's on your mind"
-        >
-          →
-        </button>
-      </div>
       {moments > 0 && <p style={styles.momentsCount}>{moments} moments</p>}
     </div>
   );
 
-  const renderBreathing = () => (
-    <div style={styles.breathingWrapper}>
-      {selectedEnergy && (
-        <BreathingExercise energy={selectedEnergy} onComplete={handleBreathingComplete} />
-      )}
-    </div>
-  );
+  const renderBreathing = () => {
+    const sessionKey = getSessionKeyFromEnergy(selectedEnergy);
+    if (!sessionKey) {
+      return (
+        <div style={styles.breathingWrapper}>
+          <p>Please select an exercise to begin.</p>
+        </div>
+      );
+    }
+    return (
+      <div style={styles.breathingWrapper}>
+        <SessionEngine sessionKey={sessionKey} onComplete={handleBreathingComplete} />
+      </div>
+    );
+  };
 
   const renderConversation = () => {
     const nodeData = conversationState ? getConversationNode(conversationState.node) : null;
@@ -1290,20 +945,6 @@ export default function App() {
             ))}
           </div>
         )}
-        <div style={styles.inputContainer}>
-          <input
-            type="text"
-            style={styles.input}
-            placeholder="Type your response..."
-            value={userInput}
-            onChange={(e: any) => setUserInput(e.target.value)}
-            onKeyDown={handleKeyPress}
-            disabled={aiLoading}
-          />
-          <button style={styles.sendButton} onClick={() => handleSendMessage()} disabled={aiLoading || !userInput.trim()}>
-            →
-          </button>
-        </div>
       </div>
     );
   };
@@ -1320,6 +961,7 @@ export default function App() {
 
     return (
       <div style={styles.app}>
+        {renderHeader()}
         {!isWebGPUSupported && renderUnsupportedBrowser()}
         {view === 'loading' && renderLoading()}
         {view === 'terms' && renderTerms()}
@@ -1332,6 +974,7 @@ export default function App() {
         {view === 'help' && renderHelp()}
         {view === 'sessions' && renderSessions()}
         {view === 'complete' && renderComplete()}
+        {renderFooterInput()}
         {renderBottomNav()}
         {renderThemeToggle()}
       </div>
@@ -1339,6 +982,182 @@ export default function App() {
 }
 
 const styles: Record<string, React.CSSProperties> = {
+  appHeader: {
+    position: 'fixed' as const,
+    top: 0,
+    left: 0,
+    right: 0,
+    height: '60px',
+    backgroundColor: 'var(--bg-card, #ffffff)',
+    borderBottom: '1px solid var(--border, rgba(0,0,0,0.1))',
+    display: 'flex',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    padding: '0 16px',
+    zIndex: 1000,
+    boxShadow: '0 2px 4px rgba(0,0,0,0.05)',
+  },
+  headerLeft: {
+    display: 'flex',
+    alignItems: 'center',
+    gap: '12px',
+  },
+  headerLogo: {
+    width: '40px',
+    height: '40px',
+    borderRadius: '8px',
+    objectFit: 'contain',
+  },
+  headerTitle: {
+    fontSize: '20px',
+    fontWeight: '700',
+    color: 'var(--text-primary, #1b3448)',
+    margin: 0,
+  },
+  headerRight: {
+    display: 'flex',
+    alignItems: 'center',
+    gap: '8px',
+  },
+  headerIconButton: {
+    width: '40px',
+    height: '40px',
+    borderRadius: '8px',
+    backgroundColor: 'transparent',
+    border: 'none',
+    cursor: 'pointer',
+    display: 'flex',
+    alignItems: 'center',
+    justifyContent: 'center',
+    padding: 0,
+    transition: 'background-color 0.2s ease',
+  },
+  headerIconButtonHover: {
+    backgroundColor: 'var(--bg-secondary, #f8f7f4)',
+  },
+  headerIcon: {
+    fontSize: '20px',
+  },
+  // ============================================
+  // TESTING ONLY: Device Selector Styles
+  // TODO: Remove this entire section before production
+  // ============================================
+  deviceSelectorButton: {
+    width: '32px', // Smaller than other buttons - hidden in plain sight
+    height: '32px',
+    opacity: 0.3, // Very subtle
+    fontSize: '14px', // Smaller icon
+  },
+  deviceSelectorDropdown: {
+    position: 'absolute' as const,
+    top: 'calc(100% + 8px)',
+    right: 0,
+    backgroundColor: 'var(--bg-card, #ffffff)',
+    border: '1px solid var(--border, rgba(0,0,0,0.1))',
+    borderRadius: '12px',
+    boxShadow: '0 4px 12px rgba(0,0,0,0.15)',
+    minWidth: '200px',
+    zIndex: 1000,
+    overflow: 'hidden',
+  },
+  deviceSelectorHeader: {
+    display: 'flex',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    padding: '12px 16px',
+    borderBottom: '1px solid var(--border, rgba(0,0,0,0.1))',
+    backgroundColor: 'var(--bg-secondary, #f8f7f4)',
+  },
+  deviceSelectorTitle: {
+    fontSize: '14px',
+    fontWeight: '600',
+    color: 'var(--text-primary, #1b3448)',
+  },
+  deviceSelectorIcon: {
+    fontSize: '16px',
+  },
+  deviceSelectorOption: {
+    display: 'flex',
+    alignItems: 'center',
+    gap: '12px',
+    width: '100%',
+    padding: '12px 16px',
+    border: 'none',
+    backgroundColor: 'transparent',
+    cursor: 'pointer',
+    textAlign: 'left' as const,
+    fontSize: '14px',
+    color: 'var(--text-primary, #1b3448)',
+    transition: 'background-color 0.2s ease',
+  },
+  deviceSelectorOptionActive: {
+    backgroundColor: 'var(--bg-secondary, #f8f7f4)',
+    fontWeight: '500',
+  },
+  deviceSelectorOptionIcon: {
+    fontSize: '18px',
+  },
+  // ============================================
+  // END TESTING ONLY: Device Selector Styles
+  // ============================================
+  footerInputContainer: {
+    position: 'fixed' as const,
+    bottom: `calc(60px + env(safe-area-inset-bottom))`,
+    left: 0,
+    right: 0,
+    padding: '12px 16px',
+    paddingBottom: `calc(12px + env(safe-area-inset-bottom))`,
+    backgroundColor: 'var(--bg-card, #ffffff)',
+    borderTop: '1px solid var(--border, rgba(0,0,0,0.1))',
+    display: 'flex',
+    gap: '8px',
+    alignItems: 'flex-end',
+    zIndex: 999,
+    boxShadow: '0 -2px 8px rgba(0,0,0,0.05)',
+  },
+  footerInput: {
+    flex: 1,
+    padding: '12px 16px',
+    fontSize: '15px',
+    border: '1px solid var(--border-color, #e0e0e0)',
+    borderRadius: '24px',
+    outline: 'none',
+    backgroundColor: 'var(--bg-secondary, #f8f7f4)',
+    color: 'var(--text-primary, #1a1a1a)',
+    fontFamily: 'inherit',
+    maxHeight: '120px',
+  },
+  footerTextarea: {
+    flex: 1,
+    padding: '12px 16px',
+    fontSize: '15px',
+    border: '1px solid var(--border-color, #e0e0e0)',
+    borderRadius: '24px',
+    outline: 'none',
+    backgroundColor: 'var(--bg-secondary, #f8f7f4)',
+    color: 'var(--text-primary, #1a1a1a)',
+    fontFamily: 'inherit',
+    resize: 'none' as const,
+    minHeight: '48px',
+    maxHeight: '120px',
+    lineHeight: '1.5',
+  },
+  footerSendButton: {
+    width: '44px',
+    height: '44px',
+    borderRadius: '50%',
+    backgroundColor: 'var(--primary-color, #02295b)',
+    color: 'white',
+    border: 'none',
+    cursor: 'pointer',
+    display: 'flex',
+    alignItems: 'center',
+    justifyContent: 'center',
+    fontSize: '20px',
+    fontWeight: '600',
+    flexShrink: 0,
+    transition: 'opacity 0.2s ease, transform 0.2s ease',
+  },
   app: {
     minHeight: '100vh',
     width: '100%',
@@ -1346,7 +1165,8 @@ const styles: Record<string, React.CSSProperties> = {
     color: 'var(--text-primary, #1b3448)',
     fontFamily: '-apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif',
     position: 'relative',
-    paddingBottom: '80px',
+    paddingTop: '60px',
+    paddingBottom: '140px', // Space for bottom nav + footer input
   },
   container: {
     flex: 1,
@@ -1670,7 +1490,7 @@ const styles: Record<string, React.CSSProperties> = {
   },
    welcomeContainer: {
      padding: '12px',
-     paddingBottom: '100px',
+     paddingBottom: '20px',
      maxWidth: '500px',
      margin: '0 auto',
    },
@@ -1682,17 +1502,10 @@ const styles: Record<string, React.CSSProperties> = {
      marginTop: '8px',
    },
    logoImage: {
-     width: '60px',
-     height: '60px',
-     borderRadius: '12px',
-     marginBottom: '8px',
-     objectFit: 'contain',
+     display: 'none', // Logo now in header
    },
    welcomeTitle: {
-     fontSize: '24px',
-     fontWeight: '700',
-     marginBottom: '4px',
-     textAlign: 'center',
+     display: 'none', // Title now in header
    },
     welcomeSubtitle: {
      fontSize: '14px',
@@ -1865,8 +1678,9 @@ const styles: Record<string, React.CSSProperties> = {
     flex: 1,
     display: 'flex',
     flexDirection: 'column',
-    height: 'calc(100vh - 80px)',
-    maxHeight: 'calc(100vh - 80px)',
+    height: 'calc(100vh - 200px)', // Account for header (60px) + footer input (80px) + bottom nav (60px)
+    maxHeight: 'calc(100vh - 200px)',
+    overflow: 'hidden',
   },
   conversationHeader: {
     display: 'flex',
@@ -1904,11 +1718,12 @@ const styles: Record<string, React.CSSProperties> = {
   },
   messagesContainer: {
     flex: 1,
-    overflow: 'auto',
+    overflowY: 'auto' as const,
     padding: '16px 20px',
     scrollBehavior: 'smooth',
     display: 'flex',
-    flexDirection: 'column',
+    flexDirection: 'column' as const,
+    gap: '12px',
   },
   messageBubble: {
     maxWidth: '85%',
@@ -1990,7 +1805,7 @@ const styles: Record<string, React.CSSProperties> = {
     transform: 'translateX(-50%)',
     width: '100%',
     maxWidth: '500px',
-    backgroundColor: 'var(--bg-card, rgba(255,255,255,0.95))',
+    backgroundColor: 'transparent',
     backdropFilter: 'blur(10px)',
     display: 'flex',
     justifyContent: 'space-evenly',

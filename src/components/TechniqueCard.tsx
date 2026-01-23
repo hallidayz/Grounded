@@ -117,9 +117,8 @@ const TechniqueCard: React.FC<TechniqueCardProps> = ({
             selectedTechnique={selectedTechnique}
             onTechniqueSelect={(techniqueId) => {
               handleTechniqueSelect(techniqueId);
-              const duration = getTechniqueDuration(energyLevel);
               const techniqueName = getTechniqueName(energyLevel, techniqueId);
-              logTechniqueSelection(energyLevel, techniqueId, techniqueName, duration).catch(console.error);
+              logTechniqueSelection(energyLevel, techniqueId, techniqueName).catch(console.error);
             }}
             onComplete={onComplete}
           />
@@ -129,9 +128,8 @@ const TechniqueCard: React.FC<TechniqueCardProps> = ({
             selectedTechnique={selectedTechnique}
             onTechniqueSelect={(techniqueId) => {
               handleTechniqueSelect(techniqueId);
-              const duration = getTechniqueDuration(energyLevel);
               const techniqueName = getTechniqueName(energyLevel, techniqueId);
-              logTechniqueSelection(energyLevel, techniqueId, techniqueName, duration).catch(console.error);
+              logTechniqueSelection(energyLevel, techniqueId, techniqueName).catch(console.error);
             }}
             onComplete={onComplete}
           />
@@ -141,9 +139,8 @@ const TechniqueCard: React.FC<TechniqueCardProps> = ({
             selectedTechnique={selectedTechnique}
             onTechniqueSelect={(techniqueId) => {
               handleTechniqueSelect(techniqueId);
-              const duration = getTechniqueDuration(energyLevel);
               const techniqueName = getTechniqueName(energyLevel, techniqueId);
-              logTechniqueSelection(energyLevel, techniqueId, techniqueName, duration).catch(console.error);
+              logTechniqueSelection(energyLevel, techniqueId, techniqueName).catch(console.error);
             }}
             onComplete={onComplete}
           />

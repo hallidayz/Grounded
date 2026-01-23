@@ -40,7 +40,7 @@ html.dark {
 }
 
 html, body, #root {
-  height: 100%;
+  height: 100svh;
   margin: 0;
   padding: 0;
 }
@@ -73,6 +73,10 @@ button {
 
 input, textarea {
   font-family: inherit;
+  font-size: 16px !important;
+  -webkit-text-size-adjust: 100%;
+  -moz-text-size-adjust: 100%;
+  text-size-adjust: 100%;
 }
 
 h1, h2, h3, h4, h5, h6 {
@@ -86,4 +90,114 @@ p {
 
 .safe-area-inset-bottom {
   padding-bottom: max(12px, env(safe-area-inset-bottom));
+}
+
+/* App Stage - Safe area container */
+.app-stage {
+  padding: env(safe-area-inset-top) 20px env(safe-area-inset-bottom) 20px;
+  min-height: 100svh;
+}
+
+/* Viewport Ranges - Mobile-first responsive design */
+/* Mobile Base (320px - 767px) - Base styles apply here */
+html {
+  font-size: 16px; /* Base: 1rem = 16px on mobile */
+}
+
+/* Tablet Range (768px - 1023px) */
+@media (min-width: 768px) and (max-width: 1023px) {
+  html {
+    font-size: 18px; /* Tablet: 1rem = 18px */
+  }
+  .app-stage {
+    padding: env(safe-area-inset-top) 24px env(safe-area-inset-bottom) 24px;
+  }
+}
+
+/* Desktop Range (1024px+) */
+@media (min-width: 1024px) {
+  html {
+    font-size: 20px; /* Desktop: 1rem = 20px */
+  }
+  .app-stage {
+    padding: env(safe-area-inset-top) 32px env(safe-area-inset-bottom) 32px;
+    max-width: 1200px;
+    margin: 0 auto;
+  }
+}
+
+/* Large Desktop (1440px+) */
+@media (min-width: 1440px) {
+  .app-stage {
+    max-width: 1400px;
+  }
+}
+
+/* Typography - Tabular numbers for timers */
+.timer-text,
+.countdown-text,
+[class*="countdown"],
+[class*="timer"] {
+  font-variant-numeric: tabular-nums;
+}
+
+.timer-text {
+  font-size: clamp(2rem, 5vw, 3rem);
+  font-variant-numeric: tabular-nums;
+}
+
+/* Container Queries - Component-level responsiveness */
+.technique-container {
+  container-type: inline-size;
+}
+
+@container (min-width: 400px) {
+  .technique-content {
+    /* Adjust layout for wider containers */
+    padding: 1.5rem;
+  }
+}
+
+/* Performance Optimizations */
+.breathing-circle,
+[class*="breathing"],
+[class*="animate"] {
+  will-change: transform, opacity;
+}
+
+.technique-container,
+.session-container {
+  contain: layout style paint;
+}
+
+/* Reduced Motion */
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+  }
+}
+
+/* Thumb Zone - Primary buttons in bottom 30% */
+.thumb-zone {
+  position: fixed;
+  bottom: calc(30svh + env(safe-area-inset-bottom));
+  left: 0;
+  right: 0;
+  padding: 0 20px;
+  z-index: 100;
+}
+
+/* Navigation & Footer Input Styles */
+.bottomNav {
+  background-color: transparent;
+  backdrop-filter: blur(10px);
+}
+
+.footerInputContainer {
+  z-index: 999;
+  bottom: calc(60px + env(safe-area-inset-bottom));
 }

@@ -1,7 +1,15 @@
 import React, { useState } from 'react';
 import { motion } from 'framer-motion';
+import type { TechniqueComponentProps } from '../../types/sessions';
 
-const RealityCheckTechnique: React.FC = () => {
+const RealityCheckTechnique: React.FC<TechniqueComponentProps> = ({
+  currentPhase,
+  countdown,
+  phaseIndex,
+  sessionConfig,
+}) => {
+  // This component manages its own state for user input
+  // Props are optional - can work standalone or with SessionEngine
   const [thought, setThought] = useState('');
   const [evidenceFor, setEvidenceFor] = useState<string[]>([]);
   const [evidenceAgainst, setEvidenceAgainst] = useState<string[]>([]);

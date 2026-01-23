@@ -1,29 +1,50 @@
 import React, { useState, useEffect } from 'react';
 import { motion } from 'framer-motion';
+import type { TechniqueComponentProps } from '../../types/sessions';
 
-const WeightDropTechnique: React.FC = () => {
-  const [phase, setPhase] = useState<'squeeze' | 'release'>('squeeze');
-  const [countdown, setCountdown] = useState(3);
+const WeightDropTechnique: React.FC<TechniqueComponentProps> = ({
+  currentPhase,
+  countdown,
+  phaseIndex,
+  sessionConfig,
+}) => {
+  // Support both SessionEngine (with props) and standalone usage (without props)
+  const [localPhase, setLocalPhase] = useState<'squeeze' | 'release'>('squeeze');
+  const [localCountdown, setLocalCountdown] = useState(3);
 
+  // If props are provided, use them (SessionEngine mode)
+  const phase = currentPhase 
+    ? (currentPhase.label.toLowerCase().includes('squeeze') ? 'squeeze' : 'release')
+    : localPhase;
+  
+  const displayCountdown = countdown !== undefined ? countdown : localCountdown;
+  const getInstruction = () => {
+    if (currentPhase?.prompt) return currentPhase.prompt;
+    return phase === 'squeeze' 
+      ? 'Squeeze your shoulders to your ears. Clench your fists.'
+      : 'Drop the weight. Let your shoulders fall.';
+  };
+  const instruction = getInstruction();
+
+  // Standalone mode: manage own timer
   useEffect(() => {
-    // 0-3s: Squeeze
-    // 3-10s: Release
-    const timer = setInterval(() => {
-      setCountdown((prev) => {
-        if (prev <= 0) {
-          if (phase === 'squeeze') {
-            setPhase('release');
-            return 7; // Release for 7 seconds
-          } else {
-            return 0; // Complete
+    if (countdown === undefined) {
+      const timer = setInterval(() => {
+        setLocalCountdown((prev) => {
+          if (prev <= 0) {
+            if (localPhase === 'squeeze') {
+              setLocalPhase('release');
+              return 7;
+            } else {
+              return 0;
+            }
           }
-        }
-        return prev - 1;
-      });
-    }, 1000);
-
-    return () => clearInterval(timer);
-  }, [phase]);
+          return prev - 1;
+        });
+      }, 1000);
+      return () => clearInterval(timer);
+    }
+  }, [countdown, localPhase]);
 
   return (
     <div style={styles.container}>
@@ -43,14 +64,14 @@ const WeightDropTechnique: React.FC = () => {
       <div style={styles.instructions}>
         {phase === 'squeeze' && (
           <>
-            <p style={styles.instruction}>Squeeze your shoulders to your ears. Clench your fists.</p>
-            <p style={styles.countdown}>{countdown}</p>
+            <p style={styles.instruction}>{instruction}</p>
+            <p style={styles.countdown}>{displayCountdown}</p>
           </>
         )}
         {phase === 'release' && (
           <>
-            <p style={styles.instruction}>Drop the weight. Let your shoulders fall.</p>
-            <p style={styles.countdown}>{countdown}</p>
+            <p style={styles.instruction}>{instruction}</p>
+            <p style={styles.countdown}>{displayCountdown}</p>
           </>
         )}
       </div>

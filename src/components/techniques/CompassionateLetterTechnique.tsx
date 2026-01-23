@@ -1,35 +1,54 @@
 import React, { useState, useEffect } from 'react';
 import { motion } from 'framer-motion';
+import type { TechniqueComponentProps } from '../../types/sessions';
 
-const STAGES = [
-  { name: 'Grounding', duration: 60, instruction: 'Take 3 deep breaths' },
-  { name: 'Writing', duration: 180, instruction: 'Write from the perspective of a Wise, Compassionate Friend' },
-  { name: 'Read Back', duration: 60, instruction: 'Read these words back to yourself' },
-];
-
-const CompassionateLetterTechnique: React.FC = () => {
-  const [currentStage, setCurrentStage] = useState(0);
-  const [timeRemaining, setTimeRemaining] = useState(STAGES[0].duration);
+const CompassionateLetterTechnique: React.FC<TechniqueComponentProps> = ({
+  currentPhase,
+  countdown,
+  phaseIndex,
+  sessionConfig,
+}) => {
+  // Support both SessionEngine (with props) and standalone usage (without props)
+  const [localStage, setLocalStage] = useState(0);
+  const [localTimeRemaining, setLocalTimeRemaining] = useState(60);
+  
+  // If props are provided, use them (SessionEngine mode)
+  const currentStageIndex = phaseIndex !== undefined ? phaseIndex : localStage;
+  const displayCountdown = countdown !== undefined ? countdown : localTimeRemaining;
+  
+  // Get stage info from currentPhase or use defaults
+  const stageName = currentPhase?.label || (currentStageIndex === 0 ? 'Grounding' : currentStageIndex === 1 ? 'Writing' : 'Read Back');
+  const instruction = currentPhase?.prompt || (currentStageIndex === 0 
+    ? 'Take 3 deep breaths'
+    : currentStageIndex === 1
+    ? 'Write from the perspective of a Wise, Compassionate Friend'
+    : 'Read these words back to yourself');
   const [breathCount, setBreathCount] = useState(0);
   const [letterText, setLetterText] = useState('');
   const [breathPhase, setBreathPhase] = useState<'in' | 'hold' | 'out'>('in');
 
+  // Standalone mode: manage own timer
   useEffect(() => {
-    const timer = setInterval(() => {
-      setTimeRemaining((prev) => {
-        if (prev <= 1) {
-          if (currentStage < STAGES.length - 1) {
-            setCurrentStage((s) => s + 1);
-            return STAGES[s + 1].duration;
+    if (countdown === undefined) {
+      const timer = setInterval(() => {
+        setLocalTimeRemaining((prev) => {
+          if (prev <= 1) {
+            if (localStage < 2) {
+              setLocalStage((s) => s + 1);
+              return localStage === 0 ? 180 : 60;
+            }
+            return 0;
           }
-          return 0;
-        }
-        return prev - 1;
-      });
-    }, 1000);
+          return prev - 1;
+        });
+      }, 1000);
+      return () => clearInterval(timer);
+    }
+  }, [countdown, localStage]);
 
-    // Breathing animation for grounding stage
-    if (currentStage === 0) {
+  // Breathing animation for grounding stage
+  useEffect(() => {
+    if (currentStageIndex === 0) {
       const breathTimer = setInterval(() => {
         setBreathPhase((prev) => {
           if (prev === 'in') {
@@ -45,24 +64,20 @@ const CompassionateLetterTechnique: React.FC = () => {
           }
         });
       }, 6000);
-      return () => {
-        clearInterval(timer);
-        clearInterval(breathTimer);
-      };
+      return () => clearInterval(breathTimer);
     }
+  }, [currentStageIndex]);
 
-    return () => clearInterval(timer);
-  }, [currentStage]);
-
-  const stage = STAGES[currentStage];
+  const minutes = Math.floor(displayCountdown / 60);
+  const seconds = displayCountdown % 60;
 
   return (
     <div style={styles.container}>
-      <h3 style={styles.stageName}>{stage.name}</h3>
-      <p style={styles.instruction}>{stage.instruction}</p>
-      <p style={styles.timer}>{Math.floor(timeRemaining / 60)}:{(timeRemaining % 60).toString().padStart(2, '0')}</p>
+      <h3 style={styles.stageName}>{stageName}</h3>
+      <p style={styles.instruction}>{instruction}</p>
+      <p style={styles.timer}>{minutes}:{seconds.toString().padStart(2, '0')}</p>
 
-      {currentStage === 0 && (
+      {currentStageIndex === 0 && (
         <div style={styles.groundingContainer}>
           <motion.div
             style={styles.breathCircle}
@@ -84,7 +99,7 @@ const CompassionateLetterTechnique: React.FC = () => {
         </div>
       )}
 
-      {currentStage === 1 && (
+      {currentStageIndex === 1 && (
         <div style={styles.writingContainer}>
           <p style={styles.writingPrompt}>
             If a friend you loved was feeling exactly this way, what would you say to them?
@@ -100,7 +115,7 @@ const CompassionateLetterTechnique: React.FC = () => {
         </div>
       )}
 
-      {currentStage === 2 && (
+      {currentStageIndex === 2 && (
         <div style={styles.readBackContainer}>
           <div style={styles.parchment}>
             <p style={styles.letterText}>{letterText || 'Your letter will appear here...'}</p>

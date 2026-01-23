@@ -1,0 +1,94 @@
+/**
+ * Session Type Definitions
+ * 
+ * Type-safe interfaces for the unified session engine and CBT intervention library.
+ */
+
+/**
+ * Represents the distinct types of CBT/Mindfulness interventions.
+ * Used to determine which UI components to render (Breathing circle, Text area, Bubbles).
+ */
+export type SessionType = 
+  | 'breathing' 
+  | 'physical' 
+  | 'sensory' 
+  | 'cognitive-restructuring' 
+  | 'inquiry' 
+  | 'visualization' 
+  | 'writing';
+
+/**
+ * A single segment of a larger exercise.
+ */
+export interface SessionPhase {
+  id: string;
+  duration: number; // in seconds
+  label: string;    // Short title (e.g., "Recognize")
+  prompt: string;   // Deep instruction for the user
+  instruction?: string; // Short technical cue (e.g., "Inhale")
+  icon?: string;    // Optional emoji/icon for phase
+}
+
+/**
+ * The master configuration for a specific timer choice (10s, 2m, or 5m).
+ */
+export interface SessionConfig {
+  id: string;
+  label: string;
+  type: SessionType;
+  message: string;
+  phases: SessionPhase[];
+  category: '10s' | '2min' | '5min';
+  color?: string;   // Optional theme color
+  bgColor?: string; // Optional background color
+}
+
+/**
+ * The full library structure indexed by the energy/timer key.
+ */
+export interface SessionLibrary {
+  [key: string]: SessionConfig;
+}
+
+/**
+ * Internal state for the Session Engine.
+ */
+export interface SessionState {
+  currentPhaseIndex: number;
+  timeLeftInPhase: number;
+  isActive: boolean;
+  userInput?: string; // For 'writing' or 'cognitive' types
+  startedAt?: number; // Timestamp for tracking
+}
+
+/**
+ * Props for the SessionEngine component.
+ */
+export interface SessionEngineProps {
+  sessionKey: string; // e.g., '10s-reset' or '5min-rain'
+  onComplete: () => void;
+}
+
+/**
+ * Props for technique components that receive session configuration.
+ * All props are optional to support both SessionEngine and standalone usage.
+ */
+export interface TechniqueComponentProps {
+  currentPhase?: SessionPhase;
+  countdown?: number;
+  phaseIndex?: number;
+  sessionConfig?: SessionConfig;
+  onPhaseComplete?: () => void;
+}
+
+/**
+ * Categories for nurture affirmations.
+ */
+export type NurtureCategory = 'shame' | 'anxiety' | 'burnout' | 'grief';
+
+/**
+ * Library of nurture affirmations by category.
+ */
+export interface AffirmationLibrary {
+  [key in NurtureCategory]: string[];
+}

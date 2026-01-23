@@ -1,5 +1,6 @@
 import React, { useState, useRef, useEffect } from 'react';
 import { motion } from 'framer-motion';
+import type { TechniqueComponentProps } from '../../types/sessions';
 
 interface Thought {
   id: string;
@@ -9,7 +10,12 @@ interface Thought {
   onLeaf: boolean;
 }
 
-const ThoughtStreamTechnique: React.FC = () => {
+const ThoughtStreamTechnique: React.FC<TechniqueComponentProps> = ({
+  currentPhase,
+  countdown,
+  phaseIndex,
+  sessionConfig,
+}) => {
   const [thoughts, setThoughts] = useState<Thought[]>([]);
   const [inputValue, setInputValue] = useState('');
   const [leaves, setLeaves] = useState<Array<{ id: string; x: number; y: number }>>([]);

@@ -1,29 +1,26 @@
 import React, { useState } from 'react';
 import { motion } from 'framer-motion';
+import type { TechniqueComponentProps } from '../../types/sessions';
 
-const STAGES = [
-  {
-    name: 'Describe Place',
-    duration: 120,
-    instruction: 'Visualize a safe place (beach, forest, library)',
-    prompt: 'What do you see?',
-  },
-  {
-    name: 'Sensory Layering',
-    duration: 120,
-    instruction: 'Add sensory details',
-    prompts: ['What is the temperature?', 'Who is there that loves you?', 'What sounds do you hear?'],
-  },
-  {
-    name: 'Anchor',
-    duration: 60,
-    instruction: 'Associate this feeling with a physical gesture',
-    prompt: 'Touch your heart and remember this feeling',
-  },
-];
-
-const SafeSpaceTechnique: React.FC = () => {
-  const [currentStage, setCurrentStage] = useState(0);
+const SafeSpaceTechnique: React.FC<TechniqueComponentProps> = ({
+  currentPhase,
+  countdown,
+  phaseIndex,
+  sessionConfig,
+}) => {
+  // Support both SessionEngine (with props) and standalone usage (without props)
+  const [localStage, setLocalStage] = useState(0);
+  
+  // If props are provided, use them (SessionEngine mode)
+  const currentStageIndex = phaseIndex !== undefined ? phaseIndex : localStage;
+  
+  // Get stage info from currentPhase or use defaults
+  const stageName = currentPhase?.label || (currentStageIndex === 0 ? 'Describe Place' : currentStageIndex === 1 ? 'Sensory Layering' : 'Anchor');
+  const instruction = currentPhase?.prompt || (currentStageIndex === 0 
+    ? 'Visualize a safe place (beach, forest, library). What do you see?'
+    : currentStageIndex === 1
+    ? 'Add sensory details. What is the temperature? Who is there that loves you? What sounds do you hear?'
+    : 'Associate this feeling with a physical gesture. Touch your heart and remember this feeling');
   const [description, setDescription] = useState('');
   const [sensoryDetails, setSensoryDetails] = useState({
     temperature: '',
@@ -33,8 +30,8 @@ const SafeSpaceTechnique: React.FC = () => {
   const [landscapeElements, setLandscapeElements] = useState<string[]>([]);
 
   const handleNext = () => {
-    if (currentStage < STAGES.length - 1) {
-      setCurrentStage((prev) => prev + 1);
+    if (currentStageIndex < 2) {
+      setLocalStage((prev) => prev + 1);
     }
   };
 
@@ -44,16 +41,24 @@ const SafeSpaceTechnique: React.FC = () => {
     }
   };
 
-  const stage = STAGES[currentStage];
+  const timerStyle: React.CSSProperties = {
+    fontSize: '2rem',
+    fontWeight: 'bold',
+    color: 'var(--primary-color, #02295b)',
+    marginBottom: '2rem',
+  };
 
   return (
     <div style={styles.container}>
-      <h3 style={styles.stageName}>{stage.name}</h3>
-      <p style={styles.instruction}>{stage.instruction}</p>
+      <h3 style={styles.stageName}>{stageName}</h3>
+      <p style={styles.instruction}>{instruction}</p>
+      {countdown !== undefined && (
+        <p style={timerStyle}>{Math.floor(countdown / 60)}:{(countdown % 60).toString().padStart(2, '0')}</p>
+      )}
 
-      {currentStage === 0 && (
+      {currentStageIndex === 0 && (
         <div style={styles.stageContent}>
-          <p style={styles.prompt}>{stage.prompt}</p>
+          <p style={styles.prompt}>What do you see?</p>
           <textarea
             value={description}
             onChange={(e) => setDescription(e.target.value)}
@@ -89,9 +94,9 @@ const SafeSpaceTechnique: React.FC = () => {
         </div>
       )}
 
-      {currentStage === 1 && (
+      {currentStageIndex === 1 && (
         <div style={styles.stageContent}>
-          {stage.prompts?.map((prompt, index) => (
+          {['What is the temperature?', 'Who is there that loves you?', 'What sounds do you hear?'].map((prompt, index) => (
             <div key={index} style={styles.sensoryQuestion}>
               <label style={styles.label}>{prompt}</label>
               <input
@@ -120,9 +125,9 @@ const SafeSpaceTechnique: React.FC = () => {
         </div>
       )}
 
-      {currentStage === 2 && (
+      {currentStageIndex === 2 && (
         <div style={styles.stageContent}>
-          <p style={styles.prompt}>{stage.prompt}</p>
+          <p style={styles.prompt}>Touch your heart and remember this feeling</p>
           <motion.div
             style={styles.heartGesture}
             animate={{
@@ -139,9 +144,11 @@ const SafeSpaceTechnique: React.FC = () => {
         </div>
       )}
 
-      <button onClick={handleNext} style={styles.nextButton} disabled={currentStage === STAGES.length - 1}>
-        {currentStage === STAGES.length - 1 ? 'Complete' : 'Next'}
-      </button>
+      {countdown === undefined && (
+        <button onClick={handleNext} style={styles.nextButton} disabled={currentStageIndex === 2}>
+          {currentStageIndex === 2 ? 'Complete' : 'Next'}
+        </button>
+      )}
     </div>
   );
 };
