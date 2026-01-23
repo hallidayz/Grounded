@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useState } from 'react';
 import type { EnergyLevel } from './EnergyCheckIn';
 import LowEnergyTechniques from './techniques/LowEnergyTechniques';
 import MediumEnergyTechniques from './techniques/MediumEnergyTechniques';
@@ -90,10 +90,21 @@ const TechniqueCard: React.FC<TechniqueCardProps> = ({
     }
   };
 
+  const [isBackHovered, setIsBackHovered] = useState(false);
+
   return (
     <div style={styles.container}>
       <div style={styles.header}>
-        <button style={styles.backButton} onClick={onBack} aria-label="Back to energy selection">
+        <button 
+          style={{
+            ...styles.backButton,
+            ...(isBackHovered ? { opacity: 1 } : {})
+          }} 
+          onClick={onBack} 
+          onMouseEnter={() => setIsBackHovered(true)}
+          onMouseLeave={() => setIsBackHovered(false)}
+          aria-label="Back to energy selection"
+        >
           ← Back
         </button>
         <h3 style={styles.cardTitle}>{getCardTitle()}</h3>
@@ -157,10 +168,14 @@ const styles: Record<string, React.CSSProperties> = {
     top: 0,
     background: 'none',
     border: 'none',
-    color: 'var(--text-secondary, #666)',
+    color: 'var(--text-primary, #1a1a1a)',
     cursor: 'pointer',
-    fontSize: '0.9rem',
-    padding: '0.25rem 0.5rem',
+    fontSize: '18px',
+    fontWeight: '500',
+    padding: '12px 16px',
+    opacity: 0.8,
+    transition: 'opacity 0.2s ease',
+    zIndex: 10,
   },
   cardTitle: {
     fontSize: '1.25rem',

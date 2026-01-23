@@ -2,22 +2,10 @@
  * Energy Check-in Tracking Service
  * 
  * Tracks all energy check-in interactions for future analytics and wellness progress visualization.
- * Uses the existing userInteractions table with type-specific metadata.
+ * Uses sessionStorage for now (can be migrated to IndexedDB later if needed).
  */
 
 type EnergyLevel = 'low' | 'medium' | 'high';
-type TrackingAction = 'energy_selection' | 'technique_selection' | 'technique_start' | 'technique_complete' | 'technique_repeat' | 'technique_done';
-
-interface EnergyTrackingData {
-  energyLevel?: EnergyLevel;
-  techniqueId?: string;
-  techniqueName?: string;
-  duration?: number; // in seconds
-  completionStatus?: 'completed' | 'skipped' | 'interrupted';
-  repeatCount?: number;
-  totalSessionDuration?: number;
-  [key: string]: any; // For additional metadata
-}
 
 // Generate a simple UUID
 function generateId(): string {
@@ -42,25 +30,33 @@ function clearSessionId(): void {
 // Get current user ID
 async function getUserId(): Promise<string> {
   try {
-    // Try to import and use getCurrentUser if available
-    const { getCurrentUser } = await import('./authService');
-    const user = await getCurrentUser();
-    return user?.id || sessionStorage.getItem('userId') || 'anonymous';
+    return sessionStorage.getItem('userId') || localStorage.getItem('userId') || 'anonymous';
   } catch {
-    return sessionStorage.getItem('userId') || 'anonymous';
+    return 'anonymous';
   }
 }
 
-// Get database adapter
-async function getAdapter() {
+// Simple storage using sessionStorage
+async function saveInteraction(data: {
+  id: string;
+  timestamp: string;
+  type: string;
+  sessionId: string;
+  userId?: string;
+  metadata: string;
+}): Promise<void> {
   try {
-    // Try to import and use getDatabaseAdapter if available
-    const { getDatabaseAdapter } = await import('./databaseAdapter');
-    return getDatabaseAdapter();
-  } catch {
-    // Fallback: return null if adapter not available
-    console.warn('[EnergyTracking] Database adapter not available');
-    return null;
+    const key = `energy_interaction_${data.id}`;
+    sessionStorage.setItem(key, JSON.stringify(data));
+    
+    // Also store in a list for retrieval
+    const listKey = 'energy_interactions_list';
+    const existing = sessionStorage.getItem(listKey);
+    const list = existing ? JSON.parse(existing) : [];
+    list.push(data.id);
+    sessionStorage.setItem(listKey, JSON.stringify(list));
+  } catch (error) {
+    console.warn('[EnergyTracking] Failed to save interaction:', error);
   }
 }
 
@@ -69,14 +65,11 @@ async function getAdapter() {
  */
 export async function logEnergySelection(energyLevel: EnergyLevel): Promise<void> {
   try {
-    const adapter = await getAdapter();
-    if (!adapter) return;
-
     const userId = await getUserId();
     const sessionId = getSessionId();
     const timestamp = new Date().toISOString();
 
-    await adapter.saveUserInteraction({
+    await saveInteraction({
       id: generateId(),
       timestamp,
       type: 'energy_checkin',
@@ -98,18 +91,14 @@ export async function logEnergySelection(energyLevel: EnergyLevel): Promise<void
 export async function logTechniqueSelection(
   energyLevel: EnergyLevel,
   techniqueId: string,
-  techniqueName: string,
-  duration: number
+  techniqueName: string
 ): Promise<void> {
   try {
-    const adapter = await getAdapter();
-    if (!adapter) return;
-
     const userId = await getUserId();
     const sessionId = getSessionId();
     const timestamp = new Date().toISOString();
 
-    await adapter.saveUserInteraction({
+    await saveInteraction({
       id: generateId(),
       timestamp,
       type: 'energy_checkin',
@@ -120,7 +109,6 @@ export async function logTechniqueSelection(
         energyLevel,
         techniqueId,
         techniqueName,
-        duration,
       }),
     });
   } catch (error) {
@@ -137,14 +125,11 @@ export async function logTechniqueStart(
   techniqueName: string
 ): Promise<void> {
   try {
-    const adapter = await getAdapter();
-    if (!adapter) return;
-
     const userId = await getUserId();
     const sessionId = getSessionId();
     const timestamp = new Date().toISOString();
 
-    await adapter.saveUserInteraction({
+    await saveInteraction({
       id: generateId(),
       timestamp,
       type: 'energy_checkin',
@@ -173,14 +158,11 @@ export async function logTechniqueComplete(
   completionStatus: 'completed' | 'skipped' | 'interrupted' = 'completed'
 ): Promise<void> {
   try {
-    const adapter = await getAdapter();
-    if (!adapter) return;
-
     const userId = await getUserId();
     const sessionId = getSessionId();
     const timestamp = new Date().toISOString();
 
-    await adapter.saveUserInteraction({
+    await saveInteraction({
       id: generateId(),
       timestamp,
       type: 'energy_checkin',
@@ -210,14 +192,11 @@ export async function logTechniqueRepeat(
   repeatCount: number
 ): Promise<void> {
   try {
-    const adapter = await getAdapter();
-    if (!adapter) return;
-
     const userId = await getUserId();
     const sessionId = getSessionId();
     const timestamp = new Date().toISOString();
 
-    await adapter.saveUserInteraction({
+    await saveInteraction({
       id: generateId(),
       timestamp,
       type: 'energy_checkin',
@@ -246,14 +225,11 @@ export async function logTechniqueDone(
   totalSessionDuration: number
 ): Promise<void> {
   try {
-    const adapter = await getAdapter();
-    if (!adapter) return;
-
     const userId = await getUserId();
     const sessionId = getSessionId();
     const timestamp = new Date().toISOString();
 
-    await adapter.saveUserInteraction({
+    await saveInteraction({
       id: generateId(),
       timestamp,
       type: 'energy_checkin',
@@ -284,14 +260,11 @@ export async function logTechniqueInteraction(
   data?: Record<string, any>
 ): Promise<void> {
   try {
-    const adapter = await getAdapter();
-    if (!adapter) return;
-
     const userId = await getUserId();
     const sessionId = getSessionId();
     const timestamp = new Date().toISOString();
 
-    await adapter.saveUserInteraction({
+    await saveInteraction({
       id: generateId(),
       timestamp,
       type: 'energy_checkin',

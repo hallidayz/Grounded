@@ -126,7 +126,9 @@ const styles: Record<string, React.CSSProperties> = {
     padding: '1rem',
     display: 'flex',
     flexDirection: 'column' as const,
-    gap: '1.5rem',
+    gap: '1rem',
+    maxHeight: 'calc(100vh - 200px)',
+    overflowY: 'auto' as const,
   },
   title: {
     fontSize: '1.5rem',
@@ -156,7 +158,7 @@ const styles: Record<string, React.CSSProperties> = {
   scaleContainer: {
     display: 'flex',
     justifyContent: 'center',
-    padding: '2rem 0',
+    padding: '1rem 0',
   },
   scale: {
     display: 'flex',
@@ -175,7 +177,7 @@ const styles: Record<string, React.CSSProperties> = {
     alignItems: 'center',
   },
   scaleCenter: {
-    fontSize: '3rem',
+    fontSize: '2.5rem',
   },
   scaleLabel: {
     fontSize: '0.9rem',
@@ -198,7 +200,9 @@ const styles: Record<string, React.CSSProperties> = {
   typeButton: {
     flex: 1,
     padding: '0.75rem',
-    border: '2px solid var(--border-color, #e0e0e0)',
+    borderWidth: '2px',
+    borderStyle: 'solid',
+    borderColor: 'var(--border-color, #e0e0e0)',
     borderRadius: '0.5rem',
     backgroundColor: 'var(--bg-card, #ffffff)',
     cursor: 'pointer',
@@ -207,6 +211,8 @@ const styles: Record<string, React.CSSProperties> = {
     transition: 'all 0.2s ease',
   },
   typeButtonActive: {
+    borderWidth: '2px',
+    borderStyle: 'solid',
     borderColor: 'var(--primary-color, #02295b)',
     backgroundColor: 'var(--primary-light, #f0f4f8)',
     color: 'var(--primary-color, #02295b)',

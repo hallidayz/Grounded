@@ -3,7 +3,6 @@ import { motion } from 'framer-motion';
 
 const CompassionateTouchTechnique: React.FC = () => {
   const [countdown, setCountdown] = useState(10);
-  const [wavePhase, setWavePhase] = useState(0);
 
   useEffect(() => {
     const timer = setInterval(() => {
@@ -16,69 +15,32 @@ const CompassionateTouchTechnique: React.FC = () => {
       });
     }, 1000);
 
-    // Wave animation
-    const waveTimer = setInterval(() => {
-      setWavePhase((prev) => (prev + 1) % 100);
-    }, 100);
-
-    return () => {
-      clearInterval(timer);
-      clearInterval(waveTimer);
-    };
+    return () => clearInterval(timer);
   }, []);
 
   return (
     <div style={styles.container}>
-      <div style={styles.palmsContainer}>
-        <motion.div
-          style={styles.palm}
-          animate={{
-            scale: [1, 1.1, 1],
-            opacity: [0.7, 1, 0.7],
-          }}
-          transition={{
-            duration: 2,
-            repeat: Infinity,
-            ease: 'easeInOut',
-          }}
-        >
-          <span style={styles.palmIcon}>🤲</span>
-        </motion.div>
-        <motion.div
-          style={styles.palm}
-          animate={{
-            scale: [1, 1.1, 1],
-            opacity: [0.7, 1, 0.7],
-          }}
-          transition={{
-            duration: 2,
-            repeat: Infinity,
-            ease: 'easeInOut',
-            delay: 1,
-          }}
-        >
-          <span style={styles.palmIcon}>🤲</span>
-        </motion.div>
-      </div>
-      
-      <div style={styles.waveContainer}>
-        <motion.div
-          style={styles.wave}
-          animate={{
-            x: [0, 20, 0],
-            opacity: [0.3, 0.7, 0.3],
-          }}
-          transition={{
-            duration: 2,
-            repeat: Infinity,
-            ease: 'easeInOut',
-          }}
-        />
-      </div>
+      <motion.div
+        style={styles.handsOverHeart}
+        animate={{
+          scale: [1, 1.05, 1],
+          opacity: [0.8, 1, 0.8],
+        }}
+        transition={{
+          duration: 3,
+          repeat: Infinity,
+          ease: 'easeInOut',
+        }}
+      >
+        <div style={styles.handsContainer}>
+          <span style={styles.handIcon}>🤲</span>
+        </div>
+        <span style={styles.heartIcon}>❤️</span>
+      </motion.div>
 
       <div style={styles.instructions}>
         <p style={styles.instruction}>
-          Cross your arms and stroke your upper arms (shoulders to elbows) or place hands over your heart.
+          Place your hands over your heart. Feel the warmth and rhythm.
         </p>
         <p style={styles.countdown}>{countdown}</p>
         <p style={styles.message}>
@@ -94,39 +56,42 @@ const styles: Record<string, React.CSSProperties> = {
     display: 'flex',
     flexDirection: 'column' as const,
     alignItems: 'center',
-    justifyContent: 'center',
+    justifyContent: 'flex-start',
     width: '100%',
-    minHeight: '300px',
-    padding: '2rem',
-  },
-  palmsContainer: {
-    display: 'flex',
-    gap: '2rem',
-    marginBottom: '2rem',
-  },
-  palm: {
-    width: '80px',
-    height: '80px',
-    display: 'flex',
-    alignItems: 'center',
-    justifyContent: 'center',
-    filter: 'drop-shadow(0 0 10px rgba(236, 72, 153, 0.5))',
-  },
-  palmIcon: {
-    fontSize: '3rem',
-  },
-  waveContainer: {
-    width: '100%',
-    height: '40px',
-    marginBottom: '2rem',
-    position: 'relative' as const,
+    minHeight: '400px',
+    maxHeight: 'calc(100vh - 200px)',
+    padding: '1rem',
     overflow: 'hidden',
   },
-  wave: {
-    width: '100%',
-    height: '100%',
-    background: 'linear-gradient(90deg, transparent, rgba(236, 72, 153, 0.3), transparent)',
-    borderRadius: '50%',
+  handsOverHeart: {
+    display: 'flex',
+    flexDirection: 'column' as const,
+    alignItems: 'center',
+    justifyContent: 'center',
+    position: 'relative' as const,
+    marginBottom: '2rem',
+    width: '150px',
+    height: '150px',
+  },
+  handsContainer: {
+    position: 'absolute' as const,
+    top: '20%',
+    left: '50%',
+    transform: 'translateX(-50%)',
+    zIndex: 2,
+  },
+  handIcon: {
+    fontSize: '4rem',
+    filter: 'drop-shadow(0 2px 4px rgba(0, 0, 0, 0.2))',
+  },
+  heartIcon: {
+    fontSize: '5rem',
+    position: 'absolute' as const,
+    top: '50%',
+    left: '50%',
+    transform: 'translate(-50%, -50%)',
+    zIndex: 1,
+    filter: 'drop-shadow(0 0 10px rgba(236, 72, 153, 0.4))',
   },
   instructions: {
     textAlign: 'center' as const,

@@ -577,6 +577,9 @@ export default function App() {
   const [inputRows, setInputRows] = useState(1);
   const [isWebGPUSupported, setIsWebGPUSupported] = useState(true);
   const [selectedTenSecondBreaker, setSelectedTenSecondBreaker] = useState<EnergyLevel>('10s-reset');
+  const [savedSessions, setSavedSessions] = useState<ChatSession[]>([]);
+  const [selectedDate, setSelectedDate] = useState<string>('');
+  const [datesWithSessions, setDatesWithSessions] = useState<string[]>([]);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
   const messagesEndRef = useRef<HTMLDivElement>(null);
 
@@ -805,10 +808,6 @@ export default function App() {
       }
     }
   };
-
-  const [savedSessions, setSavedSessions] = useState<ChatSession[]>([]);
-  const [selectedDate, setSelectedDate] = useState<string>('');
-  const [datesWithSessions, setDatesWithSessions] = useState<string[]>([]);
 
   useEffect(() => {
     if (selectedDate) {
@@ -1438,12 +1437,18 @@ const styles: Record<string, React.CSSProperties> = {
     marginBottom: '24px',
   },
   backButton: {
-    padding: '8px 12px',
-    fontSize: '14px',
-    opacity: 0.6,
+    padding: '12px 16px',
+    fontSize: '18px',
+    fontWeight: '500',
+    opacity: 0.8,
     background: 'none',
     border: 'none',
     cursor: 'pointer',
+    color: 'var(--text-primary, #1a1a1a)',
+    transition: 'opacity 0.2s ease',
+  },
+  backButtonHover: {
+    opacity: 1,
   },
   termsScroll: {
     maxHeight: 'calc(100vh - 200px)',

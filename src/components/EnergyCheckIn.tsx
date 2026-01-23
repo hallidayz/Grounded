@@ -34,6 +34,7 @@ const EnergyCheckIn: React.FC<EnergyCheckInProps> = ({ onComplete, onReturnHome 
 
   const handleBackToSelection = useCallback(() => {
     setSelectedTechnique(null);
+    setSelectedEnergy(null); // Go back to energy selection
   }, []);
 
   return (

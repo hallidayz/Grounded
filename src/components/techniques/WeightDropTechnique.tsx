@@ -28,16 +28,17 @@ const WeightDropTechnique: React.FC = () => {
   return (
     <div style={styles.container}>
       <motion.div
-        style={styles.anchor}
+        style={styles.weightsContainer}
         animate={{
-          y: phase === 'squeeze' ? 0 : 'calc(100vh - 200px)',
+          y: phase === 'squeeze' ? 0 : 200,
         }}
         transition={{
           duration: phase === 'release' ? 7 : 0,
           ease: 'easeIn',
         }}
       >
-        <span style={styles.anchorIcon}>⚓</span>
+        <span style={styles.weightIcon}>🏋️</span>
+        <span style={styles.weightIcon}>🪨</span>
       </motion.div>
       <div style={styles.instructions}>
         {phase === 'squeeze' && (
@@ -62,31 +63,30 @@ const styles: Record<string, React.CSSProperties> = {
     display: 'flex',
     flexDirection: 'column' as const,
     alignItems: 'center',
-    justifyContent: 'center',
+    justifyContent: 'flex-start',
     width: '100%',
-    minHeight: '300px',
-    padding: '2rem',
+    minHeight: '400px',
+    maxHeight: 'calc(100vh - 200px)',
+    padding: '1rem',
+    overflow: 'hidden',
     position: 'relative' as const,
   },
-  anchor: {
-    position: 'absolute' as const,
-    top: '50px',
-    width: '80px',
-    height: '80px',
+  weightsContainer: {
+    position: 'relative' as const,
+    top: '20px',
     display: 'flex',
     alignItems: 'center',
     justifyContent: 'center',
-    backgroundColor: 'var(--text-primary, #1a1a1a)',
-    borderRadius: '8px',
-    boxShadow: '0 4px 12px rgba(0, 0, 0, 0.3)',
+    gap: '1rem',
+    marginBottom: '2rem',
   },
-  anchorIcon: {
-    fontSize: '2rem',
-    color: 'white',
+  weightIcon: {
+    fontSize: '3rem',
+    filter: 'drop-shadow(0 2px 4px rgba(0, 0, 0, 0.2))',
   },
   instructions: {
-    marginTop: '200px',
     textAlign: 'center' as const,
+    marginTop: '1rem',
   },
   instruction: {
     fontSize: '1.25rem',
