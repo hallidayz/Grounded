@@ -9,21 +9,25 @@ const ENERGY_OPTIONS: Array<{
   level: EnergyLevel;
   label: string;
   description: string;
+  image: string;
 }> = [
   {
     level: 'low',
     label: 'Low / Drained',
     description: 'Heavy, tired, hard to move.',
+    image: '/energy-low.svg',
   },
   {
     level: 'medium',
     label: 'Medium / Managing',
     description: 'Getting through, not great, not awful.',
+    image: '/energy-medium.svg',
   },
   {
     level: 'high',
     label: 'High / Wired',
     description: 'On edge, restless, keyed up.',
+    image: '/energy-high.svg',
   },
 ];
 
@@ -52,6 +56,7 @@ const EnergySelection: React.FC<EnergySelectionProps> = ({ onSelect }) => {
             }}
             onClick={() => handleClick(option.level)}
           >
+            <img src={option.image} alt={option.label} style={styles.buttonImage} />
             <span style={styles.buttonLabel}>{option.label}</span>
             {selectedEnergy === option.level && (
               <span style={styles.description}>{option.description}</span>
@@ -101,6 +106,12 @@ const styles: Record<string, React.CSSProperties> = {
     cursor: 'pointer',
     transition: 'all 0.2s ease',
     minHeight: '80px',
+    gap: '0.5rem',
+  },
+  buttonImage: {
+    width: '48px',
+    height: '48px',
+    objectFit: 'contain',
   },
   buttonSelected: {
     borderColor: 'var(--primary-color, #02295b)',

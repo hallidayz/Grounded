@@ -64,9 +64,8 @@ export default function App() {
   // TESTING ONLY: Device Selector State
   // TODO: Remove this section before production
   // ============================================
-  const [deviceSelectorOpen, setDeviceSelectorOpen] = useState(false);
-  const [selectedDevice, setSelectedDevice] = useState<'current' | 'mobile' | 'tablet'>('current');
   // ============================================
+  const [hoveredNav, setHoveredNav] = useState<string | null>(null);
 
   useEffect(() => {
     const checkWebGPU = async () => {
@@ -85,6 +84,18 @@ export default function App() {
       }
     };
     checkWebGPU();
+    
+    // Initialize database and verify it's working
+    const initDB = async () => {
+      try {
+        // Test database by trying to get session count
+        const count = await chatDB.getSessionCount();
+        console.log('[App] Database initialized. Existing sessions:', count);
+      } catch (error) {
+        console.error('[App] Database initialization error:', error);
+      }
+    };
+    initDB();
   }, []);
 
   useEffect(() => {
@@ -124,22 +135,27 @@ export default function App() {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
   }, [conversationHistory]);
 
-  // ============================================
-  // TESTING ONLY: Close device selector on outside click
-  // TODO: Remove this useEffect before production
-  // ============================================
+  // Auto-save conversation when it has messages (debounced)
   useEffect(() => {
-    if (!deviceSelectorOpen) return;
-    const handleClickOutside = (event: MouseEvent) => {
-      const target = event.target as HTMLElement;
-      if (!target.closest('[data-device-selector]')) {
-        setDeviceSelectorOpen(false);
-      }
-    };
-    document.addEventListener('mousedown', handleClickOutside);
-    return () => document.removeEventListener('mousedown', handleClickOutside);
-  }, [deviceSelectorOpen]);
-  // ============================================
+    if (conversationHistory.length >= 2 && view === 'conversation' && conversationState) {
+      // Debounce auto-save to avoid too frequent saves
+      const saveTimer = setTimeout(async () => {
+        try {
+          const sessionId = await chatDB.saveSession(conversationHistory, selectedEnergy || undefined);
+          console.log('[App] Auto-saved session:', sessionId);
+          // Reload sessions list if on sessions view
+          if (view === 'sessions') {
+            await loadSavedSessions();
+          }
+        } catch (err) {
+          console.error('[App] Auto-save failed:', err);
+        }
+      }, 2000); // Save 2 seconds after last message
+      
+      return () => clearTimeout(saveTimer);
+    }
+  }, [conversationHistory.length, view, conversationState, selectedEnergy]); // Use length to avoid re-saving on content changes
+
 
   const toggleTheme = () => {
     const newDark = !isDarkMode;
@@ -289,9 +305,17 @@ export default function App() {
         conversationHistory,
         selectedEnergy || undefined
       );
+      console.log('[App] Session saved with ID:', sessionId);
+      // Reload sessions list if we're on the sessions view
+      if (view === 'sessions') {
+        await loadSavedSessions();
+      }
+      // Reload sessions list to show the new session
+      await loadSavedSessions();
       alert('Chat saved locally.');
     } catch (error) {
-      alert('Failed to save chat.');
+      console.error('[App] Error saving session:', error);
+      alert(`Failed to save chat: ${error instanceof Error ? error.message : 'Unknown error'}`);
     }
   };
 
@@ -334,7 +358,7 @@ export default function App() {
   };
 
   const renderHelp = () => (
-    <div style={styles.container}>
+    <div className="app-stage" style={styles.helpContainer}>
       <div style={styles.settingsHeader}>
         <h2 style={styles.title}>How to Use Grounded</h2>
       </div>
@@ -491,7 +515,7 @@ export default function App() {
     );
   };
 
-  const [headerHover, setHeaderHover] = useState<'theme' | 'settings' | 'device' | null>(null);
+  const [headerHover, setHeaderHover] = useState<'theme' | 'settings' | null>(null);
 
   const renderHeader = () => {
     if (view === 'loading' || view === 'terms') return null;
@@ -502,84 +526,6 @@ export default function App() {
           <h1 style={styles.headerTitle}>Grounded</h1>
         </div>
         <div style={styles.headerRight}>
-          {/* ============================================
-              TESTING ONLY: Device Selector
-              TODO: Remove this entire block before production
-              ============================================ */}
-          <div style={{ position: 'relative' as const }} data-device-selector>
-            <button 
-              style={{
-                ...styles.headerIconButton,
-                ...styles.deviceSelectorButton, // Hidden, only developer knows where to click
-                ...(headerHover === 'device' ? styles.headerIconButtonHover : {}),
-              }}
-              onClick={() => setDeviceSelectorOpen(!deviceSelectorOpen)} 
-              onMouseEnter={() => setHeaderHover('device')}
-              onMouseLeave={() => setHeaderHover(null)}
-              aria-label="Device selector (testing only)"
-              title="Device selector (testing only)"
-            >
-              <span style={styles.headerIcon}>📱</span>
-            </button>
-            {deviceSelectorOpen && (
-              <div style={styles.deviceSelectorDropdown} data-device-selector>
-                <div style={styles.deviceSelectorHeader}>
-                  <span style={styles.deviceSelectorTitle}>Device</span>
-                  <span style={styles.deviceSelectorIcon}>🖥️📱</span>
-                </div>
-                <button
-                  style={{
-                    ...styles.deviceSelectorOption,
-                    ...(selectedDevice === 'current' ? styles.deviceSelectorOptionActive : {}),
-                  }}
-                  onClick={() => {
-                    setSelectedDevice('current');
-                    document.body.style.width = '';
-                    document.body.style.maxWidth = '';
-                    setDeviceSelectorOpen(false);
-                  }}
-                >
-                  <span style={styles.deviceSelectorOptionIcon}>🖥️📱</span>
-                  <span>Current screen size</span>
-                </button>
-                <button
-                  style={{
-                    ...styles.deviceSelectorOption,
-                    ...(selectedDevice === 'mobile' ? styles.deviceSelectorOptionActive : {}),
-                  }}
-                  onClick={() => {
-                    setSelectedDevice('mobile');
-                    document.body.style.width = '375px';
-                    document.body.style.maxWidth = '375px';
-                    document.body.style.margin = '0 auto';
-                    setDeviceSelectorOpen(false);
-                  }}
-                >
-                  <span style={styles.deviceSelectorOptionIcon}>📱</span>
-                  <span>Mobile</span>
-                </button>
-                <button
-                  style={{
-                    ...styles.deviceSelectorOption,
-                    ...(selectedDevice === 'tablet' ? styles.deviceSelectorOptionActive : {}),
-                  }}
-                  onClick={() => {
-                    setSelectedDevice('tablet');
-                    document.body.style.width = '768px';
-                    document.body.style.maxWidth = '768px';
-                    document.body.style.margin = '0 auto';
-                    setDeviceSelectorOpen(false);
-                  }}
-                >
-                  <span style={styles.deviceSelectorOptionIcon}>📱</span>
-                  <span>Tablet</span>
-                </button>
-              </div>
-            )}
-          </div>
-          {/* ============================================
-              END TESTING ONLY: Device Selector
-              ============================================ */}
           <button 
             style={{
               ...styles.headerIconButton,
@@ -622,8 +568,14 @@ export default function App() {
         {navItems.map(item => (
           <button
             key={item.view}
-            style={{...styles.bottomNavItem, ...(view === item.view ? styles.bottomNavActive : {})}}
+            style={{
+              ...styles.bottomNavItem, 
+              ...(view === item.view ? styles.bottomNavActive : {}),
+              ...(hoveredNav === item.view ? styles.bottomNavItemHover : {}),
+            }}
             onClick={() => setView(item.view as AppView)}
+            onMouseEnter={() => setHoveredNav(item.view)}
+            onMouseLeave={() => setHoveredNav(null)}
           >
             <span style={styles.bottomNavIcon}>{item.icon}</span>
             <span style={styles.bottomNavLabel}>{item.label}</span>
@@ -674,6 +626,14 @@ export default function App() {
             setPendingUserInput(value);
             const lines = value.split('\n').length;
             setInputRows(Math.min(Math.max(lines, 1), 4));
+          }}
+          onKeyDown={(e: React.KeyboardEvent<HTMLTextAreaElement>) => {
+            if (e.key === 'Enter' && !e.shiftKey) {
+              e.preventDefault();
+              if (pendingUserInput.trim()) {
+                handleWelcomeInput();
+              }
+            }
           }}
         />
         <button 
@@ -1038,71 +998,9 @@ const styles: Record<string, React.CSSProperties> = {
   headerIcon: {
     fontSize: '20px',
   },
-  // ============================================
-  // TESTING ONLY: Device Selector Styles
-  // TODO: Remove this entire section before production
-  // ============================================
-  deviceSelectorButton: {
-    width: '32px', // Smaller than other buttons - hidden in plain sight
-    height: '32px',
-    opacity: 0.3, // Very subtle
-    fontSize: '14px', // Smaller icon
-  },
-  deviceSelectorDropdown: {
-    position: 'absolute' as const,
-    top: 'calc(100% + 8px)',
-    right: 0,
-    backgroundColor: 'var(--bg-card, #ffffff)',
-    border: '1px solid var(--border, rgba(0,0,0,0.1))',
-    borderRadius: '12px',
-    boxShadow: '0 4px 12px rgba(0,0,0,0.15)',
-    minWidth: '200px',
-    zIndex: 1000,
-    overflow: 'hidden',
-  },
-  deviceSelectorHeader: {
-    display: 'flex',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    padding: '12px 16px',
-    borderBottom: '1px solid var(--border, rgba(0,0,0,0.1))',
-    backgroundColor: 'var(--bg-secondary, #f8f7f4)',
-  },
-  deviceSelectorTitle: {
-    fontSize: '14px',
-    fontWeight: '600',
-    color: 'var(--text-primary, #1b3448)',
-  },
-  deviceSelectorIcon: {
-    fontSize: '16px',
-  },
-  deviceSelectorOption: {
-    display: 'flex',
-    alignItems: 'center',
-    gap: '12px',
-    width: '100%',
-    padding: '12px 16px',
-    border: 'none',
-    backgroundColor: 'transparent',
-    cursor: 'pointer',
-    textAlign: 'left' as const,
-    fontSize: '14px',
-    color: 'var(--text-primary, #1b3448)',
-    transition: 'background-color 0.2s ease',
-  },
-  deviceSelectorOptionActive: {
-    backgroundColor: 'var(--bg-secondary, #f8f7f4)',
-    fontWeight: '500',
-  },
-  deviceSelectorOptionIcon: {
-    fontSize: '18px',
-  },
-  // ============================================
-  // END TESTING ONLY: Device Selector Styles
-  // ============================================
   footerInputContainer: {
     position: 'fixed' as const,
-    bottom: `calc(60px + env(safe-area-inset-bottom))`,
+    bottom: `calc(80px + env(safe-area-inset-bottom))`, // Above navigation (60px nav + 20px spacing)
     left: 0,
     right: 0,
     padding: '12px 16px',
@@ -1166,7 +1064,7 @@ const styles: Record<string, React.CSSProperties> = {
     fontFamily: '-apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif',
     position: 'relative',
     paddingTop: '60px',
-    paddingBottom: '140px', // Space for bottom nav + footer input
+    paddingBottom: '160px', // Space for bottom nav (80px) + footer input (80px)
   },
   container: {
     flex: 1,
@@ -1174,6 +1072,20 @@ const styles: Record<string, React.CSSProperties> = {
     paddingBottom: '100px',
     maxWidth: '500px',
     margin: '0 auto',
+  },
+  helpContainer: {
+    width: '100%',
+    maxWidth: '100%',
+    minHeight: 'calc(100svh - 60px)', // Account for header
+    maxHeight: 'calc(100svh - 60px)', // Fit within viewport
+    paddingTop: 'calc(60px + env(safe-area-inset-top))', // Header height + safe area
+    paddingBottom: 'calc(80px + env(safe-area-inset-bottom))', // Navigation + safe area
+    paddingLeft: 'max(20px, env(safe-area-inset-left))',
+    paddingRight: 'max(20px, env(safe-area-inset-right))',
+    overflowY: 'auto' as const,
+    overflowX: 'hidden' as const,
+    display: 'flex',
+    flexDirection: 'column' as const,
   },
   loadingContent: {
     flex: 1,
@@ -1194,10 +1106,11 @@ const styles: Record<string, React.CSSProperties> = {
     marginBottom: '24px',
   },
   title: {
-    fontSize: '28px',
+    fontSize: 'clamp(20px, 4vw, 28px)', // Responsive title
     fontWeight: '700',
-    marginBottom: '12px',
+    marginBottom: 'clamp(8px, 2vw, 12px)', // Responsive margin
     textAlign: 'center',
+    color: 'var(--text-primary, #1b3448)',
   },
   subtitle: {
     fontSize: '16px',
@@ -1337,8 +1250,9 @@ const styles: Record<string, React.CSSProperties> = {
   settingsHeader: {
     display: 'flex',
     alignItems: 'center',
-    gap: '12px',
-    marginBottom: '24px',
+    gap: 'clamp(8px, 2vw, 12px)', // Responsive gap
+    marginBottom: 'clamp(16px, 3vw, 24px)', // Responsive margin
+    flexShrink: 0, // Prevent header from shrinking
   },
   settingsItem: {
     display: 'flex',
@@ -1810,10 +1724,10 @@ const styles: Record<string, React.CSSProperties> = {
     display: 'flex',
     justifyContent: 'space-evenly',
     alignItems: 'center',
-    paddingBottom: 'max(16px, env(safe-area-inset-bottom))',
-    paddingTop: '12px',
-    paddingLeft: '8px',
-    paddingRight: '8px',
+    paddingBottom: 'max(20px, env(safe-area-inset-bottom))', // Increased for thumb reachability
+    paddingTop: '16px', // Increased for thumb reachability
+    paddingLeft: '12px', // Increased for thumb reachability
+    paddingRight: '12px', // Increased for thumb reachability
     borderTop: '1px solid var(--border, rgba(0,0,0,0.1))',
     zIndex: 100,
    },
@@ -1821,14 +1735,20 @@ const styles: Record<string, React.CSSProperties> = {
     display: 'flex',
     flexDirection: 'column',
     alignItems: 'center',
-    gap: '4px',
-    padding: '8px 16px',
+    gap: '6px', // Increased gap
+    padding: '12px 20px', // Increased padding for thumb reachability
     background: 'none',
     border: 'none',
     cursor: 'pointer',
-    minWidth: '64px',
-    minHeight: '48px',
+    minWidth: '72px', // Increased for thumb reachability
+    minHeight: '56px', // Increased for thumb reachability (44px minimum + padding)
     opacity: 0.6,
+    borderRadius: '12px', // Added for better touch target
+    transition: 'background-color 0.2s ease, opacity 0.2s ease',
+   },
+   bottomNavItemHover: {
+    backgroundColor: 'var(--bg-secondary, rgba(248, 247, 244, 0.5))',
+    opacity: 0.8,
    },
    bottomNavActive: {
     opacity: 1,
@@ -2315,48 +2235,55 @@ const styles: Record<string, React.CSSProperties> = {
     helpSection: {
      display: 'flex',
      flexDirection: 'column',
-     gap: '20px',
+     gap: 'clamp(12px, 2vw, 20px)', // Responsive gap
+     flex: 1,
+     overflowY: 'auto' as const,
     },
     helpItem: {
      display: 'flex',
-     gap: '16px',
-     padding: '16px',
+     gap: 'clamp(12px, 2vw, 16px)', // Responsive gap
+     padding: 'clamp(12px, 2vw, 16px)', // Responsive padding
      backgroundColor: 'var(--bg-card, #ffffff)',
-     borderRadius: '16px',
+     borderRadius: 'clamp(12px, 2vw, 16px)', // Responsive border radius
      boxShadow: '0 2px 8px rgba(0,0,0,0.06)',
+     flexShrink: 0, // Prevent items from shrinking
     },
     helpIcon: {
-     fontSize: '32px',
-     width: '48px',
-     height: '48px',
+     fontSize: 'clamp(24px, 4vw, 32px)', // Responsive icon size
+     width: 'clamp(40px, 6vw, 48px)', // Responsive width
+     height: 'clamp(40px, 6vw, 48px)', // Responsive height
+     minWidth: 'clamp(40px, 6vw, 48px)', // Prevent shrinking
+     minHeight: 'clamp(40px, 6vw, 48px)', // Prevent shrinking
      display: 'flex',
      alignItems: 'center',
      justifyContent: 'center',
      backgroundColor: 'var(--bg-secondary, rgba(0,0,0,0.05))',
-     borderRadius: '12px',
+     borderRadius: 'clamp(10px, 2vw, 12px)', // Responsive border radius
+     flexShrink: 0, // Prevent icon from shrinking
     },
     helpContent: {
      flex: 1,
     },
     helpTitle: {
-     fontSize: '16px',
+     fontSize: 'clamp(14px, 2.5vw, 16px)', // Responsive title
      fontWeight: '600',
      color: 'var(--text-primary, #1b3448)',
-     marginBottom: '8px',
+     marginBottom: 'clamp(6px, 1vw, 8px)', // Responsive margin
     },
     helpText: {
-     fontSize: '14px',
+     fontSize: 'clamp(13px, 2vw, 14px)', // Responsive text
      color: 'var(--text-secondary, #4a5568)',
      lineHeight: 1.5,
     },
     helpFooter: {
-     marginTop: '24px',
-     padding: '16px',
+     marginTop: 'clamp(16px, 3vw, 24px)', // Responsive margin
+     padding: 'clamp(12px, 2vw, 16px)', // Responsive padding
      backgroundColor: 'var(--bg-secondary, rgba(0,0,0,0.05))',
-     borderRadius: '12px',
+     borderRadius: 'clamp(10px, 2vw, 12px)', // Responsive border radius
+     flexShrink: 0, // Prevent footer from shrinking
     },
     helpFooterText: {
-      fontSize: '13px',
+      fontSize: 'clamp(12px, 2vw, 13px)', // Responsive text
       color: 'var(--text-secondary, #4a5568)',
       textAlign: 'center',
       lineHeight: 1.5,

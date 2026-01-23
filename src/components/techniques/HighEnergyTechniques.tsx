@@ -16,18 +16,21 @@ const TECHNIQUES = [
     name: 'The RAIN Method',
     description: 'Compassionate Inquiry',
     bestFor: 'De-shaming and emotional processing',
+    image: '/exercise-rain-method.svg',
   },
   {
     id: 'safe-space',
     name: 'The Safe Space',
     description: 'Imagery Rescripting',
     bestFor: 'High stress or trauma triggers',
+    image: '/exercise-safe-space.svg',
   },
   {
     id: 'compassionate-letter',
     name: 'The Compassionate Letter',
     description: 'Perspective Taking',
     bestFor: 'Intense guilt or shame',
+    image: '/exercise-compassionate-letter.svg',
   },
 ];
 
@@ -71,6 +74,7 @@ const HighEnergyTechniques: React.FC<HighEnergyTechniquesProps> = ({
             onClick={() => onTechniqueSelect(technique.id)}
           >
             <div style={styles.optionHeader}>
+              <img src={technique.image} alt={technique.name} style={styles.optionImage} />
               <h4 style={styles.optionName}>{technique.name}</h4>
               <span style={styles.optionType}>{technique.description}</span>
             </div>
@@ -112,6 +116,15 @@ const styles: Record<string, React.CSSProperties> = {
   },
   optionHeader: {
     marginBottom: '0.5rem',
+    display: 'flex',
+    flexDirection: 'column' as const,
+    alignItems: 'center' as const,
+    gap: '0.5rem',
+  },
+  optionImage: {
+    width: '40px',
+    height: '40px',
+    objectFit: 'contain',
   },
   optionName: {
     fontSize: '1rem',

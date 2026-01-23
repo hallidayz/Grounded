@@ -123,7 +123,9 @@ const styles: Record<string, React.CSSProperties> = {
     justifyContent: 'center',
     width: '100%',
     minHeight: '300px',
-    padding: '2rem',
+    maxHeight: 'calc(100svh - 200px)', // Fit between header and footer
+    padding: '1rem',
+    overflowY: 'auto' as const,
   },
   heart: {
     width: '120px',
@@ -156,7 +158,7 @@ const styles: Record<string, React.CSSProperties> = {
   timer: {
     fontSize: '2rem',
     fontWeight: 'bold',
-    color: 'var(--primary-color, #02295b)',
+    color: 'var(--primary, #2c5282)', // Use CSS variable that adapts to dark mode
   },
   phrasesContainer: {
     width: '100%',

@@ -135,7 +135,7 @@ const styles: Record<string, React.CSSProperties> = {
     display: 'flex',
     flexDirection: 'column' as const,
     gap: '1rem',
-    maxHeight: 'calc(100vh - 200px)',
+    maxHeight: 'calc(100svh - 200px)', // Fit between header and footer
     overflowY: 'auto' as const,
   },
   title: {
@@ -195,7 +195,7 @@ const styles: Record<string, React.CSSProperties> = {
   scaleCount: {
     fontSize: '1.5rem',
     fontWeight: 'bold',
-    color: 'var(--primary-color, #02295b)',
+    color: 'var(--primary, #2c5282)', // Use CSS variable that adapts to dark mode
   },
   evidenceSection: {
     width: '100%',

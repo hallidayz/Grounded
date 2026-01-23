@@ -44,7 +44,7 @@ const SafeSpaceTechnique: React.FC<TechniqueComponentProps> = ({
   const timerStyle: React.CSSProperties = {
     fontSize: '2rem',
     fontWeight: 'bold',
-    color: 'var(--primary-color, #02295b)',
+    color: 'var(--primary, #2c5282)', // Use CSS variable that adapts to dark mode
     marginBottom: '2rem',
   };
 
@@ -160,7 +160,9 @@ const styles: Record<string, React.CSSProperties> = {
     display: 'flex',
     flexDirection: 'column' as const,
     alignItems: 'center',
-    minHeight: '400px',
+    minHeight: '300px',
+    maxHeight: 'calc(100svh - 200px)', // Fit between header and footer
+    overflowY: 'auto' as const,
   },
   stageName: {
     fontSize: '1.5rem',

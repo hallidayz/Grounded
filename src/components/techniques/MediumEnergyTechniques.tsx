@@ -16,18 +16,21 @@ const TECHNIQUES = [
     name: 'The Thought Stream',
     description: 'Defusion',
     bestFor: 'Overthinking or "Sticky" thoughts',
+    image: '/exercise-thought-stream.svg',
   },
   {
     id: 'self-compassion-break',
     name: 'The Self-Compassion Break',
     description: 'Based on Dr. Kristin Neff\'s work',
     bestFor: 'Self-criticism or "not enough-ness"',
+    image: '/exercise-self-compassion.svg',
   },
   {
     id: 'reality-check',
     name: 'The Reality Check',
     description: 'Cognitive Distortions',
     bestFor: 'Catastrophizing',
+    image: '/exercise-reality-check.svg',
   },
 ];
 
@@ -71,6 +74,7 @@ const MediumEnergyTechniques: React.FC<MediumEnergyTechniquesProps> = ({
             onClick={() => onTechniqueSelect(technique.id)}
           >
             <div style={styles.optionHeader}>
+              <img src={technique.image} alt={technique.name} style={styles.optionImage} />
               <h4 style={styles.optionName}>{technique.name}</h4>
               <span style={styles.optionType}>{technique.description}</span>
             </div>
@@ -112,6 +116,15 @@ const styles: Record<string, React.CSSProperties> = {
   },
   optionHeader: {
     marginBottom: '0.5rem',
+    display: 'flex',
+    flexDirection: 'column' as const,
+    alignItems: 'center' as const,
+    gap: '0.5rem',
+  },
+  optionImage: {
+    width: '40px',
+    height: '40px',
+    objectFit: 'contain',
   },
   optionName: {
     fontSize: '1rem',

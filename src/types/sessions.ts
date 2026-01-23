@@ -79,6 +79,7 @@ export interface TechniqueComponentProps {
   phaseIndex?: number;
   sessionConfig?: SessionConfig;
   onPhaseComplete?: () => void;
+  bestFor?: string; // Optional "Best for" text to display in technique
 }
 
 /**

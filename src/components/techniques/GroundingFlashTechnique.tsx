@@ -7,6 +7,7 @@ const GroundingFlashTechnique: React.FC<TechniqueComponentProps> = ({
   countdown,
   phaseIndex,
   sessionConfig,
+  bestFor,
 }) => {
   // Support both SessionEngine (with props) and standalone usage (without props)
   const [localPhase, setLocalPhase] = useState<'inhale' | 'hold' | 'exhale'>('inhale');
@@ -52,6 +53,9 @@ const GroundingFlashTechnique: React.FC<TechniqueComponentProps> = ({
 
   return (
     <div style={styles.container}>
+      <div style={styles.iconContainer}>
+        <span style={styles.icon}>⚡</span>
+      </div>
       <motion.div
         style={styles.circle}
         animate={{
@@ -66,6 +70,9 @@ const GroundingFlashTechnique: React.FC<TechniqueComponentProps> = ({
       </motion.div>
       <p style={styles.instruction}>{instruction}</p>
       <p style={styles.message}>{message}</p>
+      {bestFor && (
+        <p style={styles.bestFor}>Best for: {bestFor}</p>
+      )}
     </div>
   );
 };
@@ -78,7 +85,9 @@ const styles: Record<string, React.CSSProperties> = {
     justifyContent: 'center',
     width: '100%',
     minHeight: '300px',
-    padding: '2rem',
+    maxHeight: 'calc(100svh - 200px)', // Fit between header and footer
+    padding: '1rem',
+    overflowY: 'auto' as const,
   },
   circle: {
     width: '150px',
@@ -95,7 +104,7 @@ const styles: Record<string, React.CSSProperties> = {
   countdown: {
     fontSize: '2rem',
     fontWeight: 'bold',
-    color: 'white',
+    color: 'white', // White on colored circle background
   },
   instruction: {
     fontSize: '1.25rem',
@@ -109,6 +118,21 @@ const styles: Record<string, React.CSSProperties> = {
     textAlign: 'center' as const,
     fontStyle: 'italic',
     maxWidth: '300px',
+    marginBottom: '0.5rem',
+  },
+  iconContainer: {
+    marginBottom: '1rem',
+  },
+  icon: {
+    fontSize: '2.5rem',
+  },
+  bestFor: {
+    fontSize: '0.85rem',
+    color: 'var(--text-secondary, #666)',
+    textAlign: 'center' as const,
+    fontStyle: 'italic',
+    marginTop: '0.5rem',
+    opacity: 0.8,
   },
 };
 

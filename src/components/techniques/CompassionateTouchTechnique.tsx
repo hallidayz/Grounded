@@ -7,6 +7,7 @@ const CompassionateTouchTechnique: React.FC<TechniqueComponentProps> = ({
   countdown,
   phaseIndex,
   sessionConfig,
+  bestFor,
 }) => {
   // Support both SessionEngine (with props) and standalone usage (without props)
   const [localCountdown, setLocalCountdown] = React.useState(10);
@@ -58,6 +59,9 @@ const CompassionateTouchTechnique: React.FC<TechniqueComponentProps> = ({
         <p style={styles.instruction}>{instruction}</p>
         <p style={styles.countdown}>{displayCountdown}</p>
         <p style={styles.message}>{message}</p>
+        {bestFor && (
+          <p style={styles.bestFor}>Best for: {bestFor}</p>
+        )}
       </div>
     </div>
   );
@@ -70,10 +74,10 @@ const styles: Record<string, React.CSSProperties> = {
     alignItems: 'center',
     justifyContent: 'flex-start',
     width: '100%',
-    minHeight: '400px',
-    maxHeight: 'calc(100vh - 200px)',
+    minHeight: '300px',
+    maxHeight: 'calc(100svh - 200px)', // Fit between header and footer
     padding: '1rem',
-    overflow: 'hidden',
+    overflowY: 'auto' as const,
   },
   handsOverHeart: {
     display: 'flex',
@@ -117,7 +121,7 @@ const styles: Record<string, React.CSSProperties> = {
   countdown: {
     fontSize: '2rem',
     fontWeight: 'bold',
-    color: 'var(--primary-color, #02295b)',
+    color: 'var(--primary, #2c5282)', // Use CSS variable that adapts to dark mode
     marginBottom: '1rem',
   },
   message: {
@@ -125,6 +129,15 @@ const styles: Record<string, React.CSSProperties> = {
     color: 'var(--text-secondary, #666)',
     fontStyle: 'italic',
     maxWidth: '300px',
+    marginBottom: '0.5rem',
+  },
+  bestFor: {
+    fontSize: '0.85rem',
+    color: 'var(--text-secondary, #666)',
+    textAlign: 'center' as const,
+    fontStyle: 'italic',
+    marginTop: '0.5rem',
+    opacity: 0.8,
   },
 };
 

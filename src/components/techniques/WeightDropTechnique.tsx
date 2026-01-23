@@ -7,6 +7,7 @@ const WeightDropTechnique: React.FC<TechniqueComponentProps> = ({
   countdown,
   phaseIndex,
   sessionConfig,
+  bestFor,
 }) => {
   // Support both SessionEngine (with props) and standalone usage (without props)
   const [localPhase, setLocalPhase] = useState<'squeeze' | 'release'>('squeeze');
@@ -49,17 +50,19 @@ const WeightDropTechnique: React.FC<TechniqueComponentProps> = ({
   return (
     <div style={styles.container}>
       <motion.div
-        style={styles.weightsContainer}
+        style={styles.rocksContainer}
         animate={{
-          y: phase === 'squeeze' ? 0 : 200,
+          y: phase === 'squeeze' ? 0 : 150,
+          opacity: phase === 'squeeze' ? 1 : 0.3,
         }}
         transition={{
           duration: phase === 'release' ? 7 : 0,
           ease: 'easeIn',
         }}
       >
-        <span style={styles.weightIcon}>🏋️</span>
-        <span style={styles.weightIcon}>🪨</span>
+        <div style={styles.rockPile}>
+          <span style={styles.rockIcon}>🪨</span>
+        </div>
       </motion.div>
       <div style={styles.instructions}>
         {phase === 'squeeze' && (
@@ -74,6 +77,9 @@ const WeightDropTechnique: React.FC<TechniqueComponentProps> = ({
             <p style={styles.countdown}>{displayCountdown}</p>
           </>
         )}
+        {bestFor && (
+          <p style={styles.bestFor}>Best for: {bestFor}</p>
+        )}
       </div>
     </div>
   );
@@ -86,24 +92,34 @@ const styles: Record<string, React.CSSProperties> = {
     alignItems: 'center',
     justifyContent: 'flex-start',
     width: '100%',
-    minHeight: '400px',
-    maxHeight: 'calc(100vh - 200px)',
+    minHeight: '300px',
+    maxHeight: 'calc(100svh - 200px)', // Fit between header and footer
     padding: '1rem',
-    overflow: 'hidden',
+    overflowY: 'auto' as const,
     position: 'relative' as const,
   },
-  weightsContainer: {
+  rocksContainer: {
     position: 'relative' as const,
-    top: '20px',
+    top: '10px',
     display: 'flex',
     alignItems: 'center',
     justifyContent: 'center',
-    gap: '1rem',
-    marginBottom: '2rem',
+    marginBottom: '1.5rem',
+    height: '120px',
   },
-  weightIcon: {
-    fontSize: '3rem',
-    filter: 'drop-shadow(0 2px 4px rgba(0, 0, 0, 0.2))',
+  rockPile: {
+    display: 'flex',
+    flexDirection: 'column' as const,
+    alignItems: 'center',
+    justifyContent: 'flex-end',
+    gap: '0.25rem',
+    position: 'relative' as const,
+  },
+  rockIcon: {
+    fontSize: '2.5rem',
+    filter: 'drop-shadow(0 2px 4px rgba(0, 0, 0, 0.3))',
+    display: 'block',
+    transform: 'rotate(0deg)',
   },
   instructions: {
     textAlign: 'center' as const,
@@ -118,7 +134,15 @@ const styles: Record<string, React.CSSProperties> = {
   countdown: {
     fontSize: '2rem',
     fontWeight: 'bold',
-    color: 'var(--primary-color, #02295b)',
+    color: 'var(--primary, #2c5282)', // Use CSS variable that adapts to dark mode
+  },
+  bestFor: {
+    fontSize: '0.85rem',
+    color: 'var(--text-secondary, #666)',
+    textAlign: 'center' as const,
+    fontStyle: 'italic',
+    marginTop: '0.5rem',
+    opacity: 0.8,
   },
 };
 

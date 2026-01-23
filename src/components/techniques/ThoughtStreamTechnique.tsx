@@ -177,6 +177,8 @@ const styles: Record<string, React.CSSProperties> = {
     display: 'flex',
     flexDirection: 'column' as const,
     alignItems: 'center',
+    maxHeight: 'calc(100svh - 200px)', // Fit between header and footer
+    overflowY: 'auto' as const,
   },
   title: {
     fontSize: '1.5rem',

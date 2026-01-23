@@ -16,6 +16,7 @@ const SensorySnapTechnique: React.FC<TechniqueComponentProps> = ({
   countdown,
   phaseIndex,
   sessionConfig,
+  bestFor,
 }) => {
   // Support both SessionEngine (with props) and standalone usage (without props)
   const [selectedColor, setSelectedColor] = useState(COLORS[0]);
@@ -56,6 +57,9 @@ const SensorySnapTechnique: React.FC<TechniqueComponentProps> = ({
       animate={{ opacity: isVisible ? 1 : 0 }}
       transition={{ duration: 1, ease: 'easeIn' }}
     >
+      <div style={styles.iconContainer}>
+        <span style={styles.icon}>👌</span>
+      </div>
       <div style={{
         ...styles.colorDisplay,
         backgroundColor: selectedColor.hex,
@@ -71,6 +75,9 @@ const SensorySnapTechnique: React.FC<TechniqueComponentProps> = ({
           <span style={styles.countdown}>{displayCountdown}</span>
         </div>
         <p style={styles.message}>Found it? Focus on the color. You are here now.</p>
+        {bestFor && (
+          <p style={styles.bestFor}>Best for: {bestFor}</p>
+        )}
       </div>
     </motion.div>
   );
@@ -79,14 +86,14 @@ const SensorySnapTechnique: React.FC<TechniqueComponentProps> = ({
 const styles: Record<string, React.CSSProperties> = {
   container: {
     width: '100%',
-    minHeight: '400px',
-    maxHeight: 'calc(100vh - 200px)',
+    minHeight: '300px',
+    maxHeight: 'calc(100svh - 200px)', // Fit between header and footer
     display: 'flex',
     flexDirection: 'column' as const,
     alignItems: 'center',
     justifyContent: 'flex-start',
-    padding: '1.5rem',
-    overflow: 'hidden',
+    padding: '1rem',
+    overflowY: 'auto' as const,
   },
   colorDisplay: {
     width: '120px',
@@ -126,13 +133,28 @@ const styles: Record<string, React.CSSProperties> = {
   countdown: {
     fontSize: '2.5rem',
     fontWeight: 'bold',
-    color: 'var(--primary-color, #02295b)',
+    color: 'var(--primary, #2c5282)', // Use CSS variable that adapts to dark mode
   },
   message: {
     fontSize: '0.95rem',
     color: 'var(--text-secondary, #666)',
     fontStyle: 'italic',
     lineHeight: '1.5',
+    marginBottom: '0.5rem',
+  },
+  iconContainer: {
+    marginBottom: '1rem',
+  },
+  icon: {
+    fontSize: '2.5rem',
+  },
+  bestFor: {
+    fontSize: '0.85rem',
+    color: 'var(--text-secondary, #666)',
+    textAlign: 'center' as const,
+    fontStyle: 'italic',
+    marginTop: '0.5rem',
+    opacity: 0.8,
   },
 };
 
