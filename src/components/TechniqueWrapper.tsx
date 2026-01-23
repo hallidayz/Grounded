@@ -1,0 +1,159 @@
+import React, { useState, useEffect, useRef } from 'react';
+import {
+  logTechniqueStart,
+  logTechniqueComplete,
+  logTechniqueRepeat,
+  logTechniqueDone,
+} from '../services/energyTrackingService';
+
+interface TechniqueWrapperProps {
+  children: React.ReactNode;
+  onComplete: () => void;
+  onRepeat?: () => void;
+  duration?: number; // in seconds
+  techniqueId: string;
+  techniqueName: string;
+  energyLevel: 'low' | 'medium' | 'high';
+}
+
+const TechniqueWrapper: React.FC<TechniqueWrapperProps> = ({
+  children,
+  onComplete,
+  onRepeat,
+  duration,
+  techniqueId,
+  techniqueName,
+  energyLevel,
+}) => {
+  const [isRunning, setIsRunning] = useState(false);
+  const [isCompleted, setIsCompleted] = useState(false);
+  const [restartKey, setRestartKey] = useState(0);
+  const startTimeRef = useRef<number | null>(null);
+  const repeatCountRef = useRef(0);
+  const sessionStartTimeRef = useRef<number | null>(null);
+
+  const handleStart = () => {
+    setIsRunning(true);
+    setIsCompleted(false);
+    startTimeRef.current = Date.now();
+    if (!sessionStartTimeRef.current) {
+      sessionStartTimeRef.current = Date.now();
+    }
+    // Log technique start
+    logTechniqueStart(energyLevel, techniqueId, techniqueName).catch(console.error);
+  };
+
+  const handleComplete = () => {
+    setIsRunning(false);
+    setIsCompleted(true);
+    // Log technique completion
+    if (startTimeRef.current) {
+      const actualDuration = Math.floor((Date.now() - startTimeRef.current) / 1000);
+      logTechniqueComplete(energyLevel, techniqueId, techniqueName, actualDuration, 'completed').catch(console.error);
+    }
+  };
+
+  const handleRepeat = () => {
+    repeatCountRef.current += 1;
+    setIsRunning(false);
+    setIsCompleted(false);
+    startTimeRef.current = null;
+    // Log repeat action
+    logTechniqueRepeat(energyLevel, techniqueId, techniqueName, repeatCountRef.current).catch(console.error);
+    // Trigger restart by updating key
+    setRestartKey((prev) => prev + 1);
+    onRepeat?.();
+  };
+
+  const handleDone = () => {
+    // Log done action
+    const totalDuration = sessionStartTimeRef.current
+      ? Math.floor((Date.now() - sessionStartTimeRef.current) / 1000)
+      : 0;
+    logTechniqueDone(energyLevel, techniqueId, techniqueName, totalDuration).catch(console.error);
+    onComplete();
+  };
+
+  // Auto-start when component mounts if it's a timed technique
+  useEffect(() => {
+    if (duration && !isRunning && !isCompleted) {
+      handleStart();
+      const timer = setTimeout(() => {
+        handleComplete();
+      }, duration * 1000);
+      return () => clearTimeout(timer);
+    }
+  }, [duration, isRunning, isCompleted, energyLevel, techniqueId, techniqueName, restartKey]);
+
+  return (
+    <div style={styles.container}>
+      <div style={styles.content} key={restartKey}>
+        {children}
+      </div>
+      
+      <div style={styles.actions}>
+        <button
+          style={styles.repeatButton}
+          onClick={handleRepeat}
+          disabled={!isCompleted && !isRunning}
+        >
+          Repeat
+        </button>
+        <button
+          style={styles.doneButton}
+          onClick={handleDone}
+        >
+          Done
+        </button>
+      </div>
+    </div>
+  );
+};
+
+const styles: Record<string, React.CSSProperties> = {
+  container: {
+    width: '100%',
+    display: 'flex',
+    flexDirection: 'column' as const,
+    minHeight: '400px',
+  },
+  content: {
+    flex: 1,
+    display: 'flex',
+    flexDirection: 'column' as const,
+    alignItems: 'center',
+    justifyContent: 'center',
+    padding: '1rem',
+  },
+  actions: {
+    display: 'flex',
+    gap: '1rem',
+    padding: '1rem',
+    justifyContent: 'center',
+    borderTop: '1px solid var(--border-color, #e0e0e0)',
+  },
+  repeatButton: {
+    padding: '0.75rem 1.5rem',
+    border: '2px solid var(--border-color, #e0e0e0)',
+    borderRadius: '0.5rem',
+    backgroundColor: 'var(--bg-card, #ffffff)',
+    color: 'var(--text-primary, #1a1a1a)',
+    cursor: 'pointer',
+    fontSize: '1rem',
+    fontWeight: '500',
+    transition: 'all 0.2s ease',
+  },
+  doneButton: {
+    padding: '0.75rem 1.5rem',
+    border: 'none',
+    borderRadius: '0.5rem',
+    backgroundColor: 'var(--primary-color, #02295b)',
+    color: 'white',
+    cursor: 'pointer',
+    fontSize: '1rem',
+    fontWeight: '600',
+    transition: 'all 0.2s ease',
+  },
+};
+
+export default TechniqueWrapper;

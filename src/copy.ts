@@ -337,6 +337,96 @@ export const COPY = {
     dismiss: 'Maybe later',
     dismissAll: 'I\'m good for now',
   },
+
+  energyCheckIn: {
+    title: 'How is your energy right now?',
+    subtext: 'Pick one that fits right now. There\'s no wrong answer.',
+    levels: {
+      low: {
+        label: 'Low / Drained',
+        description: 'Heavy, tired, hard to move.',
+        cardTitle: 'Tiny step for low energy',
+        duration: '≈ 10 seconds',
+        subtext: 'Quick interventions to shift the nervous system or cognitive perspective.',
+      },
+      medium: {
+        label: 'Medium / Managing',
+        description: 'Getting through, not great, not awful.',
+        cardTitle: '2-minute reset',
+        duration: '≈ 2 minutes',
+        subtext: 'Quick interventions to shift the nervous system or cognitive perspective.',
+      },
+      high: {
+        label: 'High / Wired',
+        description: 'On edge, restless, keyed up.',
+        cardTitle: '5-minute deep support',
+        duration: '≈ 5 minutes',
+        subtext: 'Deeply restorative work for when you have the capacity to sit with your feelings.',
+      },
+    },
+    techniques: {
+      low: {
+        'grounding-flash': {
+          name: 'The Grounding Flash',
+          type: 'Breath-Led',
+          bestFor: 'Feeling "tight" or panicked',
+          message: 'Just this breath. You are safe in this moment.',
+        },
+        'weight-drop': {
+          name: 'The Weight Drop',
+          type: 'Body-Led',
+          bestFor: 'High irritability, clenched teeth, or "on-edge" feeling',
+          message: 'Drop the weight. Let your shoulders fall.',
+        },
+        'sensory-snap': {
+          name: 'The Sensory Snap',
+          type: 'Senses-Led',
+          bestFor: 'Dissociation, "spacing out," or intense rumination',
+          message: 'Found it? Focus on the color. You are here now.',
+        },
+        'compassionate-touch': {
+          name: 'The Compassionate Touch',
+          type: 'Emotional-Led',
+          bestFor: 'Self-loathing, shame spirals, or feeling "unraveled"',
+          message: 'Give yourself this moment of kindness. I am here for you.',
+        },
+      },
+      medium: {
+        'thought-stream': {
+          name: 'The Thought Stream',
+          type: 'Defusion',
+          bestFor: 'Overthinking or "Sticky" thoughts',
+        },
+        'self-compassion-break': {
+          name: 'The Self-Compassion Break',
+          type: 'Based on Dr. Kristin Neff\'s work',
+          bestFor: 'Self-criticism or "not enough-ness"',
+        },
+        'reality-check': {
+          name: 'The Reality Check',
+          type: 'Cognitive Distortions',
+          bestFor: 'Catastrophizing',
+        },
+      },
+      high: {
+        'rain-method': {
+          name: 'The RAIN Method',
+          type: 'Compassionate Inquiry',
+          bestFor: 'De-shaming and emotional processing',
+        },
+        'safe-space': {
+          name: 'The Safe Space',
+          type: 'Imagery Rescripting',
+          bestFor: 'High stress or trauma triggers',
+        },
+        'compassionate-letter': {
+          name: 'The Compassionate Letter',
+          type: 'Perspective Taking',
+          bestFor: 'Intense guilt or shame',
+        },
+      },
+    },
+  },
 };
 
 export function getValidationCopy(mood: MoodType): string {

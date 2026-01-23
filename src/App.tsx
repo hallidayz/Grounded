@@ -12,6 +12,7 @@ import {
 } from './services/settings';
 import { chatDB, type ChatSession } from './services/chatDB';
 import type { EnergyLevel, ConversationState, AppView } from './types';
+import EnergyCheckIn from './components/EnergyCheckIn';
 
 const BREATHING_PATTERNS = {
   '10s-reset': { 
@@ -1191,58 +1192,17 @@ export default function App() {
         <img src="/ac-minds-logo.png" alt="AC Minds" style={styles.logoImage} />
         <h1 style={styles.welcomeTitle}>Grounded</h1>
         <p style={styles.welcomeSubtitle}>Small moments, big difference</p>
-        <h2 style={styles.welcomeHeading}>Pause. What's moving through you?</h2>
       </div>
       
-      <div style={styles.circuitBreakerSelector}>
-        <div style={styles.circuitBreakerHeader}>
-          <span style={styles.circuitBreakerLabel}>The Circuit Breaker</span>
-          <span style={styles.circuitBreakerEnergyBadge}>High Energy</span>
-        </div>
-        <div style={styles.circuitBreakerOptions}>
-          {COPY.tenSecondBreakers.map(breaker => (
-            <button
-              key={breaker.key}
-              style={{
-                ...styles.circuitBreakerOption,
-                ...(selectedTenSecondBreaker === breaker.key ? styles.circuitBreakerOptionSelected : {}),
-                borderColor: selectedTenSecondBreaker === breaker.key ? breaker.color : `${breaker.color}60`,
-                backgroundColor: selectedTenSecondBreaker === breaker.key ? breaker.bgColor : 'var(--bg-card, #ffffff)',
-              }}
-              onClick={() => setSelectedTenSecondBreaker(breaker.key as EnergyLevel)}
-            >
-              <span style={styles.circuitBreakerVisual}>{breaker.icon}</span>
-              <span style={styles.circuitBreakerName}>{breaker.label}</span>
-              <span style={{
-                ...styles.circuitBreakerEnergy,
-                color: breaker.color,
-              }}>{breaker.energyLevel?.toUpperCase()}</span>
-            </button>
-          ))}
-        </div>
-        <p style={styles.circuitBreakerSubtext}>
-          {COPY.tenSecondBreakers.find(b => b.key === selectedTenSecondBreaker)?.subtext}
-        </p>
-      </div>
+      <EnergyCheckIn
+        onComplete={() => {
+          // Return to welcome view (already there, but could reset state if needed)
+        }}
+        onReturnHome={() => {
+          // Already on home/welcome view
+        }}
+      />
 
-      <div style={styles.optionsGrid}>
-        {COPY.energy.options.map(option => (
-          <button key={option.energy} style={styles.optionCard} onClick={() => handleEnergySelect(option.energy)}>
-            <span style={styles.optionIcon}>{option.icon}</span>
-            <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-start', flex: 1 }}>
-              <span style={styles.optionLabel}>{option.label}</span>
-              <span style={styles.optionDescription}>{option.description}</span>
-            </div>
-            {option.energyLevel && (
-              <span style={{
-                ...styles.energyLevelBadge,
-                backgroundColor: option.energyLevel === 'high' ? '#fef3c7' : option.energyLevel === 'medium' ? '#fce7f3' : '#ede9fe',
-                color: option.energyLevel === 'high' ? '#d97706' : option.energyLevel === 'medium' ? '#db2777' : '#7c3aed',
-              }}>{option.energyLevel}</span>
-            )}
-          </button>
-        ))}
-      </div>
       <p style={styles.welcomeInputLabel}>Or share what's on your mind:</p>
       <div style={styles.welcomeInputContainer}>
         <textarea

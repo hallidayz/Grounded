@@ -1,0 +1,134 @@
+import React from 'react';
+import TechniqueWrapper from '../TechniqueWrapper';
+import RAINMethodTechnique from './RAINMethodTechnique';
+import SafeSpaceTechnique from './SafeSpaceTechnique';
+import CompassionateLetterTechnique from './CompassionateLetterTechnique';
+
+interface HighEnergyTechniquesProps {
+  selectedTechnique: string | null;
+  onTechniqueSelect: (techniqueId: string) => void;
+  onComplete: () => void;
+}
+
+const TECHNIQUES = [
+  {
+    id: 'rain-method',
+    name: 'The RAIN Method',
+    description: 'Compassionate Inquiry',
+    bestFor: 'De-shaming and emotional processing',
+  },
+  {
+    id: 'safe-space',
+    name: 'The Safe Space',
+    description: 'Imagery Rescripting',
+    bestFor: 'High stress or trauma triggers',
+  },
+  {
+    id: 'compassionate-letter',
+    name: 'The Compassionate Letter',
+    description: 'Perspective Taking',
+    bestFor: 'Intense guilt or shame',
+  },
+];
+
+const HighEnergyTechniques: React.FC<HighEnergyTechniquesProps> = ({
+  selectedTechnique,
+  onTechniqueSelect,
+  onComplete,
+}) => {
+  if (selectedTechnique) {
+    return (
+      <TechniqueWrapper
+        techniqueId={selectedTechnique}
+        techniqueName={TECHNIQUES.find(t => t.id === selectedTechnique)?.name || ''}
+        energyLevel="high"
+        duration={300}
+        onComplete={onComplete}
+      >
+        {selectedTechnique === 'rain-method' && (
+          <RAINMethodTechnique />
+        )}
+        {selectedTechnique === 'safe-space' && (
+          <SafeSpaceTechnique />
+        )}
+        {selectedTechnique === 'compassionate-letter' && (
+          <CompassionateLetterTechnique />
+        )}
+      </TechniqueWrapper>
+    );
+  }
+
+  return (
+    <div style={styles.container}>
+      <p style={styles.subtext}>
+        Deeply restorative work for when you have the capacity to sit with your feelings.
+      </p>
+      <div style={styles.optionsGrid}>
+        {TECHNIQUES.map((technique) => (
+          <button
+            key={technique.id}
+            style={styles.optionButton}
+            onClick={() => onTechniqueSelect(technique.id)}
+          >
+            <div style={styles.optionHeader}>
+              <h4 style={styles.optionName}>{technique.name}</h4>
+              <span style={styles.optionType}>{technique.description}</span>
+            </div>
+            <p style={styles.optionBestFor}>Best For: {technique.bestFor}</p>
+          </button>
+        ))}
+      </div>
+    </div>
+  );
+};
+
+const styles: Record<string, React.CSSProperties> = {
+  container: {
+    width: '100%',
+    padding: '1rem',
+  },
+  subtext: {
+    fontSize: '0.9rem',
+    color: 'var(--text-secondary, #666)',
+    textAlign: 'center' as const,
+    marginBottom: '1.5rem',
+    fontStyle: 'italic',
+  },
+  optionsGrid: {
+    display: 'grid',
+    gridTemplateColumns: 'repeat(1, 1fr)',
+    gap: '1rem',
+  },
+  optionButton: {
+    display: 'flex',
+    flexDirection: 'column' as const,
+    padding: '1rem',
+    border: '2px solid var(--border-color, #e0e0e0)',
+    borderRadius: '0.5rem',
+    backgroundColor: 'var(--bg-card, #ffffff)',
+    cursor: 'pointer',
+    transition: 'all 0.2s ease',
+    textAlign: 'left' as const,
+  },
+  optionHeader: {
+    marginBottom: '0.5rem',
+  },
+  optionName: {
+    fontSize: '1rem',
+    fontWeight: '600',
+    margin: '0 0 0.25rem 0',
+    color: 'var(--text-primary, #1a1a1a)',
+  },
+  optionType: {
+    fontSize: '0.75rem',
+    color: 'var(--text-secondary, #666)',
+    fontStyle: 'italic',
+  },
+  optionBestFor: {
+    fontSize: '0.85rem',
+    color: 'var(--text-secondary, #666)',
+    margin: 0,
+  },
+};
+
+export default HighEnergyTechniques;
