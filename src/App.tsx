@@ -59,6 +59,14 @@ export default function App() {
   const [datesWithSessions, setDatesWithSessions] = useState<string[]>([]);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
   const messagesEndRef = useRef<HTMLDivElement>(null);
+  
+  // ============================================
+  // TESTING ONLY: Device Selector State
+  // TODO: Remove this section before production
+  // ============================================
+  const [deviceSelectorOpen, setDeviceSelectorOpen] = useState(false);
+  const [selectedDevice, setSelectedDevice] = useState<'current' | 'mobile' | 'tablet'>('current');
+  // ============================================
 
   useEffect(() => {
     const checkWebGPU = async () => {
@@ -484,14 +492,6 @@ export default function App() {
   };
 
   const [headerHover, setHeaderHover] = useState<'theme' | 'settings' | 'device' | null>(null);
-  
-  // ============================================
-  // TESTING ONLY: Device Selector
-  // TODO: Remove this section before production
-  // ============================================
-  const [deviceSelectorOpen, setDeviceSelectorOpen] = useState(false);
-  const [selectedDevice, setSelectedDevice] = useState<'current' | 'mobile' | 'tablet'>('current');
-  // ============================================
 
   const renderHeader = () => {
     if (view === 'loading' || view === 'terms') return null;
