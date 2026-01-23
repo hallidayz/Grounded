@@ -2,30 +2,6 @@ var commonjsGlobal = typeof globalThis !== "undefined" ? globalThis : typeof win
 function getDefaultExportFromCjs(x) {
   return x && x.__esModule && Object.prototype.hasOwnProperty.call(x, "default") ? x["default"] : x;
 }
-function getAugmentedNamespace(n) {
-  if (Object.prototype.hasOwnProperty.call(n, "__esModule")) return n;
-  var f = n.default;
-  if (typeof f == "function") {
-    var a = function a2() {
-      if (this instanceof a2) {
-        return Reflect.construct(f, arguments, this.constructor);
-      }
-      return f.apply(this, arguments);
-    };
-    a.prototype = f.prototype;
-  } else a = {};
-  Object.defineProperty(a, "__esModule", { value: true });
-  Object.keys(n).forEach(function(k) {
-    var d = Object.getOwnPropertyDescriptor(n, k);
-    Object.defineProperty(a, k, d.get ? d : {
-      enumerable: true,
-      get: function() {
-        return n[k];
-      }
-    });
-  });
-  return a;
-}
 var dexie_min$1 = { exports: {} };
 var dexie_min = dexie_min$1.exports;
 var hasRequiredDexie_min;
@@ -3165,6 +3141,5 @@ const {
 } = Dexie;
 export {
   Dexie as D,
-  getDefaultExportFromCjs as a,
-  getAugmentedNamespace as g
+  getDefaultExportFromCjs as g
 };

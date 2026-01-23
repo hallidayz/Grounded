@@ -1,8 +1,3 @@
-var __defProp = Object.defineProperty;
-var __defNormalProp = (obj, key, value) => key in obj ? __defProp(obj, key, { enumerable: true, configurable: true, writable: true, value }) : obj[key] = value;
-var __publicField = (obj, key, value) => __defNormalProp(obj, typeof key !== "symbol" ? key + "" : key, value);
-import { g as getAugmentedNamespace$1, a as getDefaultExportFromCjs } from "./db-vendor-CqkAjsCZ.js";
-import { O as ONNX_NODE } from "./transformers-CdMs_eeA.js";
 var scheduler = { exports: {} };
 var scheduler_production = {};
 /**
@@ -278,2096 +273,42 @@ function requireScheduler() {
   }
   return scheduler.exports;
 }
-var sqlWasm = { exports: {} };
-const require$$2$1 = /* @__PURE__ */ getAugmentedNamespace$1(ONNX_NODE);
-var hasRequiredSqlWasm;
-function requireSqlWasm() {
-  if (hasRequiredSqlWasm) return sqlWasm.exports;
-  hasRequiredSqlWasm = 1;
-  (function(module, exports$1) {
-    var initSqlJsPromise = void 0;
-    var initSqlJs2 = function(moduleConfig) {
-      if (initSqlJsPromise) {
-        return initSqlJsPromise;
-      }
-      initSqlJsPromise = new Promise(function(resolveModule, reject) {
-        var Module = typeof moduleConfig !== "undefined" ? moduleConfig : {};
-        var originalOnAbortFunction = Module["onAbort"];
-        Module["onAbort"] = function(errorThatCausedAbort) {
-          reject(new Error(errorThatCausedAbort));
-          if (originalOnAbortFunction) {
-            originalOnAbortFunction(errorThatCausedAbort);
-          }
-        };
-        Module["postRun"] = Module["postRun"] || [];
-        Module["postRun"].push(function() {
-          resolveModule(Module);
-        });
-        module = void 0;
-        var f;
-        f || (f = typeof Module != "undefined" ? Module : {});
-        var aa = "object" == typeof window, ba = "undefined" != typeof WorkerGlobalScope, ca = "object" == typeof process && "object" == typeof process.versions && "string" == typeof process.versions.node && "renderer" != process.type;
-        f.onRuntimeInitialized = function() {
-          function a(g, l) {
-            switch (typeof l) {
-              case "boolean":
-                dc(g, l ? 1 : 0);
-                break;
-              case "number":
-                ec(g, l);
-                break;
-              case "string":
-                fc(g, l, -1, -1);
-                break;
-              case "object":
-                if (null === l) lb(g);
-                else if (null != l.length) {
-                  var n = da(l, ea);
-                  gc(g, n, l.length, -1);
-                  fa(n);
-                } else va(g, "Wrong API use : tried to return a value of an unknown type (" + l + ").", -1);
-                break;
-              default:
-                lb(g);
-            }
-          }
-          function b(g, l) {
-            for (var n = [], r = 0; r < g; r += 1) {
-              var t = m(l + 4 * r, "i32"), y = hc(t);
-              if (1 === y || 2 === y) t = ic(t);
-              else if (3 === y) t = jc(t);
-              else if (4 === y) {
-                y = t;
-                t = kc(y);
-                y = lc(y);
-                for (var L = new Uint8Array(t), J = 0; J < t; J += 1) L[J] = p[y + J];
-                t = L;
-              } else t = null;
-              n.push(t);
-            }
-            return n;
-          }
-          function c(g, l) {
-            this.Qa = g;
-            this.db = l;
-            this.Oa = 1;
-            this.lb = [];
-          }
-          function d(g, l) {
-            this.db = l;
-            l = ha(g) + 1;
-            this.eb = ia(l);
-            if (null === this.eb) throw Error("Unable to allocate memory for the SQL string");
-            u(g, x, this.eb, l);
-            this.kb = this.eb;
-            this.Za = this.pb = null;
-          }
-          function e(g) {
-            this.filename = "dbfile_" + (4294967295 * Math.random() >>> 0);
-            if (null != g) {
-              var l = this.filename, n = "/", r = l;
-              n && (n = "string" == typeof n ? n : ja(n), r = l ? ka(n + "/" + l) : n);
-              l = la(true, true);
-              r = ma(r, l);
-              if (g) {
-                if ("string" == typeof g) {
-                  n = Array(g.length);
-                  for (var t = 0, y = g.length; t < y; ++t) n[t] = g.charCodeAt(t);
-                  g = n;
-                }
-                na(r, l | 146);
-                n = oa(r, 577);
-                pa(n, g, 0, g.length, 0);
-                qa(n);
-                na(r, l);
-              }
-            }
-            this.handleError(q(this.filename, h));
-            this.db = m(h, "i32");
-            ob(this.db);
-            this.fb = {};
-            this.Sa = {};
-          }
-          var h = z(4), k = f.cwrap, q = k("sqlite3_open", "number", ["string", "number"]), w = k("sqlite3_close_v2", "number", ["number"]), v = k("sqlite3_exec", "number", ["number", "string", "number", "number", "number"]), C = k("sqlite3_changes", "number", ["number"]), G = k("sqlite3_prepare_v2", "number", ["number", "string", "number", "number", "number"]), pb = k("sqlite3_sql", "string", ["number"]), nc = k("sqlite3_normalized_sql", "string", ["number"]), qb = k("sqlite3_prepare_v2", "number", ["number", "number", "number", "number", "number"]), oc = k("sqlite3_bind_text", "number", ["number", "number", "number", "number", "number"]), rb = k("sqlite3_bind_blob", "number", ["number", "number", "number", "number", "number"]), pc = k("sqlite3_bind_double", "number", ["number", "number", "number"]), qc = k(
-            "sqlite3_bind_int",
-            "number",
-            ["number", "number", "number"]
-          ), rc = k("sqlite3_bind_parameter_index", "number", ["number", "string"]), sc = k("sqlite3_step", "number", ["number"]), tc = k("sqlite3_errmsg", "string", ["number"]), uc = k("sqlite3_column_count", "number", ["number"]), vc = k("sqlite3_data_count", "number", ["number"]), wc = k("sqlite3_column_double", "number", ["number", "number"]), sb = k("sqlite3_column_text", "string", ["number", "number"]), xc = k("sqlite3_column_blob", "number", ["number", "number"]), yc = k("sqlite3_column_bytes", "number", [
-            "number",
-            "number"
-          ]), zc = k("sqlite3_column_type", "number", ["number", "number"]), Ac = k("sqlite3_column_name", "string", ["number", "number"]), Bc = k("sqlite3_reset", "number", ["number"]), Cc = k("sqlite3_clear_bindings", "number", ["number"]), Dc = k("sqlite3_finalize", "number", ["number"]), tb = k("sqlite3_create_function_v2", "number", "number string number number number number number number number".split(" ")), hc = k("sqlite3_value_type", "number", ["number"]), kc = k("sqlite3_value_bytes", "number", ["number"]), jc = k(
-            "sqlite3_value_text",
-            "string",
-            ["number"]
-          ), lc = k("sqlite3_value_blob", "number", ["number"]), ic = k("sqlite3_value_double", "number", ["number"]), ec = k("sqlite3_result_double", "", ["number", "number"]), lb = k("sqlite3_result_null", "", ["number"]), fc = k("sqlite3_result_text", "", ["number", "string", "number", "number"]), gc = k("sqlite3_result_blob", "", ["number", "number", "number", "number"]), dc = k("sqlite3_result_int", "", ["number", "number"]), va = k("sqlite3_result_error", "", ["number", "string", "number"]), ub = k(
-            "sqlite3_aggregate_context",
-            "number",
-            ["number", "number"]
-          ), ob = k("RegisterExtensionFunctions", "number", ["number"]), vb = k("sqlite3_update_hook", "number", ["number", "number", "number"]);
-          c.prototype.bind = function(g) {
-            if (!this.Qa) throw "Statement closed";
-            this.reset();
-            return Array.isArray(g) ? this.Cb(g) : null != g && "object" === typeof g ? this.Db(g) : true;
-          };
-          c.prototype.step = function() {
-            if (!this.Qa) throw "Statement closed";
-            this.Oa = 1;
-            var g = sc(this.Qa);
-            switch (g) {
-              case 100:
-                return true;
-              case 101:
-                return false;
-              default:
-                throw this.db.handleError(g);
-            }
-          };
-          c.prototype.wb = function(g) {
-            null == g && (g = this.Oa, this.Oa += 1);
-            return wc(this.Qa, g);
-          };
-          c.prototype.Gb = function(g) {
-            null == g && (g = this.Oa, this.Oa += 1);
-            g = sb(this.Qa, g);
-            if ("function" !== typeof BigInt) throw Error("BigInt is not supported");
-            return BigInt(g);
-          };
-          c.prototype.Hb = function(g) {
-            null == g && (g = this.Oa, this.Oa += 1);
-            return sb(this.Qa, g);
-          };
-          c.prototype.getBlob = function(g) {
-            null == g && (g = this.Oa, this.Oa += 1);
-            var l = yc(this.Qa, g);
-            g = xc(this.Qa, g);
-            for (var n = new Uint8Array(l), r = 0; r < l; r += 1) n[r] = p[g + r];
-            return n;
-          };
-          c.prototype.get = function(g, l) {
-            l = l || {};
-            null != g && this.bind(g) && this.step();
-            g = [];
-            for (var n = vc(this.Qa), r = 0; r < n; r += 1) switch (zc(this.Qa, r)) {
-              case 1:
-                var t = l.useBigInt ? this.Gb(r) : this.wb(r);
-                g.push(t);
-                break;
-              case 2:
-                g.push(this.wb(r));
-                break;
-              case 3:
-                g.push(this.Hb(r));
-                break;
-              case 4:
-                g.push(this.getBlob(r));
-                break;
-              default:
-                g.push(null);
-            }
-            return g;
-          };
-          c.prototype.getColumnNames = function() {
-            for (var g = [], l = uc(this.Qa), n = 0; n < l; n += 1) g.push(Ac(this.Qa, n));
-            return g;
-          };
-          c.prototype.getAsObject = function(g, l) {
-            g = this.get(g, l);
-            l = this.getColumnNames();
-            for (var n = {}, r = 0; r < l.length; r += 1) n[l[r]] = g[r];
-            return n;
-          };
-          c.prototype.getSQL = function() {
-            return pb(this.Qa);
-          };
-          c.prototype.getNormalizedSQL = function() {
-            return nc(this.Qa);
-          };
-          c.prototype.run = function(g) {
-            null != g && this.bind(g);
-            this.step();
-            return this.reset();
-          };
-          c.prototype.sb = function(g, l) {
-            null == l && (l = this.Oa, this.Oa += 1);
-            g = ra(g);
-            var n = da(g, ea);
-            this.lb.push(n);
-            this.db.handleError(oc(this.Qa, l, n, g.length - 1, 0));
-          };
-          c.prototype.Bb = function(g, l) {
-            null == l && (l = this.Oa, this.Oa += 1);
-            var n = da(g, ea);
-            this.lb.push(n);
-            this.db.handleError(rb(
-              this.Qa,
-              l,
-              n,
-              g.length,
-              0
-            ));
-          };
-          c.prototype.rb = function(g, l) {
-            null == l && (l = this.Oa, this.Oa += 1);
-            this.db.handleError((g === (g | 0) ? qc : pc)(this.Qa, l, g));
-          };
-          c.prototype.Eb = function(g) {
-            null == g && (g = this.Oa, this.Oa += 1);
-            rb(this.Qa, g, 0, 0, 0);
-          };
-          c.prototype.tb = function(g, l) {
-            null == l && (l = this.Oa, this.Oa += 1);
-            switch (typeof g) {
-              case "string":
-                this.sb(g, l);
-                return;
-              case "number":
-                this.rb(g, l);
-                return;
-              case "bigint":
-                this.sb(g.toString(), l);
-                return;
-              case "boolean":
-                this.rb(g + 0, l);
-                return;
-              case "object":
-                if (null === g) {
-                  this.Eb(l);
-                  return;
-                }
-                if (null != g.length) {
-                  this.Bb(
-                    g,
-                    l
-                  );
-                  return;
-                }
-            }
-            throw "Wrong API use : tried to bind a value of an unknown type (" + g + ").";
-          };
-          c.prototype.Db = function(g) {
-            var l = this;
-            Object.keys(g).forEach(function(n) {
-              var r = rc(l.Qa, n);
-              0 !== r && l.tb(g[n], r);
-            });
-            return true;
-          };
-          c.prototype.Cb = function(g) {
-            for (var l = 0; l < g.length; l += 1) this.tb(g[l], l + 1);
-            return true;
-          };
-          c.prototype.reset = function() {
-            this.freemem();
-            return 0 === Cc(this.Qa) && 0 === Bc(this.Qa);
-          };
-          c.prototype.freemem = function() {
-            for (var g; void 0 !== (g = this.lb.pop()); ) fa(g);
-          };
-          c.prototype.free = function() {
-            this.freemem();
-            var g = 0 === Dc(this.Qa);
-            delete this.db.fb[this.Qa];
-            this.Qa = 0;
-            return g;
-          };
-          d.prototype.next = function() {
-            if (null === this.eb) return { done: true };
-            null !== this.Za && (this.Za.free(), this.Za = null);
-            if (!this.db.db) throw this.mb(), Error("Database closed");
-            var g = sa(), l = z(4);
-            ta(h);
-            ta(l);
-            try {
-              this.db.handleError(qb(this.db.db, this.kb, -1, h, l));
-              this.kb = m(l, "i32");
-              var n = m(h, "i32");
-              if (0 === n) return this.mb(), { done: true };
-              this.Za = new c(n, this.db);
-              this.db.fb[n] = this.Za;
-              return { value: this.Za, done: false };
-            } catch (r) {
-              throw this.pb = ua(this.kb), this.mb(), r;
-            } finally {
-              wa(g);
-            }
-          };
-          d.prototype.mb = function() {
-            fa(this.eb);
-            this.eb = null;
-          };
-          d.prototype.getRemainingSQL = function() {
-            return null !== this.pb ? this.pb : ua(this.kb);
-          };
-          "function" === typeof Symbol && "symbol" === typeof Symbol.iterator && (d.prototype[Symbol.iterator] = function() {
-            return this;
-          });
-          e.prototype.run = function(g, l) {
-            if (!this.db) throw "Database closed";
-            if (l) {
-              g = this.prepare(g, l);
-              try {
-                g.step();
-              } finally {
-                g.free();
-              }
-            } else this.handleError(v(this.db, g, 0, 0, h));
-            return this;
-          };
-          e.prototype.exec = function(g, l, n) {
-            if (!this.db) throw "Database closed";
-            var r = sa(), t = null;
-            try {
-              var y = xa(g), L = z(4);
-              for (g = []; 0 !== m(y, "i8"); ) {
-                ta(h);
-                ta(L);
-                this.handleError(qb(this.db, y, -1, h, L));
-                var J = m(h, "i32");
-                y = m(L, "i32");
-                if (0 !== J) {
-                  var I = null;
-                  t = new c(J, this);
-                  for (null != l && t.bind(l); t.step(); ) null === I && (I = { columns: t.getColumnNames(), values: [] }, g.push(I)), I.values.push(t.get(null, n));
-                  t.free();
-                }
-              }
-              return g;
-            } catch (M) {
-              throw t && t.free(), M;
-            } finally {
-              wa(r);
-            }
-          };
-          e.prototype.each = function(g, l, n, r, t) {
-            "function" === typeof l && (r = n, n = l, l = void 0);
-            g = this.prepare(g, l);
-            try {
-              for (; g.step(); ) n(g.getAsObject(
-                null,
-                t
-              ));
-            } finally {
-              g.free();
-            }
-            if ("function" === typeof r) return r();
-          };
-          e.prototype.prepare = function(g, l) {
-            ta(h);
-            this.handleError(G(this.db, g, -1, h, 0));
-            g = m(h, "i32");
-            if (0 === g) throw "Nothing to prepare";
-            var n = new c(g, this);
-            null != l && n.bind(l);
-            return this.fb[g] = n;
-          };
-          e.prototype.iterateStatements = function(g) {
-            return new d(g, this);
-          };
-          e.prototype["export"] = function() {
-            Object.values(this.fb).forEach(function(l) {
-              l.free();
-            });
-            Object.values(this.Sa).forEach(A);
-            this.Sa = {};
-            this.handleError(w(this.db));
-            var g = ya(this.filename);
-            this.handleError(q(
-              this.filename,
-              h
-            ));
-            this.db = m(h, "i32");
-            ob(this.db);
-            return g;
-          };
-          e.prototype.close = function() {
-            null !== this.db && (Object.values(this.fb).forEach(function(g) {
-              g.free();
-            }), Object.values(this.Sa).forEach(A), this.Sa = {}, this.Ya && (A(this.Ya), this.Ya = void 0), this.handleError(w(this.db)), za("/" + this.filename), this.db = null);
-          };
-          e.prototype.handleError = function(g) {
-            if (0 === g) return null;
-            g = tc(this.db);
-            throw Error(g);
-          };
-          e.prototype.getRowsModified = function() {
-            return C(this.db);
-          };
-          e.prototype.create_function = function(g, l) {
-            Object.prototype.hasOwnProperty.call(
-              this.Sa,
-              g
-            ) && (A(this.Sa[g]), delete this.Sa[g]);
-            var n = Aa(function(r, t, y) {
-              t = b(t, y);
-              try {
-                var L = l.apply(null, t);
-              } catch (J) {
-                va(r, J, -1);
-                return;
-              }
-              a(r, L);
-            }, "viii");
-            this.Sa[g] = n;
-            this.handleError(tb(this.db, g, l.length, 1, 0, n, 0, 0, 0));
-            return this;
-          };
-          e.prototype.create_aggregate = function(g, l) {
-            var n = l.init || function() {
-              return null;
-            }, r = l.finalize || function(I) {
-              return I;
-            }, t = l.step;
-            if (!t) throw "An aggregate function must have a step function in " + g;
-            var y = {};
-            Object.hasOwnProperty.call(this.Sa, g) && (A(this.Sa[g]), delete this.Sa[g]);
-            l = g + "__finalize";
-            Object.hasOwnProperty.call(this.Sa, l) && (A(this.Sa[l]), delete this.Sa[l]);
-            var L = Aa(function(I, M, Ra) {
-              var X = ub(I, 1);
-              Object.hasOwnProperty.call(y, X) || (y[X] = n());
-              M = b(M, Ra);
-              M = [y[X]].concat(M);
-              try {
-                y[X] = t.apply(null, M);
-              } catch (Fc) {
-                delete y[X], va(I, Fc, -1);
-              }
-            }, "viii"), J = Aa(function(I) {
-              var M = ub(I, 1);
-              try {
-                var Ra = r(y[M]);
-              } catch (X) {
-                delete y[M];
-                va(I, X, -1);
-                return;
-              }
-              a(I, Ra);
-              delete y[M];
-            }, "vi");
-            this.Sa[g] = L;
-            this.Sa[l] = J;
-            this.handleError(tb(this.db, g, t.length - 1, 1, 0, 0, L, J, 0));
-            return this;
-          };
-          e.prototype.updateHook = function(g) {
-            this.Ya && (vb(this.db, 0, 0), A(this.Ya), this.Ya = void 0);
-            g && (this.Ya = Aa(function(l, n, r, t, y) {
-              switch (n) {
-                case 18:
-                  l = "insert";
-                  break;
-                case 23:
-                  l = "update";
-                  break;
-                case 9:
-                  l = "delete";
-                  break;
-                default:
-                  throw "unknown operationCode in updateHook callback: " + n;
-              }
-              r = r ? B(x, r) : "";
-              t = t ? B(x, t) : "";
-              if (y > Number.MAX_SAFE_INTEGER) throw "rowId too big to fit inside a Number";
-              g(l, r, t, Number(y));
-            }, "viiiij"), vb(this.db, this.Ya, 0));
-          };
-          f.Database = e;
-        };
-        var Ba = { ...f }, Ca = "./this.program", Da = (a, b) => {
-          throw b;
-        }, D = "", Ea, Fa;
-        if (ca) {
-          var fs = require$$2$1;
-          D = __dirname + "/";
-          Fa = (a) => {
-            a = Ga(a) ? new URL(a) : a;
-            return fs.readFileSync(a);
-          };
-          Ea = async (a) => {
-            a = Ga(a) ? new URL(a) : a;
-            return fs.readFileSync(a, void 0);
-          };
-          !f.thisProgram && 1 < process.argv.length && (Ca = process.argv[1].replace(/\\/g, "/"));
-          process.argv.slice(2);
-          module.exports = f;
-          Da = (a, b) => {
-            process.exitCode = a;
-            throw b;
-          };
-        } else if (aa || ba) ba ? D = self.location.href : "undefined" != typeof document && document.currentScript && (D = document.currentScript.src), D = D.startsWith("blob:") ? "" : D.slice(0, D.replace(/[?#].*/, "").lastIndexOf("/") + 1), ba && (Fa = (a) => {
-          var b = new XMLHttpRequest();
-          b.open("GET", a, false);
-          b.responseType = "arraybuffer";
-          b.send(null);
-          return new Uint8Array(b.response);
-        }), Ea = async (a) => {
-          if (Ga(a)) return new Promise((c, d) => {
-            var e = new XMLHttpRequest();
-            e.open("GET", a, true);
-            e.responseType = "arraybuffer";
-            e.onload = () => {
-              200 == e.status || 0 == e.status && e.response ? c(e.response) : d(e.status);
-            };
-            e.onerror = d;
-            e.send(null);
-          });
-          var b = await fetch(a, { credentials: "same-origin" });
-          if (b.ok) return b.arrayBuffer();
-          throw Error(b.status + " : " + b.url);
-        };
-        var Ha = f.print || console.log.bind(console), Ia = f.printErr || console.error.bind(console);
-        Object.assign(f, Ba);
-        Ba = null;
-        f.thisProgram && (Ca = f.thisProgram);
-        var Ja = f.wasmBinary, Ka, La = false, Ma, p, x, Na, E, F, Oa, H, Pa, Ga = (a) => a.startsWith("file://");
-        function Qa() {
-          var a = Ka.buffer;
-          f.HEAP8 = p = new Int8Array(a);
-          f.HEAP16 = Na = new Int16Array(a);
-          f.HEAPU8 = x = new Uint8Array(a);
-          f.HEAPU16 = new Uint16Array(a);
-          f.HEAP32 = E = new Int32Array(a);
-          f.HEAPU32 = F = new Uint32Array(a);
-          f.HEAPF32 = Oa = new Float32Array(a);
-          f.HEAPF64 = Pa = new Float64Array(a);
-          f.HEAP64 = H = new BigInt64Array(a);
-          f.HEAPU64 = new BigUint64Array(a);
-        }
-        var K = 0, Sa = null;
-        function Ta(a) {
-          f.onAbort?.(a);
-          a = "Aborted(" + a + ")";
-          Ia(a);
-          La = true;
-          throw new WebAssembly.RuntimeError(a + ". Build with -sASSERTIONS for more info.");
-        }
-        var Ua;
-        async function Va(a) {
-          if (!Ja) try {
-            var b = await Ea(a);
-            return new Uint8Array(b);
-          } catch {
-          }
-          if (a == Ua && Ja) a = new Uint8Array(Ja);
-          else if (Fa) a = Fa(a);
-          else throw "both async and sync fetching of the wasm failed";
-          return a;
-        }
-        async function Wa(a, b) {
-          try {
-            var c = await Va(a);
-            return await WebAssembly.instantiate(c, b);
-          } catch (d) {
-            Ia(`failed to asynchronously prepare wasm: ${d}`), Ta(d);
-          }
-        }
-        async function Xa(a) {
-          var b = Ua;
-          if (!Ja && "function" == typeof WebAssembly.instantiateStreaming && !Ga(b) && !ca) try {
-            var c = fetch(b, { credentials: "same-origin" });
-            return await WebAssembly.instantiateStreaming(c, a);
-          } catch (d) {
-            Ia(`wasm streaming compile failed: ${d}`), Ia("falling back to ArrayBuffer instantiation");
-          }
-          return Wa(b, a);
-        }
-        class Ya {
-          constructor(a) {
-            __publicField(this, "name", "ExitStatus");
-            this.message = `Program terminated with exit(${a})`;
-            this.status = a;
-          }
-        }
-        var Za = (a) => {
-          for (; 0 < a.length; ) a.shift()(f);
-        }, $a = [], ab = [], bb = () => {
-          var a = f.preRun.shift();
-          ab.unshift(a);
-        };
-        function m(a, b = "i8") {
-          b.endsWith("*") && (b = "*");
-          switch (b) {
-            case "i1":
-              return p[a];
-            case "i8":
-              return p[a];
-            case "i16":
-              return Na[a >> 1];
-            case "i32":
-              return E[a >> 2];
-            case "i64":
-              return H[a >> 3];
-            case "float":
-              return Oa[a >> 2];
-            case "double":
-              return Pa[a >> 3];
-            case "*":
-              return F[a >> 2];
-            default:
-              Ta(`invalid type for getValue: ${b}`);
-          }
-        }
-        var cb = f.noExitRuntime || true;
-        function ta(a) {
-          var b = "i32";
-          b.endsWith("*") && (b = "*");
-          switch (b) {
-            case "i1":
-              p[a] = 0;
-              break;
-            case "i8":
-              p[a] = 0;
-              break;
-            case "i16":
-              Na[a >> 1] = 0;
-              break;
-            case "i32":
-              E[a >> 2] = 0;
-              break;
-            case "i64":
-              H[a >> 3] = BigInt(0);
-              break;
-            case "float":
-              Oa[a >> 2] = 0;
-              break;
-            case "double":
-              Pa[a >> 3] = 0;
-              break;
-            case "*":
-              F[a >> 2] = 0;
-              break;
-            default:
-              Ta(`invalid type for setValue: ${b}`);
-          }
-        }
-        var db = "undefined" != typeof TextDecoder ? new TextDecoder() : void 0, B = (a, b = 0, c = NaN) => {
-          var d = b + c;
-          for (c = b; a[c] && !(c >= d); ) ++c;
-          if (16 < c - b && a.buffer && db) return db.decode(a.subarray(b, c));
-          for (d = ""; b < c; ) {
-            var e = a[b++];
-            if (e & 128) {
-              var h = a[b++] & 63;
-              if (192 == (e & 224)) d += String.fromCharCode((e & 31) << 6 | h);
-              else {
-                var k = a[b++] & 63;
-                e = 224 == (e & 240) ? (e & 15) << 12 | h << 6 | k : (e & 7) << 18 | h << 12 | k << 6 | a[b++] & 63;
-                65536 > e ? d += String.fromCharCode(e) : (e -= 65536, d += String.fromCharCode(55296 | e >> 10, 56320 | e & 1023));
-              }
-            } else d += String.fromCharCode(e);
-          }
-          return d;
-        }, ua = (a, b) => a ? B(x, a, b) : "", eb = (a, b) => {
-          for (var c = 0, d = a.length - 1; 0 <= d; d--) {
-            var e = a[d];
-            "." === e ? a.splice(d, 1) : ".." === e ? (a.splice(d, 1), c++) : c && (a.splice(d, 1), c--);
-          }
-          if (b) for (; c; c--) a.unshift("..");
-          return a;
-        }, ka = (a) => {
-          var b = "/" === a.charAt(0), c = "/" === a.slice(-1);
-          (a = eb(a.split("/").filter((d) => !!d), !b).join("/")) || b || (a = ".");
-          a && c && (a += "/");
-          return (b ? "/" : "") + a;
-        }, fb = (a) => {
-          var b = /^(\/?|)([\s\S]*?)((?:\.{1,2}|[^\/]+?|)(\.[^.\/]*|))(?:[\/]*)$/.exec(a).slice(1);
-          a = b[0];
-          b = b[1];
-          if (!a && !b) return ".";
-          b && (b = b.slice(0, -1));
-          return a + b;
-        }, gb = (a) => a && a.match(/([^\/]+|\/)\/*$/)[1], hb = () => {
-          if (ca) {
-            var a = require$$2$1;
-            return (b) => a.randomFillSync(b);
-          }
-          return (b) => crypto.getRandomValues(b);
-        }, ib = (a) => {
-          (ib = hb())(a);
-        }, jb = (...a) => {
-          for (var b = "", c = false, d = a.length - 1; -1 <= d && !c; d--) {
-            c = 0 <= d ? a[d] : "/";
-            if ("string" != typeof c) throw new TypeError("Arguments to path.resolve must be strings");
-            if (!c) return "";
-            b = c + "/" + b;
-            c = "/" === c.charAt(0);
-          }
-          b = eb(b.split("/").filter((e) => !!e), !c).join("/");
-          return (c ? "/" : "") + b || ".";
-        }, kb = [], ha = (a) => {
-          for (var b = 0, c = 0; c < a.length; ++c) {
-            var d = a.charCodeAt(c);
-            127 >= d ? b++ : 2047 >= d ? b += 2 : 55296 <= d && 57343 >= d ? (b += 4, ++c) : b += 3;
-          }
-          return b;
-        }, u = (a, b, c, d) => {
-          if (!(0 < d)) return 0;
-          var e = c;
-          d = c + d - 1;
-          for (var h = 0; h < a.length; ++h) {
-            var k = a.charCodeAt(h);
-            if (55296 <= k && 57343 >= k) {
-              var q = a.charCodeAt(++h);
-              k = 65536 + ((k & 1023) << 10) | q & 1023;
-            }
-            if (127 >= k) {
-              if (c >= d) break;
-              b[c++] = k;
-            } else {
-              if (2047 >= k) {
-                if (c + 1 >= d) break;
-                b[c++] = 192 | k >> 6;
-              } else {
-                if (65535 >= k) {
-                  if (c + 2 >= d) break;
-                  b[c++] = 224 | k >> 12;
-                } else {
-                  if (c + 3 >= d) break;
-                  b[c++] = 240 | k >> 18;
-                  b[c++] = 128 | k >> 12 & 63;
-                }
-                b[c++] = 128 | k >> 6 & 63;
-              }
-              b[c++] = 128 | k & 63;
-            }
-          }
-          b[c] = 0;
-          return c - e;
-        }, ra = (a, b) => {
-          var c = Array(ha(a) + 1);
-          a = u(a, c, 0, c.length);
-          b && (c.length = a);
-          return c;
-        }, mb = [];
-        function nb(a, b) {
-          mb[a] = { input: [], output: [], cb: b };
-          wb(a, xb);
-        }
-        var xb = { open(a) {
-          var b = mb[a.node.rdev];
-          if (!b) throw new N(43);
-          a.tty = b;
-          a.seekable = false;
-        }, close(a) {
-          a.tty.cb.fsync(a.tty);
-        }, fsync(a) {
-          a.tty.cb.fsync(a.tty);
-        }, read(a, b, c, d) {
-          if (!a.tty || !a.tty.cb.xb) throw new N(60);
-          for (var e = 0, h = 0; h < d; h++) {
-            try {
-              var k = a.tty.cb.xb(a.tty);
-            } catch (q) {
-              throw new N(29);
-            }
-            if (void 0 === k && 0 === e) throw new N(6);
-            if (null === k || void 0 === k) break;
-            e++;
-            b[c + h] = k;
-          }
-          e && (a.node.atime = Date.now());
-          return e;
-        }, write(a, b, c, d) {
-          if (!a.tty || !a.tty.cb.qb) throw new N(60);
-          try {
-            for (var e = 0; e < d; e++) a.tty.cb.qb(a.tty, b[c + e]);
-          } catch (h) {
-            throw new N(29);
-          }
-          d && (a.node.mtime = a.node.ctime = Date.now());
-          return e;
-        } }, yb = { xb() {
-          a: {
-            if (!kb.length) {
-              var a = null;
-              if (ca) {
-                var b = Buffer.alloc(256), c = 0, d = process.stdin.fd;
-                try {
-                  c = fs.readSync(d, b, 0, 256);
-                } catch (e) {
-                  if (e.toString().includes("EOF")) c = 0;
-                  else throw e;
-                }
-                0 < c && (a = b.slice(0, c).toString("utf-8"));
-              } else "undefined" != typeof window && "function" == typeof window.prompt && (a = window.prompt("Input: "), null !== a && (a += "\n"));
-              if (!a) {
-                a = null;
-                break a;
-              }
-              kb = ra(a, true);
-            }
-            a = kb.shift();
-          }
-          return a;
-        }, qb(a, b) {
-          null === b || 10 === b ? (Ha(B(a.output)), a.output = []) : 0 != b && a.output.push(b);
-        }, fsync(a) {
-          0 < a.output?.length && (Ha(B(a.output)), a.output = []);
-        }, Tb() {
-          return { Ob: 25856, Qb: 5, Nb: 191, Pb: 35387, Mb: [3, 28, 127, 21, 4, 0, 1, 0, 17, 19, 26, 0, 18, 15, 23, 22, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0] };
-        }, Ub() {
-          return 0;
-        }, Vb() {
-          return [24, 80];
-        } }, zb = { qb(a, b) {
-          null === b || 10 === b ? (Ia(B(a.output)), a.output = []) : 0 != b && a.output.push(b);
-        }, fsync(a) {
-          0 < a.output?.length && (Ia(B(a.output)), a.output = []);
-        } }, O = { Wa: null, Xa() {
-          return O.createNode(null, "/", 16895, 0);
-        }, createNode(a, b, c, d) {
-          if (24576 === (c & 61440) || 4096 === (c & 61440)) throw new N(63);
-          O.Wa || (O.Wa = { dir: { node: { Ta: O.La.Ta, Ua: O.La.Ua, lookup: O.La.lookup, hb: O.La.hb, rename: O.La.rename, unlink: O.La.unlink, rmdir: O.La.rmdir, readdir: O.La.readdir, symlink: O.La.symlink }, stream: { Va: O.Ma.Va } }, file: { node: { Ta: O.La.Ta, Ua: O.La.Ua }, stream: { Va: O.Ma.Va, read: O.Ma.read, write: O.Ma.write, ib: O.Ma.ib, jb: O.Ma.jb } }, link: { node: { Ta: O.La.Ta, Ua: O.La.Ua, readlink: O.La.readlink }, stream: {} }, ub: { node: { Ta: O.La.Ta, Ua: O.La.Ua }, stream: Ab } });
-          c = Bb(a, b, c, d);
-          P(c.mode) ? (c.La = O.Wa.dir.node, c.Ma = O.Wa.dir.stream, c.Na = {}) : 32768 === (c.mode & 61440) ? (c.La = O.Wa.file.node, c.Ma = O.Wa.file.stream, c.Ra = 0, c.Na = null) : 40960 === (c.mode & 61440) ? (c.La = O.Wa.link.node, c.Ma = O.Wa.link.stream) : 8192 === (c.mode & 61440) && (c.La = O.Wa.ub.node, c.Ma = O.Wa.ub.stream);
-          c.atime = c.mtime = c.ctime = Date.now();
-          a && (a.Na[b] = c, a.atime = a.mtime = a.ctime = c.atime);
-          return c;
-        }, Sb(a) {
-          return a.Na ? a.Na.subarray ? a.Na.subarray(0, a.Ra) : new Uint8Array(a.Na) : new Uint8Array(0);
-        }, La: { Ta(a) {
-          var b = {};
-          b.dev = 8192 === (a.mode & 61440) ? a.id : 1;
-          b.ino = a.id;
-          b.mode = a.mode;
-          b.nlink = 1;
-          b.uid = 0;
-          b.gid = 0;
-          b.rdev = a.rdev;
-          P(a.mode) ? b.size = 4096 : 32768 === (a.mode & 61440) ? b.size = a.Ra : 40960 === (a.mode & 61440) ? b.size = a.link.length : b.size = 0;
-          b.atime = new Date(a.atime);
-          b.mtime = new Date(a.mtime);
-          b.ctime = new Date(a.ctime);
-          b.blksize = 4096;
-          b.blocks = Math.ceil(b.size / b.blksize);
-          return b;
-        }, Ua(a, b) {
-          for (var c of ["mode", "atime", "mtime", "ctime"]) null != b[c] && (a[c] = b[c]);
-          void 0 !== b.size && (b = b.size, a.Ra != b && (0 == b ? (a.Na = null, a.Ra = 0) : (c = a.Na, a.Na = new Uint8Array(b), c && a.Na.set(c.subarray(0, Math.min(b, a.Ra))), a.Ra = b)));
-        }, lookup() {
-          throw O.vb;
-        }, hb(a, b, c, d) {
-          return O.createNode(a, b, c, d);
-        }, rename(a, b, c) {
-          try {
-            var d = Q(b, c);
-          } catch (h) {
-          }
-          if (d) {
-            if (P(a.mode)) for (var e in d.Na) throw new N(55);
-            Cb(d);
-          }
-          delete a.parent.Na[a.name];
-          b.Na[c] = a;
-          a.name = c;
-          b.ctime = b.mtime = a.parent.ctime = a.parent.mtime = Date.now();
-        }, unlink(a, b) {
-          delete a.Na[b];
-          a.ctime = a.mtime = Date.now();
-        }, rmdir(a, b) {
-          var c = Q(a, b), d;
-          for (d in c.Na) throw new N(55);
-          delete a.Na[b];
-          a.ctime = a.mtime = Date.now();
-        }, readdir(a) {
-          return [".", "..", ...Object.keys(a.Na)];
-        }, symlink(a, b, c) {
-          a = O.createNode(a, b, 41471, 0);
-          a.link = c;
-          return a;
-        }, readlink(a) {
-          if (40960 !== (a.mode & 61440)) throw new N(28);
-          return a.link;
-        } }, Ma: { read(a, b, c, d, e) {
-          var h = a.node.Na;
-          if (e >= a.node.Ra) return 0;
-          a = Math.min(a.node.Ra - e, d);
-          if (8 < a && h.subarray) b.set(h.subarray(e, e + a), c);
-          else for (d = 0; d < a; d++) b[c + d] = h[e + d];
-          return a;
-        }, write(a, b, c, d, e, h) {
-          b.buffer === p.buffer && (h = false);
-          if (!d) return 0;
-          a = a.node;
-          a.mtime = a.ctime = Date.now();
-          if (b.subarray && (!a.Na || a.Na.subarray)) {
-            if (h) return a.Na = b.subarray(c, c + d), a.Ra = d;
-            if (0 === a.Ra && 0 === e) return a.Na = b.slice(c, c + d), a.Ra = d;
-            if (e + d <= a.Ra) return a.Na.set(b.subarray(
-              c,
-              c + d
-            ), e), d;
-          }
-          h = e + d;
-          var k = a.Na ? a.Na.length : 0;
-          k >= h || (h = Math.max(h, k * (1048576 > k ? 2 : 1.125) >>> 0), 0 != k && (h = Math.max(h, 256)), k = a.Na, a.Na = new Uint8Array(h), 0 < a.Ra && a.Na.set(k.subarray(0, a.Ra), 0));
-          if (a.Na.subarray && b.subarray) a.Na.set(b.subarray(c, c + d), e);
-          else for (h = 0; h < d; h++) a.Na[e + h] = b[c + h];
-          a.Ra = Math.max(a.Ra, e + d);
-          return d;
-        }, Va(a, b, c) {
-          1 === c ? b += a.position : 2 === c && 32768 === (a.node.mode & 61440) && (b += a.node.Ra);
-          if (0 > b) throw new N(28);
-          return b;
-        }, ib(a, b, c, d, e) {
-          if (32768 !== (a.node.mode & 61440)) throw new N(43);
-          a = a.node.Na;
-          if (e & 2 || !a || a.buffer !== p.buffer) {
-            e = true;
-            d = 65536 * Math.ceil(b / 65536);
-            var h = Db(65536, d);
-            h && x.fill(0, h, h + d);
-            d = h;
-            if (!d) throw new N(48);
-            if (a) {
-              if (0 < c || c + b < a.length) a.subarray ? a = a.subarray(c, c + b) : a = Array.prototype.slice.call(a, c, c + b);
-              p.set(a, d);
-            }
-          } else e = false, d = a.byteOffset;
-          return { Kb: d, Ab: e };
-        }, jb(a, b, c, d) {
-          O.Ma.write(a, b, 0, d, c, false);
-          return 0;
-        } } }, la = (a, b) => {
-          var c = 0;
-          a && (c |= 365);
-          b && (c |= 146);
-          return c;
-        }, Eb = null, Fb = {}, Gb = [], Hb = 1, R = null, Ib = false, Jb = true, Kb = {}, N = class {
-          constructor(a) {
-            __publicField(this, "name", "ErrnoError");
-            this.Pa = a;
-          }
-        }, Lb = class {
-          constructor() {
-            __publicField(this, "gb", {});
-            __publicField(this, "node", null);
-          }
-          get flags() {
-            return this.gb.flags;
-          }
-          set flags(a) {
-            this.gb.flags = a;
-          }
-          get position() {
-            return this.gb.position;
-          }
-          set position(a) {
-            this.gb.position = a;
-          }
-        }, Mb = class {
-          constructor(a, b, c, d) {
-            __publicField(this, "La", {});
-            __publicField(this, "Ma", {});
-            __publicField(this, "ab", null);
-            a || (a = this);
-            this.parent = a;
-            this.Xa = a.Xa;
-            this.id = Hb++;
-            this.name = b;
-            this.mode = c;
-            this.rdev = d;
-            this.atime = this.mtime = this.ctime = Date.now();
-          }
-          get read() {
-            return 365 === (this.mode & 365);
-          }
-          set read(a) {
-            a ? this.mode |= 365 : this.mode &= -366;
-          }
-          get write() {
-            return 146 === (this.mode & 146);
-          }
-          set write(a) {
-            a ? this.mode |= 146 : this.mode &= -147;
-          }
-        };
-        function S(a, b = {}) {
-          if (!a) throw new N(44);
-          b.nb ?? (b.nb = true);
-          "/" === a.charAt(0) || (a = "//" + a);
-          var c = 0;
-          a: for (; 40 > c; c++) {
-            a = a.split("/").filter((q) => !!q);
-            for (var d = Eb, e = "/", h = 0; h < a.length; h++) {
-              var k = h === a.length - 1;
-              if (k && b.parent) break;
-              if ("." !== a[h]) if (".." === a[h]) e = fb(e), d = d.parent;
-              else {
-                e = ka(e + "/" + a[h]);
-                try {
-                  d = Q(d, a[h]);
-                } catch (q) {
-                  if (44 === q?.Pa && k && b.Jb) return { path: e };
-                  throw q;
-                }
-                !d.ab || k && !b.nb || (d = d.ab.root);
-                if (40960 === (d.mode & 61440) && (!k || b.$a)) {
-                  if (!d.La.readlink) throw new N(52);
-                  d = d.La.readlink(d);
-                  "/" === d.charAt(0) || (d = fb(e) + "/" + d);
-                  a = d + "/" + a.slice(h + 1).join("/");
-                  continue a;
-                }
-              }
-            }
-            return { path: e, node: d };
-          }
-          throw new N(32);
-        }
-        function ja(a) {
-          for (var b; ; ) {
-            if (a === a.parent) return a = a.Xa.zb, b ? "/" !== a[a.length - 1] ? `${a}/${b}` : a + b : a;
-            b = b ? `${a.name}/${b}` : a.name;
-            a = a.parent;
-          }
-        }
-        function Nb(a, b) {
-          for (var c = 0, d = 0; d < b.length; d++) c = (c << 5) - c + b.charCodeAt(d) | 0;
-          return (a + c >>> 0) % R.length;
-        }
-        function Cb(a) {
-          var b = Nb(a.parent.id, a.name);
-          if (R[b] === a) R[b] = a.bb;
-          else for (b = R[b]; b; ) {
-            if (b.bb === a) {
-              b.bb = a.bb;
-              break;
-            }
-            b = b.bb;
-          }
-        }
-        function Q(a, b) {
-          var c = P(a.mode) ? (c = Ob(a, "x")) ? c : a.La.lookup ? 0 : 2 : 54;
-          if (c) throw new N(c);
-          for (c = R[Nb(a.id, b)]; c; c = c.bb) {
-            var d = c.name;
-            if (c.parent.id === a.id && d === b) return c;
-          }
-          return a.La.lookup(a, b);
-        }
-        function Bb(a, b, c, d) {
-          a = new Mb(a, b, c, d);
-          b = Nb(a.parent.id, a.name);
-          a.bb = R[b];
-          return R[b] = a;
-        }
-        function P(a) {
-          return 16384 === (a & 61440);
-        }
-        function Pb(a) {
-          var b = ["r", "w", "rw"][a & 3];
-          a & 512 && (b += "w");
-          return b;
-        }
-        function Ob(a, b) {
-          if (Jb) return 0;
-          if (!b.includes("r") || a.mode & 292) {
-            if (b.includes("w") && !(a.mode & 146) || b.includes("x") && !(a.mode & 73)) return 2;
-          } else return 2;
-          return 0;
-        }
-        function Qb(a, b) {
-          if (!P(a.mode)) return 54;
-          try {
-            return Q(a, b), 20;
-          } catch (c) {
-          }
-          return Ob(a, "wx");
-        }
-        function Rb(a, b, c) {
-          try {
-            var d = Q(a, b);
-          } catch (e) {
-            return e.Pa;
-          }
-          if (a = Ob(a, "wx")) return a;
-          if (c) {
-            if (!P(d.mode)) return 54;
-            if (d === d.parent || "/" === ja(d)) return 10;
-          } else if (P(d.mode)) return 31;
-          return 0;
-        }
-        function Sb(a) {
-          if (!a) throw new N(63);
-          return a;
-        }
-        function T(a) {
-          a = Gb[a];
-          if (!a) throw new N(8);
-          return a;
-        }
-        function Tb(a, b = -1) {
-          a = Object.assign(new Lb(), a);
-          if (-1 == b) a: {
-            for (b = 0; 4096 >= b; b++) if (!Gb[b]) break a;
-            throw new N(33);
-          }
-          a.fd = b;
-          return Gb[b] = a;
-        }
-        function Ub(a, b = -1) {
-          a = Tb(a, b);
-          a.Ma?.Rb?.(a);
-          return a;
-        }
-        function Vb(a, b, c) {
-          var d = a?.Ma.Ua;
-          a = d ? a : b;
-          d ?? (d = b.La.Ua);
-          Sb(d);
-          d(a, c);
-        }
-        var Ab = { open(a) {
-          a.Ma = Fb[a.node.rdev].Ma;
-          a.Ma.open?.(a);
-        }, Va() {
-          throw new N(70);
-        } };
-        function wb(a, b) {
-          Fb[a] = { Ma: b };
-        }
-        function Wb(a, b) {
-          var c = "/" === b;
-          if (c && Eb) throw new N(10);
-          if (!c && b) {
-            var d = S(b, { nb: false });
-            b = d.path;
-            d = d.node;
-            if (d.ab) throw new N(10);
-            if (!P(d.mode)) throw new N(54);
-          }
-          b = { type: a, Wb: {}, zb: b, Ib: [] };
-          a = a.Xa(b);
-          a.Xa = b;
-          b.root = a;
-          c ? Eb = a : d && (d.ab = b, d.Xa && d.Xa.Ib.push(b));
-        }
-        function Xb(a, b, c) {
-          var d = S(a, { parent: true }).node;
-          a = gb(a);
-          if (!a) throw new N(28);
-          if ("." === a || ".." === a) throw new N(20);
-          var e = Qb(d, a);
-          if (e) throw new N(e);
-          if (!d.La.hb) throw new N(63);
-          return d.La.hb(d, a, b, c);
-        }
-        function ma(a, b = 438) {
-          return Xb(a, b & 4095 | 32768, 0);
-        }
-        function U(a, b = 511) {
-          return Xb(a, b & 1023 | 16384, 0);
-        }
-        function Yb(a, b, c) {
-          "undefined" == typeof c && (c = b, b = 438);
-          Xb(a, b | 8192, c);
-        }
-        function Zb(a, b) {
-          if (!jb(a)) throw new N(44);
-          var c = S(b, { parent: true }).node;
-          if (!c) throw new N(44);
-          b = gb(b);
-          var d = Qb(c, b);
-          if (d) throw new N(d);
-          if (!c.La.symlink) throw new N(63);
-          c.La.symlink(c, b, a);
-        }
-        function $b(a) {
-          var b = S(a, { parent: true }).node;
-          a = gb(a);
-          var c = Q(b, a), d = Rb(b, a, true);
-          if (d) throw new N(d);
-          if (!b.La.rmdir) throw new N(63);
-          if (c.ab) throw new N(10);
-          b.La.rmdir(b, a);
-          Cb(c);
-        }
-        function za(a) {
-          var b = S(a, { parent: true }).node;
-          if (!b) throw new N(44);
-          a = gb(a);
-          var c = Q(b, a), d = Rb(b, a, false);
-          if (d) throw new N(d);
-          if (!b.La.unlink) throw new N(63);
-          if (c.ab) throw new N(10);
-          b.La.unlink(b, a);
-          Cb(c);
-        }
-        function ac(a, b) {
-          a = S(a, { $a: !b }).node;
-          return Sb(a.La.Ta)(a);
-        }
-        function bc(a, b, c, d) {
-          Vb(a, b, { mode: c & 4095 | b.mode & -4096, ctime: Date.now(), Fb: d });
-        }
-        function na(a, b) {
-          a = "string" == typeof a ? S(a, { $a: true }).node : a;
-          bc(null, a, b);
-        }
-        function cc(a, b, c) {
-          if (P(b.mode)) throw new N(31);
-          if (32768 !== (b.mode & 61440)) throw new N(28);
-          var d = Ob(b, "w");
-          if (d) throw new N(d);
-          Vb(a, b, { size: c, timestamp: Date.now() });
-        }
-        function oa(a, b, c = 438) {
-          if ("" === a) throw new N(44);
-          if ("string" == typeof b) {
-            var d = { r: 0, "r+": 2, w: 577, "w+": 578, a: 1089, "a+": 1090 }[b];
-            if ("undefined" == typeof d) throw Error(`Unknown file open mode: ${b}`);
-            b = d;
-          }
-          c = b & 64 ? c & 4095 | 32768 : 0;
-          if ("object" == typeof a) d = a;
-          else {
-            var e = a.endsWith("/");
-            a = S(a, { $a: !(b & 131072), Jb: true });
-            d = a.node;
-            a = a.path;
-          }
-          var h = false;
-          if (b & 64) if (d) {
-            if (b & 128) throw new N(20);
-          } else {
-            if (e) throw new N(31);
-            d = Xb(a, c | 511, 0);
-            h = true;
-          }
-          if (!d) throw new N(44);
-          8192 === (d.mode & 61440) && (b &= -513);
-          if (b & 65536 && !P(d.mode)) throw new N(54);
-          if (!h && (e = d ? 40960 === (d.mode & 61440) ? 32 : P(d.mode) && ("r" !== Pb(b) || b & 576) ? 31 : Ob(d, Pb(b)) : 44)) throw new N(e);
-          b & 512 && !h && (e = d, e = "string" == typeof e ? S(e, { $a: true }).node : e, cc(null, e, 0));
-          b &= -131713;
-          e = Tb({ node: d, path: ja(d), flags: b, seekable: true, position: 0, Ma: d.Ma, Lb: [], error: false });
-          e.Ma.open && e.Ma.open(e);
-          h && na(d, c & 511);
-          !f.logReadFiles || b & 1 || a in Kb || (Kb[a] = 1);
-          return e;
-        }
-        function qa(a) {
-          if (null === a.fd) throw new N(8);
-          a.ob && (a.ob = null);
-          try {
-            a.Ma.close && a.Ma.close(a);
-          } catch (b) {
-            throw b;
-          } finally {
-            Gb[a.fd] = null;
-          }
-          a.fd = null;
-        }
-        function mc(a, b, c) {
-          if (null === a.fd) throw new N(8);
-          if (!a.seekable || !a.Ma.Va) throw new N(70);
-          if (0 != c && 1 != c && 2 != c) throw new N(28);
-          a.position = a.Ma.Va(a, b, c);
-          a.Lb = [];
-        }
-        function Ec(a, b, c, d, e) {
-          if (0 > d || 0 > e) throw new N(28);
-          if (null === a.fd) throw new N(8);
-          if (1 === (a.flags & 2097155)) throw new N(8);
-          if (P(a.node.mode)) throw new N(31);
-          if (!a.Ma.read) throw new N(28);
-          var h = "undefined" != typeof e;
-          if (!h) e = a.position;
-          else if (!a.seekable) throw new N(70);
-          b = a.Ma.read(a, b, c, d, e);
-          h || (a.position += b);
-          return b;
-        }
-        function pa(a, b, c, d, e) {
-          if (0 > d || 0 > e) throw new N(28);
-          if (null === a.fd) throw new N(8);
-          if (0 === (a.flags & 2097155)) throw new N(8);
-          if (P(a.node.mode)) throw new N(31);
-          if (!a.Ma.write) throw new N(28);
-          a.seekable && a.flags & 1024 && mc(a, 0, 2);
-          var h = "undefined" != typeof e;
-          if (!h) e = a.position;
-          else if (!a.seekable) throw new N(70);
-          b = a.Ma.write(a, b, c, d, e, void 0);
-          h || (a.position += b);
-          return b;
-        }
-        function ya(a) {
-          var c;
-          var d = oa(a, d || 0);
-          a = ac(a).size;
-          var e = new Uint8Array(a);
-          Ec(d, e, 0, a, 0);
-          c = e;
-          qa(d);
-          return c;
-        }
-        function V(a, b, c) {
-          a = ka("/dev/" + a);
-          var d = la(!!b, !!c);
-          V.yb ?? (V.yb = 64);
-          var e = V.yb++ << 8 | 0;
-          wb(e, { open(h) {
-            h.seekable = false;
-          }, close() {
-            c?.buffer?.length && c(10);
-          }, read(h, k, q, w) {
-            for (var v = 0, C = 0; C < w; C++) {
-              try {
-                var G = b();
-              } catch (pb) {
-                throw new N(29);
-              }
-              if (void 0 === G && 0 === v) throw new N(6);
-              if (null === G || void 0 === G) break;
-              v++;
-              k[q + C] = G;
-            }
-            v && (h.node.atime = Date.now());
-            return v;
-          }, write(h, k, q, w) {
-            for (var v = 0; v < w; v++) try {
-              c(k[q + v]);
-            } catch (C) {
-              throw new N(29);
-            }
-            w && (h.node.mtime = h.node.ctime = Date.now());
-            return v;
-          } });
-          Yb(a, d, e);
-        }
-        var W = {};
-        function Gc(a, b, c) {
-          if ("/" === b.charAt(0)) return b;
-          a = -100 === a ? "/" : T(a).path;
-          if (0 == b.length) {
-            if (!c) throw new N(44);
-            return a;
-          }
-          return a + "/" + b;
-        }
-        function Hc(a, b) {
-          E[a >> 2] = b.dev;
-          E[a + 4 >> 2] = b.mode;
-          F[a + 8 >> 2] = b.nlink;
-          E[a + 12 >> 2] = b.uid;
-          E[a + 16 >> 2] = b.gid;
-          E[a + 20 >> 2] = b.rdev;
-          H[a + 24 >> 3] = BigInt(b.size);
-          E[a + 32 >> 2] = 4096;
-          E[a + 36 >> 2] = b.blocks;
-          var c = b.atime.getTime(), d = b.mtime.getTime(), e = b.ctime.getTime();
-          H[a + 40 >> 3] = BigInt(Math.floor(c / 1e3));
-          F[a + 48 >> 2] = c % 1e3 * 1e6;
-          H[a + 56 >> 3] = BigInt(Math.floor(d / 1e3));
-          F[a + 64 >> 2] = d % 1e3 * 1e6;
-          H[a + 72 >> 3] = BigInt(Math.floor(e / 1e3));
-          F[a + 80 >> 2] = e % 1e3 * 1e6;
-          H[a + 88 >> 3] = BigInt(b.ino);
-          return 0;
-        }
-        var Ic = void 0, Jc = () => {
-          var a = E[+Ic >> 2];
-          Ic += 4;
-          return a;
-        }, Kc = 0, Lc = [0, 31, 60, 91, 121, 152, 182, 213, 244, 274, 305, 335], Mc = [0, 31, 59, 90, 120, 151, 181, 212, 243, 273, 304, 334], Nc = {}, Oc = (a) => {
-          Ma = a;
-          cb || 0 < Kc || (f.onExit?.(a), La = true);
-          Da(a, new Ya(a));
-        }, Pc = (a) => {
-          if (!La) try {
-            if (a(), !(cb || 0 < Kc)) try {
-              Ma = a = Ma, Oc(a);
-            } catch (b) {
-              b instanceof Ya || "unwind" == b || Da(1, b);
-            }
-          } catch (b) {
-            b instanceof Ya || "unwind" == b || Da(1, b);
-          }
-        }, Qc = {}, Sc = () => {
-          if (!Rc) {
-            var a = { USER: "web_user", LOGNAME: "web_user", PATH: "/", PWD: "/", HOME: "/home/web_user", LANG: ("object" == typeof navigator && navigator.languages && navigator.languages[0] || "C").replace("-", "_") + ".UTF-8", _: Ca || "./this.program" }, b;
-            for (b in Qc) void 0 === Qc[b] ? delete a[b] : a[b] = Qc[b];
-            var c = [];
-            for (b in a) c.push(`${b}=${a[b]}`);
-            Rc = c;
-          }
-          return Rc;
-        }, Rc, xa = (a) => {
-          var b = ha(a) + 1, c = z(b);
-          u(a, x, c, b);
-          return c;
-        }, Tc = (a, b, c, d) => {
-          var e = { string: (v) => {
-            var C = 0;
-            null !== v && void 0 !== v && 0 !== v && (C = xa(v));
-            return C;
-          }, array: (v) => {
-            var C = z(v.length);
-            p.set(v, C);
-            return C;
-          } };
-          a = f["_" + a];
-          var h = [], k = 0;
-          if (d) for (var q = 0; q < d.length; q++) {
-            var w = e[c[q]];
-            w ? (0 === k && (k = sa()), h[q] = w(d[q])) : h[q] = d[q];
-          }
-          c = a(...h);
-          return c = (function(v) {
-            0 !== k && wa(k);
-            return "string" === b ? v ? B(x, v) : "" : "boolean" === b ? !!v : v;
-          })(c);
-        }, ea = 0, da = (a, b) => {
-          b = 1 == b ? z(a.length) : ia(a.length);
-          a.subarray || a.slice || (a = new Uint8Array(a));
-          x.set(a, b);
-          return b;
-        }, Uc, Vc = [], Y, A = (a) => {
-          Uc.delete(Y.get(a));
-          Y.set(a, null);
-          Vc.push(a);
-        }, Aa = (a, b) => {
-          if (!Uc) {
-            Uc = /* @__PURE__ */ new WeakMap();
-            var c = Y.length;
-            if (Uc) for (var d = 0; d < 0 + c; d++) {
-              var e = Y.get(d);
-              e && Uc.set(e, d);
-            }
-          }
-          if (c = Uc.get(a) || 0) return c;
-          if (Vc.length) c = Vc.pop();
-          else {
-            try {
-              Y.grow(1);
-            } catch (w) {
-              if (!(w instanceof RangeError)) throw w;
-              throw "Unable to grow wasm table. Set ALLOW_TABLE_GROWTH.";
-            }
-            c = Y.length - 1;
-          }
-          try {
-            Y.set(c, a);
-          } catch (w) {
-            if (!(w instanceof TypeError)) throw w;
-            if ("function" == typeof WebAssembly.Function) {
-              var h = WebAssembly.Function;
-              d = { i: "i32", j: "i64", f: "f32", d: "f64", e: "externref", p: "i32" };
-              e = { parameters: [], results: "v" == b[0] ? [] : [d[b[0]]] };
-              for (var k = 1; k < b.length; ++k) e.parameters.push(d[b[k]]);
-              b = new h(e, a);
-            } else {
-              d = [1];
-              e = b.slice(0, 1);
-              b = b.slice(1);
-              k = { i: 127, p: 127, j: 126, f: 125, d: 124, e: 111 };
-              d.push(96);
-              var q = b.length;
-              128 > q ? d.push(q) : d.push(q % 128 | 128, q >> 7);
-              for (h of b) d.push(k[h]);
-              "v" == e ? d.push(0) : d.push(1, k[e]);
-              b = [0, 97, 115, 109, 1, 0, 0, 0, 1];
-              h = d.length;
-              128 > h ? b.push(h) : b.push(h % 128 | 128, h >> 7);
-              b.push(...d);
-              b.push(2, 7, 1, 1, 101, 1, 102, 0, 0, 7, 5, 1, 1, 102, 0, 0);
-              b = new WebAssembly.Module(new Uint8Array(b));
-              b = new WebAssembly.Instance(b, { e: { f: a } }).exports.f;
-            }
-            Y.set(c, b);
-          }
-          Uc.set(a, c);
-          return c;
-        };
-        R = Array(4096);
-        Wb(O, "/");
-        U("/tmp");
-        U("/home");
-        U("/home/web_user");
-        (function() {
-          U("/dev");
-          wb(259, { read: () => 0, write: (d, e, h, k) => k, Va: () => 0 });
-          Yb("/dev/null", 259);
-          nb(1280, yb);
-          nb(1536, zb);
-          Yb("/dev/tty", 1280);
-          Yb("/dev/tty1", 1536);
-          var a = new Uint8Array(1024), b = 0, c = () => {
-            0 === b && (ib(a), b = a.byteLength);
-            return a[--b];
-          };
-          V("random", c);
-          V("urandom", c);
-          U("/dev/shm");
-          U("/dev/shm/tmp");
-        })();
-        (function() {
-          U("/proc");
-          var a = U("/proc/self");
-          U("/proc/self/fd");
-          Wb({ Xa() {
-            var b = Bb(a, "fd", 16895, 73);
-            b.Ma = { Va: O.Ma.Va };
-            b.La = { lookup(c, d) {
-              c = +d;
-              var e = T(c);
-              c = { parent: null, Xa: { zb: "fake" }, La: { readlink: () => e.path }, id: c + 1 };
-              return c.parent = c;
-            }, readdir() {
-              return Array.from(Gb.entries()).filter(([, c]) => c).map(([c]) => c.toString());
-            } };
-            return b;
-          } }, "/proc/self/fd");
-        })();
-        O.vb = new N(44);
-        O.vb.stack = "<generic error, no stack>";
-        var Xc = { a: (a, b, c, d) => Ta(`Assertion failed: ${a ? B(x, a) : ""}, at: ` + [b ? b ? B(x, b) : "" : "unknown filename", c, d ? d ? B(x, d) : "" : "unknown function"]), i: function(a, b) {
-          try {
-            return a = a ? B(x, a) : "", na(a, b), 0;
-          } catch (c) {
-            if ("undefined" == typeof W || "ErrnoError" !== c.name) throw c;
-            return -c.Pa;
-          }
-        }, L: function(a, b, c) {
-          try {
-            b = b ? B(x, b) : "";
-            b = Gc(a, b);
-            if (c & -8) return -28;
-            var d = S(b, { $a: true }).node;
-            if (!d) return -44;
-            a = "";
-            c & 4 && (a += "r");
-            c & 2 && (a += "w");
-            c & 1 && (a += "x");
-            return a && Ob(d, a) ? -2 : 0;
-          } catch (e) {
-            if ("undefined" == typeof W || "ErrnoError" !== e.name) throw e;
-            return -e.Pa;
-          }
-        }, j: function(a, b) {
-          try {
-            var c = T(a);
-            bc(c, c.node, b, false);
-            return 0;
-          } catch (d) {
-            if ("undefined" == typeof W || "ErrnoError" !== d.name) throw d;
-            return -d.Pa;
-          }
-        }, h: function(a) {
-          try {
-            var b = T(a);
-            Vb(b, b.node, { timestamp: Date.now(), Fb: false });
-            return 0;
-          } catch (c) {
-            if ("undefined" == typeof W || "ErrnoError" !== c.name) throw c;
-            return -c.Pa;
-          }
-        }, b: function(a, b, c) {
-          Ic = c;
-          try {
-            var d = T(a);
-            switch (b) {
-              case 0:
-                var e = Jc();
-                if (0 > e) break;
-                for (; Gb[e]; ) e++;
-                return Ub(d, e).fd;
-              case 1:
-              case 2:
-                return 0;
-              case 3:
-                return d.flags;
-              case 4:
-                return e = Jc(), d.flags |= e, 0;
-              case 12:
-                return e = Jc(), Na[e + 0 >> 1] = 2, 0;
-              case 13:
-              case 14:
-                return 0;
-            }
-            return -28;
-          } catch (h) {
-            if ("undefined" == typeof W || "ErrnoError" !== h.name) throw h;
-            return -h.Pa;
-          }
-        }, g: function(a, b) {
-          try {
-            var c = T(a), d = c.node, e = c.Ma.Ta;
-            a = e ? c : d;
-            e ?? (e = d.La.Ta);
-            Sb(e);
-            var h = e(a);
-            return Hc(b, h);
-          } catch (k) {
-            if ("undefined" == typeof W || "ErrnoError" !== k.name) throw k;
-            return -k.Pa;
-          }
-        }, H: function(a, b) {
-          b = -9007199254740992 > b || 9007199254740992 < b ? NaN : Number(b);
-          try {
-            if (isNaN(b)) return 61;
-            var c = T(a);
-            if (0 > b || 0 === (c.flags & 2097155)) throw new N(28);
-            cc(c, c.node, b);
-            return 0;
-          } catch (d) {
-            if ("undefined" == typeof W || "ErrnoError" !== d.name) throw d;
-            return -d.Pa;
-          }
-        }, G: function(a, b) {
-          try {
-            if (0 === b) return -28;
-            var c = ha("/") + 1;
-            if (b < c) return -68;
-            u("/", x, a, b);
-            return c;
-          } catch (d) {
-            if ("undefined" == typeof W || "ErrnoError" !== d.name) throw d;
-            return -d.Pa;
-          }
-        }, K: function(a, b) {
-          try {
-            return a = a ? B(x, a) : "", Hc(b, ac(a, true));
-          } catch (c) {
-            if ("undefined" == typeof W || "ErrnoError" !== c.name) throw c;
-            return -c.Pa;
-          }
-        }, C: function(a, b, c) {
-          try {
-            return b = b ? B(x, b) : "", b = Gc(a, b), U(b, c), 0;
-          } catch (d) {
-            if ("undefined" == typeof W || "ErrnoError" !== d.name) throw d;
-            return -d.Pa;
-          }
-        }, J: function(a, b, c, d) {
-          try {
-            b = b ? B(x, b) : "";
-            var e = d & 256;
-            b = Gc(a, b, d & 4096);
-            return Hc(c, e ? ac(b, true) : ac(b));
-          } catch (h) {
-            if ("undefined" == typeof W || "ErrnoError" !== h.name) throw h;
-            return -h.Pa;
-          }
-        }, x: function(a, b, c, d) {
-          Ic = d;
-          try {
-            b = b ? B(x, b) : "";
-            b = Gc(a, b);
-            var e = d ? Jc() : 0;
-            return oa(b, c, e).fd;
-          } catch (h) {
-            if ("undefined" == typeof W || "ErrnoError" !== h.name) throw h;
-            return -h.Pa;
-          }
-        }, v: function(a, b, c, d) {
-          try {
-            b = b ? B(x, b) : "";
-            b = Gc(a, b);
-            if (0 >= d) return -28;
-            var e = S(b).node;
-            if (!e) throw new N(44);
-            if (!e.La.readlink) throw new N(28);
-            var h = e.La.readlink(e);
-            var k = Math.min(d, ha(h)), q = p[c + k];
-            u(h, x, c, d + 1);
-            p[c + k] = q;
-            return k;
-          } catch (w) {
-            if ("undefined" == typeof W || "ErrnoError" !== w.name) throw w;
-            return -w.Pa;
-          }
-        }, u: function(a) {
-          try {
-            return a = a ? B(x, a) : "", $b(a), 0;
-          } catch (b) {
-            if ("undefined" == typeof W || "ErrnoError" !== b.name) throw b;
-            return -b.Pa;
-          }
-        }, f: function(a, b) {
-          try {
-            return a = a ? B(x, a) : "", Hc(b, ac(a));
-          } catch (c) {
-            if ("undefined" == typeof W || "ErrnoError" !== c.name) throw c;
-            return -c.Pa;
-          }
-        }, r: function(a, b, c) {
-          try {
-            return b = b ? B(x, b) : "", b = Gc(a, b), 0 === c ? za(b) : 512 === c ? $b(b) : Ta("Invalid flags passed to unlinkat"), 0;
-          } catch (d) {
-            if ("undefined" == typeof W || "ErrnoError" !== d.name) throw d;
-            return -d.Pa;
-          }
-        }, q: function(a, b, c) {
-          try {
-            b = b ? B(x, b) : "";
-            b = Gc(a, b, true);
-            var d = Date.now(), e, h;
-            if (c) {
-              var k = F[c >> 2] + 4294967296 * E[c + 4 >> 2], q = E[c + 8 >> 2];
-              1073741823 == q ? e = d : 1073741822 == q ? e = null : e = 1e3 * k + q / 1e6;
-              c += 16;
-              k = F[c >> 2] + 4294967296 * E[c + 4 >> 2];
-              q = E[c + 8 >> 2];
-              1073741823 == q ? h = d : 1073741822 == q ? h = null : h = 1e3 * k + q / 1e6;
-            } else h = e = d;
-            if (null !== (h ?? e)) {
-              a = e;
-              var w = S(b, { $a: true }).node;
-              Sb(w.La.Ua)(w, { atime: a, mtime: h });
-            }
-            return 0;
-          } catch (v) {
-            if ("undefined" == typeof W || "ErrnoError" !== v.name) throw v;
-            return -v.Pa;
-          }
-        }, m: () => Ta(""), l: () => {
-          cb = false;
-          Kc = 0;
-        }, A: function(a, b) {
-          a = -9007199254740992 > a || 9007199254740992 < a ? NaN : Number(a);
-          a = new Date(1e3 * a);
-          E[b >> 2] = a.getSeconds();
-          E[b + 4 >> 2] = a.getMinutes();
-          E[b + 8 >> 2] = a.getHours();
-          E[b + 12 >> 2] = a.getDate();
-          E[b + 16 >> 2] = a.getMonth();
-          E[b + 20 >> 2] = a.getFullYear() - 1900;
-          E[b + 24 >> 2] = a.getDay();
-          var c = a.getFullYear();
-          E[b + 28 >> 2] = (0 !== c % 4 || 0 === c % 100 && 0 !== c % 400 ? Mc : Lc)[a.getMonth()] + a.getDate() - 1 | 0;
-          E[b + 36 >> 2] = -(60 * a.getTimezoneOffset());
-          c = new Date(
-            a.getFullYear(),
-            6,
-            1
-          ).getTimezoneOffset();
-          var d = new Date(a.getFullYear(), 0, 1).getTimezoneOffset();
-          E[b + 32 >> 2] = (c != d && a.getTimezoneOffset() == Math.min(d, c)) | 0;
-        }, y: function(a, b, c, d, e, h, k) {
-          e = -9007199254740992 > e || 9007199254740992 < e ? NaN : Number(e);
-          try {
-            if (isNaN(e)) return 61;
-            var q = T(d);
-            if (0 !== (b & 2) && 0 === (c & 2) && 2 !== (q.flags & 2097155)) throw new N(2);
-            if (1 === (q.flags & 2097155)) throw new N(2);
-            if (!q.Ma.ib) throw new N(43);
-            if (!a) throw new N(28);
-            var w = q.Ma.ib(q, a, e, b, c);
-            var v = w.Kb;
-            E[h >> 2] = w.Ab;
-            F[k >> 2] = v;
-            return 0;
-          } catch (C) {
-            if ("undefined" == typeof W || "ErrnoError" !== C.name) throw C;
-            return -C.Pa;
-          }
-        }, z: function(a, b, c, d, e, h) {
-          h = -9007199254740992 > h || 9007199254740992 < h ? NaN : Number(h);
-          try {
-            var k = T(e);
-            if (c & 2) {
-              c = h;
-              if (32768 !== (k.node.mode & 61440)) throw new N(43);
-              if (!(d & 2)) {
-                var q = x.slice(a, a + b);
-                k.Ma.jb && k.Ma.jb(k, q, c, b, d);
-              }
-            }
-          } catch (w) {
-            if ("undefined" == typeof W || "ErrnoError" !== w.name) throw w;
-            return -w.Pa;
-          }
-        }, n: (a, b) => {
-          Nc[a] && (clearTimeout(Nc[a].id), delete Nc[a]);
-          if (!b) return 0;
-          var c = setTimeout(() => {
-            delete Nc[a];
-            Pc(() => Wc(a, performance.now()));
-          }, b);
-          Nc[a] = {
-            id: c,
-            Xb: b
-          };
-          return 0;
-        }, B: (a, b, c, d) => {
-          var e = (/* @__PURE__ */ new Date()).getFullYear(), h = new Date(e, 0, 1).getTimezoneOffset();
-          e = new Date(e, 6, 1).getTimezoneOffset();
-          F[a >> 2] = 60 * Math.max(h, e);
-          E[b >> 2] = Number(h != e);
-          b = (k) => {
-            var q = Math.abs(k);
-            return `UTC${0 <= k ? "-" : "+"}${String(Math.floor(q / 60)).padStart(2, "0")}${String(q % 60).padStart(2, "0")}`;
-          };
-          a = b(h);
-          b = b(e);
-          e < h ? (u(a, x, c, 17), u(b, x, d, 17)) : (u(a, x, d, 17), u(b, x, c, 17));
-        }, d: () => Date.now(), s: () => 2147483648, c: () => performance.now(), o: (a) => {
-          var b = x.length;
-          a >>>= 0;
-          if (2147483648 < a) return false;
-          for (var c = 1; 4 >= c; c *= 2) {
-            var d = b * (1 + 0.2 / c);
-            d = Math.min(d, a + 100663296);
-            a: {
-              d = (Math.min(2147483648, 65536 * Math.ceil(Math.max(a, d) / 65536)) - Ka.buffer.byteLength + 65535) / 65536 | 0;
-              try {
-                Ka.grow(d);
-                Qa();
-                var e = 1;
-                break a;
-              } catch (h) {
-              }
-              e = void 0;
-            }
-            if (e) return true;
-          }
-          return false;
-        }, E: (a, b) => {
-          var c = 0;
-          Sc().forEach((d, e) => {
-            var h = b + c;
-            e = F[a + 4 * e >> 2] = h;
-            for (h = 0; h < d.length; ++h) p[e++] = d.charCodeAt(h);
-            p[e] = 0;
-            c += d.length + 1;
-          });
-          return 0;
-        }, F: (a, b) => {
-          var c = Sc();
-          F[a >> 2] = c.length;
-          var d = 0;
-          c.forEach((e) => d += e.length + 1);
-          F[b >> 2] = d;
-          return 0;
-        }, e: function(a) {
-          try {
-            var b = T(a);
-            qa(b);
-            return 0;
-          } catch (c) {
-            if ("undefined" == typeof W || "ErrnoError" !== c.name) throw c;
-            return c.Pa;
-          }
-        }, p: function(a, b) {
-          try {
-            var c = T(a);
-            p[b] = c.tty ? 2 : P(c.mode) ? 3 : 40960 === (c.mode & 61440) ? 7 : 4;
-            Na[b + 2 >> 1] = 0;
-            H[b + 8 >> 3] = BigInt(0);
-            H[b + 16 >> 3] = BigInt(0);
-            return 0;
-          } catch (d) {
-            if ("undefined" == typeof W || "ErrnoError" !== d.name) throw d;
-            return d.Pa;
-          }
-        }, w: function(a, b, c, d) {
-          try {
-            a: {
-              var e = T(a);
-              a = b;
-              for (var h, k = b = 0; k < c; k++) {
-                var q = F[a >> 2], w = F[a + 4 >> 2];
-                a += 8;
-                var v = Ec(e, p, q, w, h);
-                if (0 > v) {
-                  var C = -1;
-                  break a;
-                }
-                b += v;
-                if (v < w) break;
-                "undefined" != typeof h && (h += v);
-              }
-              C = b;
-            }
-            F[d >> 2] = C;
-            return 0;
-          } catch (G) {
-            if ("undefined" == typeof W || "ErrnoError" !== G.name) throw G;
-            return G.Pa;
-          }
-        }, D: function(a, b, c, d) {
-          b = -9007199254740992 > b || 9007199254740992 < b ? NaN : Number(b);
-          try {
-            if (isNaN(b)) return 61;
-            var e = T(a);
-            mc(e, b, c);
-            H[d >> 3] = BigInt(e.position);
-            e.ob && 0 === b && 0 === c && (e.ob = null);
-            return 0;
-          } catch (h) {
-            if ("undefined" == typeof W || "ErrnoError" !== h.name) throw h;
-            return h.Pa;
-          }
-        }, I: function(a) {
-          try {
-            var b = T(a);
-            return b.Ma?.fsync ? b.Ma.fsync(b) : 0;
-          } catch (c) {
-            if ("undefined" == typeof W || "ErrnoError" !== c.name) throw c;
-            return c.Pa;
-          }
-        }, t: function(a, b, c, d) {
-          try {
-            a: {
-              var e = T(a);
-              a = b;
-              for (var h, k = b = 0; k < c; k++) {
-                var q = F[a >> 2], w = F[a + 4 >> 2];
-                a += 8;
-                var v = pa(e, p, q, w, h);
-                if (0 > v) {
-                  var C = -1;
-                  break a;
-                }
-                b += v;
-                if (v < w) break;
-                "undefined" != typeof h && (h += v);
-              }
-              C = b;
-            }
-            F[d >> 2] = C;
-            return 0;
-          } catch (G) {
-            if ("undefined" == typeof W || "ErrnoError" !== G.name) throw G;
-            return G.Pa;
-          }
-        }, k: Oc }, Z;
-        (async function() {
-          function a(c) {
-            Z = c.exports;
-            Ka = Z.M;
-            Qa();
-            Y = Z.O;
-            K--;
-            f.monitorRunDependencies?.(K);
-            0 == K && Sa && (c = Sa, Sa = null, c());
-            return Z;
-          }
-          K++;
-          f.monitorRunDependencies?.(K);
-          var b = { a: Xc };
-          if (f.instantiateWasm) return new Promise((c) => {
-            f.instantiateWasm(b, (d, e) => {
-              a(d);
-              c(d.exports);
-            });
-          });
-          Ua ?? (Ua = f.locateFile ? f.locateFile("sql-wasm.wasm", D) : D + "sql-wasm.wasm");
-          return a((await Xa(b)).instance);
-        })();
-        f._sqlite3_free = (a) => (f._sqlite3_free = Z.P)(a);
-        f._sqlite3_value_text = (a) => (f._sqlite3_value_text = Z.Q)(a);
-        f._sqlite3_prepare_v2 = (a, b, c, d, e) => (f._sqlite3_prepare_v2 = Z.R)(a, b, c, d, e);
-        f._sqlite3_step = (a) => (f._sqlite3_step = Z.S)(a);
-        f._sqlite3_reset = (a) => (f._sqlite3_reset = Z.T)(a);
-        f._sqlite3_exec = (a, b, c, d, e) => (f._sqlite3_exec = Z.U)(a, b, c, d, e);
-        f._sqlite3_finalize = (a) => (f._sqlite3_finalize = Z.V)(a);
-        f._sqlite3_column_name = (a, b) => (f._sqlite3_column_name = Z.W)(a, b);
-        f._sqlite3_column_text = (a, b) => (f._sqlite3_column_text = Z.X)(a, b);
-        f._sqlite3_column_type = (a, b) => (f._sqlite3_column_type = Z.Y)(a, b);
-        f._sqlite3_errmsg = (a) => (f._sqlite3_errmsg = Z.Z)(a);
-        f._sqlite3_clear_bindings = (a) => (f._sqlite3_clear_bindings = Z._)(a);
-        f._sqlite3_value_blob = (a) => (f._sqlite3_value_blob = Z.$)(a);
-        f._sqlite3_value_bytes = (a) => (f._sqlite3_value_bytes = Z.aa)(a);
-        f._sqlite3_value_double = (a) => (f._sqlite3_value_double = Z.ba)(a);
-        f._sqlite3_value_int = (a) => (f._sqlite3_value_int = Z.ca)(a);
-        f._sqlite3_value_type = (a) => (f._sqlite3_value_type = Z.da)(a);
-        f._sqlite3_result_blob = (a, b, c, d) => (f._sqlite3_result_blob = Z.ea)(a, b, c, d);
-        f._sqlite3_result_double = (a, b) => (f._sqlite3_result_double = Z.fa)(a, b);
-        f._sqlite3_result_error = (a, b, c) => (f._sqlite3_result_error = Z.ga)(a, b, c);
-        f._sqlite3_result_int = (a, b) => (f._sqlite3_result_int = Z.ha)(a, b);
-        f._sqlite3_result_int64 = (a, b) => (f._sqlite3_result_int64 = Z.ia)(a, b);
-        f._sqlite3_result_null = (a) => (f._sqlite3_result_null = Z.ja)(a);
-        f._sqlite3_result_text = (a, b, c, d) => (f._sqlite3_result_text = Z.ka)(a, b, c, d);
-        f._sqlite3_aggregate_context = (a, b) => (f._sqlite3_aggregate_context = Z.la)(a, b);
-        f._sqlite3_column_count = (a) => (f._sqlite3_column_count = Z.ma)(a);
-        f._sqlite3_data_count = (a) => (f._sqlite3_data_count = Z.na)(a);
-        f._sqlite3_column_blob = (a, b) => (f._sqlite3_column_blob = Z.oa)(a, b);
-        f._sqlite3_column_bytes = (a, b) => (f._sqlite3_column_bytes = Z.pa)(a, b);
-        f._sqlite3_column_double = (a, b) => (f._sqlite3_column_double = Z.qa)(a, b);
-        f._sqlite3_bind_blob = (a, b, c, d, e) => (f._sqlite3_bind_blob = Z.ra)(a, b, c, d, e);
-        f._sqlite3_bind_double = (a, b, c) => (f._sqlite3_bind_double = Z.sa)(a, b, c);
-        f._sqlite3_bind_int = (a, b, c) => (f._sqlite3_bind_int = Z.ta)(a, b, c);
-        f._sqlite3_bind_text = (a, b, c, d, e) => (f._sqlite3_bind_text = Z.ua)(a, b, c, d, e);
-        f._sqlite3_bind_parameter_index = (a, b) => (f._sqlite3_bind_parameter_index = Z.va)(a, b);
-        f._sqlite3_sql = (a) => (f._sqlite3_sql = Z.wa)(a);
-        f._sqlite3_normalized_sql = (a) => (f._sqlite3_normalized_sql = Z.xa)(a);
-        f._sqlite3_changes = (a) => (f._sqlite3_changes = Z.ya)(a);
-        f._sqlite3_close_v2 = (a) => (f._sqlite3_close_v2 = Z.za)(a);
-        f._sqlite3_create_function_v2 = (a, b, c, d, e, h, k, q, w) => (f._sqlite3_create_function_v2 = Z.Aa)(a, b, c, d, e, h, k, q, w);
-        f._sqlite3_update_hook = (a, b, c) => (f._sqlite3_update_hook = Z.Ba)(a, b, c);
-        f._sqlite3_open = (a, b) => (f._sqlite3_open = Z.Ca)(a, b);
-        var ia = f._malloc = (a) => (ia = f._malloc = Z.Da)(a), fa = f._free = (a) => (fa = f._free = Z.Ea)(a);
-        f._RegisterExtensionFunctions = (a) => (f._RegisterExtensionFunctions = Z.Fa)(a);
-        var Db = (a, b) => (Db = Z.Ga)(a, b), Wc = (a, b) => (Wc = Z.Ha)(a, b), wa = (a) => (wa = Z.Ia)(a), z = (a) => (z = Z.Ja)(a), sa = () => (sa = Z.Ka)();
-        f.stackSave = () => sa();
-        f.stackRestore = (a) => wa(a);
-        f.stackAlloc = (a) => z(a);
-        f.cwrap = (a, b, c, d) => {
-          var e = !c || c.every((h) => "number" === h || "boolean" === h);
-          return "string" !== b && e && !d ? f["_" + a] : (...h) => Tc(a, b, c, h);
-        };
-        f.addFunction = Aa;
-        f.removeFunction = A;
-        f.UTF8ToString = ua;
-        f.ALLOC_NORMAL = ea;
-        f.allocate = da;
-        f.allocateUTF8OnStack = xa;
-        function Yc() {
-          function a() {
-            f.calledRun = true;
-            if (!La) {
-              if (!f.noFSInit && !Ib) {
-                var b, c;
-                Ib = true;
-                d ?? (d = f.stdin);
-                b ?? (b = f.stdout);
-                c ?? (c = f.stderr);
-                d ? V("stdin", d) : Zb("/dev/tty", "/dev/stdin");
-                b ? V("stdout", null, b) : Zb("/dev/tty", "/dev/stdout");
-                c ? V("stderr", null, c) : Zb("/dev/tty1", "/dev/stderr");
-                oa("/dev/stdin", 0);
-                oa("/dev/stdout", 1);
-                oa("/dev/stderr", 1);
-              }
-              Z.N();
-              Jb = false;
-              f.onRuntimeInitialized?.();
-              if (f.postRun) for ("function" == typeof f.postRun && (f.postRun = [f.postRun]); f.postRun.length; ) {
-                var d = f.postRun.shift();
-                $a.unshift(d);
-              }
-              Za($a);
-            }
-          }
-          if (0 < K) Sa = Yc;
-          else {
-            if (f.preRun) for ("function" == typeof f.preRun && (f.preRun = [f.preRun]); f.preRun.length; ) bb();
-            Za(ab);
-            0 < K ? Sa = Yc : f.setStatus ? (f.setStatus("Running..."), setTimeout(() => {
-              setTimeout(() => f.setStatus(""), 1);
-              a();
-            }, 1)) : a();
-          }
-        }
-        if (f.preInit) for ("function" == typeof f.preInit && (f.preInit = [f.preInit]); 0 < f.preInit.length; ) f.preInit.pop()();
-        Yc();
-        return Module;
-      });
-      return initSqlJsPromise;
-    };
-    {
-      module.exports = initSqlJs2;
-      module.exports.default = initSqlJs2;
-    }
-  })(sqlWasm);
-  return sqlWasm.exports;
+const byteToHex = [];
+for (let i = 0; i < 256; ++i) {
+  byteToHex.push((i + 256).toString(16).slice(1));
 }
-var sqlWasmExports = requireSqlWasm();
-const initSqlJs = /* @__PURE__ */ getDefaultExportFromCjs(sqlWasmExports);
+function unsafeStringify(arr, offset = 0) {
+  return (byteToHex[arr[offset + 0]] + byteToHex[arr[offset + 1]] + byteToHex[arr[offset + 2]] + byteToHex[arr[offset + 3]] + "-" + byteToHex[arr[offset + 4]] + byteToHex[arr[offset + 5]] + "-" + byteToHex[arr[offset + 6]] + byteToHex[arr[offset + 7]] + "-" + byteToHex[arr[offset + 8]] + byteToHex[arr[offset + 9]] + "-" + byteToHex[arr[offset + 10]] + byteToHex[arr[offset + 11]] + byteToHex[arr[offset + 12]] + byteToHex[arr[offset + 13]] + byteToHex[arr[offset + 14]] + byteToHex[arr[offset + 15]]).toLowerCase();
+}
+let getRandomValues;
+const rnds8 = new Uint8Array(16);
+function rng() {
+  if (!getRandomValues) {
+    if (typeof crypto === "undefined" || !crypto.getRandomValues) {
+      throw new Error("crypto.getRandomValues() not supported. See https://github.com/uuidjs/uuid#getrandomvalues-not-supported");
+    }
+    getRandomValues = crypto.getRandomValues.bind(crypto);
+  }
+  return getRandomValues(rnds8);
+}
+const randomUUID = typeof crypto !== "undefined" && crypto.randomUUID && crypto.randomUUID.bind(crypto);
+const native = { randomUUID };
+function _v4(options, buf, offset) {
+  options = options || {};
+  const rnds = options.random ?? options.rng?.() ?? rng();
+  if (rnds.length < 16) {
+    throw new Error("Random bytes length must be >= 16");
+  }
+  rnds[6] = rnds[6] & 15 | 64;
+  rnds[8] = rnds[8] & 63 | 128;
+  return unsafeStringify(rnds);
+}
+function v4(options, buf, offset) {
+  if (native.randomUUID && true && !options) {
+    return native.randomUUID();
+  }
+  return _v4(options);
+}
 const noop = /* @__NO_SIDE_EFFECTS__ */ (any) => any;
 let invariant = noop;
 // @__NO_SIDE_EFFECTS__
@@ -2713,185 +654,11 @@ function setDragLock(axis) {
     }
   }
 }
-const instanceOfAny = (object, constructors) => constructors.some((c) => object instanceof c);
-let idbProxyableTypes;
-let cursorAdvanceMethods;
-function getIdbProxyableTypes() {
-  return idbProxyableTypes || (idbProxyableTypes = [
-    IDBDatabase,
-    IDBObjectStore,
-    IDBIndex,
-    IDBCursor,
-    IDBTransaction
-  ]);
-}
-function getCursorAdvanceMethods() {
-  return cursorAdvanceMethods || (cursorAdvanceMethods = [
-    IDBCursor.prototype.advance,
-    IDBCursor.prototype.continue,
-    IDBCursor.prototype.continuePrimaryKey
-  ]);
-}
-const cursorRequestMap = /* @__PURE__ */ new WeakMap();
-const transactionDoneMap = /* @__PURE__ */ new WeakMap();
-const transactionStoreNamesMap = /* @__PURE__ */ new WeakMap();
-const transformCache = /* @__PURE__ */ new WeakMap();
-const reverseTransformCache = /* @__PURE__ */ new WeakMap();
-function promisifyRequest(request) {
-  const promise = new Promise((resolve, reject) => {
-    const unlisten = () => {
-      request.removeEventListener("success", success);
-      request.removeEventListener("error", error);
-    };
-    const success = () => {
-      resolve(wrap(request.result));
-      unlisten();
-    };
-    const error = () => {
-      reject(request.error);
-      unlisten();
-    };
-    request.addEventListener("success", success);
-    request.addEventListener("error", error);
-  });
-  promise.then((value) => {
-    if (value instanceof IDBCursor) {
-      cursorRequestMap.set(value, request);
-    }
-  }).catch(() => {
-  });
-  reverseTransformCache.set(promise, request);
-  return promise;
-}
-function cacheDonePromiseForTransaction(tx) {
-  if (transactionDoneMap.has(tx))
-    return;
-  const done = new Promise((resolve, reject) => {
-    const unlisten = () => {
-      tx.removeEventListener("complete", complete);
-      tx.removeEventListener("error", error);
-      tx.removeEventListener("abort", error);
-    };
-    const complete = () => {
-      resolve();
-      unlisten();
-    };
-    const error = () => {
-      reject(tx.error || new DOMException("AbortError", "AbortError"));
-      unlisten();
-    };
-    tx.addEventListener("complete", complete);
-    tx.addEventListener("error", error);
-    tx.addEventListener("abort", error);
-  });
-  transactionDoneMap.set(tx, done);
-}
-let idbProxyTraps = {
-  get(target, prop, receiver) {
-    if (target instanceof IDBTransaction) {
-      if (prop === "done")
-        return transactionDoneMap.get(target);
-      if (prop === "objectStoreNames") {
-        return target.objectStoreNames || transactionStoreNamesMap.get(target);
-      }
-      if (prop === "store") {
-        return receiver.objectStoreNames[1] ? void 0 : receiver.objectStore(receiver.objectStoreNames[0]);
-      }
-    }
-    return wrap(target[prop]);
-  },
-  set(target, prop, value) {
-    target[prop] = value;
-    return true;
-  },
-  has(target, prop) {
-    if (target instanceof IDBTransaction && (prop === "done" || prop === "store")) {
-      return true;
-    }
-    return prop in target;
-  }
-};
-function replaceTraps(callback) {
-  idbProxyTraps = callback(idbProxyTraps);
-}
-function wrapFunction(func) {
-  if (func === IDBDatabase.prototype.transaction && !("objectStoreNames" in IDBTransaction.prototype)) {
-    return function(storeNames, ...args) {
-      const tx = func.call(unwrap(this), storeNames, ...args);
-      transactionStoreNamesMap.set(tx, storeNames.sort ? storeNames.sort() : [storeNames]);
-      return wrap(tx);
-    };
-  }
-  if (getCursorAdvanceMethods().includes(func)) {
-    return function(...args) {
-      func.apply(unwrap(this), args);
-      return wrap(cursorRequestMap.get(this));
-    };
-  }
-  return function(...args) {
-    return wrap(func.apply(unwrap(this), args));
-  };
-}
-function transformCachableValue(value) {
-  if (typeof value === "function")
-    return wrapFunction(value);
-  if (value instanceof IDBTransaction)
-    cacheDonePromiseForTransaction(value);
-  if (instanceOfAny(value, getIdbProxyableTypes()))
-    return new Proxy(value, idbProxyTraps);
-  return value;
-}
-function wrap(value) {
-  if (value instanceof IDBRequest)
-    return promisifyRequest(value);
-  if (transformCache.has(value))
-    return transformCache.get(value);
-  const newValue = transformCachableValue(value);
-  if (newValue !== value) {
-    transformCache.set(value, newValue);
-    reverseTransformCache.set(newValue, value);
-  }
-  return newValue;
-}
-const unwrap = (value) => reverseTransformCache.get(value);
-const readMethods = ["get", "getKey", "getAll", "getAllKeys", "count"];
-const writeMethods = ["put", "add", "delete", "clear"];
-const cachedMethods = /* @__PURE__ */ new Map();
-function getMethod(target, prop) {
-  if (!(target instanceof IDBDatabase && !(prop in target) && typeof prop === "string")) {
-    return;
-  }
-  if (cachedMethods.get(prop))
-    return cachedMethods.get(prop);
-  const targetFuncName = prop.replace(/FromIndex$/, "");
-  const useIndex = prop !== targetFuncName;
-  const isWrite = writeMethods.includes(targetFuncName);
-  if (
-    // Bail if the target doesn't exist on the target. Eg, getAll isn't in Edge.
-    !(targetFuncName in (useIndex ? IDBIndex : IDBObjectStore).prototype) || !(isWrite || readMethods.includes(targetFuncName))
-  ) {
-    return;
-  }
-  const method = async function(storeName, ...args) {
-    const tx = this.transaction(storeName, isWrite ? "readwrite" : "readonly");
-    let target2 = tx.store;
-    if (useIndex)
-      target2 = target2.index(args.shift());
-    return (await Promise.all([
-      target2[targetFuncName](...args),
-      isWrite && tx.done
-    ]))[0];
-  };
-  cachedMethods.set(prop, method);
-  return method;
-}
-replaceTraps((oldTraps) => ({
-  ...oldTraps,
-  get: (target, prop, receiver) => getMethod(target, prop) || oldTraps.get(target, prop, receiver),
-  has: (target, prop) => !!getMethod(target, prop) || oldTraps.has(target, prop)
-}));
 const require$$3 = "MLC_DUMMY_REQUIRE_VAR";
 const require$$4 = "MLC_DUMMY_REQUIRE_VAR";
+function getDefaultExportFromCjs(x) {
+  return x && x.__esModule && Object.prototype.hasOwnProperty.call(x, "default") ? x["default"] : x;
+}
 function getAugmentedNamespace(n) {
   if (Object.prototype.hasOwnProperty.call(n, "__esModule")) return n;
   var f = n.default;
@@ -3174,13 +941,353 @@ function requireLoglevel() {
   })(loglevel$1);
   return loglevel$1.exports;
 }
-requireLoglevel();
+var loglevelExports = requireLoglevel();
+var log = /* @__PURE__ */ getDefaultExportFromCjs(loglevelExports);
+class ModelNotFoundError extends Error {
+  constructor(modelId) {
+    super(`Cannot find model record in appConfig for ${modelId}. Please check if the model ID is correct and included in the model_list configuration.`);
+    this.name = "ModelNotFoundError";
+  }
+}
+class ConfigValueError extends Error {
+  constructor(message) {
+    super(message);
+    this.name = "ConfigValueError";
+  }
+}
+class MinValueError extends ConfigValueError {
+  constructor(paramName, minValue) {
+    super(`Make sure \`${paramName}\` > ${minValue}.`);
+    this.name = "MinValueError";
+  }
+}
+let RangeError$1 = class RangeError extends ConfigValueError {
+  constructor(paramName, minValue, maxValue, additionalMessage) {
+    super(`Make sure ${minValue} < ${paramName} <= ${maxValue}.${additionalMessage ? " " + additionalMessage : ""}`);
+    this.name = "RangeError";
+  }
+};
+class NonNegativeError extends ConfigValueError {
+  constructor(paramName) {
+    super(`Make sure ${paramName} >= 0.`);
+    this.name = "NonNegativeError";
+  }
+}
+class InvalidNumberStringError extends ConfigValueError {
+  constructor(paramName, actualValue) {
+    super(`Make sure ${paramName} to be number represented in string.${actualValue ? " Got " + actualValue : ""}`);
+    this.name = "InvalidNumberStringError";
+  }
+}
+class DependencyError extends ConfigValueError {
+  constructor(dependentParam, requiredParam, requiredValue) {
+    super(`${dependentParam} requires ${requiredParam} to be ${requiredValue}.`);
+    this.name = "DependencyError";
+  }
+}
+class WebGPUNotAvailableError extends Error {
+  constructor() {
+    super("WebGPU is not supported in your current environment, but it is necessary to run the WebLLM engine. Please make sure that your browser supports WebGPU and that it is enabled in your browser settings. You can also consult your browser's compatibility chart to see if it supports WebGPU. For more information about WebGPU support in your browser, visit https://webgpureport.org/");
+    this.name = "WebGPUNotAvailableError";
+  }
+}
+class ModelNotLoadedError extends Error {
+  constructor(requestName) {
+    super(`Model not loaded before trying to complete ${requestName}. Please ensure you have called MLCEngine.reload(model) to load the model before initiating APIs, or initialize your engine using CreateMLCEngine() with a valid model configuration.`);
+    this.name = "ModelNotLoadedError";
+  }
+}
+class MessageOrderError extends Error {
+  constructor(message) {
+    super(message);
+    this.name = "MessageOrderError";
+  }
+}
+class SystemMessageOrderError extends Error {
+  constructor() {
+    super("System prompt should always be the first message in `messages`.");
+    this.name = "SystemMessageOrderError";
+  }
+}
+class ContentTypeError extends Error {
+  constructor(name) {
+    super(`${name} should have string content.`);
+    this.name = "ContentTypeError";
+  }
+}
+class UnsupportedRoleError extends Error {
+  constructor(role) {
+    super(`Unsupported role of message: ${role}`);
+    this.name = "UnsupportedRoleError";
+  }
+}
+class UserMessageContentErrorForNonVLM extends Error {
+  constructor(modelId, modelType, content) {
+    super(`The model loaded is not of type ModelType.VLM (vision-language model). Therefore, user message only supports string content, but received: ${content}
+Loaded modelId: ${modelId}, modelType: ${modelType}`);
+    this.name = "UserMessageContentErrorForNonVLM";
+  }
+}
+class PrefillChunkSizeSmallerThanImageError extends Error {
+  constructor(prefillChunkSize, imageEmbedSize) {
+    super(`prefillChunkSize needs to be greater than imageEmbedSize because a single image's prefill cannot be chunked. Got prefillChunkSize: ${prefillChunkSize}, imageEmbedSize: ${imageEmbedSize}`);
+    this.name = "PrefillChunkSizeSmallerThanImageError";
+  }
+}
+class CannotFindImageEmbedError extends Error {
+  constructor() {
+    super(`Received image input but model does not have kernel image_embed. Make sure to only pass in image to a vision model.`);
+    this.name = "CannotFindImageEmbedError";
+  }
+}
+class UnsupportedDetailError extends Error {
+  constructor(detail) {
+    super(`Currently do not support field image_url.detail, but received: ${detail}`);
+    this.name = "UnsupportedDetailError";
+  }
+}
+class UnsupportedImageURLError extends Error {
+  constructor(url) {
+    super(`image_url.url should start with "data:image" for base64, or with "http", but got: ${url}`);
+    this.name = "UnsupportedImageURLError";
+  }
+}
+class MultipleTextContentError extends Error {
+  constructor() {
+    super(`Each message can have at most one text contentPart, but received more than 1.`);
+    this.name = "MultipleTextContentError";
+  }
+}
+class ToolCallOutputParseError extends Error {
+  constructor(outputMessage, error) {
+    super(`Internal error: error encountered when parsing outputMessage for function calling. Got outputMessage: ${outputMessage}
+Got error: ${error}`);
+    this.name = "ToolCallOutputParseError";
+  }
+}
+class ToolCallOutputInvalidTypeError extends Error {
+  constructor(expectedType) {
+    super(`Internal error: expect output of function calling to be an ${expectedType}`);
+    this.name = "ToolCallOutputInvalidTypeError";
+  }
+}
+class ToolCallOutputMissingFieldsError extends Error {
+  constructor(missingFields, object) {
+    super(`Expect generated tool call to have fields ${missingFields.map((field) => `"\`${field}\`"`).join(", ")}, but got object: ${JSON.stringify(object)}`);
+    this.name = "JSONFieldError";
+  }
+}
+class ConfigurationNotInitializedError extends Error {
+  constructor() {
+    super("Configuration not initialized. Ensure you have called `reload()` function first.");
+    this.name = "ConfigurationNotInitializedError";
+  }
+}
+class MissingModelWasmError extends Error {
+  constructor(modelId) {
+    super(`Missing \`model_lib\` for the model with ID "${modelId}". Please ensure that \`model_lib\` is provided in \`model_list\` for each model. This URL is essential for downloading the WASM library necessary to run the model.`);
+    this.name = "MissingModelError";
+  }
+}
+class FeatureSupportError extends Error {
+  constructor(feature) {
+    super(`This model requires feature ${feature}, which is not yet supported by this browser.`);
+    this.name = "FeatureSupportError";
+  }
+}
+class UnsupportedFieldsError extends Error {
+  constructor(unsupportedFields, targetClass) {
+    super(`The following fields in ${targetClass} are not yet supported: 
+` + unsupportedFields.join(", "));
+    this.name = "UnsupportedFieldsError";
+  }
+}
+class ShaderF16SupportError extends FeatureSupportError {
+  constructor() {
+    super('This model requires WebGPU extension shader-f16, which is not enabled in this browser. You can try to launch Chrome Canary in command line with flag "--enable-dawn-features=allow_unsafe_apis".');
+    this.name = "ShaderF16SupportError";
+  }
+}
+class DeviceLostError extends Error {
+  constructor() {
+    super("The WebGPU device was lost while loading the model. This issue often occurs due to running out of memory (OOM). To resolve this, try reloading with a model that has fewer parameters or uses a smaller context length.");
+    this.name = "DeviceLostError";
+  }
+}
+class UnsupportedTokenizerFilesError extends Error {
+  constructor(files) {
+    super(`Cannot handle tokenizer files ${files}`);
+    this.name = "UnsupportedTokenizerFilesError";
+  }
+}
+class WindowSizeConfigurationError extends Error {
+  constructor(contextWindowSize, slidingWindowSize) {
+    super(`Only one of context_window_size and sliding_window_size can be positive. Got: context_window_size: ${contextWindowSize}, sliding_window_size: ${slidingWindowSize}
+Consider modifying ModelRecord.overrides to set one of them to -1.`);
+    this.name = "WindowSizeConfigurationError";
+  }
+}
+class AttentionSinkSizeError extends Error {
+  constructor() {
+    super("Need to specify non-negative attention_sink_size if using sliding window. Consider modifying ModelRecord.overrides. Use `attention_sink_size=0` for default sliding window.");
+    this.name = "AttentionSinkSizeError";
+  }
+}
+class WindowSizeSpecificationError extends Error {
+  constructor() {
+    super("Need to specify either sliding_window_size or max_window_size.\nConsider modifying ModelRecord.overrides to set one of them to positive.");
+    this.name = "WindowSizeSpecificationError";
+  }
+}
+class ContextWindowSizeExceededError extends Error {
+  constructor(numPromptTokens, contextWindowSize) {
+    super(`Prompt tokens exceed context window size: number of prompt tokens: ${numPromptTokens}; context window size: ${contextWindowSize}
+Consider shortening the prompt, or increase \`context_window_size\`, or using sliding window via \`sliding_window_size\`.`);
+    this.name = "ContextWindowSizeExceededError";
+  }
+}
+class StreamingCountError extends Error {
+  constructor() {
+    super("When streaming, `n` cannot be > 1.");
+    this.name = "StreamingCountError";
+  }
+}
+class SeedTypeError extends Error {
+  constructor(seed) {
+    super("`seed` should be an integer, but got " + seed);
+    this.name = "SeedTypeError";
+  }
+}
+class InvalidResponseFormatError extends Error {
+  constructor() {
+    super("JSON schema is only supported with `json_object` response format.");
+    this.name = "InvalidResponseFormatError";
+  }
+}
+class InvalidResponseFormatGrammarError extends Error {
+  constructor() {
+    super("When ResponseFormat.type is `grammar`, ResponseFormat.grammar needs to be specified.\nWhen ResponseFormat.grammar is specified, ResponseFormat.type needs to be grammar.");
+    this.name = "InvalidResponseFormatGrammarError";
+  }
+}
+class CustomResponseFormatError extends Error {
+  constructor(currentFormat) {
+    super("When using Hermes-2-Pro function calling via ChatCompletionRequest.tools, cannot specify customized response_format. We will set it for you internally. Currently set to: " + JSON.stringify(currentFormat));
+    this.name = "CustomResponseFormatError";
+  }
+}
+class UnsupportedModelIdError extends Error {
+  constructor(currentModelId, supportedModelIds) {
+    super(`${currentModelId} is not supported for ChatCompletionRequest.tools. Currently, models that support function calling are: ${supportedModelIds.join(", ")}`);
+    this.name = "UnsupportedModelIdError";
+  }
+}
+class CustomSystemPromptError extends Error {
+  constructor() {
+    super("When using Hermes-2-Pro function calling via ChatCompletionRequest.tools, cannot specify customized system prompt.");
+    this.name = "CustomSystemPromptError";
+  }
+}
+class InvalidStreamOptionsError extends Error {
+  constructor() {
+    super("Only specify stream_options when stream=True.");
+    this.name = "InvalidStreamOptionsError";
+  }
+}
+class TextCompletionExpectsKVEmptyError extends Error {
+  constructor() {
+    super("Non-chat text completion API expects KVCache to be empty.");
+    this.name = "TextCompletionExpectsKVEmptyError";
+  }
+}
+class TextCompletionConversationExpectsPrompt extends Error {
+  constructor() {
+    super("Non-chat text completion API expects isTextCompletion is true, and prompt is defined.");
+    this.name = "TextCompletionConversationExpectsPrompt";
+  }
+}
+class TextCompletionConversationError extends Error {
+  constructor(funcName) {
+    super(`Non-chat text completion API cannot call ${funcName}.`);
+    this.name = "TextCompletionConversationError";
+  }
+}
+class EmbeddingUnsupportedEncodingFormatError extends Error {
+  constructor() {
+    super("Embedding in base64 format is currently not supported.");
+    this.name = "EmbeddingUnsupportedEncodingFormatError";
+  }
+}
+class EmbeddingUnsupportedModelError extends Error {
+  constructor(currentModel) {
+    super(`Trying to run embeddings.create() with ${currentModel}, which does not have ModelRecord.model_type === ModelType.embedding in the model record. Either make sure an embedding model is loaded, or specify the model type in ModelRecord.`);
+    this.name = "EmbeddingUnsupportedModelError";
+  }
+}
+class EmbeddingSlidingWindowError extends Error {
+  constructor(sliding_window_size) {
+    super(`Embedding should not use sliding window. However, sliding_window_size=${sliding_window_size} is specified in the chat config.`);
+    this.name = "EmbeddingSlidingWindowError";
+  }
+}
+class EmbeddingChunkingUnsupportedError extends Error {
+  constructor(contextWindowSize, prefillChunkSize) {
+    super(`Embedding currently does not support chunking. Make sure contextWindowSize === prefillChunkSize. Got contextWindowSize=${contextWindowSize}, prefillChunkSize=${prefillChunkSize} instead.`);
+    this.name = "EmbeddingChunkingUnsupportedError";
+  }
+}
+class EmbeddingExceedContextWindowSizeError extends Error {
+  constructor(contextWindowSize, receivedSize) {
+    super(`The embedding model you are using only supports up to ${contextWindowSize} context size.However, an input in the batch has size ${receivedSize}.`);
+    this.name = "EmbeddingExceedContextWindowSizeError";
+  }
+}
+class EmbeddingInputEmptyError extends Error {
+  constructor() {
+    super("Embedding input cannot be empty string or empty token array.");
+    this.name = "EmbeddingInputEmptyError";
+  }
+}
+class ReloadArgumentSizeUnmatchedError extends Error {
+  constructor(numModelId, numChatOpts) {
+    super(`Expect chatOpts, if specified, to match the size of modelId. However, got ${numModelId} modelId, but ${numChatOpts} chatOpts.`);
+    this.name = "ReloadArgumentSizeUnmatchedError";
+  }
+}
+class UnclearModelToUseError extends Error {
+  constructor(loadedModels, requestName) {
+    super(`Multiple models are loaded in engine. Please specify the model in ${requestName}.
+Currently loaded models are:
+${loadedModels}`);
+    this.name = "UnclearModelToUseError";
+  }
+}
+class SpecifiedModelNotFoundError extends Error {
+  constructor(loadedModels, requestedModelId, requestName) {
+    super(`Specified model ${requestedModelId} for ${requestName} is not found in loaded models. Please check if the correct model is loaded/specified. Currently loaded models are:
+${loadedModels}`);
+    this.name = "SpecifiedModelNotFoundError";
+  }
+}
+class IncorrectPipelineLoadedError extends Error {
+  constructor(selectedModelId, expectedPipeline, requestName) {
+    super(`${requestName} expects model to be loaded with ${expectedPipeline}. However, ${selectedModelId} is not loaded with this pipeline.`);
+    this.name = "IncorrectPipelineLoadedError";
+  }
+}
+class ReloadModelIdNotUniqueError extends Error {
+  constructor(modelId) {
+    super(`Need to make models in modelId passed to reload() need to be unique. If you want to, load copies of the same model, consider making copies of the ModelRecord with different model_id. Received modelId: ${modelId}`);
+    this.name = "ReloadModelIdNotUniqueError";
+  }
+}
 var Role;
 (function(Role2) {
   Role2["user"] = "user";
   Role2["assistant"] = "assistant";
   Role2["tool"] = "tool";
 })(Role || (Role = {}));
+const DefaultLogLevel = "WARN";
 var MessagePlaceholders;
 (function(MessagePlaceholders2) {
   MessagePlaceholders2["system"] = "{system_message}";
@@ -3190,6 +1297,61 @@ var MessagePlaceholders;
   MessagePlaceholders2["function"] = "{function_string}";
   MessagePlaceholders2["hermes_tools"] = "{hermes_tools}";
 })(MessagePlaceholders || (MessagePlaceholders = {}));
+function postInitAndCheckGenerationConfigValues(config) {
+  function _hasValue(value) {
+    return value !== void 0 && value !== null;
+  }
+  if (config.frequency_penalty && (config.frequency_penalty < -2 || config.frequency_penalty > 2)) {
+    throw new RangeError$1("frequency_penalty", -2, 2);
+  }
+  if (config.presence_penalty && (config.presence_penalty < -2 || config.presence_penalty > 2)) {
+    throw new RangeError$1("presence_penalty", -2, 2);
+  }
+  if (_hasValue(config.repetition_penalty) && config.repetition_penalty <= 0) {
+    throw new MinValueError("repetition_penalty", 0);
+  }
+  if (_hasValue(config.max_tokens) && config.max_tokens <= 0) {
+    throw new MinValueError("max_tokens", 0);
+  }
+  if (_hasValue(config.top_p) && config.top_p <= 0 || config.top_p > 1) {
+    throw new RangeError$1("top_p", 0, 1);
+  }
+  if (_hasValue(config.temperature) && config.temperature < 0) {
+    throw new NonNegativeError("temperature");
+  }
+  if (_hasValue(config.frequency_penalty) && !_hasValue(config.presence_penalty)) {
+    config.presence_penalty = 0;
+    log.warn("Only frequency_penalty is set; we default presence_penaty to 0.");
+  }
+  if (_hasValue(config.presence_penalty) && !_hasValue(config.frequency_penalty)) {
+    config.frequency_penalty = 0;
+    log.warn("Only presence_penalty is set; we default frequency_penalty to 0.");
+  }
+  if (_hasValue(config.logit_bias)) {
+    for (const tokenID in config.logit_bias) {
+      const bias = config.logit_bias[tokenID];
+      if (bias > 100 || bias < -100) {
+        throw new RangeError$1("logit_bias", -100, 100, "Got " + bias + " for tokenID " + tokenID);
+      }
+      if (isNaN(parseInt(tokenID))) {
+        throw new InvalidNumberStringError("logit_bias's keys", tokenID);
+      }
+    }
+  }
+  if (_hasValue(config.top_logprobs)) {
+    if (!config.logprobs) {
+      throw new DependencyError("top_logprobs", "logprobs", true);
+    }
+    if (config.top_logprobs < 0 || config.top_logprobs > 5) {
+      throw new RangeError$1("top_logprobs", 0, 5, "Got " + config.top_logprobs);
+    }
+  }
+  if (config.logprobs) {
+    if (!_hasValue(config.top_logprobs)) {
+      config.top_logprobs = 0;
+    }
+  }
+}
 var ModelType;
 (function(ModelType2) {
   ModelType2[ModelType2["LLM"] = 0] = "LLM";
@@ -3198,7 +1360,15 @@ var ModelType;
 })(ModelType || (ModelType = {}));
 const modelVersion = "v0_2_80";
 const modelLibURLPrefix = "https://raw.githubusercontent.com/mlc-ai/binary-mlc-llm-libs/main/web-llm-models/";
-({
+const functionCallingModelIds = [
+  "Hermes-2-Pro-Llama-3-8B-q4f16_1-MLC",
+  "Hermes-2-Pro-Llama-3-8B-q4f32_1-MLC",
+  "Hermes-2-Pro-Mistral-7B-q4f16_1-MLC",
+  "Hermes-3-Llama-3.1-8B-q4f32_1-MLC",
+  "Hermes-3-Llama-3.1-8B-q4f16_1-MLC"
+];
+const prebuiltAppConfig = {
+  useIndexedDBCache: false,
   model_list: [
     // Llama-3.2
     {
@@ -4720,7 +2890,78 @@ const modelLibURLPrefix = "https://raw.githubusercontent.com/mlc-ai/binary-mlc-l
       model_type: ModelType.embedding
     }
   ]
-});
+};
+function __awaiter(thisArg, _arguments, P, generator) {
+  function adopt(value) {
+    return value instanceof P ? value : new P(function(resolve) {
+      resolve(value);
+    });
+  }
+  return new (P || (P = Promise))(function(resolve, reject) {
+    function fulfilled(value) {
+      try {
+        step(generator.next(value));
+      } catch (e) {
+        reject(e);
+      }
+    }
+    function rejected(value) {
+      try {
+        step(generator["throw"](value));
+      } catch (e) {
+        reject(e);
+      }
+    }
+    function step(result) {
+      result.done ? resolve(result.value) : adopt(result.value).then(fulfilled, rejected);
+    }
+    step((generator = generator.apply(thisArg, [])).next());
+  });
+}
+function __await(v) {
+  return this instanceof __await ? (this.v = v, this) : new __await(v);
+}
+function __asyncGenerator(thisArg, _arguments, generator) {
+  if (!Symbol.asyncIterator) throw new TypeError("Symbol.asyncIterator is not defined.");
+  var g = generator.apply(thisArg, _arguments || []), i, q = [];
+  return i = Object.create((typeof AsyncIterator === "function" ? AsyncIterator : Object).prototype), verb("next"), verb("throw"), verb("return", awaitReturn), i[Symbol.asyncIterator] = function() {
+    return this;
+  }, i;
+  function awaitReturn(f) {
+    return function(v) {
+      return Promise.resolve(v).then(f, reject);
+    };
+  }
+  function verb(n, f) {
+    if (g[n]) {
+      i[n] = function(v) {
+        return new Promise(function(a, b) {
+          q.push([n, v, a, b]) > 1 || resume(n, v);
+        });
+      };
+      if (f) i[n] = f(i[n]);
+    }
+  }
+  function resume(n, v) {
+    try {
+      step(g[n](v));
+    } catch (e) {
+      settle(q[0][3], e);
+    }
+  }
+  function step(r) {
+    r.value instanceof __await ? Promise.resolve(r.value.v).then(fulfill, reject) : settle(q[0][2], r);
+  }
+  function fulfill(value) {
+    resume("next", value);
+  }
+  function reject(value) {
+    resume("throw", value);
+  }
+  function settle(f, v) {
+    if (f(v), q.shift(), q.length) resume(q[0][0], q[0][1]);
+  }
+}
 typeof SuppressedError === "function" ? SuppressedError : function(error, suppressed, message) {
   var e = new Error(message);
   return e.name = "SuppressedError", e.error = error, e.suppressed = suppressed, e;
@@ -4741,7 +2982,7 @@ function requireLib$2() {
     (function(global, factory) {
       factory(exports$1);
     })(lib$4, (function(exports$12) {
-      function __awaiter(thisArg, _arguments, P, generator) {
+      function __awaiter2(thisArg, _arguments, P, generator) {
         function adopt(value) {
           return value instanceof P ? value : new P(function(resolve) {
             resolve(value);
@@ -5269,7 +3510,7 @@ function requireLib$2() {
           return void 0;
         }
       }
-      class Environment2 {
+      class Environment {
         constructor(importObject = {}, logger = console.log) {
           this.packedCFuncTable = [
             void 0
@@ -5398,7 +3639,7 @@ function requireLib$2() {
          * @returns The wrapped async function
          */
         wrapExport(func) {
-          return (...args) => __awaiter(this, void 0, void 0, function* () {
+          return (...args) => __awaiter2(this, void 0, void 0, function* () {
             assert(
               this.getState() == 0
               /* AsyncifyStateKind.None */
@@ -5464,7 +3705,7 @@ function requireLib$2() {
         }
       }
       function detectGPUDevice(powerPreference = "high-performance") {
-        return __awaiter(this, void 0, void 0, function* () {
+        return __awaiter2(this, void 0, void 0, function* () {
           if (typeof navigator !== "undefined" && navigator.gpu !== void 0) {
             const adapter = yield navigator.gpu.requestAdapter({ powerPreference });
             if (adapter == null) {
@@ -5772,7 +4013,7 @@ fn fragment_clear(@location(0) uv : vec2<f32>) -> @location(0) vec4<f32> {
          * Wait for all pending GPU tasks to complete
          */
         sync() {
-          return __awaiter(this, void 0, void 0, function* () {
+          return __awaiter2(this, void 0, void 0, function* () {
             yield this.device.queue.onSubmittedWorkDone();
           });
         }
@@ -5842,7 +4083,7 @@ fn fragment_clear(@location(0) uv : vec2<f32>) -> @location(0) vec4<f32> {
          * @returns The shader
          */
         createShaderAsync(finfo, code) {
-          return __awaiter(this, void 0, void 0, function* () {
+          return __awaiter2(this, void 0, void 0, function* () {
             return yield this.createShadeInternal(finfo, code, true);
           });
         }
@@ -6167,7 +4408,7 @@ fn fragment_clear(@location(0) uv : vec2<f32>) -> @location(0) vec4<f32> {
          * Convert the Response object to the expected storetype instead
          */
         responseTostoretype(response, storetype) {
-          return __awaiter(this, void 0, void 0, function* () {
+          return __awaiter2(this, void 0, void 0, function* () {
             if (storetype === void 0) {
               return response;
             } else if (storetype.toLowerCase() === "json") {
@@ -6188,7 +4429,7 @@ fn fragment_clear(@location(0) uv : vec2<f32>) -> @location(0) vec4<f32> {
          * @returns response in json, arraybuffer or pure response format
          */
         fetchWithCache(url, storetype, signal) {
-          return __awaiter(this, void 0, void 0, function* () {
+          return __awaiter2(this, void 0, void 0, function* () {
             yield this.addToCache(url, storetype, signal);
             const result = yield this.cache.match(new Request(url));
             if (result === void 0) {
@@ -6199,7 +4440,7 @@ fn fragment_clear(@location(0) uv : vec2<f32>) -> @location(0) vec4<f32> {
         }
         // eslint-disable-next-line @typescript-eslint/no-unused-vars
         addToCache(url, storetype, signal) {
-          return __awaiter(this, void 0, void 0, function* () {
+          return __awaiter2(this, void 0, void 0, function* () {
             const request = new Request(url, signal ? { signal } : void 0);
             if (this.cache === void 0) {
               this.cache = yield caches.open(this.scope);
@@ -6216,7 +4457,7 @@ fn fragment_clear(@location(0) uv : vec2<f32>) -> @location(0) vec4<f32> {
          * @returns boolean value indicate if all keys are in cache
          */
         hasAllKeys(keys) {
-          return __awaiter(this, void 0, void 0, function* () {
+          return __awaiter2(this, void 0, void 0, function* () {
             if (this.cache === void 0) {
               this.cache = yield caches.open(this.scope);
             }
@@ -6228,7 +4469,7 @@ fn fragment_clear(@location(0) uv : vec2<f32>) -> @location(0) vec4<f32> {
          * @param url the corresponding url object to be deleted
          */
         deleteInCache(url) {
-          return __awaiter(this, void 0, void 0, function* () {
+          return __awaiter2(this, void 0, void 0, function* () {
             if (this.cache === void 0) {
               this.cache = yield caches.open(this.scope);
             }
@@ -6245,7 +4486,7 @@ fn fragment_clear(@location(0) uv : vec2<f32>) -> @location(0) vec4<f32> {
          * Init the indexed DB database if it is not initialized.
          */
         initDB() {
-          return __awaiter(this, void 0, void 0, function* () {
+          return __awaiter2(this, void 0, void 0, function* () {
             if (this.db != null) {
               return;
             }
@@ -6274,7 +4515,7 @@ fn fragment_clear(@location(0) uv : vec2<f32>) -> @location(0) vec4<f32> {
          * @returns boolean indicate if url object in indexedDB
          */
         isUrlInDB(url) {
-          return __awaiter(this, void 0, void 0, function* () {
+          return __awaiter2(this, void 0, void 0, function* () {
             return new Promise((resolve, reject) => {
               var _a;
               const transaction = (_a = this.db) === null || _a === void 0 ? void 0 : _a.transaction(["urls"], "readonly");
@@ -6293,7 +4534,7 @@ fn fragment_clear(@location(0) uv : vec2<f32>) -> @location(0) vec4<f32> {
           });
         }
         asyncGetHelper(url) {
-          return __awaiter(this, void 0, void 0, function* () {
+          return __awaiter2(this, void 0, void 0, function* () {
             return new Promise((resolve, reject) => {
               var _a;
               let result;
@@ -6312,7 +4553,7 @@ fn fragment_clear(@location(0) uv : vec2<f32>) -> @location(0) vec4<f32> {
           });
         }
         fetchWithCache(url, storetype, signal) {
-          return __awaiter(this, void 0, void 0, function* () {
+          return __awaiter2(this, void 0, void 0, function* () {
             yield this.addToCache(url, storetype, signal);
             let result = yield this.asyncGetHelper(url);
             if (result === null) {
@@ -6327,7 +4568,7 @@ fn fragment_clear(@location(0) uv : vec2<f32>) -> @location(0) vec4<f32> {
           });
         }
         addToIndexedDB(url, response, storetype) {
-          return __awaiter(this, void 0, void 0, function* () {
+          return __awaiter2(this, void 0, void 0, function* () {
             yield this.initDB();
             let data;
             if (storetype != void 0) {
@@ -6353,7 +4594,7 @@ fn fragment_clear(@location(0) uv : vec2<f32>) -> @location(0) vec4<f32> {
           });
         }
         addToCache(url, storetype, signal) {
-          return __awaiter(this, void 0, void 0, function* () {
+          return __awaiter2(this, void 0, void 0, function* () {
             yield this.initDB();
             const isInDB = yield this.isUrlInDB(url);
             if (isInDB) {
@@ -6372,7 +4613,7 @@ fn fragment_clear(@location(0) uv : vec2<f32>) -> @location(0) vec4<f32> {
           });
         }
         hasAllKeys(keys) {
-          return __awaiter(this, void 0, void 0, function* () {
+          return __awaiter2(this, void 0, void 0, function* () {
             yield this.initDB();
             if (!this.db) {
               throw new Error("Database is not initialized");
@@ -6406,7 +4647,7 @@ fn fragment_clear(@location(0) uv : vec2<f32>) -> @location(0) vec4<f32> {
         }
         deleteInCache(url) {
           var _a;
-          return __awaiter(this, void 0, void 0, function* () {
+          return __awaiter2(this, void 0, void 0, function* () {
             yield this.initDB();
             const transaction = (_a = this.db) === null || _a === void 0 ? void 0 : _a.transaction(["urls"], "readwrite");
             if (transaction === void 0) {
@@ -6423,7 +4664,7 @@ fn fragment_clear(@location(0) uv : vec2<f32>) -> @location(0) vec4<f32> {
         }
       }
       function hasTensorInCache(tensorCacheUrl, cacheScope = "tvmjs", cacheType = "cache") {
-        return __awaiter(this, void 0, void 0, function* () {
+        return __awaiter2(this, void 0, void 0, function* () {
           let artifactCache;
           if (cacheType.toLowerCase() === "cache") {
             artifactCache = new ArtifactCache(cacheScope);
@@ -6444,7 +4685,7 @@ fn fragment_clear(@location(0) uv : vec2<f32>) -> @location(0) vec4<f32> {
         });
       }
       function deleteTensorCache(cacheUrl, cacheScope = "tvmjs", cacheType = "cache") {
-        return __awaiter(this, void 0, void 0, function* () {
+        return __awaiter2(this, void 0, void 0, function* () {
           let artifactCache;
           if (cacheType.toLowerCase() === "cache") {
             artifactCache = new ArtifactCache(cacheScope);
@@ -6457,7 +4698,7 @@ fn fragment_clear(@location(0) uv : vec2<f32>) -> @location(0) vec4<f32> {
           const jsonUrl = new URL("tensor-cache.json", cacheUrl).href;
           const list = yield artifactCache.fetchWithCache(jsonUrl, "json");
           const arrayentry = list["records"];
-          const processShard = (i) => __awaiter(this, void 0, void 0, function* () {
+          const processShard = (i) => __awaiter2(this, void 0, void 0, function* () {
             const dataUrl = new URL(arrayentry[i].dataPath, cacheUrl).href;
             yield artifactCache.deleteInCache(dataUrl);
           });
@@ -9367,7 +7608,7 @@ fn fragment_clear(@location(0) uv : vec2<f32>) -> @location(0) vec4<f32> {
          * Synchronize the device
          */
         sync() {
-          return __awaiter(this, void 0, void 0, function* () {
+          return __awaiter2(this, void 0, void 0, function* () {
             if (this.deviceType === DeviceStrToEnum.webgpu) {
               assert(this.lib.webGPUContext !== void 0);
               yield this.lib.webGPUContext.sync();
@@ -9722,10 +7963,10 @@ fn fragment_clear(@location(0) uv : vec2<f32>) -> @location(0) vec4<f32> {
           this.initProgressCallback = [];
           this.deviceLostIsError = true;
           if (wasmInstance instanceof WebAssembly.Instance) {
-            assert(env instanceof Environment2, "env must be provided when passing in instance");
+            assert(env instanceof Environment, "env must be provided when passing in instance");
           } else {
             assert(env === void 0);
-            env = new Environment2(importObject);
+            env = new Environment(importObject);
             wasmInstance = new WebAssembly.Instance(wasmModule, env.imports);
           }
           env.start(wasmInstance);
@@ -9752,7 +7993,7 @@ fn fragment_clear(@location(0) uv : vec2<f32>) -> @location(0) vec4<f32> {
          * @repeat The number of times to repeat the run.
          */
         benchmark(run, dev, number = 10, repeat = 1) {
-          return __awaiter(this, void 0, void 0, function* () {
+          return __awaiter2(this, void 0, void 0, function* () {
             const perf = getPerformance();
             const results = [];
             this.withNewScope(run);
@@ -10036,7 +8277,7 @@ fn fragment_clear(@location(0) uv : vec2<f32>) -> @location(0) vec4<f32> {
          * @returns The meta data
          */
         fetchTensorCache(tensorCacheUrl, device, cacheScope = "tvmjs", cacheType = "cache", signal) {
-          return __awaiter(this, void 0, void 0, function* () {
+          return __awaiter2(this, void 0, void 0, function* () {
             let artifactCache;
             if (cacheType === void 0 || cacheType.toLowerCase() === "cache") {
               artifactCache = new ArtifactCache(cacheScope);
@@ -10062,7 +8303,7 @@ fn fragment_clear(@location(0) uv : vec2<f32>) -> @location(0) vec4<f32> {
          * @param signal An optional AbortSignal to abort the fetch
          */
         fetchTensorCacheInternal(tensorCacheUrl, list, device, artifactCache, signal) {
-          return __awaiter(this, void 0, void 0, function* () {
+          return __awaiter2(this, void 0, void 0, function* () {
             const perf = getPerformance();
             const tstart = perf.now();
             let totalBytes = 0;
@@ -10103,7 +8344,7 @@ fn fragment_clear(@location(0) uv : vec2<f32>) -> @location(0) vec4<f32> {
                 text: "Start to fetch params"
               });
             }
-            const downloadCache = (start, end) => __awaiter(this, void 0, void 0, function* () {
+            const downloadCache = (start, end) => __awaiter2(this, void 0, void 0, function* () {
               for (let i = start; i < end; i++) {
                 const shard = list[i];
                 const dataUrl = new URL(shard.dataPath, tensorCacheUrl).href;
@@ -10479,7 +8720,7 @@ fn fragment_clear(@location(0) uv : vec2<f32>) -> @location(0) vec4<f32> {
          * @param mod The input module.
          */
         asyncLoadWebGPUPipelines(mod) {
-          return __awaiter(this, void 0, void 0, function* () {
+          return __awaiter2(this, void 0, void 0, function* () {
             if (this.lib.webGPUContext === void 0)
               throw Error("WebGPU not initialied");
             const webgpuContext = this.lib.webGPUContext;
@@ -10552,11 +8793,11 @@ fn fragment_clear(@location(0) uv : vec2<f32>) -> @location(0) vec4<f32> {
             const finfo = JSON.parse(info);
             return webGPUContext.createShader(finfo, code);
           });
-          this.registerAsyncServerFunc("wasm.WebGPUWaitForTasks", () => __awaiter(this, void 0, void 0, function* () {
+          this.registerAsyncServerFunc("wasm.WebGPUWaitForTasks", () => __awaiter2(this, void 0, void 0, function* () {
             yield webGPUContext.sync();
           }));
           if (this.asyncifyHandler.enabled()) {
-            this.registerAsyncifyFunc("__asyncify.WebGPUWaitForTasks", () => __awaiter(this, void 0, void 0, function* () {
+            this.registerAsyncifyFunc("__asyncify.WebGPUWaitForTasks", () => __awaiter2(this, void 0, void 0, function* () {
               yield webGPUContext.sync();
             }));
           }
@@ -10574,7 +8815,7 @@ fn fragment_clear(@location(0) uv : vec2<f32>) -> @location(0) vec4<f32> {
         /** Register global packed functions needed by the backend to the env. */
         registerEnvGlobalPackedFuncs() {
           const perf = getPerformance();
-          const timeExecution = (finvoke, dev, nstep, repeat, minRepeatMs, limitZeroTimeIterations, cooldownIntervalMs, repeatsToCooldown) => __awaiter(this, void 0, void 0, function* () {
+          const timeExecution = (finvoke, dev, nstep, repeat, minRepeatMs, limitZeroTimeIterations, cooldownIntervalMs, repeatsToCooldown) => __awaiter2(this, void 0, void 0, function* () {
             this.ctx.detachFromCurrentScope(finvoke);
             finvoke(this.scalar(1, "int32"));
             yield dev.sync();
@@ -10608,7 +8849,7 @@ fn fragment_clear(@location(0) uv : vec2<f32>) -> @location(0) vec4<f32> {
             finvoke.dispose();
             return new Uint8Array(ret.buffer);
           });
-          const addOne = (x) => __awaiter(this, void 0, void 0, function* () {
+          const addOne = (x) => __awaiter2(this, void 0, void 0, function* () {
             yield new Promise((resolve) => setTimeout(resolve, 100));
             return x + 1;
           });
@@ -10938,7 +9179,7 @@ fn fragment_clear(@location(0) uv : vec2<f32>) -> @location(0) vec4<f32> {
         }
       }
       function instantiate(bufferSource, importObject = {}, logger = console.log) {
-        const env = new Environment2(importObject, logger);
+        const env = new Environment(importObject, logger);
         return WebAssembly.instantiate(bufferSource, env.imports).then((result) => {
           return new Instance(result.module, {}, result.instance, env);
         });
@@ -11131,7 +9372,7 @@ fn fragment_clear(@location(0) uv : vec2<f32>) -> @location(0) vec4<f32> {
         onInitServer(args, header, body) {
           assert(args[0] === "rpc.WasmSession");
           assert(this.pendingBytes === 0);
-          const asyncInitServer = () => __awaiter(this, void 0, void 0, function* () {
+          const asyncInitServer = () => __awaiter2(this, void 0, void 0, function* () {
             assert(args[1] instanceof Uint8Array);
             const inst = yield instantiate(args[1].buffer, this.getImports(), this.logger);
             try {
@@ -11167,7 +9408,7 @@ fn fragment_clear(@location(0) uv : vec2<f32>) -> @location(0) vec4<f32> {
             const messageHandler = fcreate((cbytes) => {
               assert(this.inst !== void 0);
               if (this.socket.readyState === 1) {
-                const sendDataWithCongestionControl = () => __awaiter(this, void 0, void 0, function* () {
+                const sendDataWithCongestionControl = () => __awaiter2(this, void 0, void 0, function* () {
                   const packetSize = 4 << 10;
                   const maxBufferAmount = 4 * packetSize;
                   const waitTimeMs = 20;
@@ -11305,7 +9546,7 @@ fn fragment_clear(@location(0) uv : vec2<f32>) -> @location(0) vec4<f32> {
   })(lib$5, lib$5.exports);
   return lib$5.exports;
 }
-requireLib$2();
+var libExports$2 = requireLib$2();
 var lib$3 = { exports: {} };
 var lib$2 = lib$3.exports;
 var hasRequiredLib$1;
@@ -11316,7 +9557,7 @@ function requireLib$1() {
     (function(global, factory) {
       factory(exports$1);
     })(lib$2, (function(exports$12) {
-      function __awaiter(thisArg, _arguments, P, generator) {
+      function __awaiter2(thisArg, _arguments, P, generator) {
         function adopt(value) {
           return value instanceof P ? value : new P(function(resolve) {
             resolve(value);
@@ -15323,7 +13564,7 @@ function requireLib$1() {
       })();
       var binding = null;
       function asyncInitBinding() {
-        return __awaiter(this, void 0, void 0, function() {
+        return __awaiter2(this, void 0, void 0, function() {
           return __generator(this, function(_a) {
             switch (_a.label) {
               case 0:
@@ -15353,7 +13594,7 @@ function requireLib$1() {
             if (strictMode === void 0) {
               strictMode = true;
             }
-            return __awaiter(this, void 0, void 0, function() {
+            return __awaiter2(this, void 0, void 0, function() {
               var optionalIndent;
               return __generator(this, function(_a) {
                 switch (_a.label) {
@@ -15374,7 +13615,7 @@ function requireLib$1() {
             if (index3 === void 0) {
               index3 = 0;
             }
-            return __awaiter(this, void 0, void 0, function() {
+            return __awaiter2(this, void 0, void 0, function() {
               var bitmaskIntVector, rejectedIDsIntVector, rejectedIDsInt32Array;
               return __generator(this, function(_a) {
                 switch (_a.label) {
@@ -15408,7 +13649,7 @@ function requireLib$1() {
             if (rootRule === void 0) {
               rootRule = "root";
             }
-            return __awaiter(this, void 0, void 0, function() {
+            return __awaiter2(this, void 0, void 0, function() {
               return __generator(this, function(_a) {
                 switch (_a.label) {
                   case 0:
@@ -15421,7 +13662,7 @@ function requireLib$1() {
             });
           };
           Grammar2.builtinJSONGrammar = function() {
-            return __awaiter(this, void 0, void 0, function() {
+            return __awaiter2(this, void 0, void 0, function() {
               return __generator(this, function(_a) {
                 switch (_a.label) {
                   case 0:
@@ -15440,7 +13681,7 @@ function requireLib$1() {
             if (strictMode === void 0) {
               strictMode = true;
             }
-            return __awaiter(this, void 0, void 0, function() {
+            return __awaiter2(this, void 0, void 0, function() {
               var optionalIndent;
               return __generator(this, function(_a) {
                 switch (_a.label) {
@@ -15479,7 +13720,7 @@ function requireLib$1() {
             return this.handle.GetDecodedVocab();
           };
           TokenizerInfo2.createTokenizerInfo = function(encodedVocab, vocabType, prependSpaceInTokenization, vocabSize, stopTokenIds) {
-            return __awaiter(this, void 0, void 0, function() {
+            return __awaiter2(this, void 0, void 0, function() {
               var encodedVocabVec;
               return __generator(this, function(_a) {
                 switch (_a.label) {
@@ -15533,7 +13774,7 @@ function requireLib$1() {
             if (cacheEnabled === void 0) {
               cacheEnabled = true;
             }
-            return __awaiter(this, void 0, void 0, function() {
+            return __awaiter2(this, void 0, void 0, function() {
               return __generator(this, function(_a) {
                 switch (_a.label) {
                   case 0:
@@ -15557,7 +13798,7 @@ function requireLib$1() {
             if (strictMode === void 0) {
               strictMode = true;
             }
-            return __awaiter(this, void 0, void 0, function() {
+            return __awaiter2(this, void 0, void 0, function() {
               var optionalIndent;
               return __generator(this, function(_a) {
                 switch (_a.label) {
@@ -15575,7 +13816,7 @@ function requireLib$1() {
             });
           };
           GrammarCompiler2.prototype.compileBuiltinJSONGrammar = function() {
-            return __awaiter(this, void 0, void 0, function() {
+            return __awaiter2(this, void 0, void 0, function() {
               return __generator(this, function(_a) {
                 switch (_a.label) {
                   case 0:
@@ -15591,7 +13832,7 @@ function requireLib$1() {
             if (rootRule === void 0) {
               rootRule = "root";
             }
-            return __awaiter(this, void 0, void 0, function() {
+            return __awaiter2(this, void 0, void 0, function() {
               var grammarObj;
               return __generator(this, function(_a) {
                 switch (_a.label) {
@@ -15630,7 +13871,7 @@ function requireLib$1() {
             if (maxRollbackTokens === void 0) {
               maxRollbackTokens = 0;
             }
-            return __awaiter(this, void 0, void 0, function() {
+            return __awaiter2(this, void 0, void 0, function() {
               return __generator(this, function(_a) {
                 switch (_a.label) {
                   case 0:
@@ -15664,7 +13905,7 @@ function requireLib$1() {
             return this.handle._DebugAcceptString(inputStr, verbose);
           };
           GrammarMatcher2.prototype.getNextTokenBitmask = function() {
-            return __awaiter(this, void 0, void 0, function() {
+            return __awaiter2(this, void 0, void 0, function() {
               var maskIntVector, maskInt32Array;
               return __generator(this, function(_a) {
                 switch (_a.label) {
@@ -15708,14 +13949,1796 @@ function requireLib$1() {
   })(lib$3, lib$3.exports);
   return lib$3.exports;
 }
-requireLib$1();
+var libExports$1 = requireLib$1();
+class Conversation {
+  // TODO(tvm-team) confirm and remove
+  // private contextWindowStart = 0;
+  constructor(config, isTextCompletion = false) {
+    this.messages = [];
+    this.function_string = "";
+    this.use_function_calling = false;
+    this.override_system_message = void 0;
+    this.isLastMessageEmptyThinkingReplyHeader = false;
+    this.config = config;
+    this.isTextCompletion = isTextCompletion;
+  }
+  // TODO: Consider rewriting this method, a bit messy.
+  getPromptArrayInternal(addSystem, startPos) {
+    var _a;
+    if (this.config.seps.length == 0) {
+      throw Error("Need seps to work");
+    }
+    let system_message = this.config.system_message;
+    if (this.override_system_message !== void 0) {
+      system_message = this.override_system_message;
+    }
+    const system_prompt = this.config.system_template.replace(MessagePlaceholders.system, system_message);
+    const ret = addSystem && system_prompt !== "" ? [system_prompt] : [];
+    for (let i = startPos; i < this.messages.length; ++i) {
+      const item = this.messages[i];
+      const role = item[0];
+      const role_str = item[1];
+      const messageContent = item[2];
+      if (messageContent === void 0) {
+        if (i !== this.messages.length - 1) {
+          throw new Error("InternalError: Only expect message to be undefined for last message for a reply header.");
+        }
+        const empty_sep = this.config.role_empty_sep || this.config.role_empty_sep == "" ? this.config.role_empty_sep : ": ";
+        ret.push(role_str + empty_sep);
+        continue;
+      }
+      if (this.isLastMessageEmptyThinkingReplyHeader && i === this.messages.length - 1) {
+        const content_sep = this.config.role_content_sep || this.config.role_content_sep == "" ? this.config.role_content_sep : ": ";
+        ret.push(role_str + content_sep + messageContent);
+        continue;
+      }
+      let textContentPart = "";
+      const imageContentParts = [];
+      if (Array.isArray(messageContent)) {
+        let seenText = false;
+        for (let i2 = 0; i2 < messageContent.length; i2++) {
+          const curContentPart = messageContent[i2];
+          if (curContentPart.type === "text") {
+            if (seenText) {
+              throw new MultipleTextContentError();
+            }
+            textContentPart = curContentPart.text;
+            seenText = true;
+          } else {
+            imageContentParts.push(curContentPart.image_url);
+          }
+        }
+      } else {
+        textContentPart = messageContent;
+      }
+      let message_str;
+      let role_prefix;
+      if (this.config.role_templates !== void 0) {
+        message_str = (_a = this.config.role_templates[role]) === null || _a === void 0 ? void 0 : _a.replace(MessagePlaceholders[Role[role]], textContentPart);
+        if (this.use_function_calling && this.function_string !== "") {
+          message_str = message_str === null || message_str === void 0 ? void 0 : message_str.replace(MessagePlaceholders.function, this.function_string);
+        }
+        message_str = message_str === null || message_str === void 0 ? void 0 : message_str.replace(MessagePlaceholders.function, "");
+      }
+      if (message_str == void 0) {
+        message_str = textContentPart;
+      }
+      if (this.config.add_role_after_system_message === false && system_prompt != "" && i == 0) {
+        role_prefix = "";
+      } else {
+        const content_sep = this.config.role_content_sep || this.config.role_content_sep == "" ? this.config.role_content_sep : ": ";
+        role_prefix = role_str + content_sep;
+      }
+      if (imageContentParts.length === 0) {
+        ret.push(role_prefix + message_str + this.config.seps[i % this.config.seps.length]);
+      } else {
+        const curMessageList = [role_prefix];
+        imageContentParts.forEach((curImage) => {
+          curMessageList.push(curImage);
+          curMessageList.push("\n");
+        });
+        curMessageList.push(message_str + this.config.seps[i % this.config.seps.length]);
+        ret.push(curMessageList);
+      }
+    }
+    return ret;
+  }
+  /**
+   * Get prompt arrays with the first one as system.
+   *
+   * It is returned as an array of `string | Array<string | ImageURL>`, where each element of
+   * the array represents the formatted message of a role/turn. If the message only contains text,
+   * it will be a string that concatenates the role string, message, and separators. If the
+   * message contains image(s), it will be an array of string and ImageURL in the order of which
+   * they will be prefilled into the model. e.g. it can be something like
+   * [
+   *   "<|system|>\nSome system prompt\n",
+   *   [
+   *     "<|user|>\n",
+   *     imageURL1,
+   *     "\n",
+   *     imageURL2,
+   *     "\n",
+   *     "Some user input<|end|>\n"
+   *   ],
+   * ]
+   *
+   * @returns The prompt array.
+   */
+  getPromptArray() {
+    if (this.isTextCompletion) {
+      throw new TextCompletionConversationError("getPromptArray");
+    }
+    return this.getPromptArrayInternal(true, 0);
+  }
+  /**
+   * Get the last round of prompt has not been fed as input.
+   *
+   * @note This function needs to be used with the assumption that
+   *       the caller call appendMessage then appendReplyHeader.
+   *
+   * @returns The prompt array.
+   */
+  getPromptArrayLastRound() {
+    if (this.isTextCompletion) {
+      throw new TextCompletionConversationError("getPromptArrayLastRound");
+    }
+    if (this.messages.length < 3) {
+      throw Error("needs to call getPromptArray for the first message");
+    }
+    return this.getPromptArrayInternal(false, this.messages.length - 2);
+  }
+  /**
+   * Return prompt in an array for non-conversation text completion.
+   */
+  getPromptArrayTextCompletion() {
+    if (!this.isTextCompletion || this.prompt === void 0) {
+      throw new TextCompletionConversationExpectsPrompt();
+    }
+    return [this.prompt];
+  }
+  /**
+   * Resets all states for this.conversation.
+   */
+  reset() {
+    this.messages = [];
+    this.override_system_message = void 0;
+    this.function_string = "";
+    this.use_function_calling = false;
+    this.isTextCompletion = false;
+    this.prompt = void 0;
+  }
+  getStopStr() {
+    return this.config.stop_str;
+  }
+  getStopTokens() {
+    return this.config.stop_token_ids;
+  }
+  appendMessage(role, message, role_name) {
+    if (this.isTextCompletion) {
+      throw new TextCompletionConversationError("appendMessage");
+    }
+    if (this.messages.length != 0 && this.messages[this.messages.length - 1][2] == void 0) {
+      throw Error("Have unfinished reply");
+    }
+    if (!(role in this.config.roles)) {
+      throw Error("Role is not supported: " + role);
+    }
+    const role_name_str = role_name ? role_name : this.config.roles[role];
+    this.messages.push([role, role_name_str, message]);
+  }
+  appendReplyHeader(role) {
+    if (this.isTextCompletion) {
+      throw new TextCompletionConversationError("appendReplyHeader");
+    }
+    if (!(role in this.config.roles)) {
+      throw Error("Role is not supported: " + role);
+    }
+    this.messages.push([role, this.config.roles[role], void 0]);
+  }
+  appendEmptyThinkingReplyHeader(role, emptyThinkingBlockStr) {
+    if (this.isTextCompletion) {
+      throw new TextCompletionConversationError("appendEmptyThinkingReplyHeader");
+    }
+    this.isLastMessageEmptyThinkingReplyHeader = true;
+    this.messages.push([role, this.config.roles[role], emptyThinkingBlockStr]);
+  }
+  finishReply(message) {
+    if (this.isTextCompletion) {
+      throw new TextCompletionConversationError("finishReply");
+    }
+    if (this.messages.length == 0) {
+      throw Error("Message error should not be 0");
+    }
+    if (this.messages[this.messages.length - 1][2] !== void 0 && // If the last message has an empty thinknig block, last message is expected
+    // to be non-empty.
+    this.isLastMessageEmptyThinkingReplyHeader === false) {
+      throw Error("Already assigned");
+    }
+    this.messages[this.messages.length - 1][2] = message;
+    this.isLastMessageEmptyThinkingReplyHeader = false;
+  }
+}
+function getConversation(conv_template, conv_config, isTextCompletion = false) {
+  return new Conversation(Object.assign(Object.assign({}, conv_template), conv_config), isTextCompletion);
+}
+function compareConversationObject(convA, convB) {
+  if (convA.function_string !== convB.function_string || convA.use_function_calling !== convB.use_function_calling || convA.override_system_message !== convB.override_system_message || convA.messages.length !== convB.messages.length || convA.isTextCompletion !== convB.isTextCompletion) {
+    return false;
+  }
+  if (convA.messages.length === 0 && convB.messages.length === 0) {
+    return true;
+  }
+  if (convA.messages.length !== convB.messages.length) {
+    return false;
+  }
+  const msgLen = convA.messages.length;
+  const msgEntryLen = convA.messages[0].length;
+  for (let i = 0; i < msgLen; i++) {
+    for (let j = 0; j < msgEntryLen; j++) {
+      const entryA = convA.messages[i][j];
+      const entryB = convB.messages[i][j];
+      if (typeof entryA === "string" && typeof entryB === "string") {
+        if (convA.messages[i][j] !== convB.messages[i][j]) {
+          return false;
+        }
+      } else if (entryA === void 0 && entryB === void 0) {
+        continue;
+      } else if (Array.isArray(entryA) && Array.isArray(entryB)) {
+        if (entryA.length !== entryB.length) {
+          return false;
+        }
+        const numContentParts = entryA.length;
+        for (let k = 0; k < numContentParts; k++) {
+          const entryA_k = entryA[k];
+          const entryB_k = entryB[k];
+          if (entryA_k.type === "text" && entryB_k.type === "text") {
+            if (entryA_k.text !== entryB_k.text) {
+              return false;
+            }
+          } else if (entryA_k.type === "image_url" && entryB_k.type === "image_url") {
+            if (entryA_k.image_url.url !== entryB_k.image_url.url || entryA_k.image_url.detail !== entryB_k.image_url.detail) {
+              return false;
+            }
+          } else {
+            return false;
+          }
+        }
+      } else {
+        return false;
+      }
+    }
+  }
+  return true;
+}
+function getConversationFromChatCompletionRequest(request, config, includeLastMsg = false) {
+  const conversation = getConversation(config.conv_template, config.conv_config);
+  const input = request.messages;
+  const lastId = input.length - 1;
+  if (input[lastId].role !== "user" && input[lastId].role !== "tool") {
+    throw new MessageOrderError("The last message should be from the `user` or `tool`.");
+  }
+  const iterEnd = includeLastMsg ? input.length : input.length - 1;
+  for (let i = 0; i < iterEnd; i++) {
+    const message = input[i];
+    if (message.role === "system") {
+      if (i !== 0) {
+        throw new SystemMessageOrderError();
+      }
+      conversation.override_system_message = message.content;
+    } else if (message.role === "user") {
+      conversation.appendMessage(Role.user, message.content, message.name);
+    } else if (message.role === "assistant") {
+      if (typeof message.content !== "string") {
+        throw new ContentTypeError(message.role + "'s message");
+      }
+      conversation.appendMessage(Role.assistant, message.content, message.name);
+    } else if (message.role === "tool") {
+      conversation.appendMessage(Role.tool, message.content);
+    } else {
+      throw new UnsupportedRoleError(message["role"]);
+    }
+  }
+  return conversation;
+}
+function getTopProbs(num_top_probs, p_prob) {
+  if (num_top_probs == 0)
+    return [];
+  const top_probs = [];
+  const ndata = p_prob.length;
+  for (let i = 0; i < num_top_probs; i++) {
+    top_probs.push([-1, -1]);
+  }
+  let sum_prob = 0;
+  for (let p = 0; p < ndata; p++) {
+    let i = num_top_probs - 1;
+    for (; i >= 0; --i) {
+      if (p_prob[p] > top_probs[i][1]) {
+        if (i !== num_top_probs - 1) {
+          top_probs[i + 1] = top_probs[i];
+        }
+      } else {
+        break;
+      }
+    }
+    if (i !== num_top_probs - 1) {
+      top_probs[i + 1] = [p, p_prob[p]];
+    }
+    sum_prob += p_prob[p];
+    if (1 - sum_prob <= top_probs[num_top_probs - 1][1]) {
+      break;
+    }
+  }
+  return top_probs;
+}
+function getTokenTableFromTokenizer(tokenizer) {
+  const tokenTable = [];
+  const vocabSize = tokenizer.getVocabSize();
+  for (let tokenId = 0; tokenId < vocabSize; tokenId++) {
+    tokenTable.push(tokenizer.idToToken(tokenId));
+  }
+  return tokenTable;
+}
+function cleanModelUrl(modelUrl) {
+  modelUrl += modelUrl.endsWith("/") ? "" : "/";
+  if (!modelUrl.match(/.+\/resolve\/.+\//))
+    modelUrl += "resolve/main/";
+  return new URL(modelUrl).href;
+}
 const officialHermes2FunctionCallSchema = `{"properties": {"arguments": {"title": "Arguments", "type": "object"}, "name": {"title": "Name", "type": "string"}}, "required": ["arguments", "name"], "title": "FunctionCall", "type": "object"}`;
-`You are a function calling AI model. You are 
+const officialHermes2FunctionCallSchemaArray = `{"type":"array","items":${officialHermes2FunctionCallSchema}}`;
+const hermes2FunctionCallingSystemPrompt = `You are a function calling AI model. You are 
 provided with function signatures within <tools></tools> XML tags. You may call one or more functions 
 to assist with the user query. Don't make assumptions about what values to plug into functions. Here 
 are the available tools: <tools> ${MessagePlaceholders.hermes_tools}  </tools>. 
 Use the following pydantic model json schema for each tool call you will make: 
 ${officialHermes2FunctionCallSchema} For each function call return a json object.`;
+function getToolCallFromOutputMessage(outputMessage, isStreaming) {
+  let toolCallsObject;
+  try {
+    toolCallsObject = JSON.parse(outputMessage);
+  } catch (err) {
+    throw new ToolCallOutputParseError(outputMessage, err);
+  }
+  if (!(toolCallsObject instanceof Array)) {
+    throw new ToolCallOutputInvalidTypeError("array");
+  }
+  const numToolCalls = toolCallsObject.length;
+  const tool_calls = [];
+  for (let id = 0; id < numToolCalls; id++) {
+    const curToolCall = toolCallsObject[id];
+    if (curToolCall.name === void 0 || curToolCall.arguments === void 0) {
+      throw new ToolCallOutputMissingFieldsError(["name", "arguments"], curToolCall);
+    }
+    tool_calls.push({
+      name: curToolCall.name,
+      arguments: JSON.stringify(curToolCall.arguments)
+    });
+  }
+  if (isStreaming) {
+    const tool_calls_result = [];
+    for (let id = 0; id < numToolCalls; id++) {
+      const curToolCall = tool_calls[id];
+      tool_calls_result.push({
+        index: id,
+        function: {
+          name: curToolCall.name,
+          arguments: curToolCall.arguments
+        },
+        type: "function"
+      });
+    }
+    return tool_calls_result;
+  } else {
+    const tool_calls_result = [];
+    for (let id = 0; id < numToolCalls; id++) {
+      const curToolCall = tool_calls[id];
+      tool_calls_result.push({
+        id: id.toString(),
+        function: {
+          name: curToolCall.name,
+          arguments: curToolCall.arguments
+        },
+        type: "function"
+      });
+    }
+    return tool_calls_result;
+  }
+}
+function findModelRecord$1(modelId, appConfig) {
+  const matchedItem = appConfig.model_list.find((item) => item.model_id == modelId);
+  if (matchedItem !== void 0)
+    return matchedItem;
+  throw new ModelNotFoundError(modelId);
+}
+function getModelIdToUse(loadedModelIds, requestModel, requestName) {
+  let selectedModelId;
+  if (loadedModelIds.length === 0) {
+    throw new ModelNotLoadedError(requestName);
+  }
+  if (requestModel) {
+    if (loadedModelIds.indexOf(requestModel) === -1) {
+      throw new SpecifiedModelNotFoundError(loadedModelIds, requestModel, requestName);
+    } else {
+      selectedModelId = requestModel;
+    }
+  } else {
+    if (loadedModelIds.length > 1) {
+      throw new UnclearModelToUseError(loadedModelIds, requestName);
+    } else {
+      selectedModelId = loadedModelIds[0];
+    }
+  }
+  return selectedModelId;
+}
+function getChunkedPrefillInputData(inputData, prefillChunkSize) {
+  const chunks = [];
+  const chunkLens = [];
+  let curChunk = [];
+  let curChunkLen = 0;
+  for (let i = 0; i < inputData.length; i++) {
+    let curData = inputData[i];
+    const curDataLen = Array.isArray(curData) ? curData.length : IMAGE_EMBED_SIZE;
+    if (curChunkLen + curDataLen <= prefillChunkSize) {
+      curChunk.push(curData);
+      curChunkLen += curDataLen;
+      if (curChunkLen === prefillChunkSize) {
+        chunks.push([...curChunk]);
+        chunkLens.push(curChunkLen);
+        curChunk = [];
+        curChunkLen = 0;
+      }
+      continue;
+    }
+    if (Array.isArray(curData)) {
+      while (curData.length > 0) {
+        const curDataToChunkLen = Math.min(curData.length, prefillChunkSize - curChunkLen);
+        curChunk.push(curData.slice(0, curDataToChunkLen));
+        curChunkLen += curDataToChunkLen;
+        curData = curData.slice(curDataToChunkLen);
+        if (curChunkLen === prefillChunkSize) {
+          chunks.push([...curChunk]);
+          chunkLens.push(curChunkLen);
+          curChunk = [];
+          curChunkLen = 0;
+        }
+      }
+    } else {
+      if (curChunk.length === 0) {
+        throw new Error("InternalError: do not expect curChunk to be empty when an image does not fit.");
+      }
+      chunks.push([...curChunk]);
+      chunkLens.push(curChunkLen);
+      curChunk = [curData];
+      curChunkLen = IMAGE_EMBED_SIZE;
+      if (curChunkLen === prefillChunkSize) {
+        chunks.push([...curChunk]);
+        chunkLens.push(curChunkLen);
+        curChunk = [];
+        curChunkLen = 0;
+      }
+    }
+  }
+  if (curChunk.length > 0) {
+    chunks.push([...curChunk]);
+    chunkLens.push(curChunkLen);
+  }
+  return [chunks, chunkLens];
+}
+class CustomLock {
+  constructor() {
+    this.acquired = false;
+    this.queue = [];
+  }
+  acquire() {
+    return __awaiter(this, void 0, void 0, function* () {
+      if (!this.acquired) {
+        this.acquired = true;
+      } else {
+        return new Promise((resolve) => {
+          this.queue.push(resolve);
+        });
+      }
+    });
+  }
+  release() {
+    return __awaiter(this, void 0, void 0, function* () {
+      if (!this.acquired) {
+        throw Error("InternalError: expect lock is acquired upon release()");
+      }
+      if (this.queue.length === 0) {
+        this.acquired = false;
+        return;
+      }
+      const cont = this.queue.shift();
+      return new Promise((res) => {
+        cont();
+        res();
+      });
+    });
+  }
+}
+const IMAGE_EMBED_SIZE = 1921;
+function getImageDataFromURL(url) {
+  return __awaiter(this, void 0, void 0, function* () {
+    const response = yield fetch(url, { mode: "cors" });
+    const img = yield createImageBitmap(yield response.blob());
+    const canvas = new OffscreenCanvas(img.width, img.height);
+    const ctx = canvas.getContext("2d");
+    if (!ctx) {
+      throw new Error("Could not get 2d context");
+    }
+    ctx.drawImage(img, 0, 0);
+    const imageData = ctx.getImageData(0, 0, img.width, img.height);
+    return imageData;
+  });
+}
+function getRGBArrayFromImageData(imageData) {
+  const newData = new Uint8ClampedArray(imageData.width * imageData.height * 3);
+  for (let i = 0, offset = 0; i < imageData.data.length; i += 4) {
+    newData[offset++] = imageData.data[i];
+    newData[offset++] = imageData.data[i + 1];
+    newData[offset++] = imageData.data[i + 2];
+  }
+  return newData;
+}
+class LLMChatPipeline {
+  constructor(tvm, tokenizer, config, logitProcessor) {
+    this.logitsOnCPU = void 0;
+    this.filledKVCacheLength = 0;
+    this.bosTokenId = 1;
+    this.contextWindowSize = -1;
+    this.slidingWindowSize = -1;
+    this.attentionSinkSize = -1;
+    this.prefillChunkSize = -1;
+    this.resetStatsPerPrefill = true;
+    this.outputMessage = "";
+    this.outputIds = [];
+    this.stopTriggered = false;
+    this.finishReason = void 0;
+    this.appearedTokensFreq = /* @__PURE__ */ new Map();
+    this.tokenLogprobArray = [];
+    this.decodingTotalTime = 0;
+    this.decodingTotalTokens = 0;
+    this.prefillTotalTime = 0;
+    this.prefillTotalTokens = 0;
+    this.curRoundDecodingTotalTokens = 0;
+    this.curRoundPrefillTotalTokens = 0;
+    this.curRoundDecodingTotalTime = 0;
+    this.curRoundPrefillTotalTime = 0;
+    this.curRoundLatencyBreakdown = {
+      logitProcessorTime: [],
+      logitBiasTime: [],
+      penaltyTime: [],
+      sampleTime: [],
+      totalTime: [],
+      grammarBitmaskTime: []
+    };
+    this.logitProcessor = void 0;
+    this.grammarMatcher = void 0;
+    this.schemaOrGrammarStr = void 0;
+    this.xgTokenizerInfo = void 0;
+    this.grammarCompiler = void 0;
+    this.curRoundGrammarInitTotalTime = 0;
+    this.curRoundGrammarPerTokenTotalTime = 0;
+    this.tvm = tvm;
+    this.tokenizer = tokenizer;
+    this.config = config;
+    this.logitProcessor = logitProcessor;
+    this.fullVocabSize = this.config.vocab_size;
+    this.bitmaskSize = Math.ceil(this.fullVocabSize / 32);
+    this.conversation = getConversation(config.conv_template, config.conv_config);
+    this.stopStr = this.conversation.getStopStr();
+    this.stopTokens = this.conversation.getStopTokens();
+    if (config.bos_token_id !== void 0) {
+      this.bosTokenId = config.bos_token_id;
+    }
+    if (config.tokenizer_info !== void 0) {
+      this.token_postproc_method = config.tokenizer_info.token_postproc_method;
+      this.prepend_space_in_encode = config.tokenizer_info.prepend_space_in_encode;
+    } else if (config.token_table_postproc_method !== void 0) {
+      this.token_postproc_method = config.token_table_postproc_method;
+      this.prepend_space_in_encode = false;
+    } else {
+      log.warn("Cannot find `tokenizer_info` or `token_table_postproc_method` in `mlc-chat-config.json`, using default token_postproc_method `raw`.\nThis field is only used for json mode.");
+      this.token_postproc_method = "raw";
+      this.prepend_space_in_encode = false;
+    }
+    log.info("token_postproc_method: ", this.token_postproc_method);
+    log.info("prepend_space_in_encode: ", this.prepend_space_in_encode);
+    this.device = this.tvm.webgpu();
+    tvm.beginScope();
+    this.vm = this.tvm.detachFromCurrentScope(this.tvm.createVirtualMachine(this.device));
+    this.prefill = this.tvm.detachFromCurrentScope(this.vm.getFunction("prefill"));
+    this.embed = this.tvm.detachFromCurrentScope(this.vm.getFunction("embed"));
+    this.decoding = this.tvm.detachFromCurrentScope(this.vm.getFunction("decode"));
+    this.fapplyBitmask = this.tvm.detachFromCurrentScope(this.vm.getFunction("apply_bitmask_inplace"));
+    this.fapplyPenalty = this.tvm.detachFromCurrentScope(this.vm.getFunction("apply_penalty_inplace"));
+    this.fapplyLogitBias = this.tvm.detachFromCurrentScope(this.vm.getFunction("apply_logit_bias_inplace"));
+    this.fsoftmaxWithTemperature = this.tvm.detachFromCurrentScope(this.vm.getFunction("softmax_with_temperature"));
+    this.fsampleWithTopP = this.tvm.detachFromCurrentScope(this.vm.getFunction("sample_with_top_p"));
+    this.fargsortProbs = this.tvm.detachFromCurrentScope(this.vm.getFunction("argsort_probs"));
+    try {
+      this.image_embed = this.tvm.detachFromCurrentScope(this.vm.getFunction("image_embed"));
+    } catch (_a) {
+      log.info("Cannot find function image_embed.");
+    }
+    const fgetMetadata = this.vm.getFunction("_metadata");
+    const ret_value = fgetMetadata();
+    const metadataStr = ret_value.toString();
+    const metadata = JSON.parse(metadataStr);
+    const paramNames = [];
+    metadata.params.forEach((param) => {
+      paramNames.push(param.name);
+    });
+    this.params = this.tvm.detachFromCurrentScope(this.tvm.getParamsFromCacheByName(paramNames));
+    this.prefillChunkSize = metadata.prefill_chunk_size;
+    log.info("Using prefillChunkSize: ", this.prefillChunkSize);
+    if (this.prefillChunkSize <= 0) {
+      throw new MinValueError("prefill_chunk_size", 0);
+    }
+    this.slidingWindowSize = config.sliding_window_size;
+    this.contextWindowSize = config.context_window_size;
+    this.attentionSinkSize = config.attention_sink_size;
+    if (this.contextWindowSize !== -1 && this.slidingWindowSize !== -1) {
+      throw new WindowSizeConfigurationError(this.contextWindowSize, this.slidingWindowSize);
+    } else if (this.slidingWindowSize != -1) {
+      log.info("Using slidingWindowSize: ", this.slidingWindowSize);
+      if (this.attentionSinkSize >= 0) {
+        log.info("Using attentionSinkSize: ", this.attentionSinkSize);
+      } else {
+        throw new AttentionSinkSizeError();
+      }
+    } else if (this.contextWindowSize != -1) {
+      log.info("Using contextWindowSize: ", this.contextWindowSize);
+    } else {
+      throw new WindowSizeSpecificationError();
+    }
+    this.fclearKVCaches = this.tvm.detachFromCurrentScope(this.tvm.getGlobalFunc("vm.builtin.kv_state_clear"));
+    this.fKVCacheAddSequence = this.tvm.detachFromCurrentScope(this.tvm.getGlobalFunc("vm.builtin.kv_state_add_sequence"));
+    this.fKVCacheRemoveSequence = this.tvm.detachFromCurrentScope(this.tvm.getGlobalFunc("vm.builtin.kv_state_remove_sequence"));
+    this.fKVCacheBeginForward = this.tvm.detachFromCurrentScope(this.tvm.getGlobalFunc("vm.builtin.kv_state_begin_forward"));
+    this.fKVCacheEndForward = this.tvm.detachFromCurrentScope(this.tvm.getGlobalFunc("vm.builtin.kv_state_end_forward"));
+    this.fKVCacheEnableSlidingWindowForSeq = this.tvm.detachFromCurrentScope(this.tvm.getGlobalFunc("vm.builtin.attention_kv_cache_enable_sliding_window_for_seq"));
+    const fcreateCache = this.vm.getFunction("create_tir_paged_kv_cache");
+    const defaultPageSize = 16;
+    const defaultMaxNumSequence = 1;
+    const maxTotalSeqLen = this.slidingWindowSize != -1 ? this.slidingWindowSize : this.contextWindowSize;
+    this.kvCache = this.tvm.detachFromCurrentScope(fcreateCache(
+      this.tvm.makeShapeTuple([defaultMaxNumSequence]),
+      // max_num_sequence
+      this.tvm.makeShapeTuple([maxTotalSeqLen]),
+      // max_total_sequence_length
+      this.tvm.makeShapeTuple([this.prefillChunkSize]),
+      // prefill_chunk_size
+      this.tvm.makeShapeTuple([defaultPageSize]),
+      // page_size, hard coded for now
+      this.tvm.makeShapeTuple([this.slidingWindowSize != -1 ? 1 : 0])
+    ));
+    this.filledKVCacheLength = 0;
+    this.resetChat();
+    const numSamples = 1;
+    const numProbs = 1;
+    this.sampleIndices = new Int32Array(numSamples);
+    for (let i = 0; i < numSamples; i++) {
+      this.sampleIndices[i] = i;
+    }
+    this.sampleIndicesDevice = this.tvm.detachFromCurrentScope(this.tvm.empty([numSamples], "int32", this.device).copyFrom(this.sampleIndices));
+    this.topPDevice = this.tvm.detachFromCurrentScope(this.tvm.empty([numProbs], "float32", this.device));
+    tvm.endScope();
+  }
+  dispose() {
+    var _a, _b, _c, _d, _e;
+    (_a = this.grammarMatcher) === null || _a === void 0 ? void 0 : _a.dispose();
+    this.params.dispose();
+    this.decoding.dispose();
+    this.prefill.dispose();
+    this.embed.dispose();
+    (_b = this.image_embed) === null || _b === void 0 ? void 0 : _b.dispose();
+    this.vm.dispose();
+    this.kvCache.dispose();
+    this.fclearKVCaches.dispose();
+    (_c = this.logitsOnCPU) === null || _c === void 0 ? void 0 : _c.dispose();
+    this.tvm.dispose();
+    this.tokenizer.dispose();
+    (_d = this.xgTokenizerInfo) === null || _d === void 0 ? void 0 : _d.dispose();
+    (_e = this.grammarCompiler) === null || _e === void 0 ? void 0 : _e.dispose();
+  }
+  /**
+   * Get the current message.
+   */
+  getMessage() {
+    return this.outputMessage;
+  }
+  /**
+   * Reset the runtime statistics
+   */
+  resetRuntimeStats() {
+    this.prefillTotalTime = 0;
+    this.prefillTotalTokens = 0;
+    this.decodingTotalTime = 0;
+    this.decodingTotalTokens = 0;
+  }
+  /**
+   * Reset the chat history
+   */
+  resetChat(keepStats = false) {
+    var _a;
+    this.tvm.beginScope();
+    this.conversation.reset();
+    if (!keepStats) {
+      this.resetRuntimeStats();
+    }
+    this.resetKVCache();
+    this.filledKVCacheLength = 0;
+    (_a = this.logitProcessor) === null || _a === void 0 ? void 0 : _a.resetState();
+    this.tvm.endScope();
+  }
+  /**
+   * Reset KV Cache
+   */
+  resetKVCache() {
+    this.fclearKVCaches(this.kvCache);
+    this.fKVCacheAddSequence(this.kvCache, new libExports$2.Scalar(0, "int64"));
+    if (this.slidingWindowSize != -1) {
+      this.fKVCacheEnableSlidingWindowForSeq(this.kvCache, new libExports$2.Scalar(0, "int64"), new libExports$2.Scalar(this.slidingWindowSize, "int32"), new libExports$2.Scalar(this.attentionSinkSize, "int32"));
+    }
+  }
+  /**
+   * @returns Whether stop is triggered.
+   */
+  stopped() {
+    return this.stopTriggered;
+  }
+  /**
+   * @returns Finish reason; undefined if generation not started/stopped yet.
+   */
+  getFinishReason() {
+    return this.finishReason;
+  }
+  /**
+   * @returns tokenLogprobArray for this current round of autoregressive generation.
+   * Updated upon each sampled token, cleared upon each prefillStep().
+   */
+  getTokenLogprobArray() {
+    return this.tokenLogprobArray;
+  }
+  /**
+   * @returns the number of tokens decoded for a single request or a single choice in the request.
+   */
+  getCurRoundDecodingTotalTokens() {
+    return this.curRoundDecodingTotalTokens;
+  }
+  /**
+   * @returns the number of tokens decoded for a single request or a single choice in the request.
+   */
+  getCurRoundPrefillTotalTokens() {
+    return this.curRoundPrefillTotalTokens;
+  }
+  /**
+   * @returns the time spent on decode for a single request or a single choice in the request.
+   */
+  getCurRoundDecodingTotalTime() {
+    return this.curRoundDecodingTotalTime;
+  }
+  /**
+   * @returns the time spent on  for a single request or a single choice in the request.
+   */
+  getCurRoundPrefillTotalTime() {
+    return this.curRoundPrefillTotalTime;
+  }
+  /**
+   * @returns the time (seconds) spent on for initializing grammar matcher for a single request.
+   */
+  getCurRoundGrammarInitTotalTime() {
+    return this.curRoundGrammarInitTotalTime;
+  }
+  /**
+   * @returns the total time (seconds) spent on creating bitmask and accepting token grammar matcher
+   * for all the generated tokens in a single request.
+   */
+  getCurRoundGrammarPerTokenTotalTime() {
+    return this.curRoundGrammarPerTokenTotalTime;
+  }
+  /**
+   * @returns the breakdown of latencies for sampling each token for a single request.
+   */
+  getCurRoundLatencyBreakdown() {
+    return this.curRoundLatencyBreakdown;
+  }
+  /**
+   * @returns Runtime stats information.
+   */
+  runtimeStatsText() {
+    return `prefill: ${(this.prefillTotalTokens / this.prefillTotalTime).toFixed(4)} tokens/sec, decoding: ${(this.decodingTotalTokens / this.decodingTotalTime).toFixed(4)} tokens/sec`;
+  }
+  /**
+   * @returns Runtime stats information, starting from the last prefill performed.
+   */
+  curRoundRuntimeStatsText() {
+    return `prefill: ${this.getCurRoundPrefillTokensPerSec().toFixed(4)} tokens/sec, decoding: ${this.getCurRoundDecodingTokensPerSec().toFixed(4)} tokens/sec`;
+  }
+  /**
+   * @returns Prefill tokens per second, starting from the last prefill performed.
+   */
+  getCurRoundPrefillTokensPerSec() {
+    return this.curRoundPrefillTotalTokens / this.curRoundPrefillTotalTime;
+  }
+  /**
+   * @returns Prefill tokens per second, starting from the last prefill performed.
+   */
+  getCurRoundDecodingTokensPerSec() {
+    return this.curRoundDecodingTotalTokens / this.curRoundDecodingTotalTime;
+  }
+  /**
+   * Set the seed for the RNG `this.tvm.rng`.
+   */
+  setSeed(seed) {
+    this.tvm.setSeed(seed);
+  }
+  // Getters and setters for this.conversation.
+  /**
+   * @returns The conversation object (not a deep copy).
+   */
+  getConversationObject() {
+    return this.conversation;
+  }
+  /**
+   * Set this.conversation to a new conversation object.
+   */
+  setConversation(newConv) {
+    this.conversation = newConv;
+    this.stopStr = this.conversation.getStopStr();
+    this.stopTokens = this.conversation.getStopTokens();
+  }
+  asyncLoadWebGPUPipelines() {
+    return __awaiter(this, void 0, void 0, function* () {
+      yield this.tvm.asyncLoadWebGPUPipelines(this.vm.getInternalModule());
+    });
+  }
+  /**
+   * Generate the first token given input prompt
+   */
+  prefillStep(inp, msgRole, inp_role_str, genConfig) {
+    var _a, _b;
+    return __awaiter(this, void 0, void 0, function* () {
+      if (msgRole !== Role.user && msgRole !== Role.tool) {
+        throw new MessageOrderError("The last message should be from `user` or `tool`.");
+      }
+      if (this.resetStatsPerPrefill) {
+        this.resetRuntimeStats();
+      }
+      const tstart = performance.now();
+      this.outputIds = [];
+      this.appearedTokensFreq.clear();
+      this.outputMessage = "";
+      this.tokenLogprobArray = [];
+      this.curRoundDecodingTotalTokens = 0;
+      this.curRoundPrefillTotalTokens = 0;
+      this.curRoundPrefillTotalTime = 0;
+      this.curRoundDecodingTotalTime = 0;
+      this.curRoundGrammarInitTotalTime = 0;
+      this.curRoundGrammarPerTokenTotalTime = 0;
+      this.curRoundLatencyBreakdown = {
+        logitProcessorTime: [],
+        logitBiasTime: [],
+        penaltyTime: [],
+        sampleTime: [],
+        totalTime: [],
+        grammarBitmaskTime: []
+      };
+      this.stopTriggered = false;
+      const conversation = this.conversation;
+      let grammarMatcherInitPromise = void 0;
+      if (((_a = genConfig === null || genConfig === void 0 ? void 0 : genConfig.response_format) === null || _a === void 0 ? void 0 : _a.type) === "json_object" || ((_b = genConfig === null || genConfig === void 0 ? void 0 : genConfig.response_format) === null || _b === void 0 ? void 0 : _b.type) === "grammar") {
+        const curSchemaOrGrammarStr = genConfig.response_format.schema || genConfig.response_format.grammar;
+        if (curSchemaOrGrammarStr === this.schemaOrGrammarStr && this.grammarMatcher) {
+          const tGrammarInitStart = performance.now();
+          log.info("Reuse grammar matcher.");
+          this.grammarMatcher.reset();
+          this.curRoundGrammarInitTotalTime = (performance.now() - tGrammarInitStart) / 1e3;
+        } else {
+          grammarMatcherInitPromise = new Promise((resolve) => __awaiter(this, void 0, void 0, function* () {
+            var _c;
+            const tGrammarInitStart = performance.now();
+            log.info("Initialize new grammar matcher.");
+            if (this.grammarMatcher) {
+              this.grammarMatcher.dispose();
+            }
+            if (this.xgTokenizerInfo === void 0) {
+              log.info("Initialize token table.");
+              const rawTokenTable = getTokenTableFromTokenizer(this.tokenizer);
+              this.xgTokenizerInfo = yield libExports$1.TokenizerInfo.createTokenizerInfo(rawTokenTable, this.token_postproc_method, this.prepend_space_in_encode, this.fullVocabSize, this.stopTokens);
+              this.grammarCompiler = yield libExports$1.GrammarCompiler.createGrammarCompiler(this.xgTokenizerInfo);
+            }
+            const grammar = curSchemaOrGrammarStr === void 0 ? yield this.grammarCompiler.compileBuiltinJSONGrammar() : ((_c = genConfig === null || genConfig === void 0 ? void 0 : genConfig.response_format) === null || _c === void 0 ? void 0 : _c.type) === "json_object" ? yield this.grammarCompiler.compileJSONSchema(curSchemaOrGrammarStr) : yield this.grammarCompiler.compileGrammar(curSchemaOrGrammarStr);
+            this.grammarMatcher = yield libExports$1.GrammarMatcher.createGrammarMatcher(grammar);
+            grammar.dispose();
+            this.schemaOrGrammarStr = curSchemaOrGrammarStr;
+            this.curRoundGrammarInitTotalTime = (performance.now() - tGrammarInitStart) / 1e3;
+            resolve();
+          }));
+        }
+      }
+      if (conversation.isTextCompletion) {
+        conversation.prompt = inp;
+      } else {
+        conversation.appendMessage(msgRole, inp, inp_role_str);
+        if ((genConfig === null || genConfig === void 0 ? void 0 : genConfig.enable_thinking) === false) {
+          const emptyThinkingBlockStr = "<think>\n\n</think>\n\n";
+          const encoded = this.tokenizer.encode(emptyThinkingBlockStr);
+          this.outputIds.push(...encoded);
+          conversation.appendEmptyThinkingReplyHeader(Role.assistant, emptyThinkingBlockStr);
+        } else {
+          conversation.appendReplyHeader(Role.assistant);
+        }
+      }
+      const retGetInputData = this.getInputData();
+      const inputData = retGetInputData[0];
+      const promptLen = retGetInputData[1];
+      let hasImageInput = false;
+      inputData.forEach((data) => {
+        if (!Array.isArray(data)) {
+          hasImageInput = true;
+        }
+      });
+      if (hasImageInput && this.prefillChunkSize < IMAGE_EMBED_SIZE) {
+        throw new PrefillChunkSizeSmallerThanImageError(this.prefillChunkSize, IMAGE_EMBED_SIZE);
+      }
+      if (hasImageInput && this.image_embed === void 0) {
+        throw new CannotFindImageEmbedError();
+      }
+      const retGetChunks = getChunkedPrefillInputData(inputData, this.prefillChunkSize);
+      const chunks = retGetChunks[0];
+      const chunkLens = retGetChunks[1];
+      this.tvm.beginScope();
+      let logits;
+      for (let i = 0; i < chunks.length; i++) {
+        const chunk = chunks[i];
+        const chunkLen = chunkLens[i];
+        const prevFilledLen = this.filledKVCacheLength;
+        logits = this.tvm.detachFromCurrentScope(yield this.embedAndForward(chunk, chunkLen));
+        if (this.filledKVCacheLength !== prevFilledLen + chunkLen) {
+          throw new Error("Internal Error: filledKVCacheLength does not match expected value.");
+        }
+      }
+      this.tvm.endScope();
+      yield Promise.all([this.device.sync(), grammarMatcherInitPromise]);
+      const nextToken = yield this.sampleTokenFromLogits(logits, genConfig);
+      logits.dispose();
+      const tend = performance.now();
+      this.prefillTotalTime += (tend - tstart) / 1e3;
+      this.prefillTotalTokens += promptLen;
+      this.curRoundPrefillTotalTokens += promptLen;
+      this.curRoundPrefillTotalTime += (tend - tstart) / 1e3;
+      this.processNextToken(nextToken, genConfig);
+    });
+  }
+  decodeStep(genConfig) {
+    return __awaiter(this, void 0, void 0, function* () {
+      if (this.stopTriggered) {
+        throw Error("Cannot run decode when stopped");
+      }
+      const tstart = performance.now();
+      this.tvm.beginScope();
+      const chunk = [
+        this.outputIds.slice(this.outputIds.length - 1)
+      ];
+      const chunkLen = chunk.length;
+      const prevFilledLen = this.filledKVCacheLength;
+      const logits = this.tvm.detachFromCurrentScope(yield this.embedAndForward(chunk, chunkLen));
+      if (this.filledKVCacheLength !== prevFilledLen + chunkLen) {
+        throw new Error("Internal Error: filledKVCacheLength does not match expected value.");
+      }
+      this.tvm.endScope();
+      const nextToken = yield this.sampleTokenFromLogits(logits, genConfig);
+      logits.dispose();
+      const tend = performance.now();
+      this.decodingTotalTime += (tend - tstart) / 1e3;
+      this.decodingTotalTokens += 1;
+      this.curRoundDecodingTotalTokens += 1;
+      this.curRoundDecodingTotalTime += (tend - tstart) / 1e3;
+      this.processNextToken(nextToken, genConfig);
+    });
+  }
+  /**
+   * Manually trigger stop if it is not stopped.
+   */
+  triggerStop() {
+    if (this.stopTriggered) {
+      return;
+    }
+    this.stopTriggered = true;
+    this.finishReason = "abort";
+    if (!this.conversation.isTextCompletion) {
+      this.conversation.finishReply(this.outputMessage);
+    }
+  }
+  /**
+   * Add a generated token and check for stop.
+   *
+   * @param nextToken The next token.
+   * @param genConfig Configs that override `this.config` for this round of generation.
+   */
+  processNextToken(nextToken, genConfig) {
+    if (this.stopTriggered) {
+      throw Error("Cannot call process when it is stoppped");
+    }
+    let max_tokens = Infinity;
+    if (genConfig !== void 0 && genConfig.max_tokens) {
+      max_tokens = genConfig.max_tokens;
+    }
+    if (max_tokens <= 0) {
+      throw new MinValueError("max_tokens", 0);
+    }
+    let ignore_eos = false;
+    if (genConfig !== void 0 && genConfig.ignore_eos !== void 0 && genConfig.ignore_eos !== null) {
+      ignore_eos = genConfig.ignore_eos;
+    }
+    let stopStrs = this.stopStr;
+    if (genConfig !== void 0 && genConfig.stop) {
+      stopStrs = stopStrs.concat(genConfig.stop);
+    }
+    let stopTokens = this.stopTokens;
+    if (ignore_eos) {
+      stopTokens = [];
+      stopStrs = [];
+    }
+    if (stopTokens.includes(nextToken)) {
+      this.stopTriggered = true;
+      this.finishReason = "stop";
+    }
+    if (!this.stopTriggered) {
+      this.outputIds.push(nextToken);
+      const curFreq = this.appearedTokensFreq.get(nextToken);
+      if (curFreq !== void 0) {
+        this.appearedTokensFreq.set(nextToken, curFreq + 1);
+      } else {
+        this.appearedTokensFreq.set(nextToken, 1);
+      }
+    }
+    let outputMessage = this.tokenizer.decode(new Int32Array(this.outputIds));
+    let stopPos = -1;
+    for (const stopStr of stopStrs) {
+      stopPos = outputMessage.lastIndexOf(stopStr);
+      if (stopPos != -1) {
+        outputMessage = outputMessage.substring(0, stopPos);
+        this.stopTriggered = true;
+        this.finishReason = "stop";
+        break;
+      }
+    }
+    this.outputMessage = outputMessage;
+    if (this.outputIds.length >= max_tokens) {
+      this.stopTriggered = true;
+      this.finishReason = "length";
+      log.info("Generation stopped due to exceeding max_tokens.");
+    }
+    if (this.slidingWindowSize == -1 && this.filledKVCacheLength == this.contextWindowSize) {
+      this.stopTriggered = true;
+      this.finishReason = "length";
+      log.info("Generation stopped due to exceeding context_window_size.");
+    }
+    if (this.stopTriggered) {
+      if (!this.conversation.isTextCompletion) {
+        this.conversation.finishReply(this.outputMessage);
+      }
+    }
+  }
+  /**
+   * Given input tokens, return embeddings of them by calling embed kernel.
+   *
+   * @note precondition: inputTokens.length <= prefillChunkSize, since we take care of
+   * chunking in `getChunkedPrefillInputData()`.
+   */
+  getTokensEmbeddings(inputTokens) {
+    this.tvm.beginScope();
+    if (inputTokens.length > this.prefillChunkSize) {
+      throw new Error("Internal Error: getTokensEmbeddings input should be <= prefillChunkSize.");
+    }
+    const inputData = this.tvm.empty([inputTokens.length], "int32", this.device);
+    inputData.copyFrom(inputTokens);
+    const embed = this.tvm.detachFromCurrentScope(this.embed(inputData, this.params));
+    this.tvm.endScope();
+    this.tvm.attachToCurrentScope(embed);
+    return embed;
+  }
+  /**
+   * Embed an image input.
+   */
+  getImageEmbeddings(inputImage) {
+    return __awaiter(this, void 0, void 0, function* () {
+      this.tvm.beginScope();
+      const url = inputImage.url;
+      const imgData = yield getImageDataFromURL(url);
+      const pixelValues = getRGBArrayFromImageData(imgData);
+      const pixelArray = this.tvm.empty([imgData.height, imgData.width, 3], "uint32", this.device).copyFrom(pixelValues).view([1, imgData.height, imgData.width, 3]);
+      const embed = this.tvm.detachFromCurrentScope(this.image_embed(pixelArray, this.params));
+      if (embed.shape[0] !== IMAGE_EMBED_SIZE) {
+        throw new Error(`InternalError: expect embed.shape[0] to be ${IMAGE_EMBED_SIZE}, but got ${embed.shape[0]}`);
+      }
+      this.tvm.endScope();
+      this.tvm.attachToCurrentScope(embed);
+      return embed;
+    });
+  }
+  /**
+   * Embed and forward input data, that can be either array of tokens, or an image.
+   * This will increment `this.filledKVCacheLength`.
+   *
+   * @param inputData data to embed and forward
+   * @param inputDataLen length of this inputData, should smaller than prefill chunk size.
+   * @returns The logits returned by this forward as tvmjs.Tensor on GPU.
+   *
+   * @note Precondition: inputData's data length is smaller than prefill chunk size
+   */
+  embedAndForward(inputData, inputDataLen) {
+    return __awaiter(this, void 0, void 0, function* () {
+      if (inputDataLen > this.prefillChunkSize) {
+        throw new Error("InternalError: expect inputDataLen <= this.prefillChunkSize.");
+      }
+      this.tvm.beginScope();
+      const embeddings = [];
+      for (let i = 0; i < inputData.length; i++) {
+        const data = inputData[i];
+        if (Array.isArray(data)) {
+          embeddings.push(this.getTokensEmbeddings(data));
+        } else {
+          embeddings.push(yield this.getImageEmbeddings(data));
+        }
+      }
+      let allEmbeddings;
+      if (embeddings.length === 1) {
+        allEmbeddings = embeddings[0];
+      } else {
+        allEmbeddings = this.tvm.concatEmbeddings(embeddings);
+      }
+      if (inputDataLen !== allEmbeddings.shape[0]) {
+        throw new Error("InternalError: expect seqLen == allEmbeddings.shape[0]");
+      }
+      allEmbeddings = allEmbeddings.view([1].concat(allEmbeddings.shape));
+      const inputLenShape = this.tvm.makeShapeTuple([inputDataLen]);
+      const seqIdsTuple = this.tvm.makeShapeTuple([0]);
+      this.fKVCacheBeginForward(this.kvCache, seqIdsTuple, inputLenShape);
+      let retValue;
+      if (inputDataLen > 1) {
+        retValue = this.prefill(allEmbeddings, this.kvCache, this.params);
+      } else {
+        retValue = this.decoding(allEmbeddings, this.kvCache, this.params);
+      }
+      this.fKVCacheEndForward(this.kvCache);
+      this.filledKVCacheLength += inputDataLen;
+      const logits = this.tvm.detachFromCurrentScope(retValue.get(0));
+      this.tvm.endScope();
+      this.tvm.attachToCurrentScope(logits);
+      return logits;
+    });
+  }
+  // NOTE: caller must call device.sync()
+  updateLogitsOnCPU(logits) {
+    if (this.logitsOnCPU == void 0) {
+      this.logitsOnCPU = this.tvm.detachFromCurrentScope(this.tvm.empty(logits.shape, logits.dtype, this.tvm.cpu()));
+    } else {
+      if (logits.shape[0] != this.logitsOnCPU.shape[0]) {
+        throw Error("We expect the size of logits to remain unchanged");
+      }
+    }
+    this.logitsOnCPU.copyFrom(logits);
+    return this.logitsOnCPU;
+  }
+  sampleTokenFromLogits(logitsOnGPU, genConfig) {
+    var _a;
+    return __awaiter(this, void 0, void 0, function* () {
+      function _hasValue(value) {
+        return value !== void 0 && value !== null;
+      }
+      let temperature = this.config.temperature;
+      let top_p = this.config.top_p;
+      let repetition_penalty = this.config.repetition_penalty;
+      let frequency_penalty = this.config.frequency_penalty;
+      let presence_penalty = this.config.presence_penalty;
+      let logit_bias = void 0;
+      let logprobs = void 0;
+      let top_logprobs = void 0;
+      let response_format = void 0;
+      if (genConfig !== void 0) {
+        if (_hasValue(genConfig.temperature)) {
+          temperature = genConfig.temperature;
+        }
+        if (_hasValue(genConfig.top_p)) {
+          top_p = genConfig.top_p;
+        }
+        if (!_hasValue(top_p)) {
+          top_p = 1;
+        }
+        if (_hasValue(genConfig.repetition_penalty)) {
+          repetition_penalty = genConfig.repetition_penalty;
+        }
+        if (_hasValue(genConfig.frequency_penalty)) {
+          frequency_penalty = genConfig.frequency_penalty;
+        }
+        if (_hasValue(genConfig.presence_penalty)) {
+          presence_penalty = genConfig.presence_penalty;
+        }
+        if (_hasValue(frequency_penalty) && !_hasValue(presence_penalty)) {
+          presence_penalty = 0;
+        }
+        if (_hasValue(presence_penalty) && !_hasValue(frequency_penalty)) {
+          frequency_penalty = 0;
+        }
+        if (!_hasValue(frequency_penalty)) {
+          frequency_penalty = 0;
+        }
+        if (!_hasValue(presence_penalty)) {
+          presence_penalty = 0;
+        }
+        if (_hasValue(genConfig.logit_bias)) {
+          logit_bias = genConfig.logit_bias;
+        }
+        if (_hasValue(genConfig.logprobs)) {
+          logprobs = genConfig.logprobs;
+        }
+        if (_hasValue(genConfig.top_logprobs)) {
+          top_logprobs = genConfig.top_logprobs;
+        }
+        if (_hasValue(genConfig.response_format)) {
+          response_format = genConfig.response_format;
+        }
+      }
+      if (top_p <= 0 || top_p > 1) {
+        throw new RangeError$1("top_p", 0, 1);
+      }
+      if (temperature < 0) {
+        throw new MinValueError("temperature", 0);
+      }
+      if (repetition_penalty <= 0) {
+        throw new MinValueError("repetition_penalty", 0);
+      }
+      if (frequency_penalty && (frequency_penalty < -2 || frequency_penalty > 2)) {
+        throw new RangeError$1("frequency_penalty", -2, 2);
+      }
+      if (presence_penalty && (presence_penalty < -2 || presence_penalty > 2)) {
+        throw new RangeError$1("presence_penalty", -2, 2);
+      }
+      const outputTokenBegin = performance.now();
+      if ((response_format === null || response_format === void 0 ? void 0 : response_format.type) === "json_object" || (response_format === null || response_format === void 0 ? void 0 : response_format.type) === "grammar") {
+        const grammarBitmaskBegin = performance.now();
+        this.tvm.beginScope();
+        if (this.grammarMatcher === void 0) {
+          throw Error("Expect grammar matcher to be initialized.");
+        }
+        const tBitmaskStart = performance.now();
+        const bitMaskOnCPU = yield this.grammarMatcher.getNextTokenBitmask();
+        this.curRoundGrammarPerTokenTotalTime += (performance.now() - tBitmaskStart) / 1e3;
+        if (bitMaskOnCPU.length !== this.bitmaskSize) {
+          throw new Error(`InternalError: Expect grammar bitmask to be size ${this.bitmaskSize}, but got ${bitMaskOnCPU.length}.`);
+        }
+        const bitMaskOnGPU = this.tvm.empty([1, this.bitmaskSize], "int32", this.device).copyFrom(bitMaskOnCPU);
+        const seqIdsArray = this.tvm.empty([1], "int32", this.device).copyFrom([0]);
+        this.fapplyBitmask(logitsOnGPU.view([1, this.fullVocabSize]), seqIdsArray, bitMaskOnGPU);
+        this.tvm.endScope();
+        if (genConfig === null || genConfig === void 0 ? void 0 : genConfig.enable_latency_breakdown) {
+          const grammarBitmaskEnd = performance.now();
+          const grammarBitmaskTimeSpent = (grammarBitmaskEnd - grammarBitmaskBegin) / 1e3;
+          this.curRoundLatencyBreakdown.grammarBitmaskTime.push(grammarBitmaskTimeSpent);
+        }
+      }
+      if (this.logitProcessor !== void 0) {
+        this.tvm.beginScope();
+        this.updateLogitsOnCPU(logitsOnGPU);
+        this.tvm.endScope();
+        yield this.device.sync();
+        const logitProcessorBegin = performance.now();
+        if (this.logitsOnCPU == void 0) {
+          throw Error("logits should be assigned");
+        }
+        let logitsOnCPUArray = this.logitsOnCPU.toArray();
+        logitsOnCPUArray = this.logitProcessor.processLogits(logitsOnCPUArray);
+        logitsOnGPU.copyFrom(logitsOnCPUArray);
+        this.logitsOnCPU.copyFrom(logitsOnCPUArray);
+        if (genConfig === null || genConfig === void 0 ? void 0 : genConfig.enable_latency_breakdown) {
+          const logitProcessorEnd = performance.now();
+          const logitProcessorTimeSpent = (logitProcessorEnd - logitProcessorBegin) / 1e3;
+          this.curRoundLatencyBreakdown.logitProcessorTime.push(logitProcessorTimeSpent);
+        }
+      }
+      if (_hasValue(logit_bias)) {
+        const logitBiasBegin = performance.now();
+        const numTokens = Object.keys(logit_bias !== null && logit_bias !== void 0 ? logit_bias : {}).length;
+        const pos2seqIds = new Int32Array(numTokens).fill(0);
+        const tokenIds = new Int32Array(numTokens);
+        const tokenLogitBias = new Float32Array(numTokens);
+        const logitBiasKeys = Object.keys(logit_bias !== null && logit_bias !== void 0 ? logit_bias : {});
+        for (let index2 = 0; index2 < numTokens; index2++) {
+          const tokenId = parseInt(logitBiasKeys[index2]);
+          tokenIds[index2] = tokenId;
+          tokenLogitBias[index2] = logit_bias[tokenId];
+        }
+        this.tvm.beginScope();
+        const pos2seqIdsDevice = this.tvm.empty([numTokens], "int32", this.device).copyFrom(pos2seqIds);
+        const tokenIdsDevice = this.tvm.empty([numTokens], "int32", this.device).copyFrom(tokenIds);
+        const tokenLogitBiasDevice = this.tvm.empty([numTokens], "float32", this.device).copyFrom(tokenLogitBias);
+        this.fapplyLogitBias(logitsOnGPU.view([1, this.fullVocabSize]), pos2seqIdsDevice, tokenIdsDevice, tokenLogitBiasDevice);
+        this.tvm.endScope();
+        if (genConfig === null || genConfig === void 0 ? void 0 : genConfig.enable_latency_breakdown) {
+          const logitBiasEnd = performance.now();
+          const logitBiasTimeSpent = (logitBiasEnd - logitBiasBegin) / 1e3;
+          this.curRoundLatencyBreakdown.logitBiasTime.push(logitBiasTimeSpent);
+        }
+      }
+      if (frequency_penalty != 0 || presence_penalty != 0 || repetition_penalty != 1) {
+        const appearedTokens = [...this.appearedTokensFreq.keys()];
+        const appearedTokensFreqs = [...this.appearedTokensFreq.values()];
+        const numTokens = appearedTokens.length;
+        if (numTokens > 0) {
+          const penaltyBegin = performance.now();
+          const pos2seqIds = new Int32Array(numTokens).fill(0);
+          const tokenIds = new Int32Array(numTokens).fill(0);
+          const tokenCnt = new Int32Array(numTokens).fill(0);
+          const penalties = new Float32Array([
+            presence_penalty,
+            frequency_penalty,
+            repetition_penalty
+          ]);
+          tokenIds.set(appearedTokens);
+          tokenCnt.set(appearedTokensFreqs);
+          this.tvm.beginScope();
+          const seqIdsArray = this.tvm.empty([1], "int32", this.device).copyFrom([0]);
+          const pos2seqIdsDevice = this.tvm.empty([numTokens], "int32", this.device).copyFrom(pos2seqIds);
+          const tokenIdsDevice = this.tvm.empty([numTokens], "int32", this.device).copyFrom(tokenIds);
+          const tokenCntDevice = this.tvm.empty([numTokens], "int32", this.device).copyFrom(tokenCnt);
+          const penaltiesDevice = this.tvm.empty([1, 3], "float32", this.device).copyFrom(penalties);
+          this.fapplyPenalty(logitsOnGPU.view([1, this.fullVocabSize]), seqIdsArray, pos2seqIdsDevice, tokenIdsDevice, tokenCntDevice, penaltiesDevice);
+          this.tvm.endScope();
+          if (genConfig === null || genConfig === void 0 ? void 0 : genConfig.enable_latency_breakdown) {
+            const penaltyEnd = performance.now();
+            const penaltyTimeSpent = (penaltyEnd - penaltyBegin) / 1e3;
+            this.curRoundLatencyBreakdown.penaltyTime.push(penaltyTimeSpent);
+          }
+        }
+      }
+      const sampleBegin = performance.now();
+      temperature = Math.max(1e-6, temperature);
+      const numSeqs = 1;
+      const numProbs = 1;
+      const temperatures = new Float32Array([temperature]);
+      this.tvm.beginScope();
+      const temperaturesDevice = this.tvm.empty([numSeqs], "float32", this.device).copyFrom(temperatures);
+      let probs = this.fsoftmaxWithTemperature(logitsOnGPU.view([numSeqs, numProbs, this.fullVocabSize]), temperaturesDevice);
+      probs = probs.view([numProbs, this.fullVocabSize]);
+      const argsortResults = this.fargsortProbs(probs);
+      const sortedProbsDevice = argsortResults.get(0);
+      const sortedIndicesDevice = argsortResults.get(1);
+      const uniformSamplesDevice = this.tvm.uniform([1], 0, 1, this.device);
+      const topPHost = new Float32Array(numProbs).fill(-1);
+      const topPValue = Math.max(top_p, 1e-5);
+      this.sampleIndices.forEach((row) => {
+        topPHost[row] = topPValue;
+      });
+      this.topPDevice.copyFrom(topPHost);
+      const sampledTokensDevice = this.tvm.detachFromCurrentScope(this.fsampleWithTopP(sortedProbsDevice, sortedIndicesDevice, uniformSamplesDevice, this.sampleIndicesDevice, this.topPDevice));
+      const sampledTokensHost = this.tvm.detachFromCurrentScope(this.tvm.empty([numSeqs], "int32", this.tvm.cpu()).copyFrom(sampledTokensDevice));
+      if (logprobs && top_logprobs > 0) {
+        this.updateLogitsOnCPU(probs);
+      }
+      this.tvm.endScope();
+      yield this.device.sync();
+      const sampledToken = sampledTokensHost.toArray()[0];
+      if (logprobs && top_logprobs > 0) {
+        this.tokenLogprobArray.push(this.getTokenLogprob(sampledToken, top_logprobs));
+      }
+      if (genConfig === null || genConfig === void 0 ? void 0 : genConfig.enable_latency_breakdown) {
+        const sampleEnd = performance.now();
+        const sampleTimeSpent = (sampleEnd - sampleBegin) / 1e3;
+        this.curRoundLatencyBreakdown.sampleTime.push(sampleTimeSpent);
+      }
+      (_a = this.logitProcessor) === null || _a === void 0 ? void 0 : _a.processSampledToken(sampledToken);
+      if ((response_format === null || response_format === void 0 ? void 0 : response_format.type) === "json_object" || (response_format === null || response_format === void 0 ? void 0 : response_format.type) === "grammar") {
+        if (this.grammarMatcher === void 0) {
+          throw Error("Expect grammar matcher to be initialized.");
+        }
+        const tAcceptStart = performance.now();
+        const accepted = this.grammarMatcher.acceptToken(sampledToken);
+        this.curRoundGrammarPerTokenTotalTime += (performance.now() - tAcceptStart) / 1e3;
+        if (!accepted) {
+          throw Error("Grammar matcher rejected the newly sampled token.");
+        }
+      }
+      if (genConfig === null || genConfig === void 0 ? void 0 : genConfig.enable_latency_breakdown) {
+        const outputTokenEnd = performance.now();
+        const outputTokenTimeSpent = (outputTokenEnd - outputTokenBegin) / 1e3;
+        this.curRoundLatencyBreakdown.totalTime.push(outputTokenTimeSpent);
+      }
+      return sampledToken;
+    });
+  }
+  /**
+   * Return the an array of a mixture of token arrays and imageURLs (which cannot be represented
+   * as tokens). Also return the number of tokens this represents.
+   *
+   * We first convert the Conversation into a prompt array to be prefilled. Then we encode the
+   * text parts, leaving the imageURLs as it is.
+   * Example prompts:
+   * [
+   *   "<|system|>\nSome system prompt\n",
+   *   [
+   *     "<|user|>\n",
+   *     imageURL1,
+   *     "\n",
+   *     imageURL2,
+   *     "\n",
+   *     "Some user input<|end|>\n"
+   *   ],
+   * ]
+   *
+   * Expected output:
+   * [
+   *   token array for "<|system|>\nSome system prompt\n<|user|>\n",
+   *   imageUrl1,
+   *   token array for "\n",
+   *   imageUrl2,
+   *   token array for "\nSome user input<|end|>\n"
+   */
+  getInputData() {
+    const ret = [];
+    let curTokens = [];
+    let prompts;
+    if (this.conversation.isTextCompletion) {
+      if (this.filledKVCacheLength !== 0) {
+        throw new TextCompletionExpectsKVEmptyError();
+      }
+      prompts = this.conversation.getPromptArrayTextCompletion();
+    } else {
+      if (this.filledKVCacheLength === 0) {
+        if (this.conversation.config.system_prefix_token_ids !== void 0 && this.conversation.config.system_prefix_token_ids !== null) {
+          curTokens = [...this.conversation.config.system_prefix_token_ids];
+        }
+        prompts = this.conversation.getPromptArray();
+      } else {
+        prompts = this.conversation.getPromptArrayLastRound();
+      }
+    }
+    let numPromptTokens = 0;
+    for (let i = 0; i < prompts.length; i++) {
+      const curPrompt = prompts[i];
+      if (typeof curPrompt === "string") {
+        const encoded = this.tokenizer.encode(curPrompt);
+        numPromptTokens += encoded.length;
+        curTokens.push(...encoded);
+      } else {
+        for (let j = 0; j < curPrompt.length; j++) {
+          const curPromptContent = curPrompt[j];
+          if (typeof curPromptContent === "string") {
+            const encoded = this.tokenizer.encode(curPromptContent);
+            numPromptTokens += encoded.length;
+            curTokens.push(...encoded);
+          } else {
+            ret.push([...curTokens]);
+            ret.push(curPromptContent);
+            numPromptTokens += IMAGE_EMBED_SIZE;
+            curTokens = [];
+          }
+        }
+      }
+    }
+    if (curTokens.length !== 0) {
+      ret.push([...curTokens]);
+    }
+    if (this.slidingWindowSize == -1 && // There is no limit on contextWindowSize for sliding window
+    numPromptTokens + this.filledKVCacheLength > this.contextWindowSize) {
+      throw new ContextWindowSizeExceededError(numPromptTokens, this.contextWindowSize);
+    }
+    return [ret, numPromptTokens];
+  }
+  forwardTokensAndSample(inputIds, isPrefill) {
+    return __awaiter(this, void 0, void 0, function* () {
+      const tstart = performance.now();
+      this.tvm.beginScope();
+      const inputData = [inputIds];
+      const retGetChunks = getChunkedPrefillInputData(inputData, this.prefillChunkSize);
+      const chunks = retGetChunks[0];
+      const chunkLens = retGetChunks[1];
+      let logitsOnGPU;
+      for (let i = 0; i < chunks.length; i++) {
+        const chunk = chunks[i];
+        const chunkLen = chunkLens[i];
+        const prevFilledLen = this.filledKVCacheLength;
+        logitsOnGPU = yield this.embedAndForward(chunk, chunkLen);
+        if (this.filledKVCacheLength !== prevFilledLen + chunkLen) {
+          throw new Error("Internal Error: filledKVCacheLength does not match expected value.");
+        }
+      }
+      const nextToken = yield this.sampleTokenFromLogits(logitsOnGPU);
+      this.tvm.endScope();
+      const tend = performance.now();
+      if (isPrefill) {
+        this.prefillTotalTime += (tend - tstart) / 1e3;
+        this.prefillTotalTokens += inputIds.length;
+        this.curRoundPrefillTotalTokens += inputIds.length;
+        this.curRoundPrefillTotalTime += (tend - tstart) / 1e3;
+      } else {
+        this.decodingTotalTime += (tend - tstart) / 1e3;
+        this.decodingTotalTokens += 1;
+        this.curRoundDecodingTotalTokens += 1;
+        this.curRoundDecodingTotalTime += (tend - tstart) / 1e3;
+      }
+      return nextToken;
+    });
+  }
+  /**
+   * Based on `sampledToken` and `this.logitsOnCPU`, which becomes a distribution after
+   * calling `this.tvm.applySoftmaxWithTemperature()`, generate `ChatCompletionTokenLogprob` and
+   * update `this.tokenLogprobArray`.
+   *
+   * @param sampledToken The token ID sampled.
+   * @param top_logprobs Number of top tokens to include; `top_logprobs` in `ChatCompletionRequest`.
+   *
+   * @return The `ChatCompletionTokenLogprob` for this single autoregressive step.
+   */
+  getTokenLogprob(sampledToken, top_logprobs) {
+    if (this.logitsOnCPU == void 0) {
+      throw Error("logits should be assigned");
+    }
+    const logitsOnCPUArray = this.logitsOnCPU.toArray();
+    const topLogprobs = getTopProbs(top_logprobs, logitsOnCPUArray);
+    const textEncoder = new TextEncoder();
+    const tokenStr = this.tokenizer.decode(new Int32Array([sampledToken]));
+    const bytes = Array.from(textEncoder.encode(tokenStr));
+    const logprob = Math.log(logitsOnCPUArray[sampledToken]);
+    const topLogprobArray = [];
+    for (let i = 0; i < top_logprobs; i++) {
+      const tokenID_i = topLogprobs[i][0];
+      const prob_i = topLogprobs[i][1];
+      const tokenStr_i = this.tokenizer.decode(new Int32Array([tokenID_i]));
+      topLogprobArray.push({
+        token: tokenStr_i,
+        bytes: Array.from(textEncoder.encode(tokenStr_i)),
+        logprob: Math.log(prob_i)
+      });
+    }
+    return {
+      token: tokenStr,
+      bytes,
+      logprob,
+      top_logprobs: topLogprobArray
+    };
+  }
+  /**
+   * Synchronize the device.
+   */
+  sync() {
+    return __awaiter(this, void 0, void 0, function* () {
+      yield this.device.sync();
+    });
+  }
+  evaluate() {
+    return __awaiter(this, void 0, void 0, function* () {
+      this.resetKVCache();
+      this.filledKVCacheLength = 0;
+      const testPrompt = "The capital of Canada is";
+      const ids = yield this.tokenizer.encode(testPrompt);
+      const tokens = Array.from(ids);
+      tokens.unshift(this.bosTokenId);
+      if (tokens.length == 0) {
+        throw Error("empty token");
+      }
+      this.tvm.beginScope();
+      const prefillChunk = [tokens];
+      const prefillChunkLen = tokens.length;
+      const prefillStart = performance.now();
+      yield this.embedAndForward(prefillChunk, prefillChunkLen);
+      this.tvm.endScope();
+      yield this.device.sync();
+      const decodingStart = performance.now();
+      this.tvm.beginScope();
+      const decodeChunk = [[6234]];
+      const decodeChunkLen = 1;
+      const logitsOnCPU = this.updateLogitsOnCPU(yield this.embedAndForward(decodeChunk, decodeChunkLen));
+      yield this.device.sync();
+      this.tvm.endScope();
+      const decodingEnd = performance.now();
+      const msg = `prefill-time=${((decodingStart - prefillStart) / 1e3).toFixed(4)} secdecoding-time=${((decodingEnd - decodingStart) / 1e3).toFixed(4)} sec`;
+      log.info("Logits:");
+      log.info(logitsOnCPU.toArray());
+      log.info(msg);
+    });
+  }
+}
+class Chat {
+  constructor(engine) {
+    this.engine = engine;
+    this.completions = new Completions$1(this.engine);
+  }
+}
+let Completions$1 = class Completions {
+  constructor(engine) {
+    this.engine = engine;
+  }
+  create(request) {
+    return this.engine.chatCompletion(request);
+  }
+};
+const ChatCompletionRequestUnsupportedFields = [];
+function postInitAndCheckFields$2(request, currentModelId, currentModelType) {
+  var _a, _b, _c, _d, _e, _f, _g, _h, _j;
+  const unsupported = [];
+  ChatCompletionRequestUnsupportedFields.forEach((field) => {
+    if (field in request) {
+      unsupported.push(field);
+    }
+  });
+  if (unsupported.length > 0) {
+    throw new UnsupportedFieldsError(unsupported, "ChatCompletionRequest");
+  }
+  request.messages.forEach((message, index2) => {
+    if (message.role === "user" && typeof message.content !== "string") {
+      if (currentModelType !== ModelType.VLM) {
+        throw new UserMessageContentErrorForNonVLM(currentModelId, ModelType[currentModelType], message.content);
+      }
+      let numTextContent = 0;
+      for (let i = 0; i < message.content.length; i++) {
+        const curContent = message.content[i];
+        if (curContent.type === "image_url") {
+          const detail = curContent.image_url.detail;
+          if (detail !== void 0 && detail !== null) {
+            throw new UnsupportedDetailError(detail);
+          }
+          const url = curContent.image_url.url;
+          if (!url.startsWith("data:image") && !url.startsWith("http")) {
+            throw new UnsupportedImageURLError(url);
+          }
+        } else {
+          numTextContent += 1;
+        }
+      }
+      if (numTextContent > 1) {
+        throw new MultipleTextContentError();
+      }
+    }
+    if (message.role === "system" && index2 !== 0) {
+      throw new SystemMessageOrderError();
+    }
+  });
+  const lastId = request.messages.length - 1;
+  if (request.messages[lastId].role !== "user" && request.messages[lastId].role !== "tool") {
+    throw new MessageOrderError("Last message should be from either `user` or `tool`.");
+  }
+  if (request.stream && request.n && request.n > 1) {
+    throw new StreamingCountError();
+  }
+  if (request.seed !== void 0 && request.seed !== null) {
+    if (!Number.isInteger(request.seed)) {
+      throw new SeedTypeError(request.seed);
+    }
+  }
+  if (((_a = request.response_format) === null || _a === void 0 ? void 0 : _a.schema) !== void 0 && ((_b = request.response_format) === null || _b === void 0 ? void 0 : _b.schema) !== null) {
+    if (((_c = request.response_format) === null || _c === void 0 ? void 0 : _c.type) !== "json_object") {
+      throw new InvalidResponseFormatError();
+    }
+  }
+  if (((_d = request.response_format) === null || _d === void 0 ? void 0 : _d.grammar) !== void 0 && ((_e = request.response_format) === null || _e === void 0 ? void 0 : _e.grammar) !== null) {
+    if (((_f = request.response_format) === null || _f === void 0 ? void 0 : _f.type) !== "grammar") {
+      throw new InvalidResponseFormatGrammarError();
+    }
+  }
+  if (((_g = request.response_format) === null || _g === void 0 ? void 0 : _g.type) === "grammar") {
+    if (((_h = request.response_format) === null || _h === void 0 ? void 0 : _h.grammar) === void 0 || ((_j = request.response_format) === null || _j === void 0 ? void 0 : _j.grammar) === null) {
+      throw new InvalidResponseFormatGrammarError();
+    }
+  }
+  if (request.tools !== void 0 && request.tools !== null) {
+    if (!functionCallingModelIds.includes(currentModelId)) {
+      throw new UnsupportedModelIdError(currentModelId, functionCallingModelIds);
+    }
+    if (currentModelId.startsWith("Hermes-2-Pro-")) {
+      if (request.response_format !== void 0 && request.response_format !== null) {
+        throw new CustomResponseFormatError(request.response_format);
+      }
+      request.response_format = {
+        type: "json_object",
+        schema: officialHermes2FunctionCallSchemaArray
+      };
+      const hermes2SystemMessage = hermes2FunctionCallingSystemPrompt.replace(MessagePlaceholders.hermes_tools, JSON.stringify(request.tools));
+      for (let i = 0; i < request.messages.length; i++) {
+        const message = request.messages[i];
+        if (message.role === "system") {
+          throw new CustomSystemPromptError();
+        }
+      }
+      request.messages.unshift({
+        role: "system",
+        content: hermes2SystemMessage
+      });
+    }
+  }
+  if (request.stream_options !== void 0 && request.stream_options !== null) {
+    if (!request.stream) {
+      throw new InvalidStreamOptionsError();
+    }
+  }
+}
+class Completions2 {
+  constructor(engine) {
+    this.engine = engine;
+  }
+  create(request) {
+    return this.engine.completion(request);
+  }
+}
+const CompletionCreateParamsUnsupportedFields = [
+  "suffix",
+  "user",
+  "best_of"
+];
+function postInitAndCheckFields$1(request, currentModelId) {
+  const unsupported = [];
+  CompletionCreateParamsUnsupportedFields.forEach((field) => {
+    if (field in request) {
+      unsupported.push(field);
+    }
+  });
+  if (unsupported.length > 0) {
+    throw new UnsupportedFieldsError(unsupported, "CompletionCreateParams");
+  }
+  if (request.stream && request.n && request.n > 1) {
+    throw new StreamingCountError();
+  }
+  if (request.seed !== void 0 && request.seed !== null) {
+    if (!Number.isInteger(request.seed)) {
+      throw new SeedTypeError(request.seed);
+    }
+  }
+  if (request.stream_options !== void 0 && request.stream_options !== null) {
+    if (!request.stream) {
+      throw new InvalidStreamOptionsError();
+    }
+  }
+}
+class Embeddings {
+  constructor(engine) {
+    this.engine = engine;
+  }
+  /**
+   * Creates an embedding vector representing the input text.
+   */
+  create(request) {
+    return this.engine.embedding(request);
+  }
+}
+const EmbeddingCreateParamsUnsupportedFields = [
+  "dimensions",
+  "user"
+];
+function postInitAndCheckFields(request, currentModelId) {
+  const unsupported = [];
+  EmbeddingCreateParamsUnsupportedFields.forEach((field) => {
+    if (field in request) {
+      unsupported.push(field);
+    }
+  });
+  if (unsupported.length > 0) {
+    throw new UnsupportedFieldsError(unsupported, "EmbeddingCreateParams");
+  }
+  if (request.encoding_format == "base64") {
+    throw new EmbeddingUnsupportedEncodingFormatError();
+  }
+  const input = request.input;
+  if (typeof input === "string") {
+    if (input === "")
+      throw new EmbeddingInputEmptyError();
+  } else {
+    if (input.length === 0) {
+      throw new EmbeddingInputEmptyError();
+    }
+    for (let i = 0; i < input.length; i++) {
+      const curInput = input[i];
+      if (typeof curInput !== "number") {
+        if (curInput.length === 0)
+          throw new EmbeddingInputEmptyError();
+      }
+    }
+  }
+}
 var lib$1 = { exports: {} };
 var lib = lib$1.exports;
 var hasRequiredLib;
@@ -15726,7 +15749,7 @@ function requireLib() {
     (function(global, factory) {
       factory(exports$1);
     })(lib, (function(exports$12) {
-      function __awaiter(thisArg, _arguments, P, generator) {
+      function __awaiter2(thisArg, _arguments, P, generator) {
         function adopt(value) {
           return value instanceof P ? value : new P(function(resolve) {
             resolve(value);
@@ -20263,7 +20286,7 @@ function requireLib() {
       })();
       var binding = null;
       function asyncInitTokenizers() {
-        return __awaiter(this, void 0, void 0, function() {
+        return __awaiter2(this, void 0, void 0, function() {
           return __generator(this, function(_a) {
             switch (_a.label) {
               case 0:
@@ -20311,7 +20334,7 @@ function requireLib() {
             return res;
           };
           Tokenizer2.fromJSON = function(json) {
-            return __awaiter(this, void 0, void 0, function() {
+            return __awaiter2(this, void 0, void 0, function() {
               return __generator(this, function(_a) {
                 switch (_a.label) {
                   case 0:
@@ -20327,7 +20350,7 @@ function requireLib() {
             if (addedTokens === void 0) {
               addedTokens = "";
             }
-            return __awaiter(this, void 0, void 0, function() {
+            return __awaiter2(this, void 0, void 0, function() {
               return __generator(this, function(_a) {
                 switch (_a.label) {
                   case 0:
@@ -20340,7 +20363,7 @@ function requireLib() {
             });
           };
           Tokenizer2.fromSentencePiece = function(model) {
-            return __awaiter(this, void 0, void 0, function() {
+            return __awaiter2(this, void 0, void 0, function() {
               return __generator(this, function(_a) {
                 switch (_a.label) {
                   case 0:
@@ -20363,1643 +20386,1114 @@ function requireLib() {
   })(lib$1, lib$1.exports);
   return lib$1.exports;
 }
-requireLib();
+var libExports = requireLib();
+function asyncLoadTokenizer(baseUrl, config, appConfig, logger = console.log) {
+  return __awaiter(this, void 0, void 0, function* () {
+    let modelCache;
+    if (appConfig.useIndexedDBCache) {
+      modelCache = new libExports$2.ArtifactIndexedDBCache("webllm/model");
+    } else {
+      modelCache = new libExports$2.ArtifactCache("webllm/model");
+    }
+    if (config.tokenizer_files.includes("tokenizer.json")) {
+      const url = new URL("tokenizer.json", baseUrl).href;
+      const model = yield modelCache.fetchWithCache(url, "arraybuffer");
+      return libExports.Tokenizer.fromJSON(model);
+    } else if (config.tokenizer_files.includes("tokenizer.model")) {
+      logger("Using `tokenizer.model` since we cannot locate `tokenizer.json`.\nIt is recommended to use `tokenizer.json` to ensure all token mappings are included, since currently, files like `added_tokens.json`, `tokenizer_config.json` are ignored.\nConsider converting `tokenizer.model` to `tokenizer.json` by compiling the model with MLC again, or see if MLC's huggingface provides this file.");
+      const url = new URL("tokenizer.model", baseUrl).href;
+      const model = yield modelCache.fetchWithCache(url, "arraybuffer");
+      return libExports.Tokenizer.fromSentencePiece(model);
+    }
+    throw new UnsupportedTokenizerFilesError(config.tokenizer_files);
+  });
+}
+class EmbeddingPipeline {
+  constructor(tvm, tokenizer, config) {
+    this.contextWindowSize = -1;
+    this.prefillChunkSize = -1;
+    this.maxBatchSize = -1;
+    this.curRoundEmbedTotalTokens = 0;
+    this.curRoundEmbedTotalTime = 0;
+    this.tvm = tvm;
+    this.tokenizer = tokenizer;
+    this.config = config;
+    this.device = this.tvm.webgpu();
+    tvm.beginScope();
+    this.vm = this.tvm.detachFromCurrentScope(this.tvm.createVirtualMachine(this.device));
+    this.prefill = this.tvm.detachFromCurrentScope(this.vm.getFunction("prefill"));
+    const fgetMetadata = this.vm.getFunction("_metadata");
+    const ret_value = fgetMetadata();
+    const metadataStr = ret_value.toString();
+    const metadata = JSON.parse(metadataStr);
+    const paramNames = [];
+    metadata.params.forEach((param) => {
+      paramNames.push(param.name);
+    });
+    this.params = this.tvm.detachFromCurrentScope(this.tvm.getParamsFromCacheByName(paramNames));
+    this.maxBatchSize = metadata.max_batch_size;
+    this.contextWindowSize = this.config.context_window_size;
+    this.prefillChunkSize = metadata.prefill_chunk_size;
+    log.info("Using maxBatchSize: ", this.maxBatchSize);
+    log.info("Using contextWindowSize: ", this.contextWindowSize);
+    log.info("Using prefillChunkSize: ", this.prefillChunkSize);
+    if (this.config.sliding_window_size !== -1) {
+      throw new EmbeddingSlidingWindowError(this.config.sliding_window_size);
+    }
+    if (this.maxBatchSize <= 0) {
+      throw new MinValueError("maxBatchSize", 0);
+    }
+    if (this.contextWindowSize <= 0) {
+      throw new MinValueError("contextWindowSize", 0);
+    }
+    if (this.prefillChunkSize <= 0) {
+      throw new MinValueError("prefillChunkSize", 0);
+    }
+    if (this.prefillChunkSize !== this.contextWindowSize) {
+      throw new EmbeddingChunkingUnsupportedError(this.contextWindowSize, this.prefillChunkSize);
+    }
+    tvm.endScope();
+  }
+  embedStep(input) {
+    return __awaiter(this, void 0, void 0, function* () {
+      this.curRoundEmbedTotalTokens = 0;
+      this.curRoundEmbedTotalTime = 0;
+      let totalNumTokens = 0;
+      const embedStart = performance.now();
+      let tokenizedInputs = [];
+      const tempInputs = [];
+      if (input.length === 0) {
+        throw new EmbeddingInputEmptyError();
+      }
+      if (typeof input === "string") {
+        tokenizedInputs = [Array.from(this.tokenizer.encode(input))];
+      } else {
+        for (let i = 0; i < input.length; i++) {
+          const curInput = input[i];
+          if (Array.isArray(curInput)) {
+            tokenizedInputs.push(curInput);
+          } else if (typeof curInput === "string") {
+            tokenizedInputs.push(Array.from(this.tokenizer.encode(curInput)));
+          } else {
+            tempInputs.push(curInput);
+          }
+        }
+      }
+      if (tempInputs.length > 0) {
+        tokenizedInputs.push(tempInputs);
+      }
+      for (let i = 0; i < tokenizedInputs.length; i++) {
+        const curInputSize = tokenizedInputs[i].length;
+        totalNumTokens += curInputSize;
+        if (curInputSize > this.contextWindowSize) {
+          throw new EmbeddingExceedContextWindowSizeError(this.contextWindowSize, curInputSize);
+        }
+      }
+      if (tokenizedInputs.length === 0) {
+        throw new Error("InternalError: batch size is zero.");
+      }
+      const batchSize = tokenizedInputs.length;
+      const result = [];
+      for (let begin = 0; begin < batchSize; begin += this.maxBatchSize) {
+        this.tvm.beginScope();
+        const end = Math.min(batchSize, begin + this.maxBatchSize);
+        const curBatch = tokenizedInputs.slice(begin, end);
+        const curBatchSize = curBatch.length;
+        let maxInputSize = 0;
+        for (let i = 0; i < curBatchSize; i++) {
+          const curInputSize = curBatch[i].length;
+          if (curInputSize > maxInputSize) {
+            maxInputSize = curInputSize;
+          }
+        }
+        const curBatchPaddedFlatten = [];
+        const curAttnMask = [];
+        const flattenedInputSize = curBatchSize * maxInputSize;
+        for (let i = 0; i < curBatchSize; i++) {
+          const padding = Array(maxInputSize - curBatch[i].length).fill(0);
+          const ones = Array(curBatch[i].length).fill(1);
+          curBatchPaddedFlatten.push(...curBatch[i]);
+          curAttnMask.push(...ones);
+          curBatchPaddedFlatten.push(...padding);
+          curAttnMask.push(...padding);
+        }
+        if (curBatchPaddedFlatten.length !== flattenedInputSize || curAttnMask.length !== flattenedInputSize) {
+          throw new Error(`InternalError: Expect input array to be ${flattenedInputSize}, but got ${curBatchPaddedFlatten.length}`);
+        }
+        let inputNDArray = this.tvm.empty([flattenedInputSize], "int32", this.device);
+        inputNDArray.copyFrom(curBatchPaddedFlatten);
+        inputNDArray = inputNDArray.view([curBatchSize, maxInputSize]);
+        let maskNDArray = this.tvm.empty([flattenedInputSize], "int32", this.device);
+        maskNDArray.copyFrom(curAttnMask);
+        maskNDArray = maskNDArray.view([curBatchSize, maxInputSize]);
+        const logitsCurBatchOnGPU = this.prefill(inputNDArray, maskNDArray, this.params);
+        yield this.device.sync();
+        const hidden_size = logitsCurBatchOnGPU.shape[2];
+        let logitsCurBatchOnCPU = this.tvm.empty(logitsCurBatchOnGPU.shape, logitsCurBatchOnGPU.dtype, this.tvm.cpu());
+        logitsCurBatchOnCPU.copyFrom(logitsCurBatchOnGPU);
+        logitsCurBatchOnCPU = logitsCurBatchOnCPU.view([
+          curBatchSize * maxInputSize * hidden_size
+        ]);
+        yield this.device.sync();
+        const logitsCurBatchOnCPUArray = logitsCurBatchOnCPU.toArray();
+        for (let i = 0; i < curBatchSize; i++) {
+          const b = i * maxInputSize * hidden_size;
+          const e = b + hidden_size;
+          result.push(Array.from(logitsCurBatchOnCPUArray.slice(b, e)));
+        }
+        this.tvm.endScope();
+      }
+      if (result.length !== batchSize) {
+        throw new Error(`
+        InternalError: expect result.length to be ${batchSize}, but got ${result.length}`);
+      }
+      const embedEnd = performance.now();
+      this.curRoundEmbedTotalTokens = totalNumTokens;
+      this.curRoundEmbedTotalTime = (embedEnd - embedStart) / 1e3;
+      return result;
+    });
+  }
+  dispose() {
+    this.params.dispose();
+    this.prefill.dispose();
+    this.vm.dispose();
+    this.tvm.dispose();
+    this.tokenizer.dispose();
+  }
+  /**
+   * Synchronize the device.
+   */
+  sync() {
+    return __awaiter(this, void 0, void 0, function* () {
+      yield this.device.sync();
+    });
+  }
+  asyncLoadWebGPUPipelines() {
+    return __awaiter(this, void 0, void 0, function* () {
+      yield this.tvm.asyncLoadWebGPUPipelines(this.vm.getInternalModule());
+    });
+  }
+  // Performance APIs below
+  /**
+   * Get the time it took the last `embedStep()` in seconds.
+   */
+  getCurRoundEmbedTotalTime() {
+    return this.curRoundEmbedTotalTime;
+  }
+  /**
+   * Get the number of tokens embedded in the last `embedStep()`. This excludes the padded tokens.
+   */
+  getCurRoundEmbedTotalTokens() {
+    return this.curRoundEmbedTotalTokens;
+  }
+  /**
+   * @returns Prefill tokens per second, starting from the last prefill performed.
+   */
+  getCurRoundEmbedTokensPerSec() {
+    return this.curRoundEmbedTotalTokens / this.curRoundEmbedTotalTime;
+  }
+}
+function CreateMLCEngine(modelId, engineConfig, chatOpts) {
+  return __awaiter(this, void 0, void 0, function* () {
+    const engine = new MLCEngine(engineConfig);
+    yield engine.reload(modelId, chatOpts);
+    return engine;
+  });
+}
+class MLCEngine {
+  constructor(engineConfig) {
+    this.logger = log.info;
+    this.interruptSignal = false;
+    this.deviceLostIsError = true;
+    this.loadedModelIdToPipeline = /* @__PURE__ */ new Map();
+    this.loadedModelIdToChatConfig = /* @__PURE__ */ new Map();
+    this.loadedModelIdToModelType = /* @__PURE__ */ new Map();
+    this.loadedModelIdToLock = /* @__PURE__ */ new Map();
+    this.appConfig = (engineConfig === null || engineConfig === void 0 ? void 0 : engineConfig.appConfig) || prebuiltAppConfig;
+    this.setLogLevel((engineConfig === null || engineConfig === void 0 ? void 0 : engineConfig.logLevel) || DefaultLogLevel);
+    this.setInitProgressCallback(engineConfig === null || engineConfig === void 0 ? void 0 : engineConfig.initProgressCallback);
+    this.setLogitProcessorRegistry(engineConfig === null || engineConfig === void 0 ? void 0 : engineConfig.logitProcessorRegistry);
+    this.chat = new Chat(this);
+    this.completions = new Completions2(this);
+    this.embeddings = new Embeddings(this);
+  }
+  //-----------------------
+  // 0. Setters and getters
+  //-----------------------
+  setAppConfig(appConfig) {
+    this.appConfig = appConfig;
+  }
+  setInitProgressCallback(initProgressCallback) {
+    this.initProgressCallback = initProgressCallback;
+  }
+  getInitProgressCallback() {
+    return this.initProgressCallback;
+  }
+  setLogitProcessorRegistry(logitProcessorRegistry) {
+    this.logitProcessorRegistry = logitProcessorRegistry;
+  }
+  /**
+   * Set MLCEngine logging output level
+   *
+   * @param logLevel The new log level
+   */
+  setLogLevel(logLevel) {
+    log.setLevel(logLevel);
+  }
+  //----------------------------------------
+  // 1. Model/pipeline loading and unloading
+  //----------------------------------------
+  reload(modelId, chatOpts) {
+    return __awaiter(this, void 0, void 0, function* () {
+      yield this.unload();
+      if (!Array.isArray(modelId)) {
+        modelId = [modelId];
+      }
+      if (chatOpts !== void 0 && !Array.isArray(chatOpts)) {
+        chatOpts = [chatOpts];
+      }
+      if (chatOpts !== void 0 && modelId.length !== chatOpts.length) {
+        throw new ReloadArgumentSizeUnmatchedError(modelId.length, chatOpts.length);
+      }
+      if (new Set(modelId).size < modelId.length) {
+        throw new ReloadModelIdNotUniqueError(modelId);
+      }
+      this.reloadController = new AbortController();
+      try {
+        for (let i = 0; i < modelId.length; i++) {
+          yield this.reloadInternal(modelId[i], chatOpts ? chatOpts[i] : void 0);
+        }
+      } catch (error) {
+        if (error instanceof DOMException && error.name === "AbortError") {
+          log.warn("Reload() is aborted.", error.message);
+          return;
+        }
+        throw error;
+      } finally {
+        this.reloadController = void 0;
+      }
+    });
+  }
+  reloadInternal(modelId, chatOpts) {
+    var _a, _b, _c;
+    return __awaiter(this, void 0, void 0, function* () {
+      const logitProcessor = (_a = this.logitProcessorRegistry) === null || _a === void 0 ? void 0 : _a.get(modelId);
+      const tstart = performance.now();
+      const modelRecord = findModelRecord$1(modelId, this.appConfig);
+      const baseUrl = typeof document !== "undefined" ? document.URL : globalThis.location.origin;
+      let modelUrl = cleanModelUrl(modelRecord.model);
+      if (!modelUrl.startsWith("http")) {
+        modelUrl = new URL(modelUrl, baseUrl).href;
+      }
+      const modelType = modelRecord.model_type === void 0 || modelRecord.model_type === null ? ModelType.LLM : modelRecord.model_type;
+      this.loadedModelIdToModelType.set(modelId, modelType);
+      let configCache;
+      if (this.appConfig.useIndexedDBCache) {
+        configCache = new libExports$2.ArtifactIndexedDBCache("webllm/config");
+      } else {
+        configCache = new libExports$2.ArtifactCache("webllm/config");
+      }
+      const configUrl = new URL("mlc-chat-config.json", modelUrl).href;
+      const curModelConfig = Object.assign(Object.assign(Object.assign({}, yield configCache.fetchWithCache(configUrl, "json", (_b = this.reloadController) === null || _b === void 0 ? void 0 : _b.signal)), modelRecord.overrides), chatOpts);
+      this.loadedModelIdToChatConfig.set(modelId, curModelConfig);
+      let wasmCache;
+      if (this.appConfig.useIndexedDBCache) {
+        wasmCache = new libExports$2.ArtifactIndexedDBCache("webllm/wasm");
+      } else {
+        wasmCache = new libExports$2.ArtifactCache("webllm/wasm");
+      }
+      const wasmUrl = modelRecord.model_lib;
+      if (wasmUrl === void 0) {
+        throw new MissingModelWasmError(modelRecord.model_id);
+      }
+      const fetchWasmSource = () => __awaiter(this, void 0, void 0, function* () {
+        var _d;
+        if (wasmUrl.includes("localhost")) {
+          return (yield fetch(wasmUrl)).arrayBuffer();
+        } else if (!wasmUrl.startsWith("http")) {
+          return (yield fetch(new URL(wasmUrl, baseUrl).href)).arrayBuffer();
+        } else {
+          return yield wasmCache.fetchWithCache(wasmUrl, "arraybuffer", (_d = this.reloadController) === null || _d === void 0 ? void 0 : _d.signal);
+        }
+      });
+      const wasmSource = yield fetchWasmSource();
+      const wasm = new Uint8Array(wasmSource);
+      const tvm = yield libExports$2.instantiate(wasm.buffer, libExports$2.createPolyfillWASI(), this.logger);
+      if (this.initProgressCallback !== void 0) {
+        tvm.registerInitProgressCallback(this.initProgressCallback);
+      }
+      const gpuDetectOutput = yield libExports$2.detectGPUDevice();
+      if (gpuDetectOutput == void 0) {
+        throw new WebGPUNotAvailableError();
+      }
+      let gpuLabel = "WebGPU";
+      if (gpuDetectOutput.adapterInfo.description.length != 0) {
+        gpuLabel += " - " + gpuDetectOutput.adapterInfo.description;
+      } else {
+        gpuLabel += " - " + gpuDetectOutput.adapterInfo.vendor;
+      }
+      if (modelRecord.required_features !== void 0) {
+        for (const feature of modelRecord.required_features) {
+          if (!gpuDetectOutput.device.features.has(feature)) {
+            if (feature == "shader-f16") {
+              throw new ShaderF16SupportError();
+            }
+            throw new FeatureSupportError(feature);
+          }
+        }
+      }
+      let deviceLostInReload = false;
+      gpuDetectOutput.device.lost.then((info) => {
+        if (this.deviceLostIsError) {
+          log.error(`Device was lost. This can happen due to insufficient memory or other GPU constraints. Detailed error: ${info}. Please try to reload WebLLM with a less resource-intensive model.`);
+          this.unload();
+          deviceLostInReload = true;
+        }
+      });
+      tvm.initWebGPU(gpuDetectOutput.device);
+      const tokenizer = yield asyncLoadTokenizer(modelUrl, curModelConfig, this.appConfig, this.logger);
+      const cacheType = this.appConfig.useIndexedDBCache ? "indexeddb" : "cache";
+      yield tvm.fetchTensorCache(modelUrl, tvm.webgpu(), "webllm/model", cacheType, (_c = this.reloadController) === null || _c === void 0 ? void 0 : _c.signal);
+      let newPipeline;
+      if (modelRecord.model_type === ModelType.embedding) {
+        newPipeline = new EmbeddingPipeline(tvm, tokenizer, curModelConfig);
+      } else {
+        newPipeline = new LLMChatPipeline(tvm, tokenizer, curModelConfig, logitProcessor);
+      }
+      yield newPipeline.asyncLoadWebGPUPipelines();
+      this.loadedModelIdToPipeline.set(modelId, newPipeline);
+      this.loadedModelIdToLock.set(modelId, new CustomLock());
+      const tend = performance.now();
+      if (this.initProgressCallback !== void 0) {
+        const text = "Finish loading on " + gpuLabel;
+        this.initProgressCallback({
+          progress: 1,
+          timeElapsed: (tend - tstart) / 1e3,
+          text
+        });
+      }
+      if (deviceLostInReload) {
+        throw new DeviceLostError();
+      }
+    });
+  }
+  unload() {
+    return __awaiter(this, void 0, void 0, function* () {
+      this.deviceLostIsError = false;
+      for (const entry of Array.from(this.loadedModelIdToPipeline.entries())) {
+        const pipeline = entry[1];
+        pipeline.dispose();
+        yield pipeline.sync();
+      }
+      this.loadedModelIdToPipeline.clear();
+      this.loadedModelIdToChatConfig.clear();
+      this.loadedModelIdToModelType.clear();
+      this.loadedModelIdToLock.clear();
+      this.deviceLostIsError = true;
+      if (this.reloadController) {
+        this.reloadController.abort("Engine.unload() is called.");
+        this.reloadController = void 0;
+      }
+    });
+  }
+  //---------------------------------------------------
+  // 2. Underlying auto-regressive generation functions
+  //---------------------------------------------------
+  _generate(input, pipeline, chatConfig, genConfig) {
+    return __awaiter(this, void 0, void 0, function* () {
+      this.interruptSignal = false;
+      if (genConfig !== void 0) {
+        postInitAndCheckGenerationConfigValues(genConfig);
+      }
+      yield this.prefill(input, pipeline, chatConfig, genConfig);
+      while (!pipeline.stopped()) {
+        if (this.interruptSignal) {
+          pipeline.triggerStop();
+          break;
+        }
+        yield this.decode(pipeline, genConfig);
+      }
+      return pipeline.getMessage();
+    });
+  }
+  asyncGenerate(request, model, pipeline, chatConfig, genConfig, timeReceived) {
+    var _a, _b, _c, _d;
+    return __asyncGenerator(this, arguments, function* asyncGenerate_1() {
+      const lock = this.loadedModelIdToLock.get(model);
+      const isChatCompletion = "messages" in request;
+      const isFunctionCalling = "tools" in request && request.tools !== void 0 && request.tools !== null;
+      try {
+        if (isFunctionCalling && !isChatCompletion) {
+          throw new Error("Expect `chat.completions` with tools, not `completions`.");
+        }
+        postInitAndCheckGenerationConfigValues(genConfig);
+        if (request.seed !== null && request.seed !== void 0) {
+          pipeline.setSeed(request.seed);
+        }
+      } catch (err) {
+        yield __await(lock.release());
+        throw err;
+      }
+      const created = Date.now();
+      const id = crypto.randomUUID();
+      this.interruptSignal = false;
+      let prevMessageLength = 0;
+      function _countTrailingReplacementChar(curMessage) {
+        let cntr = 0;
+        for (let i = curMessage.length - 1; i >= 0; i--) {
+          if (curMessage.charAt(i) === "�") {
+            cntr += 1;
+          } else {
+            return cntr;
+          }
+        }
+        return cntr;
+      }
+      function _getChunk(selectedPipeline) {
+        return __awaiter(this, void 0, void 0, function* () {
+          const curMessage = selectedPipeline.getMessage();
+          const numTrailingReplacementChar = _countTrailingReplacementChar(curMessage);
+          if (numTrailingReplacementChar % 4 !== 0) {
+            return void 0;
+          }
+          const deltaMessage = curMessage.slice(prevMessageLength);
+          prevMessageLength = curMessage.length;
+          const logprobs = request.logprobs ? {
+            content: selectedPipeline.getTokenLogprobArray().slice(-1)
+            // always the last entry
+          } : null;
+          if (isChatCompletion) {
+            const chunk = {
+              id,
+              choices: [
+                {
+                  delta: { content: deltaMessage, role: "assistant" },
+                  finish_reason: null,
+                  index: 0,
+                  logprobs
+                }
+              ],
+              model,
+              object: "chat.completion.chunk",
+              created
+            };
+            return chunk;
+          } else {
+            const chunk = {
+              id,
+              choices: [
+                {
+                  text: deltaMessage,
+                  finish_reason: null,
+                  index: 0,
+                  logprobs
+                }
+              ],
+              model,
+              object: "text_completion",
+              created
+            };
+            return chunk;
+          }
+        });
+      }
+      let curChunk;
+      try {
+        yield __await(this.prefill(request, pipeline, chatConfig, genConfig));
+        curChunk = yield __await(_getChunk(pipeline));
+      } catch (err) {
+        yield __await(lock.release());
+        throw err;
+      }
+      if (curChunk) {
+        yield yield __await(curChunk);
+      }
+      while (!pipeline.stopped()) {
+        if (this.interruptSignal) {
+          pipeline.triggerStop();
+          break;
+        }
+        try {
+          yield __await(this.decode(pipeline, genConfig));
+          curChunk = yield __await(_getChunk(pipeline));
+        } catch (err) {
+          yield __await(lock.release());
+          throw err;
+        }
+        if (curChunk) {
+          yield yield __await(curChunk);
+        }
+      }
+      if (request.seed !== null && request.seed !== void 0) {
+        pipeline.setSeed(Date.now());
+      }
+      let finish_reason = pipeline.getFinishReason();
+      let tool_calls;
+      try {
+        if (pipeline.getFinishReason() === "stop" && isFunctionCalling) {
+          finish_reason = "tool_calls";
+          const outputMessage = pipeline.getMessage();
+          tool_calls = getToolCallFromOutputMessage(
+            outputMessage,
+            /*isStreaming=*/
+            true
+          );
+        }
+      } catch (err) {
+        yield __await(lock.release());
+        throw err;
+      }
+      if (isChatCompletion) {
+        const lastChunk = {
+          id,
+          choices: [
+            {
+              delta: isFunctionCalling ? {
+                role: "assistant",
+                tool_calls
+              } : {},
+              finish_reason,
+              index: 0
+            }
+          ],
+          model,
+          object: "chat.completion.chunk",
+          created
+        };
+        yield yield __await(lastChunk);
+      } else {
+        const lastChunk = {
+          id,
+          choices: [
+            {
+              text: "",
+              finish_reason,
+              index: 0
+            }
+          ],
+          model,
+          object: "text_completion",
+          created
+        };
+        yield yield __await(lastChunk);
+      }
+      if ((_a = request.stream_options) === null || _a === void 0 ? void 0 : _a.include_usage) {
+        const usedGrammar = "response_format" in request && (((_b = request.response_format) === null || _b === void 0 ? void 0 : _b.type) === "grammar" || ((_c = request.response_format) === null || _c === void 0 ? void 0 : _c.type) === "json_object");
+        const completion_tokens = pipeline.getCurRoundDecodingTotalTokens();
+        const prompt_tokens = pipeline.getCurRoundPrefillTotalTokens();
+        const prefill_tokens_per_s = pipeline.getCurRoundPrefillTokensPerSec();
+        const decode_tokens_per_s = pipeline.getCurRoundDecodingTokensPerSec();
+        const grammar_init_s = pipeline.getCurRoundGrammarInitTotalTime();
+        const prefill_time = pipeline.getCurRoundPrefillTotalTime();
+        const decode_time = pipeline.getCurRoundDecodingTotalTime();
+        const grammar_per_token_s = pipeline.getCurRoundGrammarPerTokenTotalTime();
+        const latencyBreakdown = pipeline.getCurRoundLatencyBreakdown();
+        const defaultExtra = {
+          e2e_latency_s: (Date.now() - timeReceived) / 1e3,
+          prefill_tokens_per_s,
+          decode_tokens_per_s,
+          time_to_first_token_s: prefill_time,
+          time_per_output_token_s: decode_time / completion_tokens,
+          latencyBreakdown: ((_d = request.extra_body) === null || _d === void 0 ? void 0 : _d.enable_latency_breakdown) ? latencyBreakdown : void 0
+        };
+        const usage = {
+          completion_tokens,
+          prompt_tokens,
+          total_tokens: completion_tokens + prompt_tokens,
+          extra: usedGrammar ? Object.assign(Object.assign({}, defaultExtra), {
+            grammar_init_s,
+            grammar_per_token_s: grammar_per_token_s / completion_tokens
+          }) : defaultExtra
+        };
+        if (isChatCompletion) {
+          const usageChunk = {
+            id,
+            choices: [],
+            usage,
+            model,
+            object: "chat.completion.chunk",
+            created
+          };
+          yield yield __await(usageChunk);
+        } else {
+          const usageChunk = {
+            id,
+            choices: [],
+            usage,
+            model,
+            object: "text_completion",
+            created
+          };
+          yield yield __await(usageChunk);
+        }
+      }
+      yield __await(lock.release());
+    });
+  }
+  interruptGenerate() {
+    return __awaiter(this, void 0, void 0, function* () {
+      this.interruptSignal = true;
+    });
+  }
+  chatCompletion(request) {
+    var _a, _b, _c, _d, _e;
+    return __awaiter(this, void 0, void 0, function* () {
+      const timeReceived = Date.now();
+      const [selectedModelId, selectedPipeline, selectedChatConfig] = this.getLLMStates("ChatCompletionRequest", request.model);
+      const selectedModelType = this.loadedModelIdToModelType.get(selectedModelId);
+      postInitAndCheckFields$2(request, selectedModelId, selectedModelType);
+      const genConfig = {
+        frequency_penalty: request.frequency_penalty,
+        presence_penalty: request.presence_penalty,
+        repetition_penalty: request.repetition_penalty,
+        max_tokens: request.max_tokens,
+        stop: request.stop,
+        top_p: request.top_p,
+        temperature: request.temperature,
+        logit_bias: request.logit_bias,
+        logprobs: request.logprobs,
+        top_logprobs: request.top_logprobs,
+        response_format: request.response_format,
+        ignore_eos: request.ignore_eos,
+        enable_thinking: (_a = request.extra_body) === null || _a === void 0 ? void 0 : _a.enable_thinking,
+        enable_latency_breakdown: (_b = request.extra_body) === null || _b === void 0 ? void 0 : _b.enable_latency_breakdown
+      };
+      const lock = this.loadedModelIdToLock.get(selectedModelId);
+      yield lock.acquire();
+      if (request.stream) {
+        return this.asyncGenerate(request, selectedModelId, selectedPipeline, selectedChatConfig, genConfig, timeReceived);
+      }
+      try {
+        if (request.seed !== null && request.seed !== void 0) {
+          selectedPipeline.setSeed(request.seed);
+        }
+        const n = request.n ? request.n : 1;
+        const choices = [];
+        let completion_tokens = 0;
+        let prompt_tokens = 0;
+        let prefill_time = 0;
+        let decode_time = 0;
+        let grammar_init_s = 0;
+        let grammar_per_token_s = 0;
+        for (let i = 0; i < n; i++) {
+          let outputMessage;
+          if (this.interruptSignal) {
+            selectedPipeline.triggerStop();
+            outputMessage = "";
+          } else {
+            outputMessage = yield this._generate(request, selectedPipeline, selectedChatConfig, genConfig);
+          }
+          let finish_reason = selectedPipeline.getFinishReason();
+          const isFunctionCalling = request.tools !== void 0 && request.tools !== null;
+          let tool_calls;
+          if (selectedPipeline.getFinishReason() === "stop" && isFunctionCalling) {
+            finish_reason = "tool_calls";
+            tool_calls = getToolCallFromOutputMessage(
+              outputMessage,
+              /*isStreaming=*/
+              false
+            );
+          }
+          choices.push({
+            finish_reason,
+            index: i,
+            logprobs: request.logprobs ? {
+              content: selectedPipeline.getTokenLogprobArray()
+            } : null,
+            message: isFunctionCalling ? {
+              content: null,
+              tool_calls,
+              role: "assistant"
+            } : {
+              content: outputMessage,
+              role: "assistant"
+            }
+          });
+          completion_tokens += selectedPipeline.getCurRoundDecodingTotalTokens();
+          prompt_tokens += selectedPipeline.getCurRoundPrefillTotalTokens();
+          prefill_time += selectedPipeline.getCurRoundPrefillTotalTime();
+          decode_time += selectedPipeline.getCurRoundDecodingTotalTime();
+          grammar_init_s += selectedPipeline.getCurRoundGrammarInitTotalTime();
+          grammar_per_token_s += selectedPipeline.getCurRoundGrammarPerTokenTotalTime();
+        }
+        const usedGrammar = "response_format" in request && (((_c = request.response_format) === null || _c === void 0 ? void 0 : _c.type) === "grammar" || ((_d = request.response_format) === null || _d === void 0 ? void 0 : _d.type) === "json_object");
+        const latencyBreakdown = selectedPipeline.getCurRoundLatencyBreakdown();
+        const defaultExtra = {
+          e2e_latency_s: (Date.now() - timeReceived) / 1e3,
+          prefill_tokens_per_s: prompt_tokens / prefill_time,
+          decode_tokens_per_s: completion_tokens / decode_time,
+          time_to_first_token_s: prefill_time,
+          time_per_output_token_s: decode_time / completion_tokens,
+          latencyBreakdown: ((_e = request.extra_body) === null || _e === void 0 ? void 0 : _e.enable_latency_breakdown) ? latencyBreakdown : void 0
+        };
+        const response = {
+          id: crypto.randomUUID(),
+          choices,
+          model: selectedModelId,
+          object: "chat.completion",
+          created: Date.now(),
+          usage: {
+            completion_tokens,
+            prompt_tokens,
+            total_tokens: completion_tokens + prompt_tokens,
+            extra: usedGrammar ? Object.assign(Object.assign({}, defaultExtra), {
+              grammar_init_s,
+              grammar_per_token_s: grammar_per_token_s / completion_tokens
+            }) : defaultExtra
+          }
+        };
+        if (request.seed !== null && request.seed !== void 0) {
+          selectedPipeline.setSeed(Date.now());
+        }
+        return response;
+      } finally {
+        yield lock.release();
+      }
+    });
+  }
+  completion(request) {
+    var _a;
+    return __awaiter(this, void 0, void 0, function* () {
+      const timeReceived = Date.now();
+      const [selectedModelId, selectedPipeline, selectedChatConfig] = this.getLLMStates("CompletionCreateParams", request.model);
+      postInitAndCheckFields$1(request);
+      const genConfig = {
+        frequency_penalty: request.frequency_penalty,
+        presence_penalty: request.presence_penalty,
+        repetition_penalty: request.repetition_penalty,
+        max_tokens: request.max_tokens,
+        stop: request.stop,
+        top_p: request.top_p,
+        temperature: request.temperature,
+        logit_bias: request.logit_bias,
+        logprobs: request.logprobs,
+        top_logprobs: request.top_logprobs,
+        ignore_eos: request.ignore_eos
+      };
+      const lock = this.loadedModelIdToLock.get(selectedModelId);
+      yield lock.acquire();
+      if (request.stream) {
+        return this.asyncGenerate(request, selectedModelId, selectedPipeline, selectedChatConfig, genConfig, timeReceived);
+      }
+      try {
+        if (request.seed !== null && request.seed !== void 0) {
+          selectedPipeline.setSeed(request.seed);
+        }
+        const n = request.n ? request.n : 1;
+        const choices = [];
+        let completion_tokens = 0;
+        let prompt_tokens = 0;
+        let prefill_time = 0;
+        let decode_time = 0;
+        for (let i = 0; i < n; i++) {
+          let outputMessage;
+          if (this.interruptSignal) {
+            selectedPipeline.triggerStop();
+            outputMessage = "";
+          } else {
+            outputMessage = yield this._generate(request, selectedPipeline, selectedChatConfig, genConfig);
+          }
+          const finish_reason = selectedPipeline.getFinishReason();
+          choices.push({
+            finish_reason,
+            index: i,
+            logprobs: request.logprobs ? {
+              content: selectedPipeline.getTokenLogprobArray()
+            } : null,
+            text: request.echo ? request.prompt + outputMessage : outputMessage
+          });
+          completion_tokens += selectedPipeline.getCurRoundDecodingTotalTokens();
+          prompt_tokens += selectedPipeline.getCurRoundPrefillTotalTokens();
+          prefill_time += selectedPipeline.getCurRoundPrefillTotalTime();
+          decode_time += selectedPipeline.getCurRoundDecodingTotalTime();
+        }
+        const latencyBreakdown = selectedPipeline.getCurRoundLatencyBreakdown();
+        const response = {
+          id: crypto.randomUUID(),
+          choices,
+          model: selectedModelId,
+          object: "text_completion",
+          created: Date.now(),
+          usage: {
+            completion_tokens,
+            prompt_tokens,
+            total_tokens: completion_tokens + prompt_tokens,
+            extra: {
+              e2e_latency_s: (Date.now() - timeReceived) / 1e3,
+              prefill_tokens_per_s: prompt_tokens / prefill_time,
+              decode_tokens_per_s: completion_tokens / decode_time,
+              time_to_first_token_s: prefill_time,
+              time_per_output_token_s: decode_time / completion_tokens,
+              latencyBreakdown: ((_a = request.extra_body) === null || _a === void 0 ? void 0 : _a.enable_latency_breakdown) ? latencyBreakdown : void 0
+            }
+          }
+        };
+        if (request.seed !== null && request.seed !== void 0) {
+          selectedPipeline.setSeed(Date.now());
+        }
+        return response;
+      } finally {
+        yield lock.release();
+      }
+    });
+  }
+  embedding(request) {
+    return __awaiter(this, void 0, void 0, function* () {
+      const [selectedModelId, selectedPipeline] = this.getEmbeddingStates("EmbeddingCreateParams", request.model);
+      postInitAndCheckFields(request);
+      const lock = this.loadedModelIdToLock.get(selectedModelId);
+      yield lock.acquire();
+      try {
+        const embedResult = yield selectedPipeline.embedStep(request.input);
+        const batchSize = embedResult.length;
+        const data = [];
+        for (let i = 0; i < batchSize; i++) {
+          const curEmbedding = {
+            embedding: embedResult[i],
+            index: i,
+            object: "embedding"
+          };
+          data.push(curEmbedding);
+        }
+        return {
+          data,
+          model: selectedModelId,
+          object: "list",
+          usage: {
+            prompt_tokens: selectedPipeline.getCurRoundEmbedTotalTokens(),
+            total_tokens: selectedPipeline.getCurRoundEmbedTotalTokens(),
+            extra: {
+              prefill_tokens_per_s: selectedPipeline.getCurRoundEmbedTokensPerSec()
+            }
+          }
+        };
+      } finally {
+        yield lock.release();
+      }
+    });
+  }
+  //-----------------------------
+  // 4. WebGPU info-querying helpers
+  //-----------------------------
+  getMaxStorageBufferBindingSize() {
+    return __awaiter(this, void 0, void 0, function* () {
+      const gpuDetectOutput = yield libExports$2.detectGPUDevice();
+      if (gpuDetectOutput == void 0) {
+        throw new WebGPUNotAvailableError();
+      }
+      const computeMB = (value) => {
+        return Math.ceil(value / (1 << 20)) + "MB";
+      };
+      const maxStorageBufferBindingSize = gpuDetectOutput.device.limits.maxStorageBufferBindingSize;
+      const defaultMaxStorageBufferBindingSize = 1 << 30;
+      if (maxStorageBufferBindingSize < defaultMaxStorageBufferBindingSize) {
+        log.warn(`WARNING: the current maxStorageBufferBindingSize (${computeMB(maxStorageBufferBindingSize)}) may only work for a limited number of models, e.g.: 
+- Llama-3.1-8B-Instruct-q4f16_1-MLC-1k 
+- Llama-2-7b-chat-hf-q4f16_1-MLC-1k 
+- RedPajama-INCITE-Chat-3B-v1-q4f16_1-MLC-1k 
+- RedPajama-INCITE-Chat-3B-v1-q4f32_1-MLC-1k 
+- TinyLlama-1.1B-Chat-v0.4-q4f16_1-MLC-1k 
+- TinyLlama-1.1B-Chat-v0.4-q4f32_1-MLC-1k`);
+      }
+      return maxStorageBufferBindingSize;
+    });
+  }
+  getGPUVendor() {
+    return __awaiter(this, void 0, void 0, function* () {
+      const gpuDetectOutput = yield libExports$2.detectGPUDevice();
+      if (gpuDetectOutput == void 0) {
+        throw new WebGPUNotAvailableError();
+      }
+      return gpuDetectOutput.adapterInfo.vendor;
+    });
+  }
+  //---------------------------------------------------------------
+  // 5. Helper for querying currently loaded model/pipeline/config.
+  // Needed due to possibly multiple loaded models.
+  //---------------------------------------------------------------
+  getLLMStates(requestName, modelId) {
+    return this.getModelStates(requestName, ModelType.LLM, modelId);
+  }
+  getEmbeddingStates(requestName, modelId) {
+    return this.getModelStates(requestName, ModelType.embedding, modelId);
+  }
+  /**
+   * Return the model, its LLMChatPipeline, and ChatConfig to use. Throws error when unclear which
+   * model to load. Ensure all loadedModelIdToXXX maps contain entry for the selected modelId.
+   * @param requestName The type of request or API to load the model for. Needed for error throwing.
+   * @param modelType The typ of model, determining what type of pipeline to expect.
+   * @param modelId Model the user specified to load via the request. Required when multiple
+   *   models are loaded
+   */
+  getModelStates(requestName, modelType, modelId) {
+    const loadedModelIds = Array.from(this.loadedModelIdToPipeline.keys());
+    const selectedModelId = getModelIdToUse(loadedModelIds, modelId, requestName);
+    const selectedPipeline = this.loadedModelIdToPipeline.get(selectedModelId);
+    if (modelType === ModelType.LLM) {
+      if (!(selectedPipeline instanceof LLMChatPipeline)) {
+        throw new IncorrectPipelineLoadedError(selectedModelId, "LLMChatPipeline", requestName);
+      }
+    } else {
+      if (!(selectedPipeline instanceof EmbeddingPipeline)) {
+        throw new IncorrectPipelineLoadedError(selectedModelId, "EmbeddingPipeline", requestName);
+      }
+      if (findModelRecord$1(selectedModelId, this.appConfig).model_type !== ModelType.embedding) {
+        throw new EmbeddingUnsupportedModelError(selectedModelId);
+      }
+    }
+    const selectedChatConfig = this.loadedModelIdToChatConfig.get(selectedModelId);
+    if (selectedChatConfig === void 0) {
+      throw new Error(`InternalError: chat config not registered for ${selectedModelId}.`);
+    }
+    if (!this.loadedModelIdToLock.has(selectedModelId)) {
+      throw new Error(`InternalError: loadedModelIdToLock does not contain ${selectedModelId}`);
+    }
+    return [selectedModelId, selectedPipeline, selectedChatConfig];
+  }
+  //--------------------------------------------------------------------
+  // 6. External low-level APIs that directly interacts with a pipeline.
+  //--------------------------------------------------------------------
+  forwardTokensAndSample(inputIds, isPrefill, modelId) {
+    return __awaiter(this, void 0, void 0, function* () {
+      const [, selectedPipeline] = this.getLLMStates("forwardTokensAndSample", modelId);
+      return selectedPipeline.forwardTokensAndSample(inputIds, isPrefill);
+    });
+  }
+  /**
+   * Get the current generated response.
+   *
+   * @returns The current output message.
+   */
+  getMessage(modelId) {
+    return __awaiter(this, void 0, void 0, function* () {
+      const [, selectedPipeline] = this.getLLMStates("getMessage", modelId);
+      return selectedPipeline.getMessage();
+    });
+  }
+  runtimeStatsText(modelId) {
+    return __awaiter(this, void 0, void 0, function* () {
+      log.warn("WARNING: `runtimeStatsText()` will soon be deprecated. Please use `ChatCompletion.usage` for non-streaming requests, or `ChatCompletionChunk.usage` for streaming requests, enabled by `stream_options`. The only flow that expects to use `runtimeStatsText()` as of now is `forwardTokensAndSample()`.");
+      const [, selectedPipeline] = this.getLLMStates("runtimeStatsText", modelId);
+      return selectedPipeline.runtimeStatsText();
+    });
+  }
+  resetChat(keepStats = false, modelId) {
+    return __awaiter(this, void 0, void 0, function* () {
+      try {
+        const [, selectedPipeline] = this.getLLMStates("resetChat", modelId);
+        selectedPipeline.resetChat(keepStats);
+      } catch (error) {
+        if (error instanceof ModelNotLoadedError || error instanceof SpecifiedModelNotFoundError) {
+          log.debug("Caught an expected error in resetChat, treating it as no-op. Error: ", error);
+        } else {
+          throw error;
+        }
+      }
+    });
+  }
+  //-----------------------------------------------
+  // 7. Prefill and decode given an LLMChatPipeline
+  //-----------------------------------------------
+  /**
+   * Run a prefill step with a given input.
+   *
+   * If `input` is a chatCompletionRequest, we treat `input.messages[-1]` as the usual user input.
+   * We then convert `input.messages[:-1]` to a `Conversation` object, representing a conversation
+   * history.
+   *
+   * If the new `Conversation` object matches the current one loaded, it means we are
+   * performing multi-round chatting, so we do not reset, hence reusing KV cache. Otherwise, we
+   * reset every thing, treating the request as something completely new.
+   *
+   * @param input The OpenAI-style prompt to prefill.
+   * @param pipeline The loaded pipeline, hence model, to carry out this prefill.
+   * @param chatConfig The chat config to use for this model.
+   * @param genConfig Generation config.
+   */
+  prefill(input, pipeline, chatConfig, genConfig) {
+    return __awaiter(this, void 0, void 0, function* () {
+      if (chatConfig === void 0) {
+        throw new ConfigurationNotInitializedError();
+      }
+      let input_str;
+      let input_role_str;
+      let lastMsgRole = Role.user;
+      if ("messages" in input) {
+        const oldConv = pipeline.getConversationObject();
+        const newConv = getConversationFromChatCompletionRequest(input, chatConfig);
+        if (!compareConversationObject(oldConv, newConv)) {
+          pipeline.resetChat();
+          pipeline.setConversation(newConv);
+        } else if (newConv.messages.length === 0) {
+          pipeline.resetChat();
+          pipeline.setConversation(newConv);
+        } else {
+          log.info("Multiround chatting, reuse KVCache.");
+        }
+        const last_msg = input.messages[input.messages.length - 1];
+        input_str = last_msg.content;
+        input_role_str = last_msg.role === "user" && last_msg.name ? last_msg.name : void 0;
+        lastMsgRole = last_msg.role === "tool" ? Role.tool : Role.user;
+      } else {
+        input_str = input.prompt;
+        pipeline.resetChat();
+        const newConv = getConversation(chatConfig.conv_template, chatConfig.conv_config, true);
+        pipeline.setConversation(newConv);
+      }
+      return pipeline.prefillStep(input_str, lastMsgRole, input_role_str, genConfig);
+    });
+  }
+  /**
+   * Run a decode step to decode the next token.
+   */
+  decode(pipeline, genConfig) {
+    return __awaiter(this, void 0, void 0, function* () {
+      return pipeline.decodeStep(genConfig);
+    });
+  }
+}
 const index = /* @__PURE__ */ Object.freeze(/* @__PURE__ */ Object.defineProperty({
   __proto__: null,
+  Chat,
+  ChatCompletionRequestUnsupportedFields,
+  Completions: Completions2,
+  CreateMLCEngine,
+  Embeddings,
+  MLCEngine,
   get ModelType() {
     return ModelType;
   },
+  functionCallingModelIds,
   modelLibURLPrefix,
-  modelVersion
+  modelVersion,
+  postInitAndCheckFieldsChatCompletion: postInitAndCheckFields$2,
+  postInitAndCheckFieldsCompletion: postInitAndCheckFields$1,
+  postInitAndCheckFieldsEmbedding: postInitAndCheckFields,
+  prebuiltAppConfig
 }, Symbol.toStringTag, { value: "Module" }));
-var TOKEN_TYPES = Object.freeze({
-  Text: "Text",
-  // The text between Jinja statements or expressions
-  NumericLiteral: "NumericLiteral",
-  // e.g., 123
-  BooleanLiteral: "BooleanLiteral",
-  // true or false
-  StringLiteral: "StringLiteral",
-  // 'string'
-  Identifier: "Identifier",
-  // Variables, functions, etc.
-  Equals: "Equals",
-  // =
-  OpenParen: "OpenParen",
-  // (
-  CloseParen: "CloseParen",
-  // )
-  OpenStatement: "OpenStatement",
-  // {%
-  CloseStatement: "CloseStatement",
-  // %}
-  OpenExpression: "OpenExpression",
-  // {{
-  CloseExpression: "CloseExpression",
-  // }}
-  OpenSquareBracket: "OpenSquareBracket",
-  // [
-  CloseSquareBracket: "CloseSquareBracket",
-  // ]
-  OpenCurlyBracket: "OpenCurlyBracket",
-  // {
-  CloseCurlyBracket: "CloseCurlyBracket",
-  // }
-  Comma: "Comma",
-  // ,
-  Dot: "Dot",
-  // .
-  Colon: "Colon",
-  // :
-  Pipe: "Pipe",
-  // |
-  CallOperator: "CallOperator",
-  // ()
-  AdditiveBinaryOperator: "AdditiveBinaryOperator",
-  // + -
-  MultiplicativeBinaryOperator: "MultiplicativeBinaryOperator",
-  // * / %
-  ComparisonBinaryOperator: "ComparisonBinaryOperator",
-  // < > <= >= == !=
-  UnaryOperator: "UnaryOperator",
-  // ! - +
-  // Keywords
-  Set: "Set",
-  If: "If",
-  For: "For",
-  In: "In",
-  Is: "Is",
-  NotIn: "NotIn",
-  Else: "Else",
-  EndIf: "EndIf",
-  ElseIf: "ElseIf",
-  EndFor: "EndFor",
-  And: "And",
-  Or: "Or",
-  Not: "UnaryOperator"
-});
-var KEYWORDS = Object.freeze({
-  set: TOKEN_TYPES.Set,
-  for: TOKEN_TYPES.For,
-  in: TOKEN_TYPES.In,
-  is: TOKEN_TYPES.Is,
-  if: TOKEN_TYPES.If,
-  else: TOKEN_TYPES.Else,
-  endif: TOKEN_TYPES.EndIf,
-  elif: TOKEN_TYPES.ElseIf,
-  endfor: TOKEN_TYPES.EndFor,
-  and: TOKEN_TYPES.And,
-  or: TOKEN_TYPES.Or,
-  not: TOKEN_TYPES.Not,
-  "not in": TOKEN_TYPES.NotIn,
-  // Literals
-  true: TOKEN_TYPES.BooleanLiteral,
-  false: TOKEN_TYPES.BooleanLiteral
-});
-var Token = class {
-  /**
-   * Constructs a new Token.
-   * @param {string} value The raw value as seen inside the source code.
-   * @param {TokenType} type The type of token.
-   */
-  constructor(value, type) {
-    this.value = value;
-    this.type = type;
-  }
-};
-function isWord(char) {
-  return /\w/.test(char);
-}
-function isInteger(char) {
-  return /[0-9]/.test(char);
-}
-var ORDERED_MAPPING_TABLE = [
-  // Control sequences
-  ["{%", TOKEN_TYPES.OpenStatement],
-  ["%}", TOKEN_TYPES.CloseStatement],
-  ["{{", TOKEN_TYPES.OpenExpression],
-  ["}}", TOKEN_TYPES.CloseExpression],
-  // Single character tokens
-  ["(", TOKEN_TYPES.OpenParen],
-  [")", TOKEN_TYPES.CloseParen],
-  ["{", TOKEN_TYPES.OpenCurlyBracket],
-  ["}", TOKEN_TYPES.CloseCurlyBracket],
-  ["[", TOKEN_TYPES.OpenSquareBracket],
-  ["]", TOKEN_TYPES.CloseSquareBracket],
-  [",", TOKEN_TYPES.Comma],
-  [".", TOKEN_TYPES.Dot],
-  [":", TOKEN_TYPES.Colon],
-  ["|", TOKEN_TYPES.Pipe],
-  // Comparison operators
-  ["<=", TOKEN_TYPES.ComparisonBinaryOperator],
-  [">=", TOKEN_TYPES.ComparisonBinaryOperator],
-  ["==", TOKEN_TYPES.ComparisonBinaryOperator],
-  ["!=", TOKEN_TYPES.ComparisonBinaryOperator],
-  ["<", TOKEN_TYPES.ComparisonBinaryOperator],
-  [">", TOKEN_TYPES.ComparisonBinaryOperator],
-  // Arithmetic operators
-  ["+", TOKEN_TYPES.AdditiveBinaryOperator],
-  ["-", TOKEN_TYPES.AdditiveBinaryOperator],
-  ["*", TOKEN_TYPES.MultiplicativeBinaryOperator],
-  ["/", TOKEN_TYPES.MultiplicativeBinaryOperator],
-  ["%", TOKEN_TYPES.MultiplicativeBinaryOperator],
-  // Assignment operator
-  ["=", TOKEN_TYPES.Equals]
-];
-var ESCAPE_CHARACTERS = /* @__PURE__ */ new Map([
-  ["n", "\n"],
-  // New line
-  ["t", "	"],
-  // Horizontal tab
-  ["r", "\r"],
-  // Carriage return
-  ["b", "\b"],
-  // Backspace
-  ["f", "\f"],
-  // Form feed
-  ["v", "\v"],
-  // Vertical tab
-  ["'", "'"],
-  // Single quote
-  ['"', '"'],
-  // Double quote
-  ["\\", "\\"]
-  // Backslash
-]);
-function preprocess(template, options = {}) {
-  if (template.endsWith("\n")) {
-    template = template.slice(0, -1);
-  }
-  template = template.replace(/{#.*?#}/gs, "{##}");
-  if (options.lstrip_blocks) {
-    template = template.replace(/^[ \t]*({[#%])/gm, "$1");
-  }
-  if (options.trim_blocks) {
-    template = template.replace(/([#%]})\n/g, "$1");
-  }
-  return template.replace(/{##}/g, "").replace(/-%}\s*/g, "%}").replace(/\s*{%-/g, "{%").replace(/-}}\s*/g, "}}").replace(/\s*{{-/g, "{{");
-}
-function tokenize(source, options = {}) {
-  const tokens = [];
-  const src = preprocess(source, options);
-  let cursorPosition = 0;
-  const consumeWhile = (predicate) => {
-    let str = "";
-    while (predicate(src[cursorPosition])) {
-      if (src[cursorPosition] === "\\") {
-        ++cursorPosition;
-        if (cursorPosition >= src.length)
-          throw new SyntaxError("Unexpected end of input");
-        const escaped = src[cursorPosition++];
-        const unescaped = ESCAPE_CHARACTERS.get(escaped);
-        if (unescaped === void 0) {
-          throw new SyntaxError(`Unexpected escaped character: ${escaped}`);
-        }
-        str += unescaped;
-        continue;
-      }
-      str += src[cursorPosition++];
-      if (cursorPosition >= src.length)
-        throw new SyntaxError("Unexpected end of input");
-    }
-    return str;
-  };
-  main:
-    while (cursorPosition < src.length) {
-      const lastTokenType = tokens.at(-1)?.type;
-      if (lastTokenType === void 0 || lastTokenType === TOKEN_TYPES.CloseStatement || lastTokenType === TOKEN_TYPES.CloseExpression) {
-        let text = "";
-        while (cursorPosition < src.length && // Keep going until we hit the next Jinja statement or expression
-        !(src[cursorPosition] === "{" && (src[cursorPosition + 1] === "%" || src[cursorPosition + 1] === "{"))) {
-          text += src[cursorPosition++];
-        }
-        if (text.length > 0) {
-          tokens.push(new Token(text, TOKEN_TYPES.Text));
-          continue;
-        }
-      }
-      consumeWhile((char2) => /\s/.test(char2));
-      const char = src[cursorPosition];
-      if (char === "-" || char === "+") {
-        const lastTokenType2 = tokens.at(-1)?.type;
-        if (lastTokenType2 === TOKEN_TYPES.Text || lastTokenType2 === void 0) {
-          throw new SyntaxError(`Unexpected character: ${char}`);
-        }
-        switch (lastTokenType2) {
-          case TOKEN_TYPES.Identifier:
-          case TOKEN_TYPES.NumericLiteral:
-          case TOKEN_TYPES.BooleanLiteral:
-          case TOKEN_TYPES.StringLiteral:
-          case TOKEN_TYPES.CloseParen:
-          case TOKEN_TYPES.CloseSquareBracket:
-            break;
-          default: {
-            ++cursorPosition;
-            const num = consumeWhile(isInteger);
-            tokens.push(
-              new Token(`${char}${num}`, num.length > 0 ? TOKEN_TYPES.NumericLiteral : TOKEN_TYPES.UnaryOperator)
-            );
-            continue;
-          }
-        }
-      }
-      for (const [char2, token] of ORDERED_MAPPING_TABLE) {
-        const slice2 = src.slice(cursorPosition, cursorPosition + char2.length);
-        if (slice2 === char2) {
-          tokens.push(new Token(char2, token));
-          cursorPosition += char2.length;
-          continue main;
-        }
-      }
-      if (char === "'" || char === '"') {
-        ++cursorPosition;
-        const str = consumeWhile((c) => c !== char);
-        tokens.push(new Token(str, TOKEN_TYPES.StringLiteral));
-        ++cursorPosition;
-        continue;
-      }
-      if (isInteger(char)) {
-        const num = consumeWhile(isInteger);
-        tokens.push(new Token(num, TOKEN_TYPES.NumericLiteral));
-        continue;
-      }
-      if (isWord(char)) {
-        const word = consumeWhile(isWord);
-        const type = Object.hasOwn(KEYWORDS, word) ? KEYWORDS[word] : TOKEN_TYPES.Identifier;
-        if (type === TOKEN_TYPES.In && tokens.at(-1)?.type === TOKEN_TYPES.Not) {
-          tokens.pop();
-          tokens.push(new Token("not in", TOKEN_TYPES.NotIn));
-        } else {
-          tokens.push(new Token(word, type));
-        }
-        continue;
-      }
-      throw new SyntaxError(`Unexpected character: ${char}`);
-    }
-  return tokens;
-}
-var Statement = class {
-  constructor() {
-    __publicField(this, "type", "Statement");
-  }
-};
-var Program = class extends Statement {
-  constructor(body) {
-    super();
-    __publicField(this, "type", "Program");
-    this.body = body;
-  }
-};
-var If = class extends Statement {
-  constructor(test, body, alternate) {
-    super();
-    __publicField(this, "type", "If");
-    this.test = test;
-    this.body = body;
-    this.alternate = alternate;
-  }
-};
-var For = class extends Statement {
-  constructor(loopvar, iterable, body) {
-    super();
-    __publicField(this, "type", "For");
-    this.loopvar = loopvar;
-    this.iterable = iterable;
-    this.body = body;
-  }
-};
-var SetStatement = class extends Statement {
-  constructor(assignee, value) {
-    super();
-    __publicField(this, "type", "Set");
-    this.assignee = assignee;
-    this.value = value;
-  }
-};
-var Expression = class extends Statement {
-  constructor() {
-    super(...arguments);
-    __publicField(this, "type", "Expression");
-  }
-};
-var MemberExpression = class extends Expression {
-  constructor(object, property, computed) {
-    super();
-    __publicField(this, "type", "MemberExpression");
-    this.object = object;
-    this.property = property;
-    this.computed = computed;
-  }
-};
-var CallExpression = class extends Expression {
-  constructor(callee, args) {
-    super();
-    __publicField(this, "type", "CallExpression");
-    this.callee = callee;
-    this.args = args;
-  }
-};
-var Identifier = class extends Expression {
-  /**
-   * @param {string} value The name of the identifier
-   */
-  constructor(value) {
-    super();
-    __publicField(this, "type", "Identifier");
-    this.value = value;
-  }
-};
-var Literal = class extends Expression {
-  constructor(value) {
-    super();
-    __publicField(this, "type", "Literal");
-    this.value = value;
-  }
-};
-var NumericLiteral = class extends Literal {
-  constructor() {
-    super(...arguments);
-    __publicField(this, "type", "NumericLiteral");
-  }
-};
-var StringLiteral = class extends Literal {
-  constructor() {
-    super(...arguments);
-    __publicField(this, "type", "StringLiteral");
-  }
-};
-var BooleanLiteral = class extends Literal {
-  constructor() {
-    super(...arguments);
-    __publicField(this, "type", "BooleanLiteral");
-  }
-};
-var ArrayLiteral = class extends Literal {
-  constructor() {
-    super(...arguments);
-    __publicField(this, "type", "ArrayLiteral");
-  }
-};
-var TupleLiteral = class extends Literal {
-  constructor() {
-    super(...arguments);
-    __publicField(this, "type", "TupleLiteral");
-  }
-};
-var ObjectLiteral = class extends Literal {
-  constructor() {
-    super(...arguments);
-    __publicField(this, "type", "ObjectLiteral");
-  }
-};
-var BinaryExpression = class extends Expression {
-  constructor(operator, left, right) {
-    super();
-    __publicField(this, "type", "BinaryExpression");
-    this.operator = operator;
-    this.left = left;
-    this.right = right;
-  }
-};
-var FilterExpression = class extends Expression {
-  constructor(operand, filter) {
-    super();
-    __publicField(this, "type", "FilterExpression");
-    this.operand = operand;
-    this.filter = filter;
-  }
-};
-var TestExpression = class extends Expression {
-  constructor(operand, negate, test) {
-    super();
-    __publicField(this, "type", "TestExpression");
-    this.operand = operand;
-    this.negate = negate;
-    this.test = test;
-  }
-};
-var UnaryExpression = class extends Expression {
-  constructor(operator, argument) {
-    super();
-    __publicField(this, "type", "UnaryExpression");
-    this.operator = operator;
-    this.argument = argument;
-  }
-};
-var SliceExpression = class extends Expression {
-  constructor(start = void 0, stop = void 0, step = void 0) {
-    super();
-    __publicField(this, "type", "SliceExpression");
-    this.start = start;
-    this.stop = stop;
-    this.step = step;
-  }
-};
-var KeywordArgumentExpression = class extends Expression {
-  constructor(key, value) {
-    super();
-    __publicField(this, "type", "KeywordArgumentExpression");
-    this.key = key;
-    this.value = value;
-  }
-};
-function parse(tokens) {
-  const program = new Program([]);
-  let current = 0;
-  function expect(type, error) {
-    const prev = tokens[current++];
-    if (!prev || prev.type !== type) {
-      throw new Error(`Parser Error: ${error}. ${prev.type} !== ${type}.`);
-    }
-    return prev;
-  }
-  function parseAny() {
-    switch (tokens[current].type) {
-      case TOKEN_TYPES.Text:
-        return parseText();
-      case TOKEN_TYPES.OpenStatement:
-        return parseJinjaStatement();
-      case TOKEN_TYPES.OpenExpression:
-        return parseJinjaExpression();
-      default:
-        throw new SyntaxError(`Unexpected token type: ${tokens[current].type}`);
-    }
-  }
-  function not(...types) {
-    return current + types.length <= tokens.length && types.some((type, i) => type !== tokens[current + i].type);
-  }
-  function is(...types) {
-    return current + types.length <= tokens.length && types.every((type, i) => type === tokens[current + i].type);
-  }
-  function parseText() {
-    return new StringLiteral(expect(TOKEN_TYPES.Text, "Expected text token").value);
-  }
-  function parseJinjaStatement() {
-    expect(TOKEN_TYPES.OpenStatement, "Expected opening statement token");
-    let result;
-    switch (tokens[current].type) {
-      case TOKEN_TYPES.Set:
-        ++current;
-        result = parseSetStatement();
-        expect(TOKEN_TYPES.CloseStatement, "Expected closing statement token");
-        break;
-      case TOKEN_TYPES.If:
-        ++current;
-        result = parseIfStatement();
-        expect(TOKEN_TYPES.OpenStatement, "Expected {% token");
-        expect(TOKEN_TYPES.EndIf, "Expected endif token");
-        expect(TOKEN_TYPES.CloseStatement, "Expected %} token");
-        break;
-      case TOKEN_TYPES.For:
-        ++current;
-        result = parseForStatement();
-        expect(TOKEN_TYPES.OpenStatement, "Expected {% token");
-        expect(TOKEN_TYPES.EndFor, "Expected endfor token");
-        expect(TOKEN_TYPES.CloseStatement, "Expected %} token");
-        break;
-      default:
-        throw new SyntaxError(`Unknown statement type: ${tokens[current].type}`);
-    }
-    return result;
-  }
-  function parseJinjaExpression() {
-    expect(TOKEN_TYPES.OpenExpression, "Expected opening expression token");
-    const result = parseExpression();
-    expect(TOKEN_TYPES.CloseExpression, "Expected closing expression token");
-    return result;
-  }
-  function parseSetStatement() {
-    const left = parseExpression();
-    if (is(TOKEN_TYPES.Equals)) {
-      ++current;
-      const value = parseSetStatement();
-      return new SetStatement(left, value);
-    }
-    return left;
-  }
-  function parseIfStatement() {
-    const test = parseExpression();
-    expect(TOKEN_TYPES.CloseStatement, "Expected closing statement token");
-    const body = [];
-    const alternate = [];
-    while (!(tokens[current]?.type === TOKEN_TYPES.OpenStatement && (tokens[current + 1]?.type === TOKEN_TYPES.ElseIf || tokens[current + 1]?.type === TOKEN_TYPES.Else || tokens[current + 1]?.type === TOKEN_TYPES.EndIf))) {
-      body.push(parseAny());
-    }
-    if (tokens[current]?.type === TOKEN_TYPES.OpenStatement && tokens[current + 1]?.type !== TOKEN_TYPES.EndIf) {
-      ++current;
-      if (is(TOKEN_TYPES.ElseIf)) {
-        expect(TOKEN_TYPES.ElseIf, "Expected elseif token");
-        alternate.push(parseIfStatement());
-      } else {
-        expect(TOKEN_TYPES.Else, "Expected else token");
-        expect(TOKEN_TYPES.CloseStatement, "Expected closing statement token");
-        while (!(tokens[current]?.type === TOKEN_TYPES.OpenStatement && tokens[current + 1]?.type === TOKEN_TYPES.EndIf)) {
-          alternate.push(parseAny());
-        }
-      }
-    }
-    return new If(test, body, alternate);
-  }
-  function parseExpressionSequence(primary = false) {
-    const fn = primary ? parsePrimaryExpression : parseExpression;
-    const expressions = [fn()];
-    const isTuple = is(TOKEN_TYPES.Comma);
-    while (isTuple) {
-      ++current;
-      expressions.push(fn());
-      if (!is(TOKEN_TYPES.Comma)) {
-        break;
-      }
-    }
-    return isTuple ? new TupleLiteral(expressions) : expressions[0];
-  }
-  function parseForStatement() {
-    const loopVariable = parseExpressionSequence(true);
-    if (!(loopVariable instanceof Identifier || loopVariable instanceof TupleLiteral)) {
-      throw new SyntaxError(`Expected identifier/tuple for the loop variable, got ${loopVariable.type} instead`);
-    }
-    expect(TOKEN_TYPES.In, "Expected `in` keyword following loop variable");
-    const iterable = parseExpression();
-    expect(TOKEN_TYPES.CloseStatement, "Expected closing statement token");
-    const body = [];
-    while (not(TOKEN_TYPES.OpenStatement, TOKEN_TYPES.EndFor)) {
-      body.push(parseAny());
-    }
-    return new For(loopVariable, iterable, body);
-  }
-  function parseExpression() {
-    return parseTernaryExpression();
-  }
-  function parseTernaryExpression() {
-    const a = parseLogicalOrExpression();
-    if (is(TOKEN_TYPES.If)) {
-      ++current;
-      const predicate = parseLogicalOrExpression();
-      expect(TOKEN_TYPES.Else, "Expected else token");
-      const b = parseLogicalOrExpression();
-      return new If(predicate, [a], [b]);
-    }
-    return a;
-  }
-  function parseLogicalOrExpression() {
-    let left = parseLogicalAndExpression();
-    while (is(TOKEN_TYPES.Or)) {
-      const operator = tokens[current];
-      ++current;
-      const right = parseLogicalAndExpression();
-      left = new BinaryExpression(operator, left, right);
-    }
-    return left;
-  }
-  function parseLogicalAndExpression() {
-    let left = parseLogicalNegationExpression();
-    while (is(TOKEN_TYPES.And)) {
-      const operator = tokens[current];
-      ++current;
-      const right = parseLogicalNegationExpression();
-      left = new BinaryExpression(operator, left, right);
-    }
-    return left;
-  }
-  function parseLogicalNegationExpression() {
-    let right;
-    while (is(TOKEN_TYPES.Not)) {
-      const operator = tokens[current];
-      ++current;
-      const arg = parseLogicalNegationExpression();
-      right = new UnaryExpression(operator, arg);
-    }
-    return right ?? parseComparisonExpression();
-  }
-  function parseComparisonExpression() {
-    let left = parseAdditiveExpression();
-    while (is(TOKEN_TYPES.ComparisonBinaryOperator) || is(TOKEN_TYPES.In) || is(TOKEN_TYPES.NotIn)) {
-      const operator = tokens[current];
-      ++current;
-      const right = parseAdditiveExpression();
-      left = new BinaryExpression(operator, left, right);
-    }
-    return left;
-  }
-  function parseAdditiveExpression() {
-    let left = parseMultiplicativeExpression();
-    while (is(TOKEN_TYPES.AdditiveBinaryOperator)) {
-      const operator = tokens[current];
-      ++current;
-      const right = parseMultiplicativeExpression();
-      left = new BinaryExpression(operator, left, right);
-    }
-    return left;
-  }
-  function parseCallMemberExpression() {
-    const member = parseMemberExpression();
-    if (is(TOKEN_TYPES.OpenParen)) {
-      return parseCallExpression(member);
-    }
-    return member;
-  }
-  function parseCallExpression(callee) {
-    let callExpression = new CallExpression(callee, parseArgs());
-    if (is(TOKEN_TYPES.OpenParen)) {
-      callExpression = parseCallExpression(callExpression);
-    }
-    return callExpression;
-  }
-  function parseArgs() {
-    expect(TOKEN_TYPES.OpenParen, "Expected opening parenthesis for arguments list");
-    const args = parseArgumentsList();
-    expect(TOKEN_TYPES.CloseParen, "Expected closing parenthesis for arguments list");
-    return args;
-  }
-  function parseArgumentsList() {
-    const args = [];
-    while (!is(TOKEN_TYPES.CloseParen)) {
-      let argument = parseExpression();
-      if (is(TOKEN_TYPES.Equals)) {
-        ++current;
-        if (!(argument instanceof Identifier)) {
-          throw new SyntaxError(`Expected identifier for keyword argument`);
-        }
-        const value = parseExpression();
-        argument = new KeywordArgumentExpression(argument, value);
-      }
-      args.push(argument);
-      if (is(TOKEN_TYPES.Comma)) {
-        ++current;
-      }
-    }
-    return args;
-  }
-  function parseMemberExpressionArgumentsList() {
-    const slices = [];
-    let isSlice = false;
-    while (!is(TOKEN_TYPES.CloseSquareBracket)) {
-      if (is(TOKEN_TYPES.Colon)) {
-        slices.push(void 0);
-        ++current;
-        isSlice = true;
-      } else {
-        slices.push(parseExpression());
-        if (is(TOKEN_TYPES.Colon)) {
-          ++current;
-          isSlice = true;
-        }
-      }
-    }
-    if (slices.length === 0) {
-      throw new SyntaxError(`Expected at least one argument for member/slice expression`);
-    }
-    if (isSlice) {
-      if (slices.length > 3) {
-        throw new SyntaxError(`Expected 0-3 arguments for slice expression`);
-      }
-      return new SliceExpression(...slices);
-    }
-    return slices[0];
-  }
-  function parseMemberExpression() {
-    let object = parsePrimaryExpression();
-    while (is(TOKEN_TYPES.Dot) || is(TOKEN_TYPES.OpenSquareBracket)) {
-      const operator = tokens[current];
-      ++current;
-      let property;
-      const computed = operator.type !== TOKEN_TYPES.Dot;
-      if (computed) {
-        property = parseMemberExpressionArgumentsList();
-        expect(TOKEN_TYPES.CloseSquareBracket, "Expected closing square bracket");
-      } else {
-        property = parsePrimaryExpression();
-        if (property.type !== "Identifier") {
-          throw new SyntaxError(`Expected identifier following dot operator`);
-        }
-      }
-      object = new MemberExpression(object, property, computed);
-    }
-    return object;
-  }
-  function parseMultiplicativeExpression() {
-    let left = parseTestExpression();
-    while (is(TOKEN_TYPES.MultiplicativeBinaryOperator)) {
-      const operator = tokens[current];
-      ++current;
-      const right = parseTestExpression();
-      left = new BinaryExpression(operator, left, right);
-    }
-    return left;
-  }
-  function parseTestExpression() {
-    let operand = parseFilterExpression();
-    while (is(TOKEN_TYPES.Is)) {
-      ++current;
-      const negate = is(TOKEN_TYPES.Not);
-      if (negate) {
-        ++current;
-      }
-      let filter = parsePrimaryExpression();
-      if (filter instanceof BooleanLiteral) {
-        filter = new Identifier(filter.value.toString());
-      }
-      if (!(filter instanceof Identifier)) {
-        throw new SyntaxError(`Expected identifier for the test`);
-      }
-      operand = new TestExpression(operand, negate, filter);
-    }
-    return operand;
-  }
-  function parseFilterExpression() {
-    let operand = parseCallMemberExpression();
-    while (is(TOKEN_TYPES.Pipe)) {
-      ++current;
-      let filter = parsePrimaryExpression();
-      if (!(filter instanceof Identifier)) {
-        throw new SyntaxError(`Expected identifier for the filter`);
-      }
-      if (is(TOKEN_TYPES.OpenParen)) {
-        filter = parseCallExpression(filter);
-      }
-      operand = new FilterExpression(operand, filter);
-    }
-    return operand;
-  }
-  function parsePrimaryExpression() {
-    const token = tokens[current];
-    switch (token.type) {
-      case TOKEN_TYPES.NumericLiteral:
-        ++current;
-        return new NumericLiteral(Number(token.value));
-      case TOKEN_TYPES.StringLiteral:
-        ++current;
-        return new StringLiteral(token.value);
-      case TOKEN_TYPES.BooleanLiteral:
-        ++current;
-        return new BooleanLiteral(token.value === "true");
-      case TOKEN_TYPES.Identifier:
-        ++current;
-        return new Identifier(token.value);
-      case TOKEN_TYPES.OpenParen: {
-        ++current;
-        const expression = parseExpressionSequence();
-        if (tokens[current].type !== TOKEN_TYPES.CloseParen) {
-          throw new SyntaxError(`Expected closing parenthesis, got ${tokens[current].type} instead`);
-        }
-        ++current;
-        return expression;
-      }
-      case TOKEN_TYPES.OpenSquareBracket: {
-        ++current;
-        const values = [];
-        while (!is(TOKEN_TYPES.CloseSquareBracket)) {
-          values.push(parseExpression());
-          if (is(TOKEN_TYPES.Comma)) {
-            ++current;
-          }
-        }
-        ++current;
-        return new ArrayLiteral(values);
-      }
-      case TOKEN_TYPES.OpenCurlyBracket: {
-        ++current;
-        const values = /* @__PURE__ */ new Map();
-        while (!is(TOKEN_TYPES.CloseCurlyBracket)) {
-          const key = parseExpression();
-          expect(TOKEN_TYPES.Colon, "Expected colon between key and value in object literal");
-          const value = parseExpression();
-          values.set(key, value);
-          if (is(TOKEN_TYPES.Comma)) {
-            ++current;
-          }
-        }
-        ++current;
-        return new ObjectLiteral(values);
-      }
-      default:
-        throw new SyntaxError(`Unexpected token: ${token.type}`);
-    }
-  }
-  while (current < tokens.length) {
-    program.body.push(parseAny());
-  }
-  return program;
-}
-function range(start, stop, step = 1) {
-  if (stop === void 0) {
-    stop = start;
-    start = 0;
-  }
-  const result = [];
-  for (let i = start; i < stop; i += step) {
-    result.push(i);
-  }
-  return result;
-}
-function slice(array, start, stop, step = 1) {
-  const direction = Math.sign(step);
-  if (direction >= 0) {
-    start = (start ?? (start = 0)) < 0 ? Math.max(array.length + start, 0) : Math.min(start, array.length);
-    stop = (stop ?? (stop = array.length)) < 0 ? Math.max(array.length + stop, 0) : Math.min(stop, array.length);
-  } else {
-    start = (start ?? (start = array.length - 1)) < 0 ? Math.max(array.length + start, -1) : Math.min(start, array.length - 1);
-    stop = (stop ?? (stop = -1)) < -1 ? Math.max(array.length + stop, -1) : Math.min(stop, array.length - 1);
-  }
-  const result = [];
-  for (let i = start; direction * i < direction * stop; i += step) {
-    result.push(array[i]);
-  }
-  return result;
-}
-function titleCase(value) {
-  return value.replace(/\b\w/g, (c) => c.toUpperCase());
-}
-var RuntimeValue = class {
-  /**
-   * Creates a new RuntimeValue.
-   */
-  constructor(value = void 0) {
-    __publicField(this, "type", "RuntimeValue");
-    __publicField(this, "value");
-    /**
-     * A collection of built-in functions for this type.
-     */
-    __publicField(this, "builtins", /* @__PURE__ */ new Map());
-    this.value = value;
-  }
-  /**
-   * Determines truthiness or falsiness of the runtime value.
-   * This function should be overridden by subclasses if it has custom truthiness criteria.
-   * @returns {BooleanValue} BooleanValue(true) if the value is truthy, BooleanValue(false) otherwise.
-   */
-  __bool__() {
-    return new BooleanValue(!!this.value);
-  }
-};
-var NumericValue = class extends RuntimeValue {
-  constructor() {
-    super(...arguments);
-    __publicField(this, "type", "NumericValue");
-  }
-};
-var StringValue = class extends RuntimeValue {
-  constructor() {
-    super(...arguments);
-    __publicField(this, "type", "StringValue");
-    __publicField(this, "builtins", /* @__PURE__ */ new Map([
-      [
-        "upper",
-        new FunctionValue(() => {
-          return new StringValue(this.value.toUpperCase());
-        })
-      ],
-      [
-        "lower",
-        new FunctionValue(() => {
-          return new StringValue(this.value.toLowerCase());
-        })
-      ],
-      [
-        "strip",
-        new FunctionValue(() => {
-          return new StringValue(this.value.trim());
-        })
-      ],
-      [
-        "title",
-        new FunctionValue(() => {
-          return new StringValue(titleCase(this.value));
-        })
-      ],
-      ["length", new NumericValue(this.value.length)]
-    ]));
-  }
-};
-var BooleanValue = class extends RuntimeValue {
-  constructor() {
-    super(...arguments);
-    __publicField(this, "type", "BooleanValue");
-  }
-};
-var ObjectValue = class extends RuntimeValue {
-  constructor() {
-    super(...arguments);
-    __publicField(this, "type", "ObjectValue");
-    __publicField(this, "builtins", /* @__PURE__ */ new Map([
-      [
-        "get",
-        new FunctionValue(([key, defaultValue]) => {
-          if (!(key instanceof StringValue)) {
-            throw new Error(`Object key must be a string: got ${key.type}`);
-          }
-          return this.value.get(key.value) ?? defaultValue ?? new NullValue();
-        })
-      ],
-      [
-        "items",
-        new FunctionValue(() => {
-          return new ArrayValue(
-            Array.from(this.value.entries()).map(([key, value]) => new ArrayValue([new StringValue(key), value]))
-          );
-        })
-      ]
-    ]));
-  }
-  /**
-   * NOTE: necessary to override since all JavaScript arrays are considered truthy,
-   * while only non-empty Python arrays are consider truthy.
-   *
-   * e.g.,
-   *  - JavaScript:  {} && 5 -> 5
-   *  - Python:      {} and 5 -> {}
-   */
-  __bool__() {
-    return new BooleanValue(this.value.size > 0);
-  }
-};
-var ArrayValue = class extends RuntimeValue {
-  constructor() {
-    super(...arguments);
-    __publicField(this, "type", "ArrayValue");
-    __publicField(this, "builtins", /* @__PURE__ */ new Map([["length", new NumericValue(this.value.length)]]));
-  }
-  /**
-   * NOTE: necessary to override since all JavaScript arrays are considered truthy,
-   * while only non-empty Python arrays are consider truthy.
-   *
-   * e.g.,
-   *  - JavaScript:  [] && 5 -> 5
-   *  - Python:      [] and 5 -> []
-   */
-  __bool__() {
-    return new BooleanValue(this.value.length > 0);
-  }
-};
-var TupleValue = class extends ArrayValue {
-  constructor() {
-    super(...arguments);
-    __publicField(this, "type", "TupleValue");
-  }
-};
-var FunctionValue = class extends RuntimeValue {
-  constructor() {
-    super(...arguments);
-    __publicField(this, "type", "FunctionValue");
-  }
-};
-var NullValue = class extends RuntimeValue {
-  constructor() {
-    super(...arguments);
-    __publicField(this, "type", "NullValue");
-  }
-};
-var UndefinedValue = class extends RuntimeValue {
-  constructor() {
-    super(...arguments);
-    __publicField(this, "type", "UndefinedValue");
-  }
-};
-var Environment = class {
-  constructor(parent) {
-    /**
-     * The variables declared in this environment.
-     */
-    __publicField(this, "variables", /* @__PURE__ */ new Map([
-      [
-        "namespace",
-        new FunctionValue((args) => {
-          if (args.length === 0) {
-            return new ObjectValue(/* @__PURE__ */ new Map());
-          }
-          if (args.length !== 1 || !(args[0] instanceof ObjectValue)) {
-            throw new Error("`namespace` expects either zero arguments or a single object argument");
-          }
-          return args[0];
-        })
-      ]
-    ]));
-    /**
-     * The tests available in this environment.
-     */
-    __publicField(this, "tests", /* @__PURE__ */ new Map([
-      ["boolean", (operand) => operand.type === "BooleanValue"],
-      ["callable", (operand) => operand instanceof FunctionValue],
-      [
-        "odd",
-        (operand) => {
-          if (operand.type !== "NumericValue") {
-            throw new Error(`Cannot apply test "odd" to type: ${operand.type}`);
-          }
-          return operand.value % 2 !== 0;
-        }
-      ],
-      [
-        "even",
-        (operand) => {
-          if (operand.type !== "NumericValue") {
-            throw new Error(`Cannot apply test "even" to type: ${operand.type}`);
-          }
-          return operand.value % 2 === 0;
-        }
-      ],
-      ["false", (operand) => operand.type === "BooleanValue" && !operand.value],
-      ["true", (operand) => operand.type === "BooleanValue" && operand.value],
-      ["number", (operand) => operand.type === "NumericValue"],
-      ["integer", (operand) => operand.type === "NumericValue" && Number.isInteger(operand.value)],
-      ["iterable", (operand) => operand instanceof ArrayValue || operand instanceof StringValue],
-      [
-        "lower",
-        (operand) => {
-          const str = operand.value;
-          return operand.type === "StringValue" && str === str.toLowerCase();
-        }
-      ],
-      [
-        "upper",
-        (operand) => {
-          const str = operand.value;
-          return operand.type === "StringValue" && str === str.toUpperCase();
-        }
-      ],
-      ["none", (operand) => operand.type === "NullValue"],
-      ["defined", (operand) => operand.type !== "UndefinedValue"],
-      ["undefined", (operand) => operand.type === "UndefinedValue"],
-      ["equalto", (a, b) => a.value === b.value]
-    ]));
-    this.parent = parent;
-  }
-  /**
-   * Set the value of a variable in the current environment.
-   */
-  set(name, value) {
-    return this.declareVariable(name, convertToRuntimeValues(value));
-  }
-  declareVariable(name, value) {
-    if (this.variables.has(name)) {
-      throw new SyntaxError(`Variable already declared: ${name}`);
-    }
-    this.variables.set(name, value);
-    return value;
-  }
-  // private assignVariable(name: string, value: AnyRuntimeValue): AnyRuntimeValue {
-  // 	const env = this.resolve(name);
-  // 	env.variables.set(name, value);
-  // 	return value;
-  // }
-  /**
-   * Set variable in the current scope.
-   * See https://jinja.palletsprojects.com/en/3.0.x/templates/#assignments for more information.
-   */
-  setVariable(name, value) {
-    this.variables.set(name, value);
-    return value;
-  }
-  /**
-   * Resolve the environment in which the variable is declared.
-   * @param {string} name The name of the variable.
-   * @returns {Environment} The environment in which the variable is declared.
-   */
-  resolve(name) {
-    if (this.variables.has(name)) {
-      return this;
-    }
-    if (this.parent) {
-      return this.parent.resolve(name);
-    }
-    throw new Error(`Unknown variable: ${name}`);
-  }
-  lookupVariable(name) {
-    try {
-      return this.resolve(name).variables.get(name) ?? new UndefinedValue();
-    } catch {
-      return new UndefinedValue();
-    }
-  }
-};
-var Interpreter = class {
-  constructor(env) {
-    __publicField(this, "global");
-    this.global = env ?? new Environment();
-  }
-  /**
-   * Run the program.
-   */
-  run(program) {
-    return this.evaluate(program, this.global);
-  }
-  /**
-   * Evaluates expressions following the binary operation type.
-   */
-  evaluateBinaryExpression(node, environment) {
-    const left = this.evaluate(node.left, environment);
-    switch (node.operator.value) {
-      case "and":
-        return left.__bool__().value ? this.evaluate(node.right, environment) : left;
-      case "or":
-        return left.__bool__().value ? left : this.evaluate(node.right, environment);
-    }
-    const right = this.evaluate(node.right, environment);
-    switch (node.operator.value) {
-      case "==":
-        return new BooleanValue(left.value == right.value);
-      case "!=":
-        return new BooleanValue(left.value != right.value);
-    }
-    if (left instanceof UndefinedValue || right instanceof UndefinedValue) {
-      throw new Error("Cannot perform operation on undefined values");
-    } else if (left instanceof NullValue || right instanceof NullValue) {
-      throw new Error("Cannot perform operation on null values");
-    } else if (left instanceof NumericValue && right instanceof NumericValue) {
-      switch (node.operator.value) {
-        case "+":
-          return new NumericValue(left.value + right.value);
-        case "-":
-          return new NumericValue(left.value - right.value);
-        case "*":
-          return new NumericValue(left.value * right.value);
-        case "/":
-          return new NumericValue(left.value / right.value);
-        case "%":
-          return new NumericValue(left.value % right.value);
-        case "<":
-          return new BooleanValue(left.value < right.value);
-        case ">":
-          return new BooleanValue(left.value > right.value);
-        case ">=":
-          return new BooleanValue(left.value >= right.value);
-        case "<=":
-          return new BooleanValue(left.value <= right.value);
-      }
-    } else if (left instanceof ArrayValue && right instanceof ArrayValue) {
-      switch (node.operator.value) {
-        case "+":
-          return new ArrayValue(left.value.concat(right.value));
-      }
-    } else if (right instanceof ArrayValue) {
-      const member = right.value.find((x) => x.value === left.value) !== void 0;
-      switch (node.operator.value) {
-        case "in":
-          return new BooleanValue(member);
-        case "not in":
-          return new BooleanValue(!member);
-      }
-    }
-    if (left instanceof StringValue || right instanceof StringValue) {
-      switch (node.operator.value) {
-        case "+":
-          return new StringValue(left.value.toString() + right.value.toString());
-      }
-    }
-    if (left instanceof StringValue && right instanceof StringValue) {
-      switch (node.operator.value) {
-        case "in":
-          return new BooleanValue(right.value.includes(left.value));
-        case "not in":
-          return new BooleanValue(!right.value.includes(left.value));
-      }
-    }
-    if (left instanceof StringValue && right instanceof ObjectValue) {
-      switch (node.operator.value) {
-        case "in":
-          return new BooleanValue(right.value.has(left.value));
-        case "not in":
-          return new BooleanValue(!right.value.has(left.value));
-      }
-    }
-    throw new SyntaxError(`Unknown operator "${node.operator.value}" between ${left.type} and ${right.type}`);
-  }
-  /**
-   * Evaluates expressions following the filter operation type.
-   */
-  evaluateFilterExpression(node, environment) {
-    const operand = this.evaluate(node.operand, environment);
-    if (node.filter.type === "Identifier") {
-      const filter = node.filter;
-      if (operand instanceof ArrayValue) {
-        switch (filter.value) {
-          case "list":
-            return operand;
-          case "first":
-            return operand.value[0];
-          case "last":
-            return operand.value[operand.value.length - 1];
-          case "length":
-            return new NumericValue(operand.value.length);
-          case "reverse":
-            return new ArrayValue(operand.value.reverse());
-          case "sort":
-            return new ArrayValue(
-              operand.value.sort((a, b) => {
-                if (a.type !== b.type) {
-                  throw new Error(`Cannot compare different types: ${a.type} and ${b.type}`);
-                }
-                switch (a.type) {
-                  case "NumericValue":
-                    return a.value - b.value;
-                  case "StringValue":
-                    return a.value.localeCompare(b.value);
-                  default:
-                    throw new Error(`Cannot compare type: ${a.type}`);
-                }
-              })
-            );
-          default:
-            throw new Error(`Unknown ArrayValue filter: ${filter.value}`);
-        }
-      } else if (operand instanceof StringValue) {
-        switch (filter.value) {
-          case "length":
-            return new NumericValue(operand.value.length);
-          case "upper":
-            return new StringValue(operand.value.toUpperCase());
-          case "lower":
-            return new StringValue(operand.value.toLowerCase());
-          case "title":
-            return new StringValue(titleCase(operand.value));
-          case "capitalize":
-            return new StringValue(operand.value.charAt(0).toUpperCase() + operand.value.slice(1));
-          case "trim":
-            return new StringValue(operand.value.trim());
-          default:
-            throw new Error(`Unknown StringValue filter: ${filter.value}`);
-        }
-      } else if (operand instanceof NumericValue) {
-        switch (filter.value) {
-          case "abs":
-            return new NumericValue(Math.abs(operand.value));
-          default:
-            throw new Error(`Unknown NumericValue filter: ${filter.value}`);
-        }
-      } else if (operand instanceof ObjectValue) {
-        switch (filter.value) {
-          case "items":
-            return new ArrayValue(
-              Array.from(operand.value.entries()).map(([key, value]) => new ArrayValue([new StringValue(key), value]))
-            );
-          case "length":
-            return new NumericValue(operand.value.size);
-          default:
-            throw new Error(`Unknown ObjectValue filter: ${filter.value}`);
-        }
-      }
-      throw new Error(`Cannot apply filter "${filter.value}" to type: ${operand.type}`);
-    } else if (node.filter.type === "CallExpression") {
-      const filter = node.filter;
-      if (filter.callee.type !== "Identifier") {
-        throw new Error(`Unknown filter: ${filter.callee.type}`);
-      }
-      const filterName = filter.callee.value;
-      if (operand instanceof ArrayValue) {
-        switch (filterName) {
-          case "selectattr": {
-            if (operand.value.some((x) => !(x instanceof ObjectValue))) {
-              throw new Error("`selectattr` can only be applied to array of objects");
-            }
-            if (filter.args.some((x) => x.type !== "StringLiteral")) {
-              throw new Error("arguments of `selectattr` must be strings");
-            }
-            const [attr, testName, value] = filter.args.map((x) => this.evaluate(x, environment));
-            let testFunction;
-            if (testName) {
-              const test = environment.tests.get(testName.value);
-              if (!test) {
-                throw new Error(`Unknown test: ${testName.value}`);
-              }
-              testFunction = test;
-            } else {
-              testFunction = (...x) => x[0].__bool__().value;
-            }
-            const filtered = operand.value.filter((item) => {
-              const a = item.value.get(attr.value);
-              if (a) {
-                return testFunction(a, value);
-              }
-              return false;
-            });
-            return new ArrayValue(filtered);
-          }
-        }
-        throw new Error(`Unknown ArrayValue filter: ${filterName}`);
-      } else {
-        throw new Error(`Cannot apply filter "${filterName}" to type: ${operand.type}`);
-      }
-    }
-    throw new Error(`Unknown filter: ${node.filter.type}`);
-  }
-  /**
-   * Evaluates expressions following the test operation type.
-   */
-  evaluateTestExpression(node, environment) {
-    const operand = this.evaluate(node.operand, environment);
-    const test = environment.tests.get(node.test.value);
-    if (!test) {
-      throw new Error(`Unknown test: ${node.test.value}`);
-    }
-    const result = test(operand);
-    return new BooleanValue(node.negate ? !result : result);
-  }
-  /**
-   * Evaluates expressions following the unary operation type.
-   */
-  evaluateUnaryExpression(node, environment) {
-    const argument = this.evaluate(node.argument, environment);
-    switch (node.operator.value) {
-      case "not":
-        return new BooleanValue(!argument.value);
-      default:
-        throw new SyntaxError(`Unknown operator: ${node.operator.value}`);
-    }
-  }
-  evalProgram(program, environment) {
-    return this.evaluateBlock(program.body, environment);
-  }
-  evaluateBlock(statements, environment) {
-    let result = "";
-    for (const statement of statements) {
-      const lastEvaluated = this.evaluate(statement, environment);
-      if (lastEvaluated.type !== "NullValue" && lastEvaluated.type !== "UndefinedValue") {
-        result += lastEvaluated.value;
-      }
-    }
-    return new StringValue(result);
-  }
-  evaluateIdentifier(node, environment) {
-    return environment.lookupVariable(node.value);
-  }
-  evaluateCallExpression(expr, environment) {
-    const args = [];
-    const kwargs = /* @__PURE__ */ new Map();
-    for (const argument of expr.args) {
-      if (argument.type === "KeywordArgumentExpression") {
-        const kwarg = argument;
-        kwargs.set(kwarg.key.value, this.evaluate(kwarg.value, environment));
-      } else {
-        args.push(this.evaluate(argument, environment));
-      }
-    }
-    if (kwargs.size > 0) {
-      args.push(new ObjectValue(kwargs));
-    }
-    const fn = this.evaluate(expr.callee, environment);
-    if (fn.type !== "FunctionValue") {
-      throw new Error(`Cannot call something that is not a function: got ${fn.type}`);
-    }
-    return fn.value(args, environment);
-  }
-  evaluateSliceExpression(object, expr, environment) {
-    if (!(object instanceof ArrayValue || object instanceof StringValue)) {
-      throw new Error("Slice object must be an array or string");
-    }
-    const start = this.evaluate(expr.start, environment);
-    const stop = this.evaluate(expr.stop, environment);
-    const step = this.evaluate(expr.step, environment);
-    if (!(start instanceof NumericValue || start instanceof UndefinedValue)) {
-      throw new Error("Slice start must be numeric or undefined");
-    }
-    if (!(stop instanceof NumericValue || stop instanceof UndefinedValue)) {
-      throw new Error("Slice stop must be numeric or undefined");
-    }
-    if (!(step instanceof NumericValue || step instanceof UndefinedValue)) {
-      throw new Error("Slice step must be numeric or undefined");
-    }
-    if (object instanceof ArrayValue) {
-      return new ArrayValue(slice(object.value, start.value, stop.value, step.value));
-    } else {
-      return new StringValue(slice(Array.from(object.value), start.value, stop.value, step.value).join(""));
-    }
-  }
-  evaluateMemberExpression(expr, environment) {
-    const object = this.evaluate(expr.object, environment);
-    let property;
-    if (expr.computed) {
-      if (expr.property.type === "SliceExpression") {
-        return this.evaluateSliceExpression(object, expr.property, environment);
-      } else {
-        property = this.evaluate(expr.property, environment);
-      }
-    } else {
-      property = new StringValue(expr.property.value);
-    }
-    let value;
-    if (object instanceof ObjectValue) {
-      if (!(property instanceof StringValue)) {
-        throw new Error(`Cannot access property with non-string: got ${property.type}`);
-      }
-      value = object.value.get(property.value) ?? object.builtins.get(property.value);
-    } else if (object instanceof ArrayValue || object instanceof StringValue) {
-      if (property instanceof NumericValue) {
-        value = object.value.at(property.value);
-        if (object instanceof StringValue) {
-          value = new StringValue(object.value.at(property.value));
-        }
-      } else if (property instanceof StringValue) {
-        value = object.builtins.get(property.value);
-      } else {
-        throw new Error(`Cannot access property with non-string/non-number: got ${property.type}`);
-      }
-    } else {
-      if (!(property instanceof StringValue)) {
-        throw new Error(`Cannot access property with non-string: got ${property.type}`);
-      }
-      value = object.builtins.get(property.value);
-    }
-    return value instanceof RuntimeValue ? value : new UndefinedValue();
-  }
-  evaluateSet(node, environment) {
-    const rhs = this.evaluate(node.value, environment);
-    if (node.assignee.type === "Identifier") {
-      const variableName = node.assignee.value;
-      environment.setVariable(variableName, rhs);
-    } else if (node.assignee.type === "MemberExpression") {
-      const member = node.assignee;
-      const object = this.evaluate(member.object, environment);
-      if (!(object instanceof ObjectValue)) {
-        throw new Error("Cannot assign to member of non-object");
-      }
-      if (member.property.type !== "Identifier") {
-        throw new Error("Cannot assign to member with non-identifier property");
-      }
-      object.value.set(member.property.value, rhs);
-    } else {
-      throw new Error(`Invalid LHS inside assignment expression: ${JSON.stringify(node.assignee)}`);
-    }
-    return new NullValue();
-  }
-  evaluateIf(node, environment) {
-    const test = this.evaluate(node.test, environment);
-    return this.evaluateBlock(test.__bool__().value ? node.body : node.alternate, environment);
-  }
-  evaluateFor(node, environment) {
-    const scope = new Environment(environment);
-    const iterable = this.evaluate(node.iterable, scope);
-    if (!(iterable instanceof ArrayValue)) {
-      throw new Error(`Expected iterable type in for loop: got ${iterable.type}`);
-    }
-    let result = "";
-    for (let i = 0; i < iterable.value.length; ++i) {
-      const loop = /* @__PURE__ */ new Map([
-        ["index", new NumericValue(i + 1)],
-        ["index0", new NumericValue(i)],
-        ["revindex", new NumericValue(iterable.value.length - i)],
-        ["revindex0", new NumericValue(iterable.value.length - i - 1)],
-        ["first", new BooleanValue(i === 0)],
-        ["last", new BooleanValue(i === iterable.value.length - 1)],
-        ["length", new NumericValue(iterable.value.length)],
-        ["previtem", i > 0 ? iterable.value[i - 1] : new UndefinedValue()],
-        ["nextitem", i < iterable.value.length - 1 ? iterable.value[i + 1] : new UndefinedValue()]
-      ]);
-      scope.setVariable("loop", new ObjectValue(loop));
-      const current = iterable.value[i];
-      if (node.loopvar.type === "Identifier") {
-        scope.setVariable(node.loopvar.value, current);
-      } else if (node.loopvar.type === "TupleLiteral") {
-        const loopvar = node.loopvar;
-        if (current.type !== "ArrayValue") {
-          throw new Error(`Cannot unpack non-iterable type: ${current.type}`);
-        }
-        const c = current;
-        if (loopvar.value.length !== c.value.length) {
-          throw new Error(`Too ${loopvar.value.length > c.value.length ? "few" : "many"} items to unpack`);
-        }
-        for (let j = 0; j < loopvar.value.length; ++j) {
-          if (loopvar.value[j].type !== "Identifier") {
-            throw new Error(`Cannot unpack non-identifier type: ${loopvar.value[j].type}`);
-          }
-          scope.setVariable(loopvar.value[j].value, c.value[j]);
-        }
-      }
-      const evaluated = this.evaluateBlock(node.body, scope);
-      result += evaluated.value;
-    }
-    return new StringValue(result);
-  }
-  evaluate(statement, environment) {
-    if (statement === void 0)
-      return new UndefinedValue();
-    switch (statement.type) {
-      case "Program":
-        return this.evalProgram(statement, environment);
-      case "Set":
-        return this.evaluateSet(statement, environment);
-      case "If":
-        return this.evaluateIf(statement, environment);
-      case "For":
-        return this.evaluateFor(statement, environment);
-      case "NumericLiteral":
-        return new NumericValue(Number(statement.value));
-      case "StringLiteral":
-        return new StringValue(statement.value);
-      case "BooleanLiteral":
-        return new BooleanValue(statement.value);
-      case "ArrayLiteral":
-        return new ArrayValue(statement.value.map((x) => this.evaluate(x, environment)));
-      case "TupleLiteral":
-        return new TupleValue(statement.value.map((x) => this.evaluate(x, environment)));
-      case "ObjectLiteral": {
-        const mapping = /* @__PURE__ */ new Map();
-        for (const [key, value] of statement.value) {
-          const evaluatedKey = this.evaluate(key, environment);
-          if (!(evaluatedKey instanceof StringValue)) {
-            throw new Error(`Object keys must be strings: got ${evaluatedKey.type}`);
-          }
-          mapping.set(evaluatedKey.value, this.evaluate(value, environment));
-        }
-        return new ObjectValue(mapping);
-      }
-      case "Identifier":
-        return this.evaluateIdentifier(statement, environment);
-      case "CallExpression":
-        return this.evaluateCallExpression(statement, environment);
-      case "MemberExpression":
-        return this.evaluateMemberExpression(statement, environment);
-      case "UnaryExpression":
-        return this.evaluateUnaryExpression(statement, environment);
-      case "BinaryExpression":
-        return this.evaluateBinaryExpression(statement, environment);
-      case "FilterExpression":
-        return this.evaluateFilterExpression(statement, environment);
-      case "TestExpression":
-        return this.evaluateTestExpression(statement, environment);
-      default:
-        throw new SyntaxError(`Unknown node type: ${statement.type}`);
-    }
-  }
-};
-function convertToRuntimeValues(input) {
-  switch (typeof input) {
-    case "number":
-      return new NumericValue(input);
-    case "string":
-      return new StringValue(input);
-    case "boolean":
-      return new BooleanValue(input);
-    case "object":
-      if (input === null) {
-        return new NullValue();
-      } else if (Array.isArray(input)) {
-        return new ArrayValue(input.map(convertToRuntimeValues));
-      } else {
-        return new ObjectValue(
-          new Map(Object.entries(input).map(([key, value]) => [key, convertToRuntimeValues(value)]))
-        );
-      }
-    case "function":
-      return new FunctionValue((args, _scope) => {
-        const result = input(...args.map((x) => x.value)) ?? null;
-        return convertToRuntimeValues(result);
-      });
-    default:
-      throw new Error(`Cannot convert to runtime value: ${input}`);
-  }
-}
-var Template = class {
-  /**
-   * @param {string} template The template string
-   */
-  constructor(template) {
-    __publicField(this, "parsed");
-    const tokens = tokenize(template, {
-      lstrip_blocks: true,
-      trim_blocks: true
-    });
-    this.parsed = parse(tokens);
-  }
-  render(items) {
-    const env = new Environment();
-    env.set("false", false);
-    env.set("true", true);
-    env.set("raise_exception", (args) => {
-      throw new Error(args);
-    });
-    env.set("range", range);
-    for (const [key, value] of Object.entries(items)) {
-      env.set(key, value);
-    }
-    const interpreter = new Interpreter(env);
-    const result = interpreter.run(this.parsed);
-    return result.value;
-  }
-};
 export {
   GroupPlaybackControls as G,
-  Template as T,
-  isGenerator as a,
-  maxGeneratorDuration as b,
+  maxGeneratorDuration as a,
+  isBezierDefinition as b,
   calcGeneratorDuration as c,
-  isBezierDefinition as d,
-  invariant as e,
-  mapEasingToNativeEasing as f,
+  invariant as d,
+  mapEasingToNativeEasing as e,
+  memo as f,
   generateLinearEasing as g,
-  memo as h,
-  initSqlJs as i,
-  supportsLinearEasing as j,
-  attachTimeline as k,
-  isWaapiSupportedEasing as l,
+  supportsLinearEasing as h,
+  isGenerator as i,
+  attachTimeline as j,
+  isWaapiSupportedEasing as k,
+  getValueTransition as l,
   millisecondsToSeconds as m,
   noop as n,
-  getValueTransition as o,
+  isPrimaryPointer as o,
   progress as p,
-  isPrimaryPointer as q,
-  setDragLock as r,
+  setDragLock as q,
+  hover as r,
   secondsToMilliseconds as s,
-  hover as t,
-  press as u,
-  requireScheduler as v,
+  press as t,
+  requireScheduler as u,
+  v4 as v,
   index as w
 };

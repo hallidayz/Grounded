@@ -5,6 +5,448 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.14.0] - 2026-01-23
+
+### Added
+
+- implement mood selection and swipe functionality in AIResponseBubble component for enhanced user interaction and experience| (883485c)
+
+- update emotion log retrieval to fetch the first feeling log for improved user experience in AppContent and AIResponseBubble components| (87f4015)
+
+- implement loading of last emotion from database in AppContent and AIResponseBubble components for enhanced user experience| (30dfd23)
+
+- implement InstallationGate component to manage app installation status and enhance user experience| (8c6dc7d)
+
+### Changed
+
+- simplify AIResponseBubble component by removing unused state management and event handling for improved readability and performance| (1a77864)
+
+- enhance logging in getCurrentUser function to provide clearer debug information during user recovery scenarios| (2df7a98)
+
+- replace console logging with logger utility in AuthContext for improved logging consistency| (d469a8d)
+
+- streamline Dashboard and ReflectionForm components by removing unused emotion handling and related UI elements for improved clarity and functionality| (f2e2c11)
+
+- remove unused emotion handling logic and mood trend chart from Dashboard component for cleaner code| (ad477aa)
+
+- integrate logger utility in DataContext for improved logging consistency| (5af3bd1)
+
+- replace console logging with logger utility in various components and services for improved logging consistency| (16f18bf)
+
+- replace console logging with logger utility in useAppInitialization, authService, and dexieDB for improved logging consistency| (f91eb10)
+
+- replace console logging with logger utility in DatabaseInspector, authService, and dexieDB for improved logging consistency| (7f00dee)
+
+- replace console logging with logger utility in useAppInitialization and DatabaseService for improved logging consistency| (d47e5a7)
+
+- replace console logging with logger utility in DataContext, useAppInitialization, useDashboard, and dexieDB for improved logging consistency| (bb97265)
+
+- clean up whitespace and formatting in various service files for consistency| (75d49b1)
+
+### Other
+
+- update README.txt with new generation timestamp for package documentation| (084c17a)
+
+- release version 1.13.8 with enhancements to user experience, including mood selection, emotion log retrieval, and session memory loading; refactor components for improved performance and logging consistency| (570fe6b)
+
+- update package dependencies and enhance AI service with WebLLM integration for improved performance and logging| (2937ffd)
+
+- **vercel**: remove unnecessary workbox headers from vercel.json to streamline configuration| (efc6f56)
+
+- ✨ UPDATE: Refactor App Component and Enhance Techniques|- Removed temporary device selector state and related UI elements from the App component, streamlining the code for production readiness. (7141e9d)
+
+-  (- Intro)
+
+-  (- Enhan)
+
+-  (- Updat)
+
+-  (- Impro)
+
+-  (These c)
+
+- ✨ ADD: Temporary Device Selector State for Testing|- Introduced device selector state management in the App component for testing purposes. (4f412d8)
+
+-  (- Added)
+
+-  (- Marke)
+
+-  (These c)
+
+- ✨ UPDATE: Refactor Techniques and Enhance User Experience|- Introduced a new SessionEngine component to manage session states and transitions for various techniques. (e35fe55)
+
+-  (- Updat)
+
+-  (- Enhan)
+
+-  (- Added)
+
+-  (- Imple)
+
+-  (These c)
+
+- ✨ UPDATE: Enhance App Functionality and UI Improvements|- Added state management for saved chat sessions, selected date, and dates with sessions in App component. (4105cc4)
+
+-  (- Updat)
+
+-  (- Refin)
+
+-  (- Enhan)
+
+-  (- Adjus)
+
+-  (- Strea)
+
+-  (These c)
+
+- ✨ ADD: Energy Check-In Component and Copy Updates|- Introduced EnergyCheckIn component to assess user energy levels with tailored options. (e46052b)
+
+-  (- Added)
+
+-  (- Remov)
+
+-  (This up)
+
+- synce changes on device to github| (550d08a)
+
+- ✨ ADD: 10-second button with 3 circuit breaker variations|- Implement 3 reset options for the 10-second breathing exercise: (f48088c)
+
+-  (  - The)
+
+-  (  - The)
+
+-  (  - The)
+
+-  (- Add s)
+
+-  (- Each )
+
+-  (- Updat)
+
+-  (  - Rec)
+
+-  (  - All)
+
+-  (  - Inv)
+
+-  (  - Nur)
+
+-  (- Updat)
+
+-  (- Renam)
+
+-  (📝 Copy)
+
+-  (- Add t)
+
+-  (- Updat)
+
+-  (- Updat)
+
+-  (🔧 Type)
+
+-  (- Expan)
+
+-  (- Add h)
+
+- 🔧 UPDATE: Optimize Vite config for production|- Change host from '0.0.0.0' to 'true' for better compatibility (5a77401)
+
+-  (- Chang)
+
+-  (- Switc)
+
+-  (- Clean)
+
+- 🔧 FIX: Regenerate package-lock.json with uuid dependency| (0ae74ea)
+
+- ✨ ADD: Chat save/share with local encrypted database|- Implement Dexie.js IndexedDB for storing chat sessions locally (e19381e)
+
+-  (- Add s)
+
+-  (- Add s)
+
+-  (- Creat)
+
+-  (- Add N)
+
+-  (- Clear)
+
+-  (- Add H)
+
+-  (- Add H)
+
+-  (- Repla)
+
+-  (- Updat)
+
+-  (📦 Depe)
+
+- Implement comprehensive branding system with dark mode support|- Add centralized branding configuration (src/branding.ts) with theme-aware (e12a15c)
+
+-  (  color)
+
+-  (- Repla)
+
+-  (  light)
+
+-  (- Fix d)
+
+-  (  CSS v)
+
+-  (- Add t)
+
+-  (  for r)
+
+-  (- Updat)
+
+-  (- Repla)
+
+-  (- Remov)
+
+-  (- Updat)
+
+- 🔧 FIX: Value Duplication Issue|PROBLEM: (c2cc328)
+
+-  (- Value)
+
+-  (- Race )
+
+-  (- Dupli)
+
+-  (SOLUTIO)
+
+-  (1. Fixe)
+
+-  (   - Us)
+
+-  (   - Pr)
+
+-  (   - Up)
+
+-  (   - No)
+
+-  (2. Fixe)
+
+-  (   - Ex)
+
+-  (   - Re)
+
+-  (   - Fi)
+
+-  (3. Impr)
+
+-  (   - Us)
+
+-  (   - Fi)
+
+-  (IMPACT:)
+
+-  (✅ Value)
+
+-  (✅ Datab)
+
+-  (✅ Build)
+
+-  (✅ Clean)
+
+-  (TESTING)
+
+-  (- Build)
+
+-  (- No du)
+
+-  (- User )
+
+- 🔧 ADD: AI Fallback Response & Model Readiness Check|Added graceful fallback when AI model is not ready: (ff29f9c)
+
+-  (- Check)
+
+-  (- Retur)
+
+-  (- Preve)
+
+-  (- Inclu)
+
+-  (This en)
+
+-  (TECHNIC)
+
+-  (- speci)
+
+-  (- Fallb)
+
+-  (- Alway)
+
+-  (- App c)
+
+-  (User Im)
+
+-  (✅ No mo)
+
+-  (✅ Alway)
+
+-  (✅ Crisi)
+
+-  (✅ Smoot)
+
+- 🔧 CRITICAL FIX: WebLLM Import Constructor|ISSUE: Dynamic import failing - LLM is not a constructor (afeb743)
+
+-  (- WebLL)
+
+-  (- Need )
+
+-  (SOLUTIO)
+
+-  (- Updat)
+
+-  (- Added)
+
+-  (- Creat)
+
+-  (- Model)
+
+-  (IMPACT:)
+
+-  (- Fixes)
+
+-  (- Resto)
+
+-  (- Maint)
+
+-  (TEST:)
+
+-  (- Build)
+
+-  (- No mo)
+
+-  (- AI fe)
+
+- 🔧 CRITICAL FIXES: AI Loading, Timeout & Progress|FIX #1: Restored Immediate Background AI Loading (8515a3e)
+
+-  (- Chang)
+
+-  (- Model)
+
+-  (- Preve)
+
+-  (- Users)
+
+-  (FIX #2:)
+
+-  (- Chang)
+
+-  (- Preve)
+
+-  (- Gives)
+
+-  (FIX #3:)
+
+-  (- Chang)
+
+-  (- Added)
+
+-  (- Users)
+
+-  (FIX #4:)
+
+-  (- Separ)
+
+-  (- Kept )
+
+-  (- Reduc)
+
+-  (These f)
+
+-  (✅ No ru)
+
+-  (✅ Accur)
+
+-  (✅ No pr)
+
+-  (✅ AI mo)
+
+-  (✅ Clear)
+
+- 🔧 CRITICAL FIXES: Timeout, Messages, Simplification|ISSUE #1: Increased timeout from 5s to 10s (48da86c)
+
+-  (- Preve)
+
+-  (- Gives)
+
+-  (ISSUE #)
+
+-  (- Chang)
+
+-  (- Refle)
+
+-  (- Updat)
+
+-  (ISSUE #)
+
+-  (- Separ)
+
+-  (- Kept )
+
+-  (- Reduc)
+
+-  (These f)
+
+-  (- No pr)
+
+-  (- Accur)
+
+-  (- Clean)
+
+- 🚀 Critical Performance Optimizations - 83-87% Faster Startup|Phase 1: Initialization Optimization (956785d)
+
+-  (- Reduc)
+
+-  (- Elimi)
+
+-  (- Paral)
+
+-  (- Reduc)
+
+-  (Phase 2)
+
+-  (- Defer)
+
+-  (- Imple)
+
+-  (- Prese)
+
+-  (Phase 3)
+
+-  (- Added)
+
+-  (- Imple)
+
+-  (- Simpl)
+
+-  (- Added)
+
+-  (Phase 4)
+
+-  (- Conso)
+
+-  (- Added)
+
+-  (- Remov)
+
+-  (- Fixed)
+
+-  (Expecte)
+
+-  (- Time )
+
+-  (- First)
+
+-  (- Bundl)
+
+-  (- Memor)
+
+-  (- AI Lo)
+
 ## [1.13.8] - 2026-01-19
 
 ### Added

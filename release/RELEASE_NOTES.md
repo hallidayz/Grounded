@@ -1,6 +1,6 @@
-# Grounded PWA v1.13.8
+# Grounded PWA v1.14.0
 
-**Release Date**: 2026-01-19
+**Release Date**: 2026-01-23
 
 ## 🎉 What's New
 
@@ -18,7 +18,7 @@
 3. Follow platform-specific installation prompts
 
 ### Option 2: Download Package
-1. Download `Grounded-PWA-v1.13.8.zip` from this release
+1. Download `Grounded-PWA-v1.14.0.zip` from this release
 2. Extract the zip file
 3. Follow instructions in `INSTALLATION_GUIDE.md`
 
@@ -59,8 +59,8 @@ None at this time. If you encounter issues, please check the debug log in the ap
 ## 📞 Support
 
 - **Email**: ac.minds.ai@gmail.com
-- **Version**: 1.13.8
-- **Build Date**: 2026-01-19
+- **Version**: 1.14.0
+- **Build Date**: 2026-01-23
 
 ---
 

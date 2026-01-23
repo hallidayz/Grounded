@@ -1,5 +1,5 @@
-import { a as getDefaultExportFromCjs } from "./db-vendor-CqkAjsCZ.js";
-import { v as requireScheduler } from "./vendor-BKChQSPc.js";
+import { g as getDefaultExportFromCjs } from "./db-vendor-CVq4xLia.js";
+import { u as requireScheduler } from "./vendor-CBqSsvzT.js";
 var jsxRuntime = { exports: {} };
 var reactJsxRuntime_production = {};
 /**
@@ -49,8 +49,6 @@ function requireJsxRuntime() {
   return jsxRuntime.exports;
 }
 var jsxRuntimeExports = requireJsxRuntime();
-var client = { exports: {} };
-var reactDomClient_production = {};
 var react = { exports: {} };
 var react_production = {};
 /**
@@ -495,6 +493,10 @@ function requireReact() {
   }
   return react.exports;
 }
+var reactExports = requireReact();
+const React = /* @__PURE__ */ getDefaultExportFromCjs(reactExports);
+var client = { exports: {} };
+var reactDomClient_production = {};
 var reactDom = { exports: {} };
 var reactDom_production = {};
 /**
@@ -12221,8 +12223,6 @@ function requireClient() {
 }
 var clientExports = requireClient();
 const ReactDOM = /* @__PURE__ */ getDefaultExportFromCjs(clientExports);
-var reactExports = requireReact();
-const React = /* @__PURE__ */ getDefaultExportFromCjs(reactExports);
 export {
   React as R,
   ReactDOM as a,

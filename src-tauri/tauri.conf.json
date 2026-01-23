@@ -1,6 +1,6 @@
 {
   "productName": "Grounded",
-  "version": "1.13.8",
+  "version": "1.14.0",
   "identifier": "com.acminds.grounded",
   "build": {
     "beforeDevCommand": "npm run dev",
