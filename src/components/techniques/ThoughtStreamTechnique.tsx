@@ -173,23 +173,25 @@ const ThoughtStreamTechnique: React.FC<TechniqueComponentProps> = ({
 const styles: Record<string, React.CSSProperties> = {
   container: {
     width: '100%',
-    padding: '1rem',
+    maxWidth: '100%',
+    padding: '0.5rem',
     display: 'flex',
     flexDirection: 'column' as const,
     alignItems: 'center',
-    maxHeight: 'calc(100svh - 200px)', // Fit between header and footer
-    overflowY: 'auto' as const,
+    gap: '0.75rem',
+    boxSizing: 'border-box' as const,
+    overflowX: 'hidden' as const,
   },
   title: {
-    fontSize: '1.5rem',
+    fontSize: '1.25rem',
     fontWeight: 'bold',
-    marginBottom: '0.5rem',
+    margin: 0,
     color: 'var(--text-primary, #1a1a1a)',
   },
   instruction: {
     fontSize: '0.9rem',
     color: 'var(--text-secondary, #666)',
-    marginBottom: '1rem',
+    margin: 0,
     textAlign: 'center' as const,
   },
   inputContainer: {

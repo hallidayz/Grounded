@@ -101,7 +101,7 @@ const LowEnergyTechniques: React.FC<LowEnergyTechniquesProps> = ({
 const styles: Record<string, React.CSSProperties> = {
   container: {
     width: '100%',
-    padding: '1rem',
+    padding: '0.5rem',
   },
   subtext: {
     fontSize: '0.9rem',

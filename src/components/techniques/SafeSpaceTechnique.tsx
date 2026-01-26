@@ -42,10 +42,10 @@ const SafeSpaceTechnique: React.FC<TechniqueComponentProps> = ({
   };
 
   const timerStyle: React.CSSProperties = {
-    fontSize: '2rem',
+    fontSize: '1.5rem',
     fontWeight: 'bold',
     color: 'var(--primary, #2c5282)', // Use CSS variable that adapts to dark mode
-    marginBottom: '2rem',
+    margin: 0,
   };
 
   return (
@@ -156,24 +156,22 @@ const SafeSpaceTechnique: React.FC<TechniqueComponentProps> = ({
 const styles: Record<string, React.CSSProperties> = {
   container: {
     width: '100%',
-    padding: '1rem',
+    padding: '0.5rem',
     display: 'flex',
     flexDirection: 'column' as const,
     alignItems: 'center',
-    minHeight: '300px',
-    maxHeight: 'calc(100svh - 200px)', // Fit between header and footer
-    overflowY: 'auto' as const,
+    gap: '0.75rem',
   },
   stageName: {
-    fontSize: '1.5rem',
+    fontSize: '1.25rem',
     fontWeight: 'bold',
-    marginBottom: '0.5rem',
+    margin: 0,
     color: 'var(--text-primary, #1a1a1a)',
   },
   instruction: {
-    fontSize: '1rem',
+    fontSize: '0.9rem',
     color: 'var(--text-secondary, #666)',
-    marginBottom: '1.5rem',
+    margin: 0,
     textAlign: 'center' as const,
   },
   stageContent: {
@@ -181,7 +179,7 @@ const styles: Record<string, React.CSSProperties> = {
     maxWidth: '500px',
     display: 'flex',
     flexDirection: 'column' as const,
-    gap: '1rem',
+    gap: '0.75rem',
   },
   prompt: {
     fontSize: '1.1rem',
@@ -191,12 +189,14 @@ const styles: Record<string, React.CSSProperties> = {
   },
   textarea: {
     width: '100%',
-    minHeight: '120px',
+    minHeight: '100px',
+    maxHeight: '200px',
     padding: '0.75rem',
     border: '2px solid var(--border-color, #e0e0e0)',
     borderRadius: '0.5rem',
     fontSize: '1rem',
     fontFamily: 'inherit',
+    resize: 'vertical' as const,
   },
   landscapePreview: {
     display: 'flex',
@@ -246,16 +246,16 @@ const styles: Record<string, React.CSSProperties> = {
     display: 'flex',
     alignItems: 'center',
     justifyContent: 'center',
-    width: '150px',
-    height: '150px',
-    margin: '2rem auto',
+    width: '120px',
+    height: '120px',
+    margin: '1rem auto',
   },
   heartIcon: {
     fontSize: '5rem',
     filter: 'drop-shadow(0 0 20px rgba(236, 72, 153, 0.5))',
   },
   nextButton: {
-    marginTop: '2rem',
+    marginTop: '1rem',
     padding: '0.75rem 2rem',
     border: 'none',
     borderRadius: '0.5rem',

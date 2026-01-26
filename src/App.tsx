@@ -523,7 +523,10 @@ export default function App() {
       <header style={styles.appHeader}>
         <div style={styles.headerLeft}>
           <img src="/ac-minds-logo.png" alt="AC Minds" style={styles.headerLogo} />
-          <h1 style={styles.headerTitle}>Grounded</h1>
+          <div style={styles.headerTitleContainer}>
+            <h1 style={styles.headerTitle}>Grounded</h1>
+            <p style={styles.headerTagline}>Small moments, big difference</p>
+          </div>
         </div>
         <div style={styles.headerRight}>
           <button 
@@ -821,7 +824,6 @@ export default function App() {
       <div style={styles.welcomeLogoSection}>
         <img src="/ac-minds-logo.png" alt="AC Minds" style={styles.logoImage} />
         <h1 style={styles.welcomeTitle}>Grounded</h1>
-        <p style={styles.welcomeSubtitle}>Small moments, big difference</p>
       </div>
       
       <EnergyCheckIn
@@ -957,6 +959,18 @@ const styles: Record<string, React.CSSProperties> = {
     zIndex: 1000,
     boxShadow: '0 2px 4px rgba(0,0,0,0.05)',
   },
+  headerTitleContainer: {
+    display: 'flex',
+    flexDirection: 'column' as const,
+    gap: '0.1rem',
+  },
+  headerTagline: {
+    fontSize: '0.7rem',
+    color: 'var(--text-secondary, #666)',
+    margin: 0,
+    fontStyle: 'italic',
+    lineHeight: '1.2',
+  },
   headerLeft: {
     display: 'flex',
     alignItems: 'center',
@@ -1057,14 +1071,17 @@ const styles: Record<string, React.CSSProperties> = {
     transition: 'opacity 0.2s ease, transform 0.2s ease',
   },
   app: {
-    minHeight: '100vh',
+    minHeight: '100svh',
     width: '100%',
+    maxWidth: '100vw',
     backgroundColor: 'var(--bg-primary, #fafaf9)',
     color: 'var(--text-primary, #1b3448)',
     fontFamily: '-apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif',
     position: 'relative',
     paddingTop: '60px',
     paddingBottom: '160px', // Space for bottom nav (80px) + footer input (80px)
+    overflowX: 'hidden',
+    boxSizing: 'border-box' as const,
   },
   container: {
     flex: 1,

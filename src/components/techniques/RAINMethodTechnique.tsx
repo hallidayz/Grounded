@@ -204,36 +204,36 @@ const getBodyPartPosition = (part: string): React.CSSProperties => {
 const styles: Record<string, React.CSSProperties> = {
   container: {
     width: '100%',
-    padding: '1rem',
+    padding: '0.5rem',
     display: 'flex',
     flexDirection: 'column' as const,
     alignItems: 'center',
-    minHeight: '300px',
-    maxHeight: 'calc(100svh - 200px)', // Fit between header and footer
-    overflowY: 'auto' as const,
+    gap: '0.75rem',
   },
   stageName: {
-    fontSize: '1.5rem',
+    fontSize: '1.25rem',
     fontWeight: 'bold',
-    marginBottom: '0.5rem',
+    margin: 0,
     color: 'var(--text-primary, #1a1a1a)',
   },
   instruction: {
-    fontSize: '1rem',
+    fontSize: '0.9rem',
     color: 'var(--text-secondary, #666)',
-    marginBottom: '1rem',
+    margin: 0,
     textAlign: 'center' as const,
   },
   timer: {
-    fontSize: '2rem',
+    fontSize: '1.5rem',
     fontWeight: 'bold',
     color: 'var(--primary, #2c5282)', // Use CSS variable that adapts to dark mode
-    marginBottom: '2rem',
+    margin: 0,
   },
   bubblesContainer: {
     position: 'relative' as const,
     width: '100%',
-    height: '300px',
+    minHeight: '250px',
+    maxHeight: '350px',
+    flex: 1,
   },
   bubble: {
     position: 'absolute' as const,
@@ -252,11 +252,13 @@ const styles: Record<string, React.CSSProperties> = {
   },
   allowContainer: {
     width: '100%',
-    height: '300px',
+    minHeight: '200px',
+    maxHeight: '300px',
     position: 'relative' as const,
     display: 'flex',
     alignItems: 'center',
     justifyContent: 'center',
+    flex: 1,
   },
   dimmedScreen: {
     position: 'absolute' as const,
@@ -276,8 +278,10 @@ const styles: Record<string, React.CSSProperties> = {
   },
   bodyContainer: {
     width: '100%',
-    height: '400px',
+    minHeight: '250px',
+    maxHeight: '350px',
     position: 'relative' as const,
+    flex: 1,
   },
   bodySilhouette: {
     width: '200px',
@@ -302,11 +306,13 @@ const styles: Record<string, React.CSSProperties> = {
   },
   nurtureContainer: {
     width: '100%',
-    height: '300px',
+    minHeight: '200px',
+    maxHeight: '300px',
     display: 'flex',
     alignItems: 'center',
     justifyContent: 'center',
     borderRadius: '1rem',
+    flex: 1,
   },
   nurtureText: {
     fontSize: '1.25rem',

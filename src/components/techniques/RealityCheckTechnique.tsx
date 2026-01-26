@@ -131,21 +131,24 @@ const RealityCheckTechnique: React.FC<TechniqueComponentProps> = ({
 const styles: Record<string, React.CSSProperties> = {
   container: {
     width: '100%',
-    padding: '1rem',
+    maxWidth: '100%',
+    padding: '0.5rem',
     display: 'flex',
     flexDirection: 'column' as const,
-    gap: '1rem',
-    maxHeight: 'calc(100svh - 200px)', // Fit between header and footer
-    overflowY: 'auto' as const,
+    gap: '0.75rem',
+    boxSizing: 'border-box' as const,
+    overflowX: 'hidden' as const,
   },
   title: {
-    fontSize: '1.5rem',
+    fontSize: '1.25rem',
     fontWeight: 'bold',
     textAlign: 'center' as const,
     color: 'var(--text-primary, #1a1a1a)',
+    margin: 0,
   },
   questionSection: {
     width: '100%',
+    boxSizing: 'border-box' as const,
   },
   label: {
     display: 'block',
@@ -157,22 +160,30 @@ const styles: Record<string, React.CSSProperties> = {
   textarea: {
     width: '100%',
     minHeight: '80px',
+    maxWidth: '100%',
     padding: '0.75rem',
     border: '2px solid var(--border-color, #e0e0e0)',
     borderRadius: '0.5rem',
     fontSize: '1rem',
     fontFamily: 'inherit',
+    boxSizing: 'border-box' as const,
+    resize: 'vertical' as const,
   },
   scaleContainer: {
     display: 'flex',
     justifyContent: 'center',
-    padding: '1rem 0',
+    padding: '0.5rem 0',
+    width: '100%',
+    boxSizing: 'border-box' as const,
+    overflowX: 'hidden' as const,
   },
   scale: {
     display: 'flex',
     alignItems: 'center',
-    gap: '2rem',
+    gap: '1rem',
     transformOrigin: 'center',
+    flexWrap: 'wrap' as const,
+    justifyContent: 'center',
   },
   scaleLeft: {
     display: 'flex',
@@ -185,7 +196,8 @@ const styles: Record<string, React.CSSProperties> = {
     alignItems: 'center',
   },
   scaleCenter: {
-    fontSize: '2.5rem',
+    fontSize: '2rem',
+    flexShrink: 0,
   },
   scaleLabel: {
     fontSize: '0.9rem',
@@ -199,11 +211,14 @@ const styles: Record<string, React.CSSProperties> = {
   },
   evidenceSection: {
     width: '100%',
+    boxSizing: 'border-box' as const,
   },
   evidenceTypeSelector: {
     display: 'flex',
     gap: '0.5rem',
-    marginBottom: '1rem',
+    marginBottom: '0.75rem',
+    width: '100%',
+    boxSizing: 'border-box' as const,
   },
   typeButton: {
     flex: 1,
@@ -217,6 +232,8 @@ const styles: Record<string, React.CSSProperties> = {
     fontSize: '0.9rem',
     fontWeight: '500',
     transition: 'all 0.2s ease',
+    minWidth: 0,
+    boxSizing: 'border-box' as const,
   },
   typeButtonActive: {
     borderWidth: '2px',
@@ -228,7 +245,9 @@ const styles: Record<string, React.CSSProperties> = {
   evidenceInput: {
     display: 'flex',
     gap: '0.5rem',
-    marginBottom: '1rem',
+    marginBottom: '0.75rem',
+    width: '100%',
+    boxSizing: 'border-box' as const,
   },
   input: {
     flex: 1,
@@ -236,6 +255,8 @@ const styles: Record<string, React.CSSProperties> = {
     border: '2px solid var(--border-color, #e0e0e0)',
     borderRadius: '0.5rem',
     fontSize: '1rem',
+    minWidth: 0,
+    boxSizing: 'border-box' as const,
   },
   addButton: {
     padding: '0.75rem 1.5rem',
@@ -250,13 +271,18 @@ const styles: Record<string, React.CSSProperties> = {
   evidenceLists: {
     display: 'grid',
     gridTemplateColumns: 'repeat(2, 1fr)',
-    gap: '1rem',
+    gap: '0.75rem',
+    width: '100%',
+    boxSizing: 'border-box' as const,
   },
   evidenceList: {
-    padding: '1rem',
+    padding: '0.75rem',
     border: '2px solid var(--border-color, #e0e0e0)',
     borderRadius: '0.5rem',
     backgroundColor: 'var(--bg-card, #ffffff)',
+    minWidth: 0,
+    overflow: 'hidden',
+    boxSizing: 'border-box' as const,
   },
   evidenceListTitle: {
     fontSize: '1rem',
