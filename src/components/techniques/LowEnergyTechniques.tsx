@@ -112,39 +112,40 @@ const styles: Record<string, React.CSSProperties> = {
   optionsGrid: {
     display: 'grid',
     gridTemplateColumns: 'repeat(2, 1fr)',
-    gap: '0.5rem', // Tighter gap to match app style
+    gap: '1rem',
   },
   optionButton: {
     display: 'flex',
     flexDirection: 'column' as const,
-    padding: '8px 12px', // Compact padding to match app style
-    border: '1px solid var(--border, rgba(0,0,0,0.1))',
-    borderRadius: '12px', // Match app button border radius
+    padding: '1rem',
+    border: '2px solid var(--border-color, #e0e0e0)',
+    borderRadius: '0.5rem',
     backgroundColor: 'var(--bg-card, #ffffff)',
     cursor: 'pointer',
     transition: 'all 0.2s ease',
     textAlign: 'center' as const,
     alignItems: 'center' as const,
-    minHeight: 'auto', // Remove fixed height
+    minHeight: '120px',
   },
   optionHeader: {
     display: 'flex',
     flexDirection: 'column' as const,
     alignItems: 'center' as const,
-    gap: '0.2rem',
+    gap: '0.5rem',
+    marginBottom: '0.5rem',
   },
   optionIcon: {
-    fontSize: '1.5rem', // Smaller icon
-    marginBottom: '0.2rem',
+    fontSize: '2rem',
+    marginBottom: '0.25rem',
   },
   optionName: {
-    fontSize: '0.8rem', // Smaller font to match app style
+    fontSize: '1rem',
     fontWeight: '600',
-    margin: 0,
+    margin: '0 0 0.25rem 0',
     color: 'var(--text-primary, #1a1a1a)',
   },
   optionType: {
-    fontSize: '0.65rem', // Smaller font
+    fontSize: '0.75rem',
     color: 'var(--text-secondary, #666)',
     fontStyle: 'italic',
   },

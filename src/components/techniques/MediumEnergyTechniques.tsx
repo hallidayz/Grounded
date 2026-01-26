@@ -112,7 +112,9 @@ const styles: Record<string, React.CSSProperties> = {
     backgroundColor: 'var(--bg-card, #ffffff)',
     cursor: 'pointer',
     transition: 'all 0.2s ease',
-    textAlign: 'left' as const,
+    textAlign: 'center' as const,
+    alignItems: 'center' as const,
+    minHeight: '120px',
   },
   optionHeader: {
     marginBottom: '0.5rem',
@@ -141,6 +143,7 @@ const styles: Record<string, React.CSSProperties> = {
     fontSize: '0.85rem',
     color: 'var(--text-secondary, #666)',
     margin: 0,
+    textAlign: 'center' as const,
   },
 };
 
