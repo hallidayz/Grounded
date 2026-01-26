@@ -56,6 +56,8 @@ const LowEnergyTechniques: React.FC<LowEnergyTechniquesProps> = ({
         energyLevel="low"
         duration={10}
         onComplete={onComplete}
+        bestFor={technique?.bestFor}
+        description={technique?.description}
       >
         {selectedTechnique === 'grounding-flash' && (
           <GroundingFlashTechnique bestFor={technique?.bestFor} />
@@ -88,7 +90,6 @@ const LowEnergyTechniques: React.FC<LowEnergyTechniquesProps> = ({
             <div style={styles.optionHeader}>
               <span style={styles.optionIcon}>{technique.icon}</span>
               <h4 style={styles.optionName}>{technique.name}</h4>
-              <span style={styles.optionType}>{technique.description}</span>
             </div>
           </button>
         ))}

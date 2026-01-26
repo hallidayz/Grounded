@@ -14,6 +14,8 @@ interface TechniqueWrapperProps {
   techniqueId: string;
   techniqueName: string;
   energyLevel: 'low' | 'medium' | 'high';
+  bestFor?: string;
+  description?: string;
 }
 
 const TechniqueWrapper: React.FC<TechniqueWrapperProps> = ({
@@ -24,6 +26,8 @@ const TechniqueWrapper: React.FC<TechniqueWrapperProps> = ({
   techniqueId,
   techniqueName,
   energyLevel,
+  bestFor,
+  description,
 }) => {
   const [isRunning, setIsRunning] = useState(false);
   const [isCompleted, setIsCompleted] = useState(false);
@@ -87,6 +91,16 @@ const TechniqueWrapper: React.FC<TechniqueWrapperProps> = ({
 
   return (
     <div style={styles.container}>
+      {(bestFor || description) && (
+        <div style={styles.subtleNote}>
+          {bestFor && (
+            <p style={styles.bestForText}>{bestFor}</p>
+          )}
+          {description && (
+            <p style={styles.descriptionText}>{description}</p>
+          )}
+        </div>
+      )}
       <div style={styles.content} key={restartKey}>
         {children}
       </div>
@@ -116,6 +130,30 @@ const styles: Record<string, React.CSSProperties> = {
     display: 'flex',
     flexDirection: 'column' as const,
     minHeight: '400px',
+  },
+  subtleNote: {
+    padding: '0.75rem 1rem',
+    marginBottom: '1rem',
+    textAlign: 'center' as const,
+    maxWidth: '600px',
+    margin: '0 auto 1rem auto',
+  },
+  bestForText: {
+    fontSize: '0.85rem',
+    color: 'var(--text-secondary, #666)',
+    fontStyle: 'italic',
+    margin: '0 0 0.35rem 0',
+    lineHeight: '1.5',
+    opacity: 0.85,
+    fontWeight: '400',
+  },
+  descriptionText: {
+    fontSize: '0.8rem',
+    color: 'var(--text-secondary, #777)',
+    margin: 0,
+    lineHeight: '1.4',
+    opacity: 0.75,
+    fontStyle: 'normal',
   },
   content: {
     flex: 1,

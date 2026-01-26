@@ -47,6 +47,8 @@ const HighEnergyTechniques: React.FC<HighEnergyTechniquesProps> = ({
         energyLevel="high"
         duration={300}
         onComplete={onComplete}
+        bestFor={TECHNIQUES.find(t => t.id === selectedTechnique)?.bestFor}
+        description={TECHNIQUES.find(t => t.id === selectedTechnique)?.description}
       >
         {selectedTechnique === 'rain-method' && (
           <RAINMethodTechnique />
@@ -76,9 +78,7 @@ const HighEnergyTechniques: React.FC<HighEnergyTechniquesProps> = ({
             <div style={styles.optionHeader}>
               <img src={technique.image} alt={technique.name} style={styles.optionImage} />
               <h4 style={styles.optionName}>{technique.name}</h4>
-              <span style={styles.optionType}>{technique.description}</span>
             </div>
-            <p style={styles.optionBestFor}>Best For: {technique.bestFor}</p>
           </button>
         ))}
       </div>
@@ -134,18 +134,6 @@ const styles: Record<string, React.CSSProperties> = {
     margin: '0 0 0.15rem 0',
     color: 'var(--text-primary, #1a1a1a)',
     lineHeight: '1.2',
-  },
-  optionType: {
-    fontSize: '0.7rem',
-    color: 'var(--text-secondary, #666)',
-    fontStyle: 'italic',
-  },
-  optionBestFor: {
-    fontSize: '0.7rem',
-    color: 'var(--text-secondary, #666)',
-    margin: 0,
-    textAlign: 'center' as const,
-    lineHeight: '1.3',
   },
 };
 
