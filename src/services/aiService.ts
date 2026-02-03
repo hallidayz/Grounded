@@ -409,3 +409,159 @@ export function getAILoadStatus(): { loaded: boolean; loading: boolean } {
     loading: isLoading,
   };
 }
+
+export interface RealityCheckAISuggestion {
+  questions: string[];
+  exampleEvidenceFor: string[];
+  exampleEvidenceAgainst: string[];
+}
+
+export interface RealityCheckVerdict {
+  balancedThoughts: string[];
+  encouragement: string;
+}
+
+/**
+ * Get AI suggestions for Reality Check technique
+ * Provides reflective questions and example evidence (labeled as examples)
+ */
+export async function getRealityCheckSuggestions(
+  thought: string,
+  evidenceFor: string[],
+  evidenceAgainst: string[]
+): Promise<RealityCheckAISuggestion> {
+  try {
+    const chatEngine = await getEngine();
+    
+    const systemPrompt = `You are a gentle CBT co-counsel helping someone examine a thought.
+
+The user has the thought: "${thought}"
+They have provided this evidence FOR the thought: ${evidenceFor.length > 0 ? evidenceFor.join(', ') : 'None yet'}
+They have provided this evidence AGAINST the thought: ${evidenceAgainst.length > 0 ? evidenceAgainst.join(', ') : 'None yet'}
+
+Your job is to:
+1. Suggest 2-3 questions that might help the user notice additional real-world evidence, without giving them the answers.
+2. Propose 1-2 possible examples of evidence FOR and 1-2 possible examples of evidence AGAINST that a typical person might consider, clearly labeled as 'examples, not facts about you'.
+
+Keep the tone validating, brief, and beginner-friendly. Avoid telling the user what to believe; focus on curiosity.
+
+Format your response as JSON:
+{
+  "questions": ["question 1", "question 2", "question 3"],
+  "exampleEvidenceFor": ["example 1", "example 2"],
+  "exampleEvidenceAgainst": ["example 1", "example 2"]
+}`;
+
+    const contextMessages = [
+      { role: 'system' as const, content: systemPrompt },
+      { role: 'user' as const, content: `Generate suggestions for examining the thought: "${thought}"` },
+    ];
+    
+    const response = await chatEngine.chat.completions.create({
+      messages: contextMessages,
+      max_tokens: 200,
+      temperature: 0.7,
+    });
+    
+    const aiMessage = response.choices[0]?.message?.content || '';
+    
+    // Try to parse JSON response
+    try {
+      const parsed = JSON.parse(aiMessage);
+      return {
+        questions: parsed.questions || [],
+        exampleEvidenceFor: parsed.exampleEvidenceFor || [],
+        exampleEvidenceAgainst: parsed.exampleEvidenceAgainst || [],
+      };
+    } catch {
+      // Fallback: extract from text
+      return {
+        questions: [
+          'What happened in the last week that supports this thought?',
+          'What happened that doesn\'t fit this story?',
+        ],
+        exampleEvidenceFor: ['Example: A recent setback'],
+        exampleEvidenceAgainst: ['Example: A time things went differently'],
+      };
+    }
+  } catch (error) {
+    console.error('Reality Check AI suggestions failed:', error);
+    // Return helpful fallback
+    return {
+      questions: [
+        'What happened in the last week that supports this thought?',
+        'What happened that doesn\'t fit this story at all?',
+        'What would someone who cares about you notice?',
+      ],
+      exampleEvidenceFor: ['Example: A recent challenge'],
+      exampleEvidenceAgainst: ['Example: A time things worked out'],
+    };
+  }
+}
+
+/**
+ * Get AI-generated balanced thoughts for the verdict step
+ */
+export async function getRealityCheckVerdict(
+  thought: string,
+  evidenceFor: string[],
+  evidenceAgainst: string[]
+): Promise<RealityCheckVerdict> {
+  try {
+    const chatEngine = await getEngine();
+    
+    const systemPrompt = `You are a gentle CBT co-counsel helping someone find a balanced perspective.
+
+The user's original thought: "${thought}"
+Evidence FOR: ${evidenceFor.join(', ') || 'None'}
+Evidence AGAINST: ${evidenceAgainst.join(', ') || 'None'}
+
+Your job is to:
+1. Propose 1-2 candidate balanced thoughts that acknowledge both sides, clearly labeled as "example wordings you can edit."
+2. Provide a gentle, non-competitive encouragement message.
+
+Keep it validating, brief, and beginner-friendly. The balanced thoughts should feel more accurate than the original, not dismissive.
+
+Format your response as JSON:
+{
+  "balancedThoughts": ["balanced thought 1", "balanced thought 2"],
+  "encouragement": "encouraging message"
+}`;
+
+    const contextMessages = [
+      { role: 'system' as const, content: systemPrompt },
+      { role: 'user' as const, content: `Generate a balanced perspective for: "${thought}"` },
+    ];
+    
+    const response = await chatEngine.chat.completions.create({
+      messages: contextMessages,
+      max_tokens: 150,
+      temperature: 0.7,
+    });
+    
+    const aiMessage = response.choices[0]?.message?.content || '';
+    
+    try {
+      const parsed = JSON.parse(aiMessage);
+      return {
+        balancedThoughts: parsed.balancedThoughts || [],
+        encouragement: parsed.encouragement || 'You just practiced examining a thought instead of automatically believing it. That\'s a big skill.',
+      };
+    } catch {
+      return {
+        balancedThoughts: [
+          `Example: While ${thought.toLowerCase()}, there's also evidence that suggests a more balanced view.`,
+        ],
+        encouragement: 'You just practiced examining a thought instead of automatically believing it. That\'s a big skill.',
+      };
+    }
+  } catch (error) {
+    console.error('Reality Check verdict failed:', error);
+    return {
+      balancedThoughts: [
+        `Example: While ${thought.toLowerCase()}, there's also evidence that suggests a more balanced view.`,
+      ],
+      encouragement: 'You just practiced examining a thought instead of automatically believing it. That\'s a big skill.',
+    };
+  }
+}

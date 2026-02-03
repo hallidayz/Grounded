@@ -11,6 +11,12 @@ import {
   TERMS_VERSION
 } from './services/settings';
 import { chatDB, type ChatSession } from './services/chatDB';
+import {
+  getSelections,
+  toggleSelection,
+  initAiSync,
+} from './services/valuesService';
+import { VALUES_CATALOG, VALUES_CATEGORY_ORDER } from './data/valuesCatalog';
 import type { EnergyLevel, ConversationState, AppView } from './types';
 import EnergyCheckIn from './components/EnergyCheckIn';
 import SessionEngine from './components/SessionEngine';
@@ -66,6 +72,11 @@ export default function App() {
   // ============================================
   // ============================================
   const [hoveredNav, setHoveredNav] = useState<string | null>(null);
+  const [valuesVersion, setValuesVersion] = useState(0);
+
+  useEffect(() => {
+    initAiSync();
+  }, []);
 
   useEffect(() => {
     const checkWebGPU = async () => {
@@ -745,6 +756,10 @@ export default function App() {
         <span style={styles.settingsIcon}>📋</span>
         <span style={styles.settingsText}>Terms & Privacy</span>
       </button>
+      <button style={styles.settingsItem} onClick={() => setView('values')}>
+        <span style={styles.settingsIcon}>💎</span>
+        <span style={styles.settingsText}>Your Values</span>
+      </button>
       <div style={styles.settingsInfo}>
         <p style={styles.settingsVersion}>Version {TERMS_VERSION}</p>
         <p style={styles.settingsInfoText}>All data stored locally</p>
@@ -756,35 +771,69 @@ export default function App() {
     </div>
   );
 
-  const renderValues = () => (
-    <div style={styles.container}>
-      <div style={styles.settingsHeader}>
-        <button style={styles.backButton} onClick={() => setView('welcome')}>
-          ← Back
-        </button>
-        <h2 style={styles.title}>Your Values</h2>
-      </div>
-      <p style={styles.valuesIntro}>What matters most to you?</p>
-      <div style={styles.valuesGrid}>
-        {[
-          { icon: '❤️', label: 'Compassion', desc: 'For yourself & others' },
-          { icon: '🌱', label: 'Growth', desc: 'Learning & improving' },
-          { icon: '🤝', label: 'Connection', desc: 'Relationships' },
-          { icon: '🎯', label: 'Presence', desc: 'Being here now' },
-          { icon: '🛡️', label: 'Safety', desc: 'Feeling secure' },
-          { icon: '✨', label: 'Authenticity', desc: 'Being true to yourself' },
-          { icon: '🌊', label: 'Flow', desc: 'Natural rhythm' },
-          { icon: '🧘', label: 'Peace', desc: 'Inner calm' },
-        ].map(value => (
-          <button key={value.label} style={styles.valueCard}>
-            <span style={styles.valueIcon}>{value.icon}</span>
-            <span style={styles.valueLabel}>{value.label}</span>
-            <span style={styles.valueDesc}>{value.desc}</span>
+  const renderValues = () => {
+    const { selections } = getSelections();
+    const selectedSet = new Set(selections.map((s) => s.value));
+
+    const handleToggle = (category: string, value: string) => {
+      toggleSelection(category, value);
+      setValuesVersion((v) => v + 1);
+    };
+
+    return (
+      <div style={styles.container}>
+        <div style={styles.settingsHeader}>
+          <button style={styles.backButton} onClick={() => setView('welcome')}>
+            ← Back
           </button>
-        ))}
+          <h2 style={styles.title}>Your Values</h2>
+        </div>
+        <p style={styles.valuesIntro}>What matters most to you? Tap to select or deselect.</p>
+        {selections.length > 0 && (
+          <div style={styles.valuesSummary}>
+            <h3 style={styles.valuesSummaryTitle}>Your selections ({selections.length})</h3>
+            <p style={styles.valuesSummaryList}>
+              {selections.map((s) => s.value).join(', ')}
+            </p>
+          </div>
+        )}
+        <div style={styles.valuesByCategory}>
+          {VALUES_CATEGORY_ORDER.map((category) => {
+            const values = VALUES_CATALOG[category];
+            if (!values || typeof values !== 'object') return null;
+            return (
+              <div key={category} style={styles.valuesCategoryBlock}>
+                <h3 style={styles.valuesCategoryTitle}>{category}</h3>
+                <div style={styles.valuesCardList}>
+                  {Object.entries(values).map(([valueName, description]) => {
+                    const isSelected = selectedSet.has(valueName);
+                    return (
+                      <button
+                        key={valueName}
+                        type="button"
+                        style={{
+                          ...styles.valueCardWithDesc,
+                          ...(isSelected ? styles.valueCardSelected : {}),
+                        }}
+                        onClick={() => handleToggle(category, valueName)}
+                        aria-pressed={isSelected}
+                        aria-label={`${valueName}: ${isSelected ? 'selected' : 'not selected'}`}
+                      >
+                        <span style={styles.valueCardName}>
+                          {isSelected ? '✓ ' : ''}{valueName}
+                        </span>
+                        <span style={styles.valueCardDesc}>{description}</span>
+                      </button>
+                    );
+                  })}
+                </div>
+              </div>
+            );
+          })}
+        </div>
       </div>
-    </div>
-  );
+    );
+  };
 
   const renderCrisisResources = () => (
     <div style={styles.container}>
@@ -1353,6 +1402,77 @@ const styles: Record<string, React.CSSProperties> = {
     opacity: 0.6,
     textAlign: 'center',
     display: 'block',
+  },
+  valuesSummary: {
+    padding: '12px 16px',
+    backgroundColor: 'var(--bg-secondary, rgba(0,0,0,0.05))',
+    borderRadius: '12px',
+    marginBottom: '20px',
+  },
+  valuesSummaryTitle: {
+    fontSize: '14px',
+    fontWeight: '600',
+    marginBottom: '6px',
+    display: 'block',
+    color: 'var(--text-primary, #1b3448)',
+  },
+  valuesSummaryList: {
+    fontSize: '13px',
+    opacity: 0.85,
+    margin: 0,
+    lineHeight: 1.4,
+    color: 'var(--text-primary, #1b3448)',
+  },
+  valuesByCategory: {
+    display: 'flex',
+    flexDirection: 'column',
+    gap: '20px',
+  },
+  valuesCategoryBlock: {
+    marginBottom: '8px',
+  },
+  valuesCategoryTitle: {
+    fontSize: '16px',
+    fontWeight: '600',
+    marginBottom: '12px',
+    display: 'block',
+    color: 'var(--text-primary, #1b3448)',
+  },
+  valuesCardList: {
+    display: 'flex',
+    flexDirection: 'column',
+    gap: '8px',
+  },
+  valueCardWithDesc: {
+    display: 'flex',
+    flexDirection: 'column',
+    alignItems: 'flex-start',
+    padding: '14px 16px',
+    backgroundColor: 'var(--bg-card, #ffffff)',
+    borderRadius: '12px',
+    boxShadow: '0 1px 3px rgba(0,0,0,0.08)',
+    cursor: 'pointer',
+    border: '2px solid transparent',
+    textAlign: 'left',
+    transition: 'border-color 0.2s ease, background-color 0.2s ease',
+  },
+  valueCardSelected: {
+    borderColor: 'var(--primary-color, #02295b)',
+    backgroundColor: 'rgba(2, 41, 91, 0.06)',
+  },
+  valueCardName: {
+    fontSize: '15px',
+    fontWeight: '600',
+    marginBottom: '4px',
+    display: 'block',
+    color: 'var(--text-primary, #1b3448)',
+  },
+  valueCardDesc: {
+    fontSize: '12px',
+    opacity: 0.75,
+    lineHeight: 1.4,
+    display: 'block',
+    color: 'var(--text-secondary, #4a5568)',
   },
   crisisUrgent: {
     padding: '16px',

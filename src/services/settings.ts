@@ -165,6 +165,7 @@ export function clearAllData(): void {
   localStorage.removeItem('acminds_crisis_contacts');
   localStorage.removeItem('theme');
   localStorage.removeItem('user_stats');
+  localStorage.removeItem('grounded_value_selections');
 }
 
 /**
