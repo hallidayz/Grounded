@@ -1,3 +1,8 @@
+/**
+ * Animations Utility Testing Suite
+ * Tests scaleBalanceAnimation and other animation utilities
+ */
+
 import { scaleBalanceAnimation } from '../src/utils/animations';
 
 describe('scaleBalanceAnimation', () => {
