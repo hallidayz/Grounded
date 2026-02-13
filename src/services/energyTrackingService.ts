@@ -63,7 +63,7 @@ async function saveInteraction(data: {
 /**
  * Internal helper to log an event
  */
-async function logEvent(action: string, metadata: Record<string, any>): Promise<void> {
+async function logEvent(action: string, metadata: any): Promise<void> {
   try {
     const userId = await getUserId();
     const sessionId = getSessionId();
