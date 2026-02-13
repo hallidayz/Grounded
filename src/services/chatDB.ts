@@ -69,12 +69,10 @@ export const chatDB = {
   },
 
   async updateSession(sessionId: string, messages: ChatMessage[]): Promise<void> {
-    const session = await db.sessions.get(sessionId);
-    if (session) {
-      session.messages = messages;
-      session.updatedAt = Date.now();
-      await db.sessions.put(session);
-    }
+    await db.sessions.update(sessionId, {
+      messages,
+      updatedAt: Date.now()
+    });
   },
 
   async getSession(sessionId: string): Promise<ChatSession | undefined> {
