@@ -61,9 +61,9 @@ async function saveInteraction(data: {
 }
 
 /**
- * Log energy level selection
+ * Internal helper to log an event
  */
-export async function logEnergySelection(energyLevel: EnergyLevel): Promise<void> {
+async function logEvent(action: string, metadata: Record<string, any>): Promise<void> {
   try {
     const userId = await getUserId();
     const sessionId = getSessionId();
@@ -76,13 +76,22 @@ export async function logEnergySelection(energyLevel: EnergyLevel): Promise<void
       sessionId,
       userId: userId !== 'anonymous' ? userId : undefined,
       metadata: JSON.stringify({
-        action: 'energy_selection',
-        energyLevel,
+        action,
+        ...metadata,
       }),
     });
   } catch (error) {
-    console.error('[EnergyTracking] Error logging energy selection:', error);
+    // Convert underscore to space for more readable error messages
+    const actionName = action.replace(/_/g, ' ');
+    console.error(`[EnergyTracking] Error logging ${actionName}:`, error);
   }
+}
+
+/**
+ * Log energy level selection
+ */
+export async function logEnergySelection(energyLevel: EnergyLevel): Promise<void> {
+  await logEvent('energy_selection', { energyLevel });
 }
 
 /**
@@ -93,27 +102,11 @@ export async function logTechniqueSelection(
   techniqueId: string,
   techniqueName: string
 ): Promise<void> {
-  try {
-    const userId = await getUserId();
-    const sessionId = getSessionId();
-    const timestamp = new Date().toISOString();
-
-    await saveInteraction({
-      id: generateId(),
-      timestamp,
-      type: 'energy_checkin',
-      sessionId,
-      userId: userId !== 'anonymous' ? userId : undefined,
-      metadata: JSON.stringify({
-        action: 'technique_selection',
-        energyLevel,
-        techniqueId,
-        techniqueName,
-      }),
-    });
-  } catch (error) {
-    console.error('[EnergyTracking] Error logging technique selection:', error);
-  }
+  await logEvent('technique_selection', {
+    energyLevel,
+    techniqueId,
+    techniqueName,
+  });
 }
 
 /**
@@ -124,27 +117,11 @@ export async function logTechniqueStart(
   techniqueId: string,
   techniqueName: string
 ): Promise<void> {
-  try {
-    const userId = await getUserId();
-    const sessionId = getSessionId();
-    const timestamp = new Date().toISOString();
-
-    await saveInteraction({
-      id: generateId(),
-      timestamp,
-      type: 'energy_checkin',
-      sessionId,
-      userId: userId !== 'anonymous' ? userId : undefined,
-      metadata: JSON.stringify({
-        action: 'technique_start',
-        energyLevel,
-        techniqueId,
-        techniqueName,
-      }),
-    });
-  } catch (error) {
-    console.error('[EnergyTracking] Error logging technique start:', error);
-  }
+  await logEvent('technique_start', {
+    energyLevel,
+    techniqueId,
+    techniqueName,
+  });
 }
 
 /**
@@ -157,29 +134,13 @@ export async function logTechniqueComplete(
   duration: number,
   completionStatus: 'completed' | 'skipped' | 'interrupted' = 'completed'
 ): Promise<void> {
-  try {
-    const userId = await getUserId();
-    const sessionId = getSessionId();
-    const timestamp = new Date().toISOString();
-
-    await saveInteraction({
-      id: generateId(),
-      timestamp,
-      type: 'energy_checkin',
-      sessionId,
-      userId: userId !== 'anonymous' ? userId : undefined,
-      metadata: JSON.stringify({
-        action: 'technique_complete',
-        energyLevel,
-        techniqueId,
-        techniqueName,
-        duration,
-        completionStatus,
-      }),
-    });
-  } catch (error) {
-    console.error('[EnergyTracking] Error logging technique completion:', error);
-  }
+  await logEvent('technique_complete', {
+    energyLevel,
+    techniqueId,
+    techniqueName,
+    duration,
+    completionStatus,
+  });
 }
 
 /**
@@ -191,28 +152,12 @@ export async function logTechniqueRepeat(
   techniqueName: string,
   repeatCount: number
 ): Promise<void> {
-  try {
-    const userId = await getUserId();
-    const sessionId = getSessionId();
-    const timestamp = new Date().toISOString();
-
-    await saveInteraction({
-      id: generateId(),
-      timestamp,
-      type: 'energy_checkin',
-      sessionId,
-      userId: userId !== 'anonymous' ? userId : undefined,
-      metadata: JSON.stringify({
-        action: 'technique_repeat',
-        energyLevel,
-        techniqueId,
-        techniqueName,
-        repeatCount,
-      }),
-    });
-  } catch (error) {
-    console.error('[EnergyTracking] Error logging technique repeat:', error);
-  }
+  await logEvent('technique_repeat', {
+    energyLevel,
+    techniqueId,
+    techniqueName,
+    repeatCount,
+  });
 }
 
 /**
@@ -224,31 +169,15 @@ export async function logTechniqueDone(
   techniqueName: string | null,
   totalSessionDuration: number
 ): Promise<void> {
-  try {
-    const userId = await getUserId();
-    const sessionId = getSessionId();
-    const timestamp = new Date().toISOString();
+  await logEvent('technique_done', {
+    energyLevel,
+    techniqueId,
+    techniqueName,
+    totalSessionDuration,
+  });
 
-    await saveInteraction({
-      id: generateId(),
-      timestamp,
-      type: 'energy_checkin',
-      sessionId,
-      userId: userId !== 'anonymous' ? userId : undefined,
-      metadata: JSON.stringify({
-        action: 'technique_done',
-        energyLevel,
-        techniqueId,
-        techniqueName,
-        totalSessionDuration,
-      }),
-    });
-
-    // Clear session ID after done
-    clearSessionId();
-  } catch (error) {
-    console.error('[EnergyTracking] Error logging technique done:', error);
-  }
+  // Clear session ID after done
+  clearSessionId();
 }
 
 /**
@@ -259,25 +188,9 @@ export async function logTechniqueInteraction(
   interactionType: string,
   data?: Record<string, any>
 ): Promise<void> {
-  try {
-    const userId = await getUserId();
-    const sessionId = getSessionId();
-    const timestamp = new Date().toISOString();
-
-    await saveInteraction({
-      id: generateId(),
-      timestamp,
-      type: 'energy_checkin',
-      sessionId,
-      userId: userId !== 'anonymous' ? userId : undefined,
-      metadata: JSON.stringify({
-        action: 'technique_interaction',
-        techniqueId,
-        interactionType,
-        ...data,
-      }),
-    });
-  } catch (error) {
-    console.error('[EnergyTracking] Error logging technique interaction:', error);
-  }
+  await logEvent('technique_interaction', {
+    techniqueId,
+    interactionType,
+    ...data,
+  });
 }
