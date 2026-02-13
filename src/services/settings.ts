@@ -1,3 +1,5 @@
+import { encrypt, decrypt, clearCryptoKey } from '../utils/crypto';
+
 export interface CrisisContact {
   id: string;
   name: string;
@@ -131,32 +133,52 @@ export function agreeToTerms(): void {
   localStorage.setItem('acminds_terms_agreement', JSON.stringify(agreement));
 }
 
-export function getCrisisContacts(): CrisisContact[] {
+export async function getCrisisContacts(): Promise<CrisisContact[]> {
   const saved = localStorage.getItem('acminds_crisis_contacts');
   if (saved) {
     try {
-      return JSON.parse(saved);
-    } catch {
-      return DEFAULT_CONTACTS;
+      // Try decrypting first
+      const decrypted = await decrypt(saved);
+      return JSON.parse(decrypted);
+    } catch (error) {
+      // If decryption fails, it might be legacy plaintext data or corrupted
+      try {
+        const parsed = JSON.parse(saved);
+        // If it parsed as JSON, it was plaintext (legacy)
+        return parsed;
+      } catch {
+        console.warn('[Settings] Failed to parse crisis contacts:', error);
+        return DEFAULT_CONTACTS;
+      }
     }
   }
   return DEFAULT_CONTACTS;
 }
 
-export function saveCrisisContact(contact: CrisisContact): void {
-  const contacts = getCrisisContacts();
-  const existingIndex = contacts.findIndex(c => c.id === contact.id);
-  if (existingIndex >= 0) {
-    contacts[existingIndex] = contact;
-  } else {
-    contacts.push(contact);
+export async function saveCrisisContact(contact: CrisisContact): Promise<void> {
+  try {
+    const contacts = await getCrisisContacts();
+    const existingIndex = contacts.findIndex(c => c.id === contact.id);
+    if (existingIndex >= 0) {
+      contacts[existingIndex] = contact;
+    } else {
+      contacts.push(contact);
+    }
+    const encrypted = await encrypt(JSON.stringify(contacts));
+    localStorage.setItem('acminds_crisis_contacts', encrypted);
+  } catch (error) {
+    console.error('[Settings] Failed to save crisis contact:', error);
   }
-  localStorage.setItem('acminds_crisis_contacts', JSON.stringify(contacts));
 }
 
-export function deleteCrisisContact(id: string): void {
-  const contacts = getCrisisContacts().filter(c => c.id !== id);
-  localStorage.setItem('acminds_crisis_contacts', JSON.stringify(contacts));
+export async function deleteCrisisContact(id: string): Promise<void> {
+  try {
+    const contacts = (await getCrisisContacts()).filter(c => c.id !== id);
+    const encrypted = await encrypt(JSON.stringify(contacts));
+    localStorage.setItem('acminds_crisis_contacts', encrypted);
+  } catch (error) {
+    console.error('[Settings] Failed to delete crisis contact:', error);
+  }
 }
 
 export function clearAllData(): void {
@@ -166,6 +188,7 @@ export function clearAllData(): void {
   localStorage.removeItem('theme');
   localStorage.removeItem('user_stats');
   localStorage.removeItem('grounded_value_selections');
+  clearCryptoKey();
 }
 
 /**
