@@ -14,7 +14,6 @@ import { chatDB, type ChatSession } from './services/chatDB';
 import {
   getSelections,
   toggleSelection,
-  initAiSync,
 } from './services/valuesService';
 import { VALUES_CATALOG, VALUES_CATEGORY_ORDER } from './data/valuesCatalog';
 import type { EnergyLevel, ConversationState, AppView } from './types';
@@ -66,18 +65,6 @@ export default function App() {
   const textareaRef = useRef<HTMLTextAreaElement>(null);
   const messagesEndRef = useRef<HTMLDivElement>(null);
   
-  // ============================================
-  // TESTING ONLY: Device Selector State
-  // TODO: Remove this section before production
-  // ============================================
-  // ============================================
-  const [hoveredNav, setHoveredNav] = useState<string | null>(null);
-  const [valuesVersion, setValuesVersion] = useState(0);
-
-  useEffect(() => {
-    initAiSync();
-  }, []);
-
   useEffect(() => {
     const checkWebGPU = async () => {
       const gpu = (navigator as unknown as { gpu?: { requestAdapter: () => Promise<unknown> } }).gpu;
@@ -585,11 +572,8 @@ export default function App() {
             style={{
               ...styles.bottomNavItem, 
               ...(view === item.view ? styles.bottomNavActive : {}),
-              ...(hoveredNav === item.view ? styles.bottomNavItemHover : {}),
             }}
             onClick={() => setView(item.view as AppView)}
-            onMouseEnter={() => setHoveredNav(item.view)}
-            onMouseLeave={() => setHoveredNav(null)}
           >
             <span style={styles.bottomNavIcon}>{item.icon}</span>
             <span style={styles.bottomNavLabel}>{item.label}</span>
@@ -777,7 +761,6 @@ export default function App() {
 
     const handleToggle = (category: string, value: string) => {
       toggleSelection(category, value);
-      setValuesVersion((v) => v + 1);
     };
 
     return (
