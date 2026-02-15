@@ -11,6 +11,7 @@ dist/models/
 *.onnx.data
 
 # Exclude large directories
+tests/
 release/
 node_modules/
 .git/

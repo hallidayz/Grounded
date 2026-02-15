@@ -116,7 +116,7 @@ export default defineConfig({
       'Cross-Origin-Embedder-Policy': 'require-corp',
     },
     watch: {
-      ignored: ['**/src-tauri/target/**', '**/node_modules/**', '**/.git/**']
+      ignored: ['**/src-tauri/target/**', '**/node_modules/**', '**/.git/**', '**/tests/**']
     },
     fs: {
       strict: false,
