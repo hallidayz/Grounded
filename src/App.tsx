@@ -154,10 +154,9 @@ export default function App() {
         try {
           const sessionId = await chatDB.saveSession(conversationHistory, selectedEnergy || undefined);
           console.log('[App] Auto-saved session:', sessionId);
-          // Reload sessions list if on sessions view
-          if (view === 'sessions') {
-            await loadSavedSessions();
-          }
+          // Note: The enclosing IF enforces view === 'conversation', so we can't be in 'sessions'.
+          // However, we call loadSavedSessions just to be safe if we need to refresh state behind the scenes.
+          await loadSavedSessions();
         } catch (err) {
           console.error('[App] Auto-save failed:', err);
         }
