@@ -6,19 +6,41 @@ jest.mock('../src/services/aiService', () => ({
   setUserValues: jest.fn(),
 }));
 
+// Ensure localStorage is explicitly mocked for this test suite
+const mockLocalStorage = (() => {
+  let store: Record<string, string> = {};
+  return {
+    getItem: jest.fn((key: string) => store[key] || null),
+    setItem: jest.fn((key: string, value: string) => {
+      store[key] = value.toString();
+    }),
+    removeItem: jest.fn((key: string) => {
+      delete store[key];
+    }),
+    clear: jest.fn(() => {
+      store = {};
+    }),
+  };
+})();
+
+Object.defineProperty(global, 'localStorage', {
+  value: mockLocalStorage,
+  writable: true
+});
+
 describe('valuesService', () => {
   const STORAGE_KEY = 'grounded_value_selections';
 
   beforeEach(() => {
     // Clear the localStorage and mocks before each test
-    window.localStorage.clear();
+    global.localStorage.clear();
     jest.clearAllMocks();
   });
 
   describe('addSelection', () => {
     it('should add a new selection when the value does not exist', () => {
       // Setup: ensure localStorage is empty initially
-      expect(window.localStorage.getItem(STORAGE_KEY)).toBeNull();
+      expect(global.localStorage.getItem(STORAGE_KEY)).toBeNull();
 
       // Execute: add a new selection
       addSelection('Core', 'Integrity');
@@ -34,7 +56,7 @@ describe('valuesService', () => {
       expect(new Date(selections.selections[0].selectedAt).getTime()).not.toBeNaN();
 
       // Verify: localStorage was updated
-      const stored = JSON.parse(window.localStorage.getItem(STORAGE_KEY) || '{}');
+      const stored = JSON.parse(global.localStorage.getItem(STORAGE_KEY) || '{}');
       expect(stored.selections).toHaveLength(1);
       expect(stored.selections[0].value).toBe('Integrity');
 
@@ -77,7 +99,7 @@ describe('valuesService', () => {
       expect(new Date(updatedSelection.updatedAt!).getTime()).not.toBeNaN();
 
       // Verify: localStorage was updated
-      const stored = JSON.parse(window.localStorage.getItem(STORAGE_KEY) || '{}');
+      const stored = JSON.parse(global.localStorage.getItem(STORAGE_KEY) || '{}');
       expect(stored.selections).toHaveLength(1);
       expect(stored.selections[0].category).toBe('Aspirational');
 
