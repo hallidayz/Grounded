@@ -78,7 +78,8 @@
     "terser": "^5.44.1",
     "ts-jest": "^29.1.2",
     "ts-node": "^10.9.2",
-    "typescript": "~5.8.2",
+    "tsconfig-paths": "^4.2.0",
+    "typescript": "^5.4.2",
     "vite": "^6.2.0",
     "vite-plugin-pwa": "^1.2.0",
     "vite-plugin-tauri": "^4.0.0"
