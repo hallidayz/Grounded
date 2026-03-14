@@ -90,8 +90,7 @@ export const chatDB = {
   },
 
   async getDatesWithSessions(): Promise<string[]> {
-    const sessions = await db.sessions.toArray();
-    const dates = [...new Set(sessions.map(s => s.dateString))];
+    const dates = await db.sessions.orderBy('dateString').uniqueKeys() as string[];
     return dates.sort().reverse();
   },
 
