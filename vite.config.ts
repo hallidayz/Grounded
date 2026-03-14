@@ -98,7 +98,7 @@ const appVersion = packageJson.version;
 export default defineConfig({
   base: '/',
   esbuild: {
-    keepNames: false, // Fix: Disable keepNames to stop generating the crashing __name helper
+    keepNames: true, // Fix: Re-enable keepNames since the underlying issue seems resolved
   },
   define: {
     'import.meta.env.VITE_APP_VERSION': JSON.stringify(appVersion),
