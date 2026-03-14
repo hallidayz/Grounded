@@ -68,55 +68,18 @@ async function getEngine() {
   return engine;
 }
 
+const PANIC_REGEX = /(panic|freaking|freak|can't breathe|heart racing|losing it|losing control|dying|spinning out|spinning|失控|疯狂|hyperventilating|chest tight|can't get air|gonna pass out|terrified|horror|emergency|911|emergency room)/i;
+const MILD_REGEX = /(anxious|anxiety|worried|worry|nervous|stressed|stress|on edge|edgy|uneasy|uptight|tense|apprehensive|butterflies|nervous stomach|future|what if)/i;
+const LOW_REGEX = /(tired|exhausted|drained|empty|heavy|numb|nothing|done|can't|no energy|so tired|drained|empty|silence|quiet|just|meh|blah|low|zombie|sleepy|wiped|beat|fried|spent|worn|can't do|too much|over it|checked out| depleted)/i;
+const HIGH_REGEX = /(chaos|crazy|overwhelm|overwhelmed|too much|everything|breaking|crashing|falling apart|can't think|mind racing|spinning|intense|out of control|bombarded|swamped|snowed under)/i;
+const MEDIUM_REGEX = /(swirl|racing|busy|mess)/i;
+
 function classifyEnergy(input: string): 'low' | 'medium' | 'high' | 'panic' | 'mild' | null {
-  const lower = input.toLowerCase();
-  
-  const panicIndicators = [
-    'panic', 'freaking', "freak", "can't breathe", 'heart racing', 'losing it',
-    'losing control', 'dying', 'spinning out', 'spinning', '失控', '疯狂',
-    'hyperventilating', 'chest tight', 'can\'t get air', 'gonna pass out',
-    'terrified', 'horror', 'emergency', '911', 'emergency room'
-  ];
-  
-  const mildIndicators = [
-    'anxious', 'anxiety', 'worried', 'worry', 'nervous', 'stressed', 'stress',
-    'on edge', 'edgy', 'uneasy', 'uptight', 'tense', 'apprehensive',
-    'butterflies', 'nervous stomach', 'future', 'what if'
-  ];
-  
-  const lowIndicators = [
-    'tired', 'exhausted', 'drained', 'empty', 'heavy', 'numb', 'nothing',
-    'done', 'can\'t', 'no energy', 'so tired', 'drained', 'empty',
-    'silence', 'quiet', 'just', 'meh', 'blah', 'low', 'zombie',
-    'sleepy', 'wiped', 'beat', 'fried', 'spent', 'worn',
-    'can\'t do', 'too much', 'over it', 'checked out', ' depleted'
-  ];
-  
-  const highIndicators = [
-    'chaos', 'crazy', 'overwhelm', 'overwhelmed', 'too much', 'everything', 'breaking',
-    'crashing', 'falling apart', 'can\'t think', 'mind racing', 'spinning',
-    'intense', 'out of control', 'bombarded', 'swamped', 'snowed under'
-  ];
-  
-  for (const indicator of panicIndicators) {
-    if (lower.includes(indicator)) return 'panic';
-  }
-  
-  for (const indicator of mildIndicators) {
-    if (lower.includes(indicator)) return 'mild';
-  }
-  
-  for (const indicator of lowIndicators) {
-    if (lower.includes(indicator)) return 'low';
-  }
-  
-  for (const indicator of highIndicators) {
-    if (lower.includes(indicator)) return 'high';
-  }
-  
-  if (lower.includes('swirl') || lower.includes('racing') || lower.includes('busy') || lower.includes('mess')) {
-    return 'medium';
-  }
+  if (PANIC_REGEX.test(input)) return 'panic';
+  if (MILD_REGEX.test(input)) return 'mild';
+  if (LOW_REGEX.test(input)) return 'low';
+  if (HIGH_REGEX.test(input)) return 'high';
+  if (MEDIUM_REGEX.test(input)) return 'medium';
   
   return null;
 }
