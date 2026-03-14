@@ -137,10 +137,10 @@ export function getCrisisContacts(): CrisisContact[] {
     try {
       return JSON.parse(saved);
     } catch {
-      return DEFAULT_CONTACTS;
+      return [...DEFAULT_CONTACTS];
     }
   }
-  return DEFAULT_CONTACTS;
+  return [...DEFAULT_CONTACTS];
 }
 
 export function saveCrisisContact(contact: CrisisContact): void {
