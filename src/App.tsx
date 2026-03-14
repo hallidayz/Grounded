@@ -66,13 +66,7 @@ export default function App() {
   const textareaRef = useRef<HTMLTextAreaElement>(null);
   const messagesEndRef = useRef<HTMLDivElement>(null);
   
-  // ============================================
-  // TESTING ONLY: Device Selector State
-  // TODO: Remove this section before production
-  // ============================================
-  // ============================================
   const [hoveredNav, setHoveredNav] = useState<string | null>(null);
-  const [valuesVersion, setValuesVersion] = useState(0);
 
   useEffect(() => {
     initAiSync();
@@ -777,7 +771,6 @@ export default function App() {
 
     const handleToggle = (category: string, value: string) => {
       toggleSelection(category, value);
-      setValuesVersion((v) => v + 1);
     };
 
     return (
