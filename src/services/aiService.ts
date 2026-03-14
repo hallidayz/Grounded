@@ -121,33 +121,16 @@ function classifyEnergy(input: string): 'low' | 'medium' | 'high' | 'panic' | 'm
   return null;
 }
 
-function routeToNode(
-  userInput: string,
-  currentNode: ConversationNode,
-  energy: EnergyLevel,
-  quickReply?: string
-): ConversationNode {
-  const input = quickReply || userInput;
-  const lower = input.toLowerCase();
-  
-  if (currentNode === 'welcome') {
-    const energyLevel = classifyEnergy(input);
-    if (energyLevel === 'low') return 'low_energy_offer';
-    if (energyLevel === 'high') return 'high_chaos_offer';
-    if (energyLevel === 'panic') return 'panic_offer';
-    if (energyLevel === 'mild') return 'mild_offer';
-    return 'medium_swirl_offer';
-  }
-  
+function handleLowEnergyNode(currentNode: ConversationNode, lowerInput: string): ConversationNode {
   if (currentNode === 'low_energy_offer') {
-    if (lower.includes('yes') || lower.includes('sure') || lower.includes('ok') || lower.includes('guide')) {
+    if (lowerInput.includes('yes') || lowerInput.includes('sure') || lowerInput.includes('ok') || lowerInput.includes('guide')) {
       return 'low_energy_yes';
     }
     return 'low_energy_no';
   }
   
   if (currentNode === 'low_energy_no') {
-    if (lower.includes('ready') || lower.includes('blue') || lower.includes('color')) {
+    if (lowerInput.includes('ready') || lowerInput.includes('blue') || lowerInput.includes('color')) {
       return 'low_energy_grounding';
     }
     return 'low_energy_grounding';
@@ -157,6 +140,10 @@ function routeToNode(
     return 'low_energy_complete';
   }
   
+  return currentNode;
+}
+
+function handleMediumSwirlNode(currentNode: ConversationNode, lowerInput: string): ConversationNode {
   if (currentNode === 'medium_swirl_offer') {
     return 'medium_swirl_response';
   }
@@ -169,18 +156,22 @@ function routeToNode(
     return 'medium_swirl_complete';
   }
   
+  return currentNode;
+}
+
+function handleHighChaosNode(currentNode: ConversationNode, lowerInput: string): ConversationNode {
   if (currentNode === 'high_chaos_offer') {
-    if (lower.includes('can\'t') || lower.includes('focus')) {
+    if (lowerInput.includes('can\'t') || lowerInput.includes('focus')) {
       return 'high_chaos_grounding';
     }
     return 'high_chaos_grounding';
   }
   
   if (currentNode === 'high_chaos_grounding') {
-    if (lower.includes('timer') || lower.includes('pro') || lower.includes('help') || lower.includes('hotline')) {
+    if (lowerInput.includes('timer') || lowerInput.includes('pro') || lowerInput.includes('help') || lowerInput.includes('hotline')) {
       return 'high_chaos_crisis';
     }
-    if (lower.includes('water') || lower.includes('walk') || lower.includes('rest') || lower.includes('journal')) {
+    if (lowerInput.includes('water') || lowerInput.includes('walk') || lowerInput.includes('rest') || lowerInput.includes('journal')) {
       return 'high_chaos_tiny_steps';
     }
     return 'high_chaos_visualization';
@@ -198,8 +189,12 @@ function routeToNode(
     return 'high_chaos_complete';
   }
   
+  return currentNode;
+}
+
+function handlePanicNode(currentNode: ConversationNode, lowerInput: string): ConversationNode {
   if (currentNode === 'panic_offer') {
-    if (lower.includes('yes') || lower.includes('sure')) {
+    if (lowerInput.includes('yes') || lowerInput.includes('sure')) {
       return 'panic_yes';
     }
     return 'panic_no';
@@ -210,7 +205,7 @@ function routeToNode(
   }
   
   if (currentNode === 'panic_no') {
-    if (lower.includes('988') || lower.includes('timer') || lower.includes('help')) {
+    if (lowerInput.includes('988') || lowerInput.includes('timer') || lowerInput.includes('help')) {
       return 'panic_escalate';
     }
     return 'panic_no';
@@ -224,8 +219,12 @@ function routeToNode(
     return 'panic_complete';
   }
   
+  return currentNode;
+}
+
+function handleMildNode(currentNode: ConversationNode, lowerInput: string): ConversationNode {
   if (currentNode === 'mild_offer') {
-    if (lower.includes(' ') && !lower.includes('everything') && !lower.includes('nothing')) {
+    if (lowerInput.includes(' ') && !lowerInput.includes('everything') && !lowerInput.includes('nothing')) {
       return 'mild_specific';
     }
     return 'mild_general';
@@ -243,6 +242,47 @@ function routeToNode(
     return 'mild_complete';
   }
   
+  return currentNode;
+}
+
+function routeToNode(
+  userInput: string,
+  currentNode: ConversationNode,
+  energy: EnergyLevel,
+  quickReply?: string
+): ConversationNode {
+  const input = quickReply || userInput;
+  const lower = input.toLowerCase();
+
+  if (currentNode === 'welcome') {
+    const energyLevel = classifyEnergy(input);
+    if (energyLevel === 'low') return 'low_energy_offer';
+    if (energyLevel === 'high') return 'high_chaos_offer';
+    if (energyLevel === 'panic') return 'panic_offer';
+    if (energyLevel === 'mild') return 'mild_offer';
+    return 'medium_swirl_offer';
+  }
+
+  if (currentNode.startsWith('low_energy_')) {
+    return handleLowEnergyNode(currentNode, lower);
+  }
+
+  if (currentNode.startsWith('medium_swirl_')) {
+    return handleMediumSwirlNode(currentNode, lower);
+  }
+
+  if (currentNode.startsWith('high_chaos_')) {
+    return handleHighChaosNode(currentNode, lower);
+  }
+
+  if (currentNode.startsWith('panic_')) {
+    return handlePanicNode(currentNode, lower);
+  }
+
+  if (currentNode.startsWith('mild_')) {
+    return handleMildNode(currentNode, lower);
+  }
+
   return currentNode;
 }
 
