@@ -65,8 +65,6 @@ export default function App() {
   const [datesWithSessions, setDatesWithSessions] = useState<string[]>([]);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
   const messagesEndRef = useRef<HTMLDivElement>(null);
-  
-  const [hoveredNav, setHoveredNav] = useState<string | null>(null);
 
   useEffect(() => {
     initAiSync();
@@ -579,11 +577,8 @@ export default function App() {
             style={{
               ...styles.bottomNavItem, 
               ...(view === item.view ? styles.bottomNavActive : {}),
-              ...(hoveredNav === item.view ? styles.bottomNavItemHover : {}),
             }}
             onClick={() => setView(item.view as AppView)}
-            onMouseEnter={() => setHoveredNav(item.view)}
-            onMouseLeave={() => setHoveredNav(null)}
           >
             <span style={styles.bottomNavIcon}>{item.icon}</span>
             <span style={styles.bottomNavLabel}>{item.label}</span>
@@ -1875,10 +1870,6 @@ const styles: Record<string, React.CSSProperties> = {
     opacity: 0.6,
     borderRadius: '12px', // Added for better touch target
     transition: 'background-color 0.2s ease, opacity 0.2s ease',
-   },
-   bottomNavItemHover: {
-    backgroundColor: 'var(--bg-secondary, rgba(248, 247, 244, 0.5))',
-    opacity: 0.8,
    },
    bottomNavActive: {
     opacity: 1,
