@@ -773,7 +773,10 @@ export default function App() {
 
   const renderValues = () => {
     const { selections } = getSelections();
-    const selectedSet = new Set(selections.map((s) => s.value));
+    const selectedSet = new Set<string>();
+    for (const s of selections) {
+      selectedSet.add(s.value);
+    }
 
     const handleToggle = (category: string, value: string) => {
       toggleSelection(category, value);
