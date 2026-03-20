@@ -54,8 +54,6 @@ export default function App() {
   const [conversationHistory, setConversationHistory] = useState<Array<{role: 'user' | 'assistant', content: string}>>([]);
   const [hasAcceptedTerms, setHasAcceptedTerms] = useState(false);
   const [showFullTerms, setShowFullTerms] = useState(false);
-  const [breathingPhase, setBreathingPhase] = useState<'inhale' | 'hold' | 'exhale' | 'rest'>('inhale');
-  const [breathingCycle, setBreathingCycle] = useState(0);
   const [pendingUserInput, setPendingUserInput] = useState<string>('');
   const [inputRows, setInputRows] = useState(1);
   const [isWebGPUSupported, setIsWebGPUSupported] = useState(true);
@@ -192,8 +190,6 @@ export default function App() {
       setSelectedEnergy(energy as EnergyLevel);
     }
     setPendingUserInput('');
-    setBreathingPhase('inhale');
-    setBreathingCycle(0);
     setView('breathing');
   };
 
@@ -1926,87 +1922,6 @@ const styles: Record<string, React.CSSProperties> = {
     alignItems: 'center',
     minHeight: 'calc(100vh - 80px)',
     padding: '20px',
-  },
-  breathingContainer: {
-    display: 'flex',
-    flexDirection: 'column',
-    alignItems: 'center',
-    justifyContent: 'center',
-    gap: '12px',
-  },
-  breathingTitle: {
-    fontSize: '24px',
-    fontWeight: '600',
-    color: 'var(--text-primary, #1b3448)',
-    textAlign: 'center',
-  },
-  breathingCircleWrapper: {
-    display: 'flex',
-    justifyContent: 'center',
-    alignItems: 'center',
-    padding: '24px',
-  },
-  breathingCircle: {
-    width: '160px',
-    height: '160px',
-    borderRadius: '50%',
-    display: 'flex',
-    flexDirection: 'column',
-    justifyContent: 'center',
-    alignItems: 'center',
-    willChange: 'transform',
-  },
-  breathingPhaseText: {
-    fontSize: '20px',
-    fontWeight: '500',
-    color: 'var(--text-primary, #1b3448)',
-    marginBottom: '4px',
-    textTransform: 'capitalize',
-  },
-  breathingCount: {
-    fontSize: '32px',
-    fontWeight: '700',
-    color: 'var(--text-primary, #1b3448)',
-  },
-  breathingCycleText: {
-    fontSize: '14px',
-    opacity: 0.6,
-    color: 'var(--text-secondary, #1b3448)',
-  },
-  breathingReducedMotion: {
-    display: 'flex',
-    flexDirection: 'column',
-    alignItems: 'center',
-    gap: '16px',
-    padding: '24px',
-  },
-  breathingStaticRing: {
-    width: '80px',
-    height: '80px',
-    borderRadius: '50%',
-    background: 'radial-gradient(circle, #a8e6cf, #84c5a4)',
-    display: 'flex',
-    justifyContent: 'center',
-    alignItems: 'center',
-    boxShadow: '0 0 40px rgba(168, 230, 207, 0.5)',
-  },
-  breathingInstruction: {
-    fontSize: '16px',
-    fontWeight: '500',
-    color: 'var(--text-primary, #1b3448)',
-    textAlign: 'center',
-  },
-  skipBreathingButton: {
-    padding: '10px 20px',
-    fontSize: '14px',
-    fontWeight: '500',
-    color: 'var(--text-primary, #1b3448)',
-    backgroundColor: 'transparent',
-    border: '1px solid var(--border, rgba(27, 52, 72, 0.3))',
-    borderRadius: '20px',
-    cursor: 'pointer',
-    marginTop: '12px',
-    transition: 'background-color 0.2s',
   },
   amygdalaContainer: {
     flex: 1,
