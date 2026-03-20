@@ -27,7 +27,26 @@ const SessionEngine: React.FC<SessionEngineProps> = ({ sessionKey, onComplete })
   
   if (!config) {
     console.error(`[SessionEngine] Session key "${sessionKey}" not found in MASTER_SESSIONS`);
-    return <div>Session not found</div>;
+    return (
+      <div style={{ padding: '2rem', textAlign: 'center', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', minHeight: '100svh' }}>
+        <h2 style={{ marginBottom: '1rem', color: '#e53e3e' }}>Session not found</h2>
+        <p style={{ marginBottom: '2rem', color: '#4a5568' }}>We couldn't load the requested exercise. Please try again.</p>
+        <button
+          onClick={onComplete}
+          style={{
+            padding: '0.75rem 1.5rem',
+            backgroundColor: '#4a5568',
+            color: 'white',
+            border: 'none',
+            borderRadius: '9999px',
+            cursor: 'pointer',
+            fontWeight: 'bold'
+          }}
+        >
+          Return to Chat
+        </button>
+      </div>
+    );
   }
 
   const [sessionState, setSessionState] = useState<SessionState>({
@@ -141,12 +160,31 @@ const SessionEngine: React.FC<SessionEngineProps> = ({ sessionKey, onComplete })
     };
   }, [sessionState.isActive, sessionState.timeLeftInPhase, sessionState.currentPhaseIndex, config, sessionKey, onComplete]);
 
-  const currentPhase = config.phases[sessionState.currentPhaseIndex] || config.phases[0];
+  const currentPhase = config?.phases ? (config.phases[sessionState.currentPhaseIndex] || config.phases[0]) : null;
 
   // Safety check - ensure currentPhase exists
   if (!currentPhase) {
     console.error(`[SessionEngine] No phase found at index ${sessionState.currentPhaseIndex} for session ${sessionKey}`);
-    return <div>Error: Session phase not found</div>;
+    return (
+      <div style={{ padding: '2rem', textAlign: 'center', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', minHeight: '100svh' }}>
+        <h2 style={{ marginBottom: '1rem', color: '#e53e3e' }}>Something went wrong</h2>
+        <p style={{ marginBottom: '2rem', color: '#4a5568' }}>We encountered an issue loading this part of the exercise.</p>
+        <button
+          onClick={onComplete}
+          style={{
+            padding: '0.75rem 1.5rem',
+            backgroundColor: '#4a5568',
+            color: 'white',
+            border: 'none',
+            borderRadius: '9999px',
+            cursor: 'pointer',
+            fontWeight: 'bold'
+          }}
+        >
+          End Exercise
+        </button>
+      </div>
+    );
   }
 
   // Render technique component based on session type and key
