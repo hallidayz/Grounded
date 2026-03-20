@@ -173,7 +173,7 @@ export function clearAllData(): void {
  * Stores completion stats locally (privacy-first: no external transmission)
  */
 export interface UserStats {
-  [sessionKey: string]: number; // Count of completions per session
+  [sessionKey: string]: number | string | undefined; // Count of completions per session
   totalCompletions?: number;
   lastSession?: string;
   lastSessionTime?: string;
@@ -185,8 +185,12 @@ export function trackCompletion(sessionKey: string): void {
     const stats: UserStats = statsStr ? JSON.parse(statsStr) : {};
     
     // Increment completion count for this session
-    stats[sessionKey] = (stats[sessionKey] || 0) + 1;
-    stats.totalCompletions = (stats.totalCompletions || 0) + 1;
+    const currentSessionCount = typeof stats[sessionKey] === 'number' ? stats[sessionKey] : 0;
+    stats[sessionKey] = currentSessionCount + 1;
+
+    const currentTotal = typeof stats.totalCompletions === 'number' ? stats.totalCompletions : 0;
+    stats.totalCompletions = currentTotal + 1;
+
     stats.lastSession = sessionKey;
     stats.lastSessionTime = new Date().toISOString();
     
