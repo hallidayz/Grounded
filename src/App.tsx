@@ -66,12 +66,6 @@ export default function App() {
   const textareaRef = useRef<HTMLTextAreaElement>(null);
   const messagesEndRef = useRef<HTMLDivElement>(null);
   
-  // ============================================
-  // TESTING ONLY: Device Selector State
-  // TODO: Remove this section before production
-  // ============================================
-  // ============================================
-  const [hoveredNav, setHoveredNav] = useState<string | null>(null);
   const [valuesVersion, setValuesVersion] = useState(0);
 
   useEffect(() => {
@@ -585,11 +579,8 @@ export default function App() {
             style={{
               ...styles.bottomNavItem, 
               ...(view === item.view ? styles.bottomNavActive : {}),
-              ...(hoveredNav === item.view ? styles.bottomNavItemHover : {}),
             }}
             onClick={() => setView(item.view as AppView)}
-            onMouseEnter={() => setHoveredNav(item.view)}
-            onMouseLeave={() => setHoveredNav(null)}
           >
             <span style={styles.bottomNavIcon}>{item.icon}</span>
             <span style={styles.bottomNavLabel}>{item.label}</span>
