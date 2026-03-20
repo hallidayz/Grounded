@@ -6,9 +6,11 @@ export interface UserValues {
 }
 
 let userValues: UserValues = { values: [], priority: [] };
+let lowerUserValues: string[] = [];
 
 export function setUserValues(values: UserValues) {
   userValues = values;
+  lowerUserValues = values.values.map(v => v.toLowerCase());
 }
 
 export function getUserValues(): UserValues {
@@ -16,17 +18,20 @@ export function getUserValues(): UserValues {
 }
 
 function checkValuesInInput(input: string): string[] {
-  const matchedValues: string[] = [];
   const lowerInput = input.toLowerCase();
   
-  userValues.values.forEach(value => {
-    if (lowerInput.includes(value.toLowerCase())) {
-      matchedValues.push(value);
-    }
-  });
-  
-  return matchedValues;
+  return userValues.values.filter((_, index) =>
+    lowerInput.includes(lowerUserValues[index])
+  );
 }
+
+const PANIC_REGEX = /panic|freaking|freak|can't breathe|heart racing|losing it|losing control|dying|spinning out|spinning|失控|疯狂|hyperventilating|chest tight|can't get air|gonna pass out|terrified|horror|emergency|911|emergency room/i;
+
+const MILD_REGEX = /anxious|anxiety|worried|worry|nervous|stressed|stress|on edge|edgy|uneasy|uptight|tense|apprehensive|butterflies|nervous stomach|future|what if/i;
+
+const LOW_REGEX = /tired|exhausted|drained|empty|heavy|numb|nothing|done|can't|no energy|so tired|silence|quiet|just|meh|blah|low|zombie|sleepy|wiped|beat|fried|spent|worn|can't do|too much|over it|checked out| depleted/i;
+
+const HIGH_REGEX = /chaos|crazy|overwhelm|overwhelmed|too much|everything|breaking|crashing|falling apart|can't think|mind racing|spinning|intense|out of control|bombarded|swamped|snowed under/i;
 
 let engine: any = null;
 let isLoading = false;
@@ -69,51 +74,12 @@ async function getEngine() {
 }
 
 function classifyEnergy(input: string): 'low' | 'medium' | 'high' | 'panic' | 'mild' | null {
+  if (PANIC_REGEX.test(input)) return 'panic';
+  if (MILD_REGEX.test(input)) return 'mild';
+  if (LOW_REGEX.test(input)) return 'low';
+  if (HIGH_REGEX.test(input)) return 'high';
+  
   const lower = input.toLowerCase();
-  
-  const panicIndicators = [
-    'panic', 'freaking', "freak", "can't breathe", 'heart racing', 'losing it',
-    'losing control', 'dying', 'spinning out', 'spinning', '失控', '疯狂',
-    'hyperventilating', 'chest tight', 'can\'t get air', 'gonna pass out',
-    'terrified', 'horror', 'emergency', '911', 'emergency room'
-  ];
-  
-  const mildIndicators = [
-    'anxious', 'anxiety', 'worried', 'worry', 'nervous', 'stressed', 'stress',
-    'on edge', 'edgy', 'uneasy', 'uptight', 'tense', 'apprehensive',
-    'butterflies', 'nervous stomach', 'future', 'what if'
-  ];
-  
-  const lowIndicators = [
-    'tired', 'exhausted', 'drained', 'empty', 'heavy', 'numb', 'nothing',
-    'done', 'can\'t', 'no energy', 'so tired', 'drained', 'empty',
-    'silence', 'quiet', 'just', 'meh', 'blah', 'low', 'zombie',
-    'sleepy', 'wiped', 'beat', 'fried', 'spent', 'worn',
-    'can\'t do', 'too much', 'over it', 'checked out', ' depleted'
-  ];
-  
-  const highIndicators = [
-    'chaos', 'crazy', 'overwhelm', 'overwhelmed', 'too much', 'everything', 'breaking',
-    'crashing', 'falling apart', 'can\'t think', 'mind racing', 'spinning',
-    'intense', 'out of control', 'bombarded', 'swamped', 'snowed under'
-  ];
-  
-  for (const indicator of panicIndicators) {
-    if (lower.includes(indicator)) return 'panic';
-  }
-  
-  for (const indicator of mildIndicators) {
-    if (lower.includes(indicator)) return 'mild';
-  }
-  
-  for (const indicator of lowIndicators) {
-    if (lower.includes(indicator)) return 'low';
-  }
-  
-  for (const indicator of highIndicators) {
-    if (lower.includes(indicator)) return 'high';
-  }
-  
   if (lower.includes('swirl') || lower.includes('racing') || lower.includes('busy') || lower.includes('mess')) {
     return 'medium';
   }
