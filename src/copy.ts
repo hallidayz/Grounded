@@ -4,7 +4,7 @@
 
 import type { EnergyOption, MoodType, ConversationNode } from './types';
 import type { CrisisResource } from './types';
-import type { SessionLibrary, AffirmationLibrary } from './types/sessions';
+import type { SessionLibrary, AffirmationLibrary, NurtureCategory } from './types/sessions';
 
 export const COPY = {
   app: {
@@ -787,7 +787,7 @@ export const MASTER_SESSIONS: SessionLibrary = {
  * 
  * Phrases for the Nurture phase of RAIN method and other compassion-based exercises.
  */
-export const NURTURE_AFFIRMATIONS: AffirmationLibrary = {
+export const NURTURE_AFFIRMATIONS: Record<NurtureCategory, string[]> = {
   shame: [
     'You are doing your best with a hard moment.',
     'You are worthy of compassion, especially from yourself.',

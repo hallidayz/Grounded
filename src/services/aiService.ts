@@ -50,9 +50,7 @@ async function getEngine() {
       engine = await CreateMLCEngine(
         modelName,
         {
-          initProgressCallback: (progress: any) => {
-            console.log('Model download progress:', progress.progress, progress.text);
-          }
+          initProgressCallback: () => {}
         }
       );
     } catch (error) {
