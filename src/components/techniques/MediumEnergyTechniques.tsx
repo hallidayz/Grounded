@@ -40,15 +40,16 @@ const MediumEnergyTechniques: React.FC<MediumEnergyTechniquesProps> = ({
   onComplete,
 }) => {
   if (selectedTechnique) {
+    const technique = TECHNIQUES.find(t => t.id === selectedTechnique);
     return (
       <TechniqueWrapper
         techniqueId={selectedTechnique}
-        techniqueName={TECHNIQUES.find(t => t.id === selectedTechnique)?.name || ''}
+        techniqueName={technique?.name || ''}
         energyLevel="medium"
         duration={120}
         onComplete={onComplete}
-        bestFor={TECHNIQUES.find(t => t.id === selectedTechnique)?.bestFor}
-        description={TECHNIQUES.find(t => t.id === selectedTechnique)?.description}
+        bestFor={technique?.bestFor}
+        description={technique?.description}
       >
         {selectedTechnique === 'thought-stream' && (
           <ThoughtStreamTechnique />
