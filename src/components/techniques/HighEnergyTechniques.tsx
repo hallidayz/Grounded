@@ -40,15 +40,16 @@ const HighEnergyTechniques: React.FC<HighEnergyTechniquesProps> = ({
   onComplete,
 }) => {
   if (selectedTechnique) {
+    const technique = TECHNIQUES.find(t => t.id === selectedTechnique);
     return (
       <TechniqueWrapper
         techniqueId={selectedTechnique}
-        techniqueName={TECHNIQUES.find(t => t.id === selectedTechnique)?.name || ''}
+        techniqueName={technique?.name || ''}
         energyLevel="high"
         duration={300}
         onComplete={onComplete}
-        bestFor={TECHNIQUES.find(t => t.id === selectedTechnique)?.bestFor}
-        description={TECHNIQUES.find(t => t.id === selectedTechnique)?.description}
+        bestFor={technique?.bestFor}
+        description={technique?.description}
       >
         {selectedTechnique === 'rain-method' && (
           <RAINMethodTechnique />
