@@ -7,9 +7,32 @@
 
 type EnergyLevel = 'low' | 'medium' | 'high';
 
-// Generate a simple UUID
-function generateId(): string {
-  return `energy_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
+// Generate a secure UUID
+export function generateId(prefix: string = 'energy'): string {
+  try {
+    // Use cryptographically secure randomUUID if available
+    if (typeof crypto !== 'undefined' && crypto.randomUUID) {
+      return `${prefix}_${crypto.randomUUID()}`;
+    }
+
+    // Fallback using crypto.getRandomValues if randomUUID is not available
+    if (typeof crypto !== 'undefined' && crypto.getRandomValues) {
+      const buffer = new Uint8Array(16);
+      crypto.getRandomValues(buffer);
+      // Simple hex conversion for a secure random string
+      const hex = Array.from(buffer).map(b => b.toString(16).padStart(2, '0')).join('');
+      return `${prefix}_${hex}`;
+    }
+  } catch (e) {
+    // Fallback if crypto fails
+  }
+
+  // Robust fallback using timestamp and multiple random components
+  const timestamp = Date.now().toString(36);
+  const randomPart = Math.random().toString(36).substring(2, 9);
+  const extraRandom = Math.random().toString(36).substring(2, 9);
+
+  return `${prefix}_${timestamp}_${randomPart}_${extraRandom}`;
 }
 
 // Get or create session ID

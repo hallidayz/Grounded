@@ -1,6 +1,7 @@
 import React, { useState, useRef, useEffect } from 'react';
 import { motion } from 'framer-motion';
 import type { TechniqueComponentProps } from '../../types/sessions';
+import { generateId } from '../../services/energyTrackingService';
 
 interface Thought {
   id: string;
@@ -25,7 +26,7 @@ const ThoughtStreamTechnique: React.FC<TechniqueComponentProps> = ({
   useEffect(() => {
     // Create initial leaves floating down
     const createLeaf = () => {
-      const id = `leaf-${Date.now()}-${Math.random()}`;
+      const id = generateId('leaf');
       const x = Math.random() * 100;
       return { id, x, y: -10 };
     };
