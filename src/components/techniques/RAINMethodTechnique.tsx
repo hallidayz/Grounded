@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { motion } from 'framer-motion';
 import type { TechniqueComponentProps } from '../../types/sessions';
+import { generateId } from '../../services/energyTrackingService';
 
 const FEELING_BUBBLES = ['Fear', 'Heavy', 'Tight', 'Angry', 'Sad', 'Anxious', 'Overwhelmed'];
 const BODY_PARTS = ['chest', 'throat', 'stomach', 'shoulders', 'head', 'hands'];
@@ -70,7 +71,7 @@ const RAINMethodTechnique: React.FC<TechniqueComponentProps> = ({
   useEffect(() => {
     if (currentStageIndex === 0) {
       const createBubble = () => {
-        const id = `bubble-${Date.now()}-${Math.random()}`;
+        const id = generateId('bubble');
         const label = FEELING_BUBBLES[Math.floor(Math.random() * FEELING_BUBBLES.length)];
         return {
           id,
