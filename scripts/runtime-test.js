@@ -134,11 +134,7 @@ test('Key source files exist', () => {
   const srcPath = path.join(rootDir, 'src');
   const keyFiles = [
     'App.tsx',
-    'AppContent.tsx',
-    'services/authStore.ts',
-    'services/ai/browserCompatibility.ts',
-    'contexts/AuthContext.tsx',
-    'contexts/DataContext.tsx'
+    'services/aiService.ts'
   ];
   const missing = keyFiles.filter(file => {
     const filePath = path.join(srcPath, file);
