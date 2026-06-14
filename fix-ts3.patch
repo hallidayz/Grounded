@@ -1,0 +1,9 @@
+--- src/services/settings.ts
++++ src/services/settings.ts
+@@ -187,3 +187,4 @@
+
+     // Increment completion count for this session
+-    stats[sessionKey] = (stats[sessionKey] || 0) + 1;
++    const currentCount = typeof stats[sessionKey] === 'number' ? stats[sessionKey] as number : 0;
++    stats[sessionKey] = currentCount + 1;
+     stats.totalCompletions = (stats.totalCompletions || 0) + 1;

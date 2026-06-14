@@ -1,6 +1,6 @@
 /**
  * Session Type Definitions
- * 
+ *
  * Type-safe interfaces for the unified session engine and CBT intervention library.
  */
 
@@ -8,13 +8,13 @@
  * Represents the distinct types of CBT/Mindfulness interventions.
  * Used to determine which UI components to render (Breathing circle, Text area, Bubbles).
  */
-export type SessionType = 
-  | 'breathing' 
-  | 'physical' 
-  | 'sensory' 
-  | 'cognitive-restructuring' 
-  | 'inquiry' 
-  | 'visualization' 
+export type SessionType =
+  | 'breathing'
+  | 'physical'
+  | 'sensory'
+  | 'cognitive-restructuring'
+  | 'inquiry'
+  | 'visualization'
   | 'writing';
 
 /**
@@ -90,6 +90,6 @@ export type NurtureCategory = 'shame' | 'anxiety' | 'burnout' | 'grief';
 /**
  * Library of nurture affirmations by category.
  */
-export type AffirmationLibrary = {
+export interface AffirmationLibrary {
   [key in NurtureCategory]: string[];
-};
+}
