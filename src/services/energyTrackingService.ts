@@ -257,7 +257,7 @@ export async function logTechniqueDone(
 export async function logTechniqueInteraction(
   techniqueId: string,
   interactionType: string,
-  data?: Record<string, any>
+  data?: Record<string, unknown>
 ): Promise<void> {
   try {
     const userId = await getUserId();

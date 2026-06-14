@@ -1,0 +1,11 @@
+--- src/types/sessions.ts
++++ src/types/sessions.ts
+@@ -88,5 +88,5 @@
+  * Library of nurture affirmations by category.
+  */
+-export interface AffirmationLibrary {
+-  [key in NurtureCategory]: string[];
+-}
++export type AffirmationLibrary = {
++  [key in NurtureCategory]: string[];
++};

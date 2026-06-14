@@ -1,0 +1,14 @@
+--- src/services/settings.ts
++++ src/services/settings.ts
+@@ -174,8 +174,8 @@
+  * Stores completion stats locally (privacy-first: no external transmission)
+  */
+ export interface UserStats {
+-  [sessionKey: string]: number; // Count of completions per session
+   totalCompletions?: number;
+   lastSession?: string;
+   lastSessionTime?: string;
++  [sessionKey: string]: number | string | undefined; // Count of completions per session
+ }
+
+ export function trackCompletion(sessionKey: string): void {
