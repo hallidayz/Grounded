@@ -3,6 +3,13 @@
  * Global test configuration and mocks
  */
 
+// Ensure global objects exist
+if (typeof global !== 'undefined') {
+  if (typeof (global as any).window === 'undefined') {
+    (global as any).window = global;
+  }
+}
+
 // Polyfill TextEncoder/TextDecoder for Node.js test environment
 import { TextEncoder, TextDecoder } from 'util';
 global.TextEncoder = TextEncoder;
@@ -54,18 +61,15 @@ const localStorageMock = (() => {
 
 Object.defineProperty(window, 'localStorage', {
   value: localStorageMock,
+  writable: true,
+});
+Object.defineProperty(global, 'localStorage', {
+  value: localStorageMock,
+  writable: true,
 });
 
 // Mock OPFS (Origin Private File System) for tests
 const opfsStore = new Map<string, ArrayBuffer>();
-
-// Ensure window exists (jsdom should provide this)
-if (typeof global !== 'undefined') {
-  // Make sure window is available
-  if (typeof (global as any).window === 'undefined') {
-    (global as any).window = global;
-  }
-}
 
 // Mock navigator.storage.getDirectory() for OPFS
 const mockGetDirectory = async () => {
@@ -144,4 +148,3 @@ if (typeof global !== 'undefined') {
     };
   }
 }
-
