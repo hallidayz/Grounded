@@ -1,3 +1,4 @@
+import type { MLCEngineInterface } from '@mlc-ai/web-llm';
 import type { ConversationNode, ConversationState, EnergyLevel } from '../types';
 
 export interface UserValues {
@@ -28,15 +29,16 @@ function checkValuesInInput(input: string): string[] {
   return matchedValues;
 }
 
-let engine: any = null;
+let engine: MLCEngineInterface | null = null;
 let isLoading = false;
 let loadPromise: Promise<void> | null = null;
 
-async function getEngine() {
+async function getEngine(): Promise<MLCEngineInterface> {
   if (engine) return engine;
   
   if (isLoading && loadPromise) {
     await loadPromise;
+    if (!engine) throw new Error('AI engine failed to load');
     return engine;
   }
   
@@ -65,6 +67,7 @@ async function getEngine() {
   })();
   
   await loadPromise;
+  if (!engine) throw new Error('AI engine failed to load');
   return engine;
 }
 
