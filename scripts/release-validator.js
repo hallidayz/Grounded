@@ -1,7 +1,7 @@
 import fs from 'fs';
 import path from 'path';
 import { fileURLToPath } from 'url';
-import { execSync } from 'child_process';
+import { spawnSync } from 'child_process';
 
 // ES module equivalent of __dirname
 const __filename = fileURLToPath(import.meta.url);
@@ -28,8 +28,14 @@ export function validateRelease(options = {}) {
     // If .git/COMMIT_EDITMSG is not available (e.g., not in a commit hook),
     // we can try to get the last commit message from git log
     try {
-      const stdout = execSync('git log -1 --pretty=%B', { cwd: projectRoot });
-      lastCommitMsg = stdout.toString().trim();
+      const result = spawnSync('git', ['log', '-1', '--pretty=%B'], { cwd: projectRoot, encoding: 'utf-8' });
+      if (result.error) {
+        throw result.error;
+      }
+      if (result.status !== 0) {
+        throw new Error(result.stderr || `Git log command failed with status ${result.status}`);
+      }
+      lastCommitMsg = (result.stdout || '').trim();
     } catch (gitError) {
       console.error('❌ Could not get last commit message from git log:', gitError.message);
       return { success: false };
