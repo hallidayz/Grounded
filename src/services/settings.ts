@@ -166,6 +166,8 @@ export function clearAllData(): void {
   localStorage.removeItem('theme');
   localStorage.removeItem('user_stats');
   localStorage.removeItem('grounded_value_selections');
+
+  cachedStats = null;
 }
 
 /**
@@ -173,11 +175,13 @@ export function clearAllData(): void {
  * Stores completion stats locally (privacy-first: no external transmission)
  */
 export interface UserStats {
-  [sessionKey: string]: number; // Count of completions per session
+  [sessionKey: string]: number | string | undefined; // Count of completions per session
   totalCompletions?: number;
   lastSession?: string;
   lastSessionTime?: string;
 }
+
+let cachedStats: UserStats | null = null;
 
 export function trackCompletion(sessionKey: string): void {
   try {
@@ -185,21 +189,30 @@ export function trackCompletion(sessionKey: string): void {
     const stats: UserStats = statsStr ? JSON.parse(statsStr) : {};
     
     // Increment completion count for this session
-    stats[sessionKey] = (stats[sessionKey] || 0) + 1;
+    const currentCount = typeof stats[sessionKey] === 'number' ? stats[sessionKey] as number : 0;
+    stats[sessionKey] = currentCount + 1;
     stats.totalCompletions = (stats.totalCompletions || 0) + 1;
     stats.lastSession = sessionKey;
     stats.lastSessionTime = new Date().toISOString();
     
     localStorage.setItem('user_stats', JSON.stringify(stats));
+    cachedStats = stats;
   } catch (error) {
     console.warn('[Settings] Failed to track session completion:', error);
   }
 }
 
 export function getUserStats(): UserStats {
+  if (cachedStats) {
+    return cachedStats;
+  }
   try {
     const statsStr = localStorage.getItem('user_stats');
-    return statsStr ? JSON.parse(statsStr) : {};
+    if (statsStr) {
+      cachedStats = JSON.parse(statsStr);
+      return cachedStats;
+    }
+    return {};
   } catch {
     return {};
   }
