@@ -1,4 +1,5 @@
 import type { ConversationNode, ConversationState, EnergyLevel } from '../types';
+import type { InitProgressReport } from '@mlc-ai/web-llm';
 
 export interface UserValues {
   values: string[];
@@ -50,7 +51,7 @@ async function getEngine() {
       engine = await CreateMLCEngine(
         modelName,
         {
-          initProgressCallback: (progress: any) => {
+          initProgressCallback: (progress: InitProgressReport) => {
             console.log('Model download progress:', progress.progress, progress.text);
           }
         }
