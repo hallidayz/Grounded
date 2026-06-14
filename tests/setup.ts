@@ -33,7 +33,11 @@ Object.defineProperty(global, 'crypto', {
 });
 
 // Mock IndexedDB for tests
-import 'fake-indexeddb/auto';
+import Dexie from "dexie";
+import { indexedDB, IDBKeyRange } from "fake-indexeddb";
+Dexie.dependencies.indexedDB = indexedDB;
+Dexie.dependencies.IDBKeyRange = IDBKeyRange;
+import "fake-indexeddb/auto";
 
 // Mock localStorage
 const localStorageMock = (() => {
@@ -52,7 +56,9 @@ const localStorageMock = (() => {
   };
 })();
 
-Object.defineProperty(window, 'localStorage', {
+if (typeof global !== "undefined" && typeof (global as any).window === "undefined") { (global as any).window = global; }
+
+Object.defineProperty(window, "localStorage", {
   value: localStorageMock,
 });
 
