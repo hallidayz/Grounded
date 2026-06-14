@@ -154,10 +154,7 @@ export default function App() {
         try {
           const sessionId = await chatDB.saveSession(conversationHistory, selectedEnergy || undefined);
           console.log('[App] Auto-saved session:', sessionId);
-          // Reload sessions list if on sessions view
-          if (view === 'sessions') {
-            await loadSavedSessions();
-          }
+          // Auto-save runs in background, no need to conditionally load sessions here since view is conversation
         } catch (err) {
           console.error('[App] Auto-save failed:', err);
         }
@@ -318,9 +315,7 @@ export default function App() {
       );
       console.log('[App] Session saved with ID:', sessionId);
       // Reload sessions list if we're on the sessions view
-      if (view === 'sessions') {
-        await loadSavedSessions();
-      }
+      // No need to check for sessions view as user just clicked save from conversation view
       // Reload sessions list to show the new session
       await loadSavedSessions();
       alert('Chat saved locally.');
