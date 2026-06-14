@@ -1,4 +1,5 @@
-import { describe, it, expect, beforeEach, spyOn, mock } from 'bun:test';
+// @ts-ignore
+import { describe, it, expect, beforeEach, jest } from '@jest/globals';
 import * as valuesService from '../src/services/valuesService';
 import * as aiService from '../src/services/aiService';
 import type { UserValueSelectionsWithCategories } from '../src/types/values';
@@ -37,7 +38,7 @@ describe('valuesService', () => {
   beforeEach(() => {
     getStorage().clear();
     // Mock setUserValues to prevent side effects and allow spying
-    spyOn(aiService, 'setUserValues').mockImplementation(() => {});
+    jest.spyOn(aiService, 'setUserValues').mockImplementation(() => {});
   });
 
   describe('addSelection', () => {
