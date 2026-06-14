@@ -821,7 +821,7 @@ export const NURTURE_AFFIRMATIONS: AffirmationLibrary = {
 /**
  * Helper function to get a random affirmation for a category
  */
-export function getNurtureAffirmation(category: keyof AffirmationLibrary): string {
+export function getNurtureAffirmation(category: keyof typeof NURTURE_AFFIRMATIONS): string {
   const affirmations = NURTURE_AFFIRMATIONS[category];
   return affirmations[Math.floor(Math.random() * affirmations.length)];
 }
