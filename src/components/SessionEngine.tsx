@@ -54,7 +54,7 @@ const SessionEngine: React.FC<SessionEngineProps> = ({ sessionKey, onComplete })
   // Wake Lock API for 5-minute sessions
   useEffect(() => {
     if (config.category === '5min' && 'wakeLock' in navigator) {
-      (navigator as any).wakeLock?.request('screen').then((wakeLock: WakeLockSentinel) => {
+      navigator.wakeLock?.request('screen').then((wakeLock: WakeLockSentinel) => {
         wakeLockRef.current = wakeLock;
       }).catch((err: Error) => {
         console.warn('[SessionEngine] Wake Lock not supported:', err);
