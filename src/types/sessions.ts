@@ -90,6 +90,6 @@ export type NurtureCategory = 'shame' | 'anxiety' | 'burnout' | 'grief';
 /**
  * Library of nurture affirmations by category.
  */
-export interface AffirmationLibrary {
+export type AffirmationLibrary = {
   [key in NurtureCategory]: string[];
 }
