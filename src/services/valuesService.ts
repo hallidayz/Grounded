@@ -45,7 +45,7 @@ export function createSelection(
   return {
     category,
     value,
-    selectedAt: Date.now(),
+    selectedAt: new Date(Date.now()).toISOString(),
   };
 }
 

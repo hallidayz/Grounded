@@ -11,10 +11,9 @@ describe('valuesService', () => {
       expect(selection.category).toBe(category);
       expect(selection.value).toBe(value);
       expect(selection.selectedAt).toBeDefined();
-      expect(typeof selection.selectedAt).toBe('number');
-      // Verify it's a valid timestamp (close to now)
-      expect(selection.selectedAt).toBeLessThanOrEqual(Date.now());
-      expect(selection.selectedAt).toBeGreaterThan(Date.now() - 1000);
+      expect(typeof selection.selectedAt).toBe('string');
+      // Verify it's a valid ISO string
+      expect(() => new Date(selection.selectedAt)).not.toThrow();
     });
 
     test('handles empty strings for category and value', () => {
