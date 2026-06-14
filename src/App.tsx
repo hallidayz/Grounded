@@ -114,7 +114,7 @@ export default function App() {
     if (savedMoments) {
       try {
         const parsed = JSON.parse(savedMoments);
-        setMoments(Array.isArray(parsed) ? parsed.length : 0);
+        setMoments(typeof parsed === 'number' ? parsed : (Array.isArray(parsed) ? parsed.length : 0));
       } catch { setMoments(0); }
     }
     const savedTheme = localStorage.getItem('theme');
@@ -284,7 +284,7 @@ export default function App() {
   const handleComplete = () => {
     const updated = moments + 1;
     setMoments(updated);
-    localStorage.setItem('grounded_moments', JSON.stringify(new Array(updated).fill({})));
+    localStorage.setItem('grounded_moments', updated.toString());
     setView('complete');
   };
 
