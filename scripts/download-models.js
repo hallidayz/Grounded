@@ -10,7 +10,6 @@ import { mkdir, access, stat } from 'fs/promises';
 import { join, dirname } from 'path';
 import { fileURLToPath } from 'url';
 import https from 'https';
-import http from 'http';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = dirname(__filename);
@@ -73,15 +72,23 @@ const models = [
 // - DistilBERT: ~67MB
 // - LaMini-Flan-T5: ~300MB
 
-function downloadFile(url, dest) {
+function downloadFile(url, dest, redirectCount = 0) {
   return new Promise((resolve, reject) => {
-    const protocol = url.startsWith('https') ? https : http;
+    if (!url.startsWith('https://')) {
+      reject(new Error(`Insecure HTTP URL not allowed: ${url}`));
+      return;
+    }
+    const protocol = https;
     let file = null;
     let totalBytes = 0;
     
     const request = protocol.get(url, (response) => {
       // Handle redirects
       if (response.statusCode === 302 || response.statusCode === 301 || response.statusCode === 307 || response.statusCode === 308) {
+        if (redirectCount > 5) {
+          reject(new Error('Too many redirects'));
+          return;
+        }
         const redirectUrl = response.headers.location;
         if (!redirectUrl) {
           reject(new Error(`Redirect but no location header for ${url}`));
@@ -91,7 +98,13 @@ function downloadFile(url, dest) {
         const fullRedirectUrl = redirectUrl.startsWith('http') 
           ? redirectUrl 
           : new URL(redirectUrl, url).href;
-        return downloadFile(fullRedirectUrl, dest).then(resolve).catch(reject);
+
+        if (!fullRedirectUrl.startsWith('https://')) {
+          reject(new Error(`Insecure HTTP redirect URL not allowed: ${fullRedirectUrl}`));
+          return;
+        }
+
+        return downloadFile(fullRedirectUrl, dest, redirectCount + 1).then(resolve).catch(reject);
       }
       
       if (response.statusCode !== 200) {
