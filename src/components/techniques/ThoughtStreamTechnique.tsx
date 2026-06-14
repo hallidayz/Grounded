@@ -1,5 +1,5 @@
 import React, { useState, useRef, useEffect } from 'react';
-import { motion } from 'framer-motion';
+import { motion, PanInfo } from 'framer-motion';
 import type { TechniqueComponentProps } from '../../types/sessions';
 
 interface Thought {
@@ -69,12 +69,12 @@ const ThoughtStreamTechnique: React.FC<TechniqueComponentProps> = ({
     setInputValue('');
   };
 
-  const handleDragEnd = (thoughtId: string, event: any) => {
+  const handleDragEnd = (thoughtId: string, event: MouseEvent | TouchEvent | PointerEvent, info: PanInfo) => {
     const rect = containerRef.current?.getBoundingClientRect();
     if (!rect) return;
 
-    const x = ((event.x - rect.left) / rect.width) * 100;
-    const y = ((event.y - rect.top) / rect.height) * 100;
+    const x = ((info.point.x - rect.left) / rect.width) * 100;
+    const y = ((info.point.y - rect.top) / rect.height) * 100;
 
     // Check if thought is near a leaf
     const nearbyLeaf = leaves.find((leaf) => Math.abs(leaf.x - x) < 5 && Math.abs(leaf.y - y) < 10);
@@ -152,7 +152,7 @@ const ThoughtStreamTechnique: React.FC<TechniqueComponentProps> = ({
             }}
             drag
             dragMomentum={false}
-            onDragEnd={(e, info) => handleDragEnd(thought.id, info)}
+            onDragEnd={(e, info) => handleDragEnd(thought.id, e, info)}
             animate={{
               y: thought.onLeaf ? [0, -100] : 0,
               opacity: thought.onLeaf ? [1, 0] : 1,
