@@ -112,9 +112,9 @@ This policy may be updated. Continued use constitutes acceptance.
 `;
 
 export function hasAgreedToTerms(): boolean {
-  const agreement = localStorage.getItem('acminds_terms_agreement');
-  if (!agreement) return false;
   try {
+    const agreement = localStorage.getItem('acminds_terms_agreement');
+    if (!agreement) return false;
     const parsed = JSON.parse(agreement);
     return parsed.agreed === true && parsed.version === TERMS_VERSION;
   } catch {
