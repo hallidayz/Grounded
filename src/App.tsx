@@ -17,6 +17,7 @@ import {
   initAiSync,
 } from './services/valuesService';
 import { VALUES_CATALOG, VALUES_CATEGORY_ORDER } from './data/valuesCatalog';
+import type { UserValueSelection } from './types/values';
 import type { EnergyLevel, ConversationState, AppView } from './types';
 import EnergyCheckIn from './components/EnergyCheckIn';
 import SessionEngine from './components/SessionEngine';
@@ -66,16 +67,11 @@ export default function App() {
   const textareaRef = useRef<HTMLTextAreaElement>(null);
   const messagesEndRef = useRef<HTMLDivElement>(null);
   
-  // ============================================
-  // TESTING ONLY: Device Selector State
-  // TODO: Remove this section before production
-  // ============================================
-  // ============================================
-  const [hoveredNav, setHoveredNav] = useState<string | null>(null);
-  const [valuesVersion, setValuesVersion] = useState(0);
+  const [selections, setSelections] = useState<UserValueSelection[]>([]);
 
   useEffect(() => {
     initAiSync();
+    setSelections([...getSelections().selections]);
   }, []);
 
   useEffect(() => {
@@ -155,7 +151,7 @@ export default function App() {
           const sessionId = await chatDB.saveSession(conversationHistory, selectedEnergy || undefined);
           console.log('[App] Auto-saved session:', sessionId);
           // Reload sessions list if on sessions view
-          if (view === 'sessions') {
+          if ((view as string) === 'sessions') {
             await loadSavedSessions();
           }
         } catch (err) {
@@ -585,11 +581,8 @@ export default function App() {
             style={{
               ...styles.bottomNavItem, 
               ...(view === item.view ? styles.bottomNavActive : {}),
-              ...(hoveredNav === item.view ? styles.bottomNavItemHover : {}),
             }}
             onClick={() => setView(item.view as AppView)}
-            onMouseEnter={() => setHoveredNav(item.view)}
-            onMouseLeave={() => setHoveredNav(null)}
           >
             <span style={styles.bottomNavIcon}>{item.icon}</span>
             <span style={styles.bottomNavLabel}>{item.label}</span>
@@ -772,12 +765,11 @@ export default function App() {
   );
 
   const renderValues = () => {
-    const { selections } = getSelections();
     const selectedSet = new Set(selections.map((s) => s.value));
 
     const handleToggle = (category: string, value: string) => {
       toggleSelection(category, value);
-      setValuesVersion((v) => v + 1);
+      setSelections([...getSelections().selections]);
     };
 
     return (
@@ -1882,10 +1874,6 @@ const styles: Record<string, React.CSSProperties> = {
     opacity: 0.6,
     borderRadius: '12px', // Added for better touch target
     transition: 'background-color 0.2s ease, opacity 0.2s ease',
-   },
-   bottomNavItemHover: {
-    backgroundColor: 'var(--bg-secondary, rgba(248, 247, 244, 0.5))',
-    opacity: 0.8,
    },
    bottomNavActive: {
     opacity: 1,
