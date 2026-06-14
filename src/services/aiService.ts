@@ -6,9 +6,11 @@ export interface UserValues {
 }
 
 let userValues: UserValues = { values: [], priority: [] };
+let lowerUserValues: string[] = [];
 
 export function setUserValues(values: UserValues) {
   userValues = values;
+  lowerUserValues = values.values.map(v => v.toLowerCase());
 }
 
 export function getUserValues(): UserValues {
@@ -16,16 +18,8 @@ export function getUserValues(): UserValues {
 }
 
 function checkValuesInInput(input: string): string[] {
-  const matchedValues: string[] = [];
   const lowerInput = input.toLowerCase();
-  
-  userValues.values.forEach(value => {
-    if (lowerInput.includes(value.toLowerCase())) {
-      matchedValues.push(value);
-    }
-  });
-  
-  return matchedValues;
+  return userValues.values.filter((_, i) => lowerInput.includes(lowerUserValues[i]));
 }
 
 let engine: any = null;
