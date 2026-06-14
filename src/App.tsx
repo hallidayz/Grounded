@@ -39,9 +39,6 @@ function getSessionKeyFromEnergy(energy: EnergyLevel | null): string | null {
   return null;
 }
 
-// BreathingExercise has been replaced by SessionEngine
-// The entire function was removed in favor of unified SessionEngine component
-
 export default function App() {
   const [view, setView] = useState<AppView>('loading');
   const [isDarkMode, setIsDarkMode] = useState(false);
@@ -155,7 +152,7 @@ export default function App() {
           const sessionId = await chatDB.saveSession(conversationHistory, selectedEnergy || undefined);
           console.log('[App] Auto-saved session:', sessionId);
           // Reload sessions list if on sessions view
-          if (view === 'sessions') {
+          if ((view as string) === 'sessions') {
             await loadSavedSessions();
           }
         } catch (err) {
