@@ -129,6 +129,8 @@ export function agreeToTerms(): void {
     version: TERMS_VERSION,
   };
   localStorage.setItem('acminds_terms_agreement', JSON.stringify(agreement));
+  // Dispatch a custom event so components can update immediately
+  window.dispatchEvent(new Event('terms_agreed'));
 }
 
 export function getCrisisContacts(): CrisisContact[] {
