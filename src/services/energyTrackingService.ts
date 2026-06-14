@@ -36,6 +36,9 @@ async function getUserId(): Promise<string> {
   }
 }
 
+// Cache for the interactions list to avoid repeated JSON.parse
+let cachedInteractionList: string[] | null = null;
+
 // Simple storage using sessionStorage
 async function saveInteraction(data: {
   id: string;
@@ -51,10 +54,12 @@ async function saveInteraction(data: {
     
     // Also store in a list for retrieval
     const listKey = 'energy_interactions_list';
-    const existing = sessionStorage.getItem(listKey);
-    const list = existing ? JSON.parse(existing) : [];
-    list.push(data.id);
-    sessionStorage.setItem(listKey, JSON.stringify(list));
+    if (cachedInteractionList === null) {
+      const existing = sessionStorage.getItem(listKey);
+      cachedInteractionList = existing ? JSON.parse(existing) : [];
+    }
+    cachedInteractionList!.push(data.id);
+    sessionStorage.setItem(listKey, JSON.stringify(cachedInteractionList));
   } catch (error) {
     console.warn('[EnergyTracking] Failed to save interaction:', error);
   }
