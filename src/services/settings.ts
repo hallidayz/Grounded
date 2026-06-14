@@ -164,43 +164,6 @@ export function clearAllData(): void {
   localStorage.removeItem('acminds_terms_agreement');
   localStorage.removeItem('acminds_crisis_contacts');
   localStorage.removeItem('theme');
-  localStorage.removeItem('user_stats');
   localStorage.removeItem('grounded_value_selections');
 }
 
-/**
- * Track session completion for analytics
- * Stores completion stats locally (privacy-first: no external transmission)
- */
-export interface UserStats {
-  [sessionKey: string]: number; // Count of completions per session
-  totalCompletions?: number;
-  lastSession?: string;
-  lastSessionTime?: string;
-}
-
-export function trackCompletion(sessionKey: string): void {
-  try {
-    const statsStr = localStorage.getItem('user_stats');
-    const stats: UserStats = statsStr ? JSON.parse(statsStr) : {};
-    
-    // Increment completion count for this session
-    stats[sessionKey] = (stats[sessionKey] || 0) + 1;
-    stats.totalCompletions = (stats.totalCompletions || 0) + 1;
-    stats.lastSession = sessionKey;
-    stats.lastSessionTime = new Date().toISOString();
-    
-    localStorage.setItem('user_stats', JSON.stringify(stats));
-  } catch (error) {
-    console.warn('[Settings] Failed to track session completion:', error);
-  }
-}
-
-export function getUserStats(): UserStats {
-  try {
-    const statsStr = localStorage.getItem('user_stats');
-    return statsStr ? JSON.parse(statsStr) : {};
-  } catch {
-    return {};
-  }
-}

@@ -98,17 +98,6 @@ const SessionEngine: React.FC<SessionEngineProps> = ({ sessionKey, onComplete })
               navigator.vibrate([100, 50, 100]);
             }
             
-            // Track completion
-            if (typeof window !== 'undefined' && window.localStorage) {
-              try {
-                const stats = JSON.parse(localStorage.getItem('user_stats') || '{}');
-                stats[sessionKey] = (stats[sessionKey] || 0) + 1;
-                localStorage.setItem('user_stats', JSON.stringify(stats));
-              } catch (e) {
-                console.warn('[SessionEngine] Failed to track completion:', e);
-              }
-            }
-            
             // Release wake lock
             if (wakeLockRef.current) {
               wakeLockRef.current.release().catch(console.error);
