@@ -360,7 +360,31 @@
       if (iosInstructions) {
         const firstStep = iosInstructions.querySelector('.step');
         if (firstStep) {
-          firstStep.innerHTML = '<div class="step-number">1</div><p><strong>⚠️ Server Required:</strong> PWAs must be served from a web server. Upload the <code>dist/</code> folder to free hosting (see options below) or use a local server on your computer.</p>';
+          firstStep.textContent = '';
+
+          const stepNumber = document.createElement('div');
+          stepNumber.className = 'step-number';
+          stepNumber.textContent = '1';
+
+          const p = document.createElement('p');
+
+          const strong = document.createElement('strong');
+          strong.textContent = '⚠️ Server Required:';
+
+          const text1 = document.createTextNode(' PWAs must be served from a web server. Upload the ');
+
+          const code = document.createElement('code');
+          code.textContent = 'dist/';
+
+          const text2 = document.createTextNode(' folder to free hosting (see options below) or use a local server on your computer.');
+
+          p.appendChild(strong);
+          p.appendChild(text1);
+          p.appendChild(code);
+          p.appendChild(text2);
+
+          firstStep.appendChild(stepNumber);
+          firstStep.appendChild(p);
         }
       }
       
