@@ -337,8 +337,8 @@ export default function App() {
     }
     try {
       await chatDB.shareSession(conversationState?.energy || 'custom');
-    } catch (error: any) {
-      if (error.message === 'Copied to clipboard') {
+    } catch (error: unknown) {
+      if (error instanceof Error && error.message === 'Copied to clipboard') {
         alert('Chat copied to clipboard.');
       } else {
         alert('Failed to share chat.');
