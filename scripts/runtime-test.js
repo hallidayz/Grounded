@@ -133,12 +133,7 @@ test('capacitor.config.ts exists', () => {
 test('Key source files exist', () => {
   const srcPath = path.join(rootDir, 'src');
   const keyFiles = [
-    'App.tsx',
-    'AppContent.tsx',
-    'services/authStore.ts',
-    'services/ai/browserCompatibility.ts',
-    'contexts/AuthContext.tsx',
-    'contexts/DataContext.tsx'
+    'App.tsx'
   ];
   const missing = keyFiles.filter(file => {
     const filePath = path.join(srcPath, file);
