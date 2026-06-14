@@ -315,9 +315,7 @@ export default function App() {
       );
       console.log('[App] Session saved with ID:', sessionId);
       // Reload sessions list if we're on the sessions view
-      if (view === 'sessions') {
-        await loadSavedSessions();
-      }
+      // No need to check for sessions view as user just clicked save from conversation view
       // Reload sessions list to show the new session
       await loadSavedSessions();
       alert('Chat saved locally.');
