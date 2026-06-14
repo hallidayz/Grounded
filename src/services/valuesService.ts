@@ -39,13 +39,13 @@ function syncToAiService(selections: ReadonlyArray<UserValueSelection>): void {
  * Create a new selection entry (no persistence).
  */
 export function createSelection(
-  value: string,
-  category: string
+  category: string,
+  value: string
 ): UserValueSelection {
   return {
     category,
     value,
-    selectedAt: new Date().toISOString(),
+    selectedAt: Date.now(),
   };
 }
 
