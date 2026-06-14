@@ -7,9 +7,35 @@
 
 type EnergyLevel = 'low' | 'medium' | 'high';
 
-// Generate a simple UUID
-function generateId(): string {
-  return `energy_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
+// Generate a secure UUID
+export function generateId(prefix: string = 'energy'): string {
+  try {
+    // Attempt to use the most secure method first (crypto.randomUUID)
+    if (typeof crypto !== 'undefined' && typeof crypto.randomUUID === 'function') {
+      return `${prefix}_${crypto.randomUUID()}`;
+    }
+
+    // Fallback 1: crypto.getRandomValues
+    if (typeof crypto !== 'undefined' && typeof crypto.getRandomValues === 'function') {
+      const array = new Uint8Array(16);
+      crypto.getRandomValues(array);
+
+      // Convert to hex string
+      const hex = Array.from(array)
+        .map(b => b.toString(16).padStart(2, '0'))
+        .join('');
+
+      // Format as UUID v4 (ish) for consistency
+      const uuid = `${hex.slice(0, 8)}-${hex.slice(8, 12)}-4${hex.slice(13, 16)}-a${hex.slice(17, 20)}-${hex.slice(20, 32)}`;
+      return `${prefix}_${uuid}`;
+    }
+  } catch (e) {
+    // If anything fails in the crypto methods, fall through to the final fallback
+    console.warn('[EnergyTracking] Secure random generation failed, falling back to timestamp:', e);
+  }
+
+  // Final fallback (only if web crypto APIs are completely missing or fail)
+  return `${prefix}_${Date.now()}_${Math.random().toString(36).substring(2, 11)}`;
 }
 
 // Get or create session ID
